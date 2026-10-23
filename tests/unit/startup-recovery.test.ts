@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { randomUUID } from "node:crypto"
-import { mkdtemp, mkdir, readdir, readFile, readlink, realpath, rm, symlink, writeFile, lstat } from "node:fs/promises"
+import { mkdtemp, mkdir, readdir, readFile, readlink, realpath, rename, rm, symlink, writeFile, lstat } from "node:fs/promises"
 import { mkdirSync, renameSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -17,6 +17,21 @@ type Family = "legacy" | "current"
 const markerName = (family: Family) => family === "legacy" ? "xuanxiang-app.json" : "shakeink-app.json"
 const markerText = (family: Family, id: string, phase: "initializing" | "ready" = "ready", inboxReady = true) =>
   JSON.stringify({ schemaVersion: 1, app: family === "legacy" ? "Xuanxiangxiezuo-Desktop" : "ShakeInk", id, phase, inboxReady })
+// 用例要求“替换后的目录与旧目录 inode 不同”。部分文件系统（如 ext4）
+// 删除目录后会立即复用其 inode，直接 rm+mkdir 无法构造该场景；
+// 这里先创建同层备用目录（与旧目录同时存在，inode 必然不同），
+// 删除旧目录后把备用目录 rename 到位——rename 不分配新 inode。
+async function replaceDirectoryWithNewInode(path: string, base: string): Promise<void> {
+  const spare = join(base, `.inode-spare-${randomUUID().slice(0, 8)}`)
+  await mkdir(spare)
+  try {
+    await rm(path, { recursive: true, force: true })
+    await rename(spare, path)
+  } catch (error) {
+    await rm(spare, { recursive: true, force: true })
+    throw error
+  }
+}
 async function fixture(run: (f: { base: string; bootstrap: string; root: string; paths: { bootstrap: string; recoveryRoot: string } }) => Promise<void>) {
   const base = await realpath(await mkdtemp(join(tmpdir(), "shakeink-startup-recovery-"))), bootstrap = join(base, "bootstrap"), root = join(base, "root")
   await mkdir(bootstrap)
@@ -100,9 +115,7 @@ test("SR-U-07/08/09 a dangling pointer to a missing or empty default root auto-i
   })
   await fixture(async f => {
     await mkdir(f.root); const pointer = await pointerFor(f.root)
-    await rm(f.root, { recursive: true }); await mkdir(f.root)
-    const rebuilt = await directoryIdentity(f.root)
-    assert.notEqual(rebuilt.inode, pointer.root.inode)
+    await replaceDirectoryWithNewInode(f.root, f.base)
     await writePointer(f.bootstrap, pointer)
     assert.deepEqual(classifyStartupRecovery(f.paths, "current"), { kind: "auto-init" })
   })
@@ -111,7 +124,7 @@ test("SR-U-07/08/09 a dangling pointer to a missing or empty default root auto-i
 test("SR-U-10/11 a replaced non-empty root or a symlink root is a mismatch dialog and never written", async () => {
   await fixture(async f => {
     const id = await healthyRoot(f.root, "current"), pointer = await pointerFor(f.root, id)
-    await rm(f.root, { recursive: true }); await mkdir(f.root); await writeFile(join(f.root, "foreign.txt"), "外来副本")
+    await replaceDirectoryWithNewInode(f.root, f.base); await writeFile(join(f.root, "foreign.txt"), "外来副本")
     await writePointer(f.bootstrap, pointer)
     assert.deepEqual(classifyStartupRecovery(f.paths, "current"), { kind: "dialog", reason: "root-mismatch", sourcePath: f.root })
     assert.equal(await readFile(join(f.root, "foreign.txt"), "utf8"), "外来副本")

@@ -77,12 +77,12 @@ export interface MonacoRuntimeRegistries {
 }
 /** Monaco resolves its own OperatingSystem from the host process
  * (base/common/platform.js: Electron exposes process.platform, so a Linux
- * renderer reports OS=3), while `platform` is this app's darwin|win32
- * contract. Monaco's keybinding layer branches only on OS===2
- * (keybindings.js createSimpleKeybinding), so OS 1 and OS 3 carry the
- * identical non-macOS Ctrl/Win semantics and a win32 contract may
- * legitimately observe either one. The set stays fail-closed: a macOS
- * contract still rejects anything but Macintosh. */
+ * renderer reports OS=3 and a Windows renderer reports OS=1), while
+ * `platform` is this app's darwin|win32|linux contract. Monaco's keybinding
+ * layer branches only on OS===2 (keybindings.js createSimpleKeybinding), so
+ * OS 1 and OS 3 carry identical non-macOS Ctrl/Win semantics and any
+ * non-darwin contract may legitimately observe either one. The set stays
+ * fail-closed: a darwin contract still rejects anything but Macintosh. */
 export function expectedMonacoOs(platform: DesktopPlatform): readonly number[] {
   return platform === "darwin" ? [2] : [1, 3]
 }

@@ -8,6 +8,7 @@ import { useDesktopCommands } from "@/lib/desktop/use-command-target"
 import { useDesktopStore } from "@/stores/desktop"
 import { ComposerHistory } from "@/lib/desktop/composer-history"
 import {composerBindingHint} from "@/lib/desktop/composer-shortcuts"
+import {shortcutNamespace} from "@desktop/core/shortcuts"
 import {desktopCommandCatalog} from "@/lib/desktop/command-runtime"
 import {consumeDesktopComposerPaste} from "@/lib/desktop/native-text-edits"
 
@@ -1687,7 +1688,7 @@ export function ChatPanel({
   },textareaRef)
 
   /** 桌面提示跟随已提交快捷键；默认 Enter 发送、Shift+Enter 换行。 */
-  const composerEnterHint = desktopBootstrap?composerBindingHint(desktopCommandCatalog(desktopBootstrap.platform),desktopBootstrap.settings.shortcuts[desktopBootstrap.platform]):"Enter 发送，Shift+Enter 换行"
+  const composerEnterHint = desktopBootstrap?composerBindingHint(desktopCommandCatalog(desktopBootstrap.platform),desktopBootstrap.settings.shortcuts[shortcutNamespace(desktopBootstrap.platform)]):"Enter 发送，Shift+Enter 换行"
   const showWelcome = canShowChatWelcome({
     recoveryStatus, messageCount:messages.length, loading:isLoadingConversation || !!requestedConversationId, loadError:!!conversationLoadError,
     generating:isGenerating, creatingNovel, following:!!following, suspended:suspendedExecution,

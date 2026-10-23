@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "monacoVersion": "0.56.0",
   "sourceHashes": {
-    "src/lib/desktop/monaco-commands.ts": "cad766d65d529120961d4a6cc7095b16da6dcde057c6844ba73370700bd54eac",
+    "src/lib/desktop/monaco-commands.ts": "2aa4709210c1c5c420aa1ce635c72084373d3517d7808f26b3eb9cc5291a9d42",
     "src/lib/desktop/markdown-actions.ts": "3684edbc677f7566efe527ec0ae22f1ccbd2e4ebbf8cd37f45d4b0fa46d39912",
     "src/lib/desktop/command-runtime.ts": "21e3f8a0fd46e3a132dbfbbe0ef53f446b17c262268afd9b21501110324add88",
     "src/lib/desktop/command-scope.ts": "aa1ba903a704b8d35ba7d0d34c0c773ce2c644bb36e0b56a9828c8e7ad433b14",
-    "desktop/shared/command-registry.ts": "fd0d447dd44f65d88a62e999b7417d9d554f74b6169ef9e582d31fad0884be66",
+    "desktop/shared/command-registry.ts": "20560a2353153df3f87fa1c6d7b24ed57a1bc3365561b070e59f17615f20d34c",
     "desktop/shared/commands.json": "d9784c5fad0d4734706d73080a95bd8b595002eea082067399d221366fe793da",
     "src/components/editor/monaco-setup.ts": "8361a4c9c2d9e705715782dd7019b5731912f0605c3a49db3b3d438ca0ad4191",
-    "desktop/core/shortcuts.ts": "343b96539265f5db16e5e900c0b25818dff9236c2a413f8d8ddafebb5bdbae5e",
+    "desktop/core/shortcuts.ts": "757127967a0f1c7f638a0639489ad30e729b0e44b32e6132133ffc1a07f6b706",
     "desktop/core/shortcut-context.ts": "61b18c806ddceaffdbd4f1f270a67862ea873eda529e4430e55b4d43d17f0be2",
     "node_modules/monaco-editor/package.json": "3555e3e0bc0d5f8c22be8f26164c11778dff0feabf564c67185726636f4b15c7"
   },

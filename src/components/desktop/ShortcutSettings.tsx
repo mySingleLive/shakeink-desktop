@@ -6,15 +6,16 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useDesktopStore, updateDesktopSettings } from "@/stores/desktop"
-import { bindingConflicts, bindingsFor, capturedKey, editBinding, type BindingConflict, type ShortcutCommand } from "@desktop/core/shortcuts"
+import { bindingConflicts, bindingsFor, capturedKey, editBinding, shortcutNamespace, type BindingConflict, type ShortcutCommand } from "@desktop/core/shortcuts"
 import { desktopCommandCatalog, desktopCatalogStatus, subscribeDesktopCommands } from "@/lib/desktop/command-runtime"
 interface Draft { id: string; index?: number; original?: string; binding: string }
 export function ShortcutSettings() {
   const bootstrap = useDesktopStore(state => state.bootstrap)!
   const platform = bootstrap.platform
+  const namespace = shortcutNamespace(platform)
   const commands = useSyncExternalStore(subscribeDesktopCommands,()=>desktopCommandCatalog(platform),()=>desktopCommandCatalog(platform))
   const catalogStatus=useSyncExternalStore(subscribeDesktopCommands,()=>desktopCatalogStatus(platform),()=>desktopCatalogStatus(platform))
-  const overrides = bootstrap.settings.shortcuts[platform]
+  const overrides = bootstrap.settings.shortcuts[namespace]
   const [query, setQuery] = useState("")
   const [draft, setDraft] = useState<Draft | null>(null)
   const [recording, setRecording] = useState(false)
@@ -74,10 +75,10 @@ export function ShortcutSettings() {
       pendingWrite.current = true
       setSaving(true)
       await updateDesktopSettings(before => {
-        const current = before.shortcuts[platform]
+        const current = before.shortcuts[namespace]
         if (draft.index !== undefined && bindingsFor(selected, current)[draft.index] !== draft.original) throw new Error("此快捷键已变化，请重新打开编辑")
         const next = editBinding(commands, current, draft.id, draft.binding, draft.index, transfer)
-        return { ...before, shortcuts: { ...before.shortcuts, [platform]: next } }
+        return { ...before, shortcuts: { ...before.shortcuts, [namespace]: next } }
       })
       setDraft(null); setConflicts([]); setRecording(false)
     } catch (cause) {
@@ -93,9 +94,9 @@ export function ShortcutSettings() {
     returnTarget.current = { id: command.id, index }
     try {
       await updateDesktopSettings(before => {
-        const bindings = bindingsFor(command, before.shortcuts[platform])
+        const bindings = bindingsFor(command, before.shortcuts[namespace])
         if (bindings[index] !== original) throw new Error("快捷键已变化，请重新读取后操作")
-        return { ...before, shortcuts: { ...before.shortcuts, [platform]: { ...before.shortcuts[platform], [command.id]: bindings.filter((_, at) => at !== index) } } }
+        return { ...before, shortcuts: { ...before.shortcuts, [namespace]: { ...before.shortcuts[namespace], [command.id]: bindings.filter((_, at) => at !== index) } } }
       })
       restoreListFocus()
     } catch (cause) { toast.error((cause as Error).message) }

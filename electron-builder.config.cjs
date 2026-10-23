@@ -42,6 +42,7 @@ module.exports = {
     target: ['dmg', 'zip'],
   },
   dmg: {sign: true, writeUpdateInfo: false},
+  linux: {icon: 'build/icon.png', target: ['AppImage'], category: 'Office'},
   win: {icon: 'build/icon.ico', target: ['nsis'], signAndEditExecutable: true, signExecutable: false},
   nsis: {oneClick: false, allowToChangeInstallationDirectory: true},
 }

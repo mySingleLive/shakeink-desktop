@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { capturedKey, canonicalKey, validShortcut, bindingConflicts, bindingsFor, editBinding, type ShortcutCommand } from "../../desktop/core/shortcuts"
+import { capturedKey, canonicalKey, validShortcut, bindingConflicts, bindingsFor, editBinding, shortcutNamespace, type ShortcutCommand } from "../../desktop/core/shortcuts"
 const commands: ShortcutCommand[] = [
   { id: "file.save", label: "保存", scope: "global", locked: false, defaults: ["Cmd+S"] },
   { id: "md.bold", label: "粗体", scope: "markdown", locked: false, defaults: ["Cmd+B"] },
@@ -8,7 +8,7 @@ const commands: ShortcutCommand[] = [
   { id: "md.enter", label: "换行", scope: "markdown", locked: false, defaults: ["Enter"] },
   { id: "app.quit", label: "退出", scope: "global", locked: true, defaults: ["Cmd+Q"] },
 ]
-const key = (value: Partial<KeyboardEvent>) => capturedKey({ key: "a", code: "KeyA", metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, isComposing: false, repeat: false, keyCode: 0, ...value })
+const key = (value: Partial<KeyboardEvent>, platform: "darwin" | "win32" | "linux" = "darwin") => capturedKey({ key: "a", code: "KeyA", metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, isComposing: false, repeat: false, keyCode: 0, ...value }, platform)
 test("DESK-K02: recording uses physical combinations and ignores modifiers, composition and repeat", () => {
   assert.equal(key({ key: "å", metaKey: true, altKey: true }), "Cmd+Alt+A")
   assert.equal(key({ key: "+", code: "Equal", metaKey: true, shiftKey: true }), "Cmd+Shift+Equal")
@@ -38,4 +38,15 @@ test("DESK-K04: transfer removes only conflicting bindings atomically; empty sta
   assert.throws(() => editBinding(commands, before, "md.bold", "Cmd+Tab"), /系统保留/)
   assert.throws(() => editBinding(commands, before, "md.bold", "Cmd+K Cmd+Q"), /系统保留/)
   assert.throws(() => editBinding(commands, before, "md.bold", "Cmd+K Cmd+C Cmd+Q"), /系统保留/)
+})
+test("DESK-K05: Linux reuses the win32 shortcut namespace and Ctrl-based capture", () => {
+  assert.equal(shortcutNamespace("darwin"), "darwin")
+  assert.equal(shortcutNamespace("win32"), "win32")
+  assert.equal(shortcutNamespace("linux"), "win32")
+  const win = key({ key: "s", code: "KeyS", ctrlKey: true }, "win32")
+  const linux = key({ key: "s", code: "KeyS", ctrlKey: true }, "linux")
+  assert.equal(linux, win)
+  assert.equal(linux, "Ctrl+S")
+  const meta = key({ key: "a", code: "KeyA", metaKey: true }, "linux")
+  assert.equal(meta, "Win+A")
 })

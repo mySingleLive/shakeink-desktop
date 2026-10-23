@@ -19,7 +19,7 @@ export function validShortcut(key: string): boolean {
     return new Set(parts).size === parts.length
   })
 }
-export function capturedKey(event: Pick<KeyboardEvent, "key" | "code" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey" | "isComposing" | "repeat" | "keyCode">, platform: "darwin" | "win32" = "darwin"): string | null {
+export function capturedKey(event: Pick<KeyboardEvent, "key" | "code" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey" | "isComposing" | "repeat" | "keyCode">, platform: "darwin" | "win32" | "linux" = "darwin"): string | null {
   if (event.isComposing || event.keyCode === 229 || event.repeat || !event.key || ["Control", "Shift", "Alt", "Meta", "AltGraph", "Dead", "Unidentified"].includes(event.key)) return null
   const punctuation: Record<string,string> = { Comma: ",", Period: ".", Semicolon: ";", Backquote: "`", Minus: "Minus", Slash: "Slash", Space: "Space" }
   const code = event.code ?? ""
@@ -28,6 +28,9 @@ export function capturedKey(event: Pick<KeyboardEvent, "key" | "code" | "metaKey
   return validShortcut(binding) ? binding : null
 }
 export function bindingsFor(command: ShortcutCommand, overrides: Record<string, string[]>) { return overrides[command.id] ?? command.defaults }
+/** Shortcut overrides are persisted per namespace; Linux reuses the win32
+ * (Ctrl-based) namespace, so only darwin and win32 exist in settings. */
+export function shortcutNamespace(platform: "darwin" | "win32" | "linux"): "darwin" | "win32" { return platform === "darwin" ? "darwin" : "win32" }
 export function shortcutConflicts(a: string, b: string) {
   const x = canonicalKey(a), y = canonicalKey(b)
   return !!x && !!y && (x === y || x.startsWith(y + " ") || y.startsWith(x + " "))

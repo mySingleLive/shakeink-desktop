@@ -72,10 +72,13 @@ test("B01/B12: China defaults and exact legacy official addresses", async () => 
   })
 })
 test("B02/B03: exact OpenAI snapshots, lifecycle and unknown future IDs", async () => {
+  // gpt-5.1's published shutdown (2027-04-01) is still future, so its 2099 fixture
+  // date reaches the warning path; gpt-4-turbo retired on 2026-10-23 and is now
+  // filtered before the fixture date is read.
   await run(async () => json({ data: [
     { id: "gpt-4.1-mini-2025-04-14" }, { id: "gpt-5.5-pro-2026-04-23" },
     { id: "gpt-4o", shutdown_date: "2000-01-01" },
-    { id: "gpt-4-turbo", shutdown_date: "2099-01-01" },
+    { id: "gpt-5.1", shutdown_date: "2099-01-01" },
     { id: "text-embedding-3-large" }, { id: "gpt-future-2099-01-01" },
   ] }), async s => {
     const result = await discover(s, draft("openai")); assert.equal(result.ok, true); if (!result.ok) return
@@ -103,10 +106,10 @@ test("MC-02/B02: canonical metadata does not add unlisted API models to discover
 test("B03: published shutdown dates override stale live search aliases and retain future lifecycle notes", async () => {
   assert.equal(officialModel("openai", "o3-pro")?.deprecated, true)
   assert.equal(officialModel("openai", "o3-pro")?.shutdownDate, "2026-12-11")
-  await run(async () => json({ data: [{ id: "gpt-4o-search-preview" }, { id: "gpt-4o-mini-search-preview" }, { id: "gpt-4.1-nano" }] }), async s => {
+  await run(async () => json({ data: [{ id: "gpt-4o-search-preview" }, { id: "gpt-4o-mini-search-preview" }, { id: "gpt-5.1" }] }), async s => {
     const result = await discover(s, draft("openai")); assert.equal(result.ok, true); if (!result.ok) return
     assert.equal(result.models.some(m => m.id === "gpt-4o-search-preview" || m.id === "gpt-4o-mini-search-preview"), false)
-    assert.ok(result.models.find(m => m.id === "gpt-4.1-nano")?.notes?.some(n => n.includes("2026-10-23")))
+    assert.ok(result.models.find(m => m.id === "gpt-5.1")?.notes?.some(n => n.includes("2027-04-01")))
     assert.equal(result.models.some(m => m.id === "o3-pro"), false, "unlisted deprecated candidates are not newly recommended")
   })
 })

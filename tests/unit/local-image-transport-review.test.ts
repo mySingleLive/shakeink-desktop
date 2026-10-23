@@ -40,6 +40,8 @@ test("IMG60-02: actual streamed renderer transport cancels quota overflow before
     const body = new ReadableStream<Uint8Array>({ pull(controller) { if (pull++ === 0) controller.enqueue(new Uint8Array(8 * 1024 * 1024)); else controller.enqueue(new Uint8Array(3 * 1024 * 1024)) }, cancel() { cancelled = true } })
     const request = new Request("https://local.invalid/api/novels/book/items/item/images", { method: "POST", headers: { "content-type": "multipart/form-data; boundary=fixture" }, body, duplex: "half" } as RequestInit & { duplex: "half" })
     await assert.rejects(window.fetch(request), /正文过大/)
+    // transport 的取消是 fire-and-forget；Node(undici) 中经克隆流异步传播到原流，断言前等待其生效
+    for (let i = 0; i < 200 && !cancelled; i++) await new Promise(resolve => setTimeout(resolve, 5))
     assert.equal(cancelled, true); assert.equal(forwarded.length, 0)
     const payload = new Uint8Array(9 * 1024 * 1024); payload[1] = 19; payload[payload.length - 1] = 63
     const form = new FormData(); form.append("file", new File([payload], "bounded.png", { type: "image/png" }))

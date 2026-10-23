@@ -14,6 +14,12 @@ async function verifyBinary(path, platform, arch) {
     const expected = arch === 'x64' ? 'x86_64' : arch
     const architectures = stdout.trim().split(/\s+/)
     if (!architectures.includes(expected)) throw new Error(`二进制架构不匹配：${path} (${architectures.join(',')})`)
+  } else if (platform === 'linux') {
+    const bytes = await readFile(path)
+    if (bytes.length < 20 || bytes.toString('ascii', 0, 4) !== '\x7fELF') throw new Error(`无效的 Linux 二进制：${path}`)
+    if (bytes[4] !== 2) throw new Error(`无效的 64 位 Linux 二进制：${path}`)
+    const machine = bytes.readUInt16LE(18)
+    if (machine !== (arch === 'x64' ? 0x3e : 0xb7)) throw new Error(`二进制架构不匹配：${path} (EM ${machine.toString(16)})`)
   } else {
     const bytes = await readFile(path)
     if (bytes.length < 64 || bytes.toString('ascii', 0, 2) !== 'MZ') throw new Error(`无效的 Windows 二进制：${path}`)
@@ -27,14 +33,14 @@ async function verifyBinary(path, platform, arch) {
 // A preflight, rather than an electronDist hook: hook exceptions may download
 // another distribution. Never enter builder on a mismatched native host.
 export async function inspectLocalRuntime(project, platform, arch) {
-  if (platform !== process.platform || !['darwin', 'win32'].includes(platform)) throw new Error('目标操作系统必须与本机构建系统一致')
+  if (platform !== process.platform || !['darwin', 'win32', 'linux'].includes(platform)) throw new Error('目标操作系统必须与本机构建系统一致')
   if (arch !== process.arch || !['arm64', 'x64'].includes(arch)) throw new Error('目标架构必须与本机安装运行库架构一致')
   const packageMetadata = await json(join(project, 'package.json'))
   const electronMetadata = await json(join(project, 'node_modules/electron/package.json'))
   const electronDist = join(project, 'node_modules/electron/dist')
   const version = (await readFile(join(electronDist, 'version'), 'utf8')).trim()
   if (version !== electronMetadata.version || version !== packageMetadata.devDependencies.electron) throw new Error('Electron 本地发行版本与锁定版本不一致')
-  const executable = platform === 'darwin' ? join(electronDist, 'Electron.app/Contents/MacOS/Electron') : join(electronDist, 'electron.exe')
+  const executable = platform === 'darwin' ? join(electronDist, 'Electron.app/Contents/MacOS/Electron') : platform === 'linux' ? join(electronDist, 'electron') : join(electronDist, 'electron.exe')
   await verifyBinary(executable, platform, arch)
   const sharpRoot = join(project, `node_modules/@img/sharp-${platform}-${arch}`)
   const sharpMetadata = await json(join(sharpRoot, 'package.json'))
@@ -42,12 +48,12 @@ export async function inspectLocalRuntime(project, platform, arch) {
   const sharpBinary = join(sharpRoot, `lib/sharp-${platform}-${arch}.node`)
   await verifyBinary(sharpBinary, platform, arch)
   let libvipsRoot = sharpRoot
-  if (platform === 'darwin') {
+  if (platform === 'darwin' || platform === 'linux') {
     libvipsRoot = join(project, `node_modules/@img/sharp-libvips-${platform}-${arch}`)
     const metadata = await json(join(libvipsRoot, 'package.json'))
     if (!metadata.os?.includes(platform) || !metadata.cpu?.includes(arch)) throw new Error('libvips 平台包架构不一致')
   }
-  const binaries = (await readdir(join(libvipsRoot, 'lib'))).filter(name => /\.(dylib|dll)$/.test(name))
+  const binaries = (await readdir(join(libvipsRoot, 'lib'))).filter(name => /\.(dylib|dll|so)(\.\d+)*$/.test(name))
   if (!binaries.length) throw new Error('缺少 libvips 本机动态库')
   for (const name of binaries) await verifyBinary(join(libvipsRoot, 'lib', name), platform, arch)
   const require = createRequire(join(project, 'package.json'))
