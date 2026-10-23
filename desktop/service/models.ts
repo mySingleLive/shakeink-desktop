@@ -7,6 +7,7 @@ import { getDatabaseContext, LOCAL_AUTHOR_ID } from "./context"
 import { restoreTaskDefaults, type TaskDefaults } from "../shared/task-defaults"
 import { currentChatExecution } from '../../src/lib/chat-execution'
 import { officialHostedContextWindow } from '../shared/provider-capabilities'
+import { MODEL_RESPONSE_MESSAGES } from '../../src/lib/ai/error-classification'
 
 type Call = <T>(method: string, value?: unknown) => Promise<T>
 let callMain: Call | undefined
@@ -96,7 +97,12 @@ export const localModelFetch: typeof fetch = async (input, init) => {
     })
     if (headers.status === 204 || headers.status === 304) { await stream.cancel(); return new Response(null, headers) }
     return new Response(stream, headers)
-  } catch (error) { cleanup(); void call("model.cancel", id).catch(() => undefined); throw error }
+  } catch (error) {
+    cleanup(); void call("model.cancel", id).catch(() => undefined)
+    request.signal.throwIfAborted()
+    if (error instanceof Error && error.message === "MODEL_RESPONSE_INVALID") throw new ContentError("MODEL_RESPONSE_INVALID", MODEL_RESPONSE_MESSAGES.MODEL_RESPONSE_INVALID, 502)
+    throw error
+  }
 }
 
 /** Semantic IMAGE transport: the worker receives verified bytes, never a provider URL. */

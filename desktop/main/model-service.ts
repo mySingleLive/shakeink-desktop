@@ -69,10 +69,12 @@ export class ModelService {
     try {
       const model = await this.resolve({ id: input.modelId, role: input.kind === "TEXT" ? "text" : "image" })
       if (transfer.canceled || model.authRevision !== input.authRevision) throw new ModelAuthorizationError("AUTHORIZATION_REVOKED")
+      let streamingText = false
       if (input.method === "POST") {
-        let payload: { model?: unknown }
+        let payload: { model?: unknown; stream?: unknown }
         try { payload = JSON.parse(input.body ?? "") } catch { throw new Error("模型请求正文无效") }
         if (!payload || payload.model !== model.modelId) throw new ModelAuthorizationError("MODEL_REQUEST_MISMATCH")
+        streamingText = input.kind === "TEXT" && payload.stream === true
       }
       transfer.lease = this.gateway.begin(input.modelId, input.kind)
       if (transfer.lease.authRevision !== input.authRevision) throw new ModelAuthorizationError("AUTHORIZATION_REVOKED")
@@ -82,6 +84,11 @@ export class ModelService {
       if (!response.ok) {
         await response.body?.cancel()
         response = Response.json({ error: { message: `模型接口请求失败（HTTP ${response.status}）`, code: `HTTP_${response.status}` } }, { status: response.status, headers: { ...(response.headers.has("retry-after") ? { "retry-after": response.headers.get("retry-after")! } : {}) } })
+      }
+      if (response.ok && streamingText && response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "text/event-stream") {
+        await response.body?.cancel().catch(() => undefined)
+        if (transfer.canceled || transfer.lease.signal.aborted) throw new ModelAuthorizationError("AUTHORIZATION_REVOKED")
+        throw new ModelAuthorizationError("MODEL_RESPONSE_INVALID")
       }
       transfer.reader = (response.body ?? new ReadableStream<Uint8Array>({ start(controller) { controller.close() } })).getReader()
       return { id: input.id, status: response.status, headers: Object.fromEntries([...response.headers].filter(([name]) => ["content-type", "retry-after"].includes(name))) }

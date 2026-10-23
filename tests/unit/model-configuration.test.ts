@@ -188,6 +188,120 @@ test("saved blank Key reuses only exact saved scope and rejects unavailable/dele
     failure(await f.service.discover("a", randomUUID(), input), "AUTHORIZATION_REVOKED"); assert.equal(calls, 1)
   } finally { await f.close() }
 })
+test("RELAY-01/03: custom OpenAI root addresses use v1 once without changing the stored credential scope or wire", async () => {
+  for (const endpoint of ["https://relay.fixture.invalid", "https://relay.fixture.invalid/"]) for (const modelId of ["relay-text", "gpt-6.1-sol"]) {
+    const calls: string[] = []
+    const f = await fixture(async (url, init) => {
+      const path = new URL(String(url)).pathname; calls.push(path)
+      assert.equal(new Headers(init?.headers).get("authorization"), `Bearer ${secret}`)
+      if (path.endsWith("/models")) return json({ data: [{ id: modelId, output_modalities: ["text"] }] })
+      return modelId === "gpt-6.1-sol" ? json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: "OK" }] }] }) : json({ choices: [{ message: { content: "OK" }, finish_reason: "stop" }] })
+    })
+    try {
+      const saved = await save(f, { ...draft("custom"), endpoint, modelId })
+      const input = { ...draft("custom"), endpoint, modelId, id: saved.models[0].id, apiKey: "" }
+      assert.equal((await f.service.test("relay", randomUUID(), input, { authorizeCharge: true })).ok, true)
+      assert.deepEqual(calls, [modelId === "gpt-6.1-sol" ? "/v1/responses" : "/v1/chat/completions"], "A connection test sends one request to the original wire API")
+      assert.equal((await f.service.discover("relay", randomUUID(), input)).ok, true)
+      assert.deepEqual(calls.slice(1), ["/v1/models"])
+      assert.deepEqual(await f.repository.read(), saved, "Request normalization must not rewrite persisted endpoint, revision or credential scope")
+    } finally { await f.close() }
+  }
+})
+test("RELAY-02: custom OpenAI explicit API prefixes and other protocol roots retain their existing paths", async () => {
+  for (const [endpoint, protocol, kind, path] of [
+    ["https://relay.fixture.invalid/v1", "openai", "TEXT", "/v1/chat/completions"],
+    ["https://relay.fixture.invalid/v1/", "openai", "TEXT", "/v1/chat/completions"],
+    ["https://relay.fixture.invalid/api/proxy/v1", "openai", "TEXT", "/api/proxy/v1/chat/completions"],
+    ["https://relay.fixture.invalid/compatible", "openai", "TEXT", "/compatible/chat/completions"],
+    ["https://relay.fixture.invalid/", "anthropic", "TEXT", "/v1/messages"],
+    ["https://relay.fixture.invalid/", "openai", "IMAGE", "/images/generations"],
+  ] as const) {
+    const calls: string[] = []
+    const f = await fixture(async url => {
+      calls.push(new URL(String(url)).pathname)
+      return kind === "IMAGE" ? json({ data: [{ b64_json: "YWJjZA==" }] }) : protocol === "anthropic" ? json({ content: [{ type: "text", text: "OK" }] }) : json({ choices: [{ message: { content: "OK" }, finish_reason: "stop" }] })
+    })
+    try {
+      assert.equal((await f.service.test("relay", randomUUID(), { ...draft("custom", kind), endpoint, protocol }, { authorizeCharge: true })).ok, true)
+      assert.deepEqual(calls, [path])
+    } finally { await f.close() }
+  }
+})
+test("RELAY-04: equal effective API prefixes never implicitly reuse a changed saved credential scope", async () => {
+  let calls = 0
+  const f = await fixture(async (url, init) => {
+    calls++
+    assert.equal(new URL(String(url)).pathname, "/v1/chat/completions")
+    assert.equal(new Headers(init?.headers).get("authorization"), `Bearer ${secret}`)
+    return json({ choices: [{ message: { content: "OK" }, finish_reason: "stop" }] })
+  })
+  try {
+    const saved = await save(f, { ...draft("custom"), endpoint: "https://relay.fixture.invalid/" })
+    const changed = { ...draft("custom"), endpoint: "https://relay.fixture.invalid/v1", id: saved.models[0].id }
+    failure(await f.service.test("relay", randomUUID(), { ...changed, apiKey: "" }, { authorizeCharge: true }), "SAVED_SCOPE_MISMATCH")
+    assert.equal(calls, 0)
+    assert.equal((await f.service.test("relay", randomUUID(), changed, { authorizeCharge: true })).ok, true)
+    assert.equal(calls, 1)
+    assert.deepEqual(await f.repository.read(), saved, "Testing an explicit new scope must still require manual save")
+  } finally { await f.close() }
+})
+test("RELAY-02/11: normalized custom roots keep URL and redirect authorization checks", async () => {
+  const calls: string[] = []
+  const f = await fixture(async url => {
+    calls.push(String(url))
+    return new Response(null, { status: 307, headers: { location: "https://other.fixture.invalid/v1/chat/completions" } })
+  })
+  try {
+    for (const endpoint of ["not a url", "https://user:pass@relay.fixture.invalid/", "https://relay.fixture.invalid/?key=fixture", "https://relay.fixture.invalid/#fragment"]) {
+      failure(await f.service.test("relay", randomUUID(), { ...draft("custom"), endpoint }, { authorizeCharge: true }), "INVALID_DRAFT")
+    }
+    assert.equal(calls.length, 0)
+    failure(await f.service.test("relay", randomUUID(), { ...draft("custom"), endpoint: "https://relay.fixture.invalid/" }, { authorizeCharge: true }), "NETWORK_ERROR")
+    assert.deepEqual(calls, ["https://relay.fixture.invalid/v1/chat/completions"])
+  } finally { await f.close() }
+})
+test("WIRE-04/05: explicit custom APIs override official names and use generic bounded probes once", async () => {
+  for (const [wire, modelId] of [["chat", "gpt-6.1-sol"], ["responses", "relay-unknown"], ["responses", "gpt-5.6-cyber"]] as const) {
+    const calls: Array<{ path: string; body: Record<string, unknown> }> = []
+    const f = await fixture(async (url, init) => {
+      const path = new URL(String(url)).pathname; calls.push({ path, body: JSON.parse(String(init?.body)) })
+      return path.endsWith("/responses") ? json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: "OK" }] }] }) : json({ choices: [{ message: { content: "OK" }, finish_reason: "stop" }] })
+    })
+    try {
+      assert.equal((await f.service.test("wire", randomUUID(), { ...draft("custom"), endpoint: "https://relay.fixture.invalid/", modelId, wire }, { authorizeCharge: true })).ok, true)
+      assert.equal(calls.length, 1)
+      assert.equal(calls[0].path, wire === "chat" ? "/v1/chat/completions" : "/v1/responses")
+      const body = calls[0].body
+      assert.equal(body[wire === "chat" ? "max_tokens" : "max_output_tokens"], 1024)
+      assert.equal(body.reasoning, undefined); assert.equal(body.reasoning_effort, undefined); assert.equal(body.access_programs, undefined)
+      if (wire === "responses") { assert.equal(body.store, false); assert.equal(body.background, false); assert.equal(typeof body.input, "string"); assert.equal(body.messages, undefined) }
+      else { assert.ok(Array.isArray(body.messages)); assert.equal(body.input, undefined); assert.equal(body.max_completion_tokens, undefined) }
+    } finally { await f.close() }
+  }
+})
+test("WIRE-01: malformed wire values fail before requesting a provider", async () => {
+  let calls = 0
+  const f = await fixture(async () => { calls++; return json({ choices: [{ message: { content: "OK" } }] }) })
+  try {
+    for (const wire of ["invalid", "CHAT", 1, null, {}]) failure(await f.service.test("wire", randomUUID(), { ...draft("custom"), wire } as never, { authorizeCharge: true }), "INVALID_DRAFT")
+    assert.equal(calls, 0)
+  } finally { await f.close() }
+})
+test("WIRE-01/05: legacy and auto custom models keep the former Responses request and capabilities", async () => {
+  for (const wire of [undefined, "auto"] as const) {
+    const calls: Array<{ path: string; body: Record<string, unknown> }> = []
+    const f = await fixture(async (url, init) => {
+      calls.push({ path: new URL(String(url)).pathname, body: JSON.parse(String(init?.body)) })
+      return json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: "OK" }] }] })
+    })
+    try {
+      assert.equal((await f.service.test("wire", randomUUID(), { ...draft("custom"), modelId: "gpt-6.1-sol", ...(wire !== undefined ? { wire } : {}) }, { authorizeCharge: true })).ok, true)
+      assert.equal(calls.length, 1); assert.equal(calls[0].path, "/v1/responses")
+      assert.equal(calls[0].body.max_output_tokens, 2048); assert.deepEqual(calls[0].body.reasoning, { effort: "low" }); assert.equal(calls[0].body.store, false)
+    } finally { await f.close() }
+  }
+})
 test("cancellation is owner-scoped, cancelled IDs remain guarded while active operation bounds apply", async () => {
   const gate = Promise.withResolvers<void>(); let calls = 0; let signal!: AbortSignal
   const f = await fixture(async (_url, init) => { calls++; signal = init!.signal!; await gate.promise; return json({ data: [{ id: "late", output_modalities: ["text"] }] }) }, { maxOperations: 1 })

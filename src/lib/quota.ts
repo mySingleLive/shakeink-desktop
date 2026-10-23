@@ -72,7 +72,7 @@ async function recordActualUsage(input: RecordUsageInput): Promise<number> {
         attemptId: input.attemptId,
         novelId: input.novelId ?? null,
         modelId: input.modelId,
-        modelSnapshot: { id: model.id, name: model.name, provider: model.provider, modelId: model.modelId, kind: model.kind, authRevision: model.authRevision, priceConfigured, inputCostPer1k: model.inputCostPer1k ?? null, outputCostPer1k: model.outputCostPer1k ?? null },
+        modelSnapshot: { id: model.id, name: model.name, provider: model.provider, modelId: model.modelId, kind: model.kind, wire: model.wire ?? "auto", authRevision: model.authRevision, priceConfigured, inputCostPer1k: model.inputCostPer1k ?? null, outputCostPer1k: model.outputCostPer1k ?? null },
         action: input.action,
         promptTokens: input.promptTokens,
         completionTokens: input.completionTokens,

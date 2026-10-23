@@ -90,6 +90,16 @@ export const ERROR_TEXT = {
   connectionReconciling: "连接已中断，正在等待核对",
 } as const
 
+/** Fixed diagnostics shared by the model boundary and its IPC/wire consumers.
+ * Never interpolate provider payloads, request URLs or credentials here. */
+export const MODEL_RESPONSE_MESSAGES = {
+  MODEL_RESPONSE_INVALID: "模型接口未返回有效的流式响应，请检查 API 地址与协议设置后重试",
+  MODEL_OUTPUT_EMPTY: "模型未返回正文或有效工具调用，请检查模型配置后重试",
+  MODEL_OUTPUT_INCOMPLETE: "模型输出未完整结束，已有内容保留，请核对当前结果后重试",
+} as const
+type ModelResponseCode = keyof typeof MODEL_RESPONSE_MESSAGES
+const modelResponseCode = (value: unknown): value is ModelResponseCode => typeof value === "string" && Object.hasOwn(MODEL_RESPONSE_MESSAGES, value)
+
 // ---------------------------------------------------------------- 识别（BFS，沿 cause 链与 RetryError 列表逐层检查，带环保护）
 
 interface MaybeErrorNode {
@@ -259,11 +269,34 @@ export interface ClassifyContext {
   statuses?: Record<string, number>
 }
 const MODEL_CONFIGURATION_CODES = new Set(["AUTHORIZATION_REVOKED", "MODEL_UNAVAILABLE", "MODEL_NOT_SELECTED", "MODEL_NOT_CONFIGURED", "MODEL_KIND_MISMATCH", "MODEL_THINKING_UNSUPPORTED", "MODEL_NOT_FOUND", "MODEL_DISABLED", "MODEL_KEY_MISSING"])
+const MODEL_AUTH_MESSAGES = {
+  MODEL_AUTHENTICATION_FAILED: "模型服务未接受当前 API Key，请在模型设置中检查密钥后重试",
+  MODEL_PERMISSION_DENIED: "当前 API Key 无权访问所选模型或接口，请检查中转支持的接口和模型权限",
+} as const
+type ModelAuthCode = keyof typeof MODEL_AUTH_MESSAGES
+function modelAuthCode(error: MaybeErrorNode): ModelAuthCode | undefined {
+  if (error.statusCode === 401) return "MODEL_AUTHENTICATION_FAILED"
+  if (error.statusCode === 403) return "MODEL_PERMISSION_DENIED"
+  // RPC may preserve only the exact sanitized machine code. Never infer an
+  // HTTP status from arbitrary provider prose or inspect its response body.
+  const codes = [error.code, error.message]
+  if (codes.includes("HTTP_401") || codes.includes("MODEL_AUTHENTICATION_FAILED")) return "MODEL_AUTHENTICATION_FAILED"
+  if (codes.includes("HTTP_403") || codes.includes("MODEL_PERMISSION_DENIED")) return "MODEL_PERMISSION_DENIED"
+  return undefined
+}
+function classifiedModelAuth(code: ModelAuthCode): ClassifiedError {
+  return { ...CATEGORY_DEFAULTS.model_unavailable, code, message: MODEL_AUTH_MESSAGES[code] }
+}
 
-/** 服务端异常 → 分类表唯一映射。识别顺序即优先级：配额 > 超时 > 审核 > 限流 > 网络 > 结构漂移 > 内部。 */
+/** 服务端异常 → 分类表唯一映射。既有本地配置/撤销优先；供应商故障为配额 > 认证/权限 > 超时 > 审核 > 限流 > 网络 > 结构漂移 > 内部。 */
 export function classifyError(err: unknown, context: ClassifyContext = {}): ClassifiedError {
   const modelFailure = findErrorNode(err, e => MODEL_CONFIGURATION_CODES.has(String(e.code ?? e.message)))
   if (modelFailure) return { ...CATEGORY_DEFAULTS.model_unavailable, code: String(modelFailure.code ?? modelFailure.message) }
+  const invalidResponse = findErrorNode(err, e => modelResponseCode(e.code ?? e.message))
+  if (invalidResponse) {
+    const code = (invalidResponse.code ?? invalidResponse.message) as ModelResponseCode
+    return { ...CATEGORY_DEFAULTS.internal, code, message: MODEL_RESPONSE_MESSAGES[code] }
+  }
   if (findErrorNode(err, e => e.name === "NoModelAvailableError")) return { ...CATEGORY_DEFAULTS.model_unavailable }
   const retryUsed = context.retryUsed ?? 0
   const providerCodes = context.providerCodes ?? []
@@ -273,6 +306,8 @@ export function classifyError(err: unknown, context: ClassifyContext = {}): Clas
     return { ...CATEGORY_DEFAULTS.quota_platform, message }
   }
   if (isProviderQuotaError(err)) return { ...CATEGORY_DEFAULTS.quota_provider }
+  const authFailure = findErrorNode(err, error => modelAuthCode(error) !== undefined)
+  if (authFailure) return classifiedModelAuth(modelAuthCode(authFailure)!)
   const stalled = findErrorNode(err, e => e.name === "ModelResponseTimeoutError")
   if (stalled) {
     const idleMs = typeof stalled.idleMs === "number" && stalled.idleMs > 0 ? stalled.idleMs : null
@@ -303,6 +338,9 @@ export function classifyError(err: unknown, context: ClassifyContext = {}): Clas
 export function classifyWireError(code: string | null | undefined, message?: string | null): ClassifiedError {
   const text = typeof message === "string" && /[一-鿿]/.test(message) ? message : null
   if (code && MODEL_CONFIGURATION_CODES.has(code)) return { ...CATEGORY_DEFAULTS.model_unavailable, code, message: text ?? CATEGORY_DEFAULTS.model_unavailable.message }
+  const authFailure = modelAuthCode({ code })
+  if (authFailure) return classifiedModelAuth(authFailure)
+  if (modelResponseCode(code)) return { ...CATEGORY_DEFAULTS.internal, code, message: MODEL_RESPONSE_MESSAGES[code] }
   if (code === "QUOTA_EXHAUSTED") {
     const base = text && text.includes("墨滴") ? CATEGORY_DEFAULTS.quota_platform : CATEGORY_DEFAULTS.quota_provider
     return { ...base, message: text ?? base.message }
@@ -331,7 +369,10 @@ export function chatTerminalError(input: {
 }): { code: string; message: string } {
   if (input.checkpointFailure) return { code: "PERSISTENCE_FAILED", message: "回复未完整保存；已提交的内容变更仍保留，请查看内容面板" }
   if (input.aborted) return { code: "EXECUTION_INTERRUPTED", message: "执行已停止，已保存的进度保留，可核对后继续" }
-  if (input.error instanceof ContentError) return { code: input.error.code, message: input.error.message + (input.writeStarted ? "；已提交改动保留，请核对当前结果" : "") }
+  if (input.error instanceof ContentError) {
+    const authFailure = modelAuthCode(input.error)
+    return { code: authFailure ?? input.error.code, message: (authFailure ? MODEL_AUTH_MESSAGES[authFailure] : input.error.message) + (input.writeStarted ? "；已提交改动保留，请核对当前结果" : "") }
+  }
   const classified = classifyError(input.error, input)
   if (classified.category === "internal" && !isSchemaDriftError(input.error)) {
     return { code: classified.code, message: input.writeStarted ? "生成中断，工具结果待确认，请先核对已保存的改动" : classified.message }

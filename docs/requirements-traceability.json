@@ -1,5 +1,26 @@
 {
   "version": "1.0",
+  "relayCompatibility20261024Revision": {
+    "date": "2026-10-24",
+    "scope": "自定义OpenAI文本中转根地址规范化、共享模型输出校验、明确重输同一凭据、显式Chat/Responses接口与401/403诊断",
+    "status": "software_fixed_external_authorization_pending",
+    "design": "docs/design/2026-10-24-relay-compatibility-fix.md",
+    "cases": "docs/testing/2026-10-24-relay-compatibility-cases.md",
+    "verification": "docs/testing/2026-10-24-relay-compatibility-results.md",
+    "independentCodeReview": "passed after usage snapshot wire fix; audit_installed_transport; no blocking findings; supplemental 119/119 targeted checks passed",
+    "coreAutomatedCoverage": "final full run after production build: 2326/2326 pass, fail/cancelled/skipped/todo 0, exit 0; prior and targeted runs not added",
+    "packagingAutomatedCoverage": "round 1 and round 2: separate 48/48 specified app/ZIP checks passed; round 2 exit 0; 2 unavailable fixed historical samples not counted passed",
+    "installedNativeStartup": "local adhoc macOS arm64: installed main/service/preload hashes match signed volume; codesign verify passed; existing workbench loaded; native quit/reopen restores explicit failed state without stale generating or false success",
+    "actualRelayAcceptance": "explicit Chat saved with existing encrypted credentials, endpoint and model unchanged; minimal main-process test and short chat rejected by upstream; no nonempty reply; exact upstream reason unconfirmed; successful provider generation remains pending",
+    "formalAcceptancePromotion": false,
+    "allRepositoryAcceptancePassed": false,
+    "supplementalDesign": "docs/plans/2026-10-24-explicit-relay-api-design.md",
+    "supplementalCases": "docs/testing/2026-10-24-explicit-relay-api-cases.md",
+    "typecheckAndBuild": "round 2 independent typecheck and production build exited 0",
+    "rollbackBoundary": "private app and encrypted pre-wire configuration recovery points kept outside repository; old strict schema rollback requires matching configuration restore",
+    "objectiveComplete": false,
+    "upstreamRejectionCause": "unknown; relay group/resource authorization and edge WAF/source IP policies remain possibilities, not confirmed causes"
+  },
   "version01Revision": {
     "date": "2026-10-19",
     "displayVersion": "0.1",

@@ -5,12 +5,66 @@ import { readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { ModelRepository, type ModelDraft } from "../../desktop/main/model-repository"
+import { ModelGateway } from "../../desktop/core/model-authorization"
 
 const draft: ModelDraft = { name: "夹具模型", provider: "custom", protocol: "openai", modelId: "fixture", endpoint: "https://model.test/v1", kind: "TEXT", contextWindow: 128000, enabled: true, thinkingLevels: ["default"], defaultThinking: "default", apiKey: "public-fixture-only-key" }
 async function fixture(run: (path: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), "xuanxiang-vault-")); try { await run(join(root, "state.json")) } finally { await rm(root, { recursive: true, force: true }) }
 }
 const protection = { isEncryptionAvailable: () => true, encryptString: (key: string) => Buffer.from("OS-CIPHER:" + [...key].reverse().join("")), decryptString: (value: Buffer) => value.toString().slice(10).split("").reverse().join("") }
+
+test("WIRE-01/03: API choices persist without migrating legacy state and undefined/auto preserve authorization", () => fixture(async path => {
+  const repo = new ModelRepository(path, protection, { replace() {}, remove() {} })
+  const legacy = await repo.saveModel(0, draft); const id = legacy.models[0].id
+  assert.equal((legacy.models[0] as {wire?:string}).wire, undefined)
+  const auto = await repo.saveModel(legacy.revision, { ...draft, id, apiKey: "", wire: "auto" })
+  assert.equal(auto.models[0].authRevision, legacy.models[0].authRevision)
+  const implicit = await repo.saveModel(auto.revision, { ...draft, id, apiKey: "" })
+  assert.equal(implicit.models[0].authRevision, legacy.models[0].authRevision)
+  const explicit = await repo.saveModel(implicit.revision, { ...draft, id, apiKey: "", wire: "chat" })
+  assert.equal(explicit.models[0].authRevision, legacy.models[0].authRevision + 1)
+  assert.equal(await repo.keyFor(id, explicit.models[0].authRevision), draft.apiKey)
+  const reopened = await new ModelRepository(path, protection, { replace() {}, remove() {} }).initialize()
+  assert.equal((reopened.models[0] as {wire?:string}).wire, "chat")
+  const unchanged = await repo.saveModel(explicit.revision, { ...draft, id, apiKey: "", wire: "chat" })
+  assert.equal(unchanged.models[0].authRevision, explicit.models[0].authRevision)
+  const responses = await repo.saveModel(unchanged.revision, { ...draft, id, apiKey: "", wire: "responses" })
+  assert.equal(responses.models[0].authRevision, explicit.models[0].authRevision + 1)
+  assert.equal(responses.models[0].wire, "responses")
+  await assert.rejects(repo.saveModel(responses.revision, { ...draft, id, wire: "invalid" } as never))
+}))
+
+test("WIRE-03: changing only an API choice keeps credentials and defaults but revokes idle, queued and reading leases", () => fixture(async path => {
+  let repo!: ModelRepository; let holdKey = false; let sent = 0
+  let releaseKey!: (value: string) => void; let enteredKey!: () => void
+  const pendingKey = new Promise<string>(resolve => { releaseKey = resolve })
+  const keyRead = new Promise<void>(resolve => { enteredKey = resolve })
+  const gateway = new ModelGateway({
+    keyFor: async (id, revision) => { if (holdKey) { enteredKey(); return pendingKey }; return repo.keyFor(id, revision) },
+    fetch: async () => { sent++; return new Response(new ReadableStream<Uint8Array>({ start() {} })) },
+  })
+  repo = new ModelRepository(path, protection, gateway)
+  let saved = await repo.saveModel(0, draft); const model = saved.models[0]
+  saved.settings.agent.textModelId = model.id; saved.settings.agent.reviewModelId = model.id
+  saved = await repo.updateSettings(saved.revision, saved.settings)
+  const before = JSON.parse(await readFile(path, "utf8"))
+  const idle = gateway.begin(model.id, "TEXT")
+  const reading = gateway.begin(model.id, "TEXT")
+  const response = await gateway.fetch(reading, draft.endpoint + "/chat/completions")
+  const reader = response.body!.getReader(); const pendingRead = reader.read(); const rejectedRead = assert.rejects(pendingRead, /AUTHORIZATION_REVOKED/)
+  const queued = gateway.begin(model.id, "TEXT"); holdKey = true
+  const pendingRequest = gateway.fetch(queued, draft.endpoint + "/chat/completions"); const rejectedRequest = assert.rejects(pendingRequest, /AUTHORIZATION_REVOKED/)
+  await keyRead
+  const next = await repo.saveModel(saved.revision, { ...draft, id: model.id, apiKey: "", wire: "chat" })
+  releaseKey(draft.apiKey)
+  await rejectedRead; await rejectedRequest; reader.releaseLock()
+  assert.equal(idle.signal.aborted, true); assert.equal(reading.signal.aborted, true); assert.equal(queued.signal.aborted, true)
+  assert.equal(sent, 1)
+  assert.equal(next.models[0].authRevision, model.authRevision + 1)
+  assert.deepEqual(next.settings.agent, saved.settings.agent)
+  const after = JSON.parse(await readFile(path, "utf8"))
+  assert.equal(after.value.models[0].encryptedKey, before.value.models[0].encryptedKey)
+}))
 
 test("model configuration preserves unknown context size instead of inventing a provider capacity", () => fixture(async path => {
   const repo = new ModelRepository(path, protection, { replace() {}, remove() {} })

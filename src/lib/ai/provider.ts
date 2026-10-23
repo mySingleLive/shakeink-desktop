@@ -6,9 +6,11 @@ import type { SharedV4ProviderOptions } from "@ai-sdk/provider"
 import type { AIModel, ModelTier } from "@/generated/prisma/client"
 import { currentChatExecution } from "@/lib/chat-execution"
 import { assertModelAuthorization, bindModelFetch, localModelFetch, localModelRecord, resolveLocalModel, snapshotForRecord } from "@desktop/service/models"
-import { officialModel } from "@desktop/shared/provider-capabilities"
+import { normalizeModelEndpoint } from "@desktop/shared/modelEndpoint"
+import { resolveOpenAITextPolicy } from "@desktop/shared/modelWirePolicy"
 import { authorizeModelOutput, nonStreamingModel } from "./nonstreaming-model"
 import { toolCompatibleModel } from "./tool-compatible-model"
+import { validatedModel } from "./validatedModel"
 import { modelResponseTimeoutFetch } from "./timeouts"
 import { buildThinkingProviderOptions } from "./thinking-effort"
 import { providerFamily } from "./provider-family"
@@ -70,9 +72,12 @@ export function instantiateModel(modelRecord: AIModel, opts: GetModelForUserOpti
   let providerOptions = providerOptionsForThinking(snapshot, effort)
   const fetch = bindModelFetch(snapshot, modelResponseTimeoutFetch(opts.fetch ?? localModelFetch))
   // An inert SDK placeholder; main removes this header and injects the OS-protected key.
-  const sdkEndpoint = snapshot.protocol === "anthropic" && !new URL(snapshot.endpoint).pathname.replace(/\/+$/, "").endsWith("/v1") ? snapshot.endpoint.replace(/\/+$/, "") + "/v1" : snapshot.endpoint
+  const endpoint = normalizeModelEndpoint(snapshot.endpoint, snapshot)
+  const sdkEndpoint = snapshot.protocol === "anthropic" && !new URL(endpoint).pathname.replace(/\/+$/, "").endsWith("/v1") ? endpoint.replace(/\/+$/, "") + "/v1" : endpoint
   const openaiProtocol = snapshot.protocol === "openai" && ["openai", "custom"].includes(snapshot.provider)
-  const capability = officialModel(openaiProtocol ? "openai" : snapshot.provider, snapshot.modelId)
+  const policy = resolveOpenAITextPolicy(snapshot)
+  const capability = policy.capability
+  if (policy.customExplicit && policy.wire === "chat") providerOptions = { ...providerOptions, openai: { ...providerOptions?.openai, forceReasoning: false, systemMessageMode: "system" } }
   // The installed SDK has no access_programs option; add this documented
   // field only to the exact approved model's Responses requests.
   const sdkFetch: typeof fetch = openaiProtocol && capability?.accessProgram ? (url, init) => {
@@ -80,14 +85,15 @@ export function instantiateModel(modelRecord: AIModel, opts: GetModelForUserOpti
     return fetch(url, init)
   } : fetch
   const options = { apiKey: "desktop-main-vault", baseURL: sdkEndpoint, fetch: sdkFetch }
-  if (openaiProtocol && capability?.wire === "responses") providerOptions = { ...providerOptions, openai: { ...providerOptions?.openai, store: false } }
+  if (openaiProtocol && policy.wire === "responses") providerOptions = { ...providerOptions, openai: { ...providerOptions?.openai, store: false } }
   let model = snapshot.protocol === "anthropic" ? createAnthropic(options)(snapshot.modelId)
     : ["deepseek", "kimi", "zhipu"].includes(providerFamily(snapshot.provider)) ? createDeepSeek(options)(snapshot.modelId)
-    : openaiProtocol && capability?.wire === "responses" ? createOpenAI(options).responses(snapshot.modelId)
+    : openaiProtocol && policy.wire === "responses" ? createOpenAI(options).responses(snapshot.modelId)
     : createOpenAI(options).chat(snapshot.modelId)
   const nonstreaming = openaiProtocol && capability?.streaming === false
   if (nonstreaming) model = nonStreamingModel(model)
   model = toolCompatibleModel(model as Exclude<LanguageModel, string>, snapshot.id)
+  model = validatedModel(model)
   if (nonstreaming) model = authorizeModelOutput(model, () => assertModelAuthorization(snapshot))
   return { model, modelRecord, providerOptions }
 }

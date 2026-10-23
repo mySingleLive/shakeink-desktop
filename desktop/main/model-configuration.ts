@@ -7,6 +7,8 @@ import { PROVIDER_PRESETS, type CatalogEntry, type CatalogResult, type Configura
 import { discoverAlibaba, discoverTencent, discoverByteDance, testGoogleImage, testAlibabaImage, testTencentImage, testByteDanceImage, parseUsage, ProviderAdapterError, type ProviderAdapterContext } from "./model-provider-adapters"
 import { officialModel, LEGACY_OFFICIAL_ENDPOINTS, OPENAI_LIFECYCLE_SOURCE, testOutputBudget, openaiUsesCompletionLimit } from "../shared/provider-capabilities"
 import { excludedBuiltinModel } from "../shared/builtin-model-catalog"
+import { normalizeModelEndpoint } from "../shared/modelEndpoint"
+import { resolveOpenAITextPolicy } from "../shared/modelWirePolicy"
 export interface ModelConfigurationOptions {
   repository: Pick<ModelRepository, "read" | "keyFor">
   gateway: ModelGateway
@@ -142,10 +144,11 @@ export class ModelConfigurationService {
   }
   private validateDraft(input: ConfigurationDraft): ConfigurationDraft {
     if (!input || typeof input !== "object") throw new ConfigurationError("INVALID_DRAFT")
-    const { id, provider, kind, protocol, endpoint, apiKey, modelId } = input
+    const { id, provider, kind, protocol, endpoint, apiKey, modelId, wire } = input
     if (!PROVIDER_PRESETS.some(p => p.id === provider) || !["TEXT", "IMAGE"].includes(kind) || !["openai", "anthropic"].includes(protocol) || typeof endpoint !== "string" || endpoint.length > 2048 || typeof apiKey !== "string" || apiKey.length > 8192 || /[\x00-\x1f\x7f]/.test(apiKey) || (id !== undefined && (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) || (modelId !== undefined && (typeof modelId !== "string" || modelId.length > 200 || /[\x00-\x1f\x7f]/.test(modelId)))) throw new ConfigurationError("INVALID_DRAFT")
+    if (wire !== undefined && !["auto", "chat", "responses"].includes(wire)) throw new ConfigurationError("INVALID_DRAFT")
     try { const url = validateModelEndpoint(endpoint); if (url.search) throw Error("query") } catch { throw new ConfigurationError("INVALID_DRAFT") }
-    return { id, provider, kind, protocol, endpoint, apiKey: apiKey.trim(), modelId: modelId?.trim() }
+    return { id, provider, kind, protocol, endpoint, apiKey: apiKey.trim(), modelId: modelId?.trim(), ...(wire !== undefined ? { wire } : {}) }
   }
   private async execute<T extends CatalogResult | ConnectionTestResult>(owner: string, id: string, input: ConfigurationDraft, signal: AbortSignal | undefined, action: (op: Operation) => Promise<T>, commit?: (op: Operation, result: T) => Promise<void>): Promise<T | ConfigurationFailure> {
     if (this.closed) return fail("CANCELLED")
@@ -228,6 +231,7 @@ export class ModelConfigurationService {
   }
   private useGateway(op: Operation, base: string, protocol: Operation["protocol"]) {
     this.assertCurrent(op); if (op.gateway && op.lease) op.gateway.finish(op.lease)
+    const requestBase = normalizeModelEndpoint(base, { provider: op.draft.provider, protocol, kind: op.draft.kind })
     op.gateway = new ModelGateway({
       keyFor: () => this.authorizedKey(op),
       fetch: (url, init) => {
@@ -237,7 +241,7 @@ export class ModelConfigurationService {
         return this.options.fetch(url, { ...init, signal: AbortSignal.any([op.controller.signal, ...(init?.signal ? [init.signal] : [])]) })
       },
     })
-    const id = randomUUID(); op.gateway.replace({ id, authRevision: 1, endpoint: base, kind: op.draft.kind, enabled: true, protocol }); op.lease = op.gateway.begin(id, op.draft.kind); op.base = base; op.draft.apiKey = ""
+    const id = randomUUID(); op.gateway.replace({ id, authRevision: 1, endpoint: requestBase, kind: op.draft.kind, enabled: true, protocol }); op.lease = op.gateway.begin(id, op.draft.kind); op.base = requestBase; op.draft.apiKey = ""
   }
   private async request(op: Operation, path: string, body?: Json, headers?: Record<string, string>): Promise<Json> {
     this.assertCurrent(op)
@@ -360,9 +364,10 @@ export class ModelConfigurationService {
     if (kind === "TEXT") {
       // No invented thinking mode/tool/capacity metadata for unknown models.
       this.useGateway(op, endpoint, protocol)
-      const capability = officialModel(provider === "custom" && protocol === "openai" ? "openai" : provider, modelId!)
-      const responses = ["openai", "custom"].includes(provider) && protocol === "openai" && capability?.wire === "responses"
-      const budget = testOutputBudget(provider, modelId!)
+      const policy = resolveOpenAITextPolicy({ ...op.draft, modelId: modelId! })
+      const { capability } = policy
+      const responses = policy.wire === "responses"
+      const budget = policy.customExplicit ? 1024 : testOutputBudget(provider, modelId!)
       path = responses ? "/responses" : protocol === "anthropic" ? (new URL(endpoint).pathname.replace(/\/+$/, "").endsWith("/v1") ? "/messages" : "/v1/messages") : "/chat/completions"
       const totalOutputLimit = provider === "openai" ? openaiUsesCompletionLimit(modelId!) : ["moonshot", "xiaomi", "alibaba", "minimax"].includes(provider) || (provider === "bytedance" && modelId !== "doubao-seed-translation-250915")
       body = responses ? { model: modelId, input: "Reply only with OK.", max_output_tokens: budget, store: false, background: false, ...(capability?.testEffort ? { reasoning: { effort: capability.testEffort } } : {}), ...(capability?.accessProgram ? { access_programs: { cyber: capability.accessProgram } } : {}) }

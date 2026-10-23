@@ -3,6 +3,7 @@
  */
 export type ConfigurationKind = "TEXT" | "IMAGE"
 export type ConfigurationProtocol = "openai" | "anthropic"
+export type ModelWire = "auto" | "chat" | "responses"
 export type PresetProviderId = "openai" | "anthropic" | "google" | "xai" | "deepseek" | "moonshot" | "zai" | "xiaomi" | "alibaba" | "minimax" | "tencent" | "bytedance"
 export type ConfigurationProviderId = PresetProviderId | "custom"
 export interface ProviderPreset {
@@ -21,6 +22,7 @@ export interface ConfigurationDraft {
   endpoint: string
   apiKey: string
   modelId?: string
+  wire?: ModelWire
 }
 export interface CatalogEntry {
   id: string

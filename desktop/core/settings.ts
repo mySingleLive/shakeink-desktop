@@ -10,6 +10,7 @@ export const modelSchema = z.object({
   id: z.string().uuid(), name: z.string().trim().min(1).max(120), provider: z.string().min(1).max(40),
   protocol: z.enum(["openai", "anthropic"]), providerName: z.string().trim().max(80).optional(), modelId: z.string().trim().min(1).max(200),
   endpoint: z.string().url().max(2048), kind: z.enum(["TEXT", "IMAGE"]),
+  wire: z.enum(["auto", "chat", "responses"]).optional(),
   contextWindow: z.union([z.literal(0), z.number().int().min(1024).max(100_000_000)]), enabled: z.boolean(), authRevision: z.number().int().positive(),
   encryptedKey: z.string().min(1).max(32000), keyMask: z.string().max(30),
   thinkingLevels: z.array(z.string().max(30)).max(12), defaultThinking: z.string().max(30),

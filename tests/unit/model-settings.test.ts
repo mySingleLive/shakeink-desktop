@@ -376,6 +376,56 @@ test("model configuration: editing a refilled Key submits only the replacement",
     assert.equal(ui.writes.length,1);assert.equal((ui.writes[0] as {apiKey:string}).apiKey,"replacement-key-fixture");assert.equal(ui.closed(),1)
   }finally{ui.finish()}
 })
+test("RELAY-04: explicitly retyping the revealed Key after an endpoint edit submits it for test and save",async()=>{
+  const retained=sample({provider:"custom",providerName:"夹具中转",endpoint:"https://relay.fixture.invalid/",thinkingLevels:[],defaultThinking:"default"})
+  const ui=configuration({model:retained,reveal:async()=>"saved-key-fixture",test:async()=>({ok:true,modelId:retained.modelId,kind:"TEXT",verifiedAt:new Date().toISOString(),durationMs:1,scope:"single-model"})})
+  try{
+    await ui.settle()
+    ui.fill("Base URL","https://relay.fixture.invalid/v1")
+    assert.equal(ui.find("API Key").element.props.value,"")
+    ui.click("测试连接");await ui.settle()
+    assert.equal(ui.tested.length,0,"An edited scope cannot silently reuse the saved credential")
+    assert.ok(ui.all().some(surface=>surface.element.props.role==="alert"&&surface.name==="请输入 API Key"))
+    ui.fill("API Key","saved-key-fixture")
+    ui.click("测试连接");await ui.settle()
+    assert.equal(ui.tested.length,1);assert.equal(ui.tested[0].apiKey,"saved-key-fixture")
+    assert.equal(ui.tested[0].endpoint,"https://relay.fixture.invalid/v1")
+    ui.click("返回配置");ui.click("保存模型");await ui.settle()
+    assert.equal(ui.writes.length,1);assert.equal((ui.writes[0] as {apiKey:string}).apiKey,"saved-key-fixture")
+    assert.equal(ui.closed(),1)
+  }finally{ui.finish()}
+})
+test("WIRE-02: new custom text configurations default Chat and keep explicit choices in test/save drafts",async()=>{
+  const ui=configuration({test:async()=>({ok:true,modelId:"gpt-6.1-sol",kind:"TEXT",verifiedAt:new Date().toISOString(),durationMs:1,scope:"single-model"})})
+  try{
+    ui.choose("供应商","custom");ui.fill("供应商名称","夹具中转");ui.choose("协议","openai")
+    assert.equal(ui.find("OpenAI 接口").element.props.value,"chat")
+    ui.fill("展示名称","夹具");ui.fill("模型 ID","gpt-6.1-sol");ui.fill("Base URL","https://relay.fixture.invalid/");ui.fill("API Key","wire-public-fixture")
+    ui.choose("OpenAI 接口","responses")
+    assert.equal(ui.find("API Key").element.props.value,"wire-public-fixture");assert.equal(ui.writes.length,0)
+    ui.click("测试连接");await ui.settle()
+    assert.equal((ui.tested[0] as catalog.ConfigurationDraft & {wire:string}).wire,"responses")
+    ui.click("返回配置");ui.click("保存模型");await ui.settle()
+    assert.equal((ui.writes[0] as {wire:string}).wire,"responses")
+  }finally{ui.finish()}
+})
+test("WIRE-02: saved legacy custom text shows auto; changing only wire preserves the saved Key and cancel",async()=>{
+  const retained=sample({provider:"custom",providerName:"夹具中转",endpoint:"https://relay.fixture.invalid/",thinkingLevels:[],defaultThinking:"default"})
+  const ui=configuration({model:retained,reveal:async()=>"wire-saved-fixture",test:async()=>({ok:true,modelId:retained.modelId,kind:"TEXT",verifiedAt:new Date().toISOString(),durationMs:1,scope:"single-model"})})
+  try{
+    await ui.settle();assert.equal(ui.find("OpenAI 接口").element.props.value,"auto")
+    ui.choose("OpenAI 接口","chat");assert.equal(ui.find("API Key").element.props.value,"wire-saved-fixture")
+    ui.click("测试连接");await ui.settle()
+    assert.equal((ui.tested[0] as catalog.ConfigurationDraft & {wire:string}).wire,"chat");assert.equal(ui.tested[0].apiKey,"")
+    ui.click("返回配置");ui.click("取消");assert.equal(ui.writes.length,0);assert.equal(ui.closed(),1)
+  }finally{ui.finish()}
+})
+test("WIRE-02: official, Anthropic and image configurations do not show an OpenAI API selector",async()=>{
+  for(const model of [sample(),sample({provider:"custom",protocol:"anthropic"}),sample({provider:"custom",kind:"IMAGE"})]){
+    const ui=configuration({model,kind:model.kind})
+    try{assert.equal(ui.query("OpenAI 接口"),undefined)}finally{ui.finish()}
+  }
+})
 
 test("model configuration: failed reveal keeps the field empty and masked with keep-on-blank semantics",async()=>{
   const ui=configuration({model:sample(),reveal:async()=>{throw new Error("系统密钥解密失败，请重新配置此模型")}})

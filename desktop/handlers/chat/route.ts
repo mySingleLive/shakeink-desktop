@@ -379,11 +379,14 @@ export async function POST(request: Request) {
                 usage = await Promise.resolve(result.totalUsage).catch(() => null)
                 if (usage && (usage.inputTokens !== undefined || usage.outputTokens !== undefined)) await recordUsage({ turnId: scope.turnId, attemptId: scope.attemptId, userId, novelId: conversation.novelId ?? undefined, modelId: modelRecord.id, modelSnapshot: snapshotForRecord(modelRecord), action: "chat", promptTokens: usage.inputTokens ?? 0, completionTokens: usage.outputTokens ?? 0 }).catch(console.error)
                 if (error || !finish || signal.aborted) throw error ?? new TypeError("network stream interrupted")
+                const steps = await result.steps
+                // A finish envelope alone is not a completed reply. Keep this
+                // business check even when a provider adapter validates output.
+                if (!steps.some(step => step.text.trim() || step.toolCalls.length)) throw new ContentError("MODEL_OUTPUT_EMPTY", "模型服务未返回正文或有效工具调用，请检查模型配置后重试", 502)
                 if (interaction) break
                 // 只检查最后一步，早先的采用/保存不能冒充后面宣布的评审回执。
                 if (hasModelResponseTimeout([...calls.values()]) || hasRepeatedToolFailure([...calls.values()])) break
                 const unresolvedTask = action?.kind === "storyTask" && !hasActionReceipt(action, [...priorReceipts, ...calls.values()], false)
-                const steps = await result.steps
                 const stepLimited = steps.length >= 32
                 const declared = hasUnexecutedDeclaration(steps)
                 if (!unresolvedTask && !stepLimited && !declared) break

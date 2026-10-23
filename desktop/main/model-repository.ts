@@ -86,7 +86,7 @@ export class ModelRepository {
     const key = apiKey.trim()
     if (key.length > 8192 || /[\r\n\0]/.test(key)) throw new Error("API Key格式无效")
     if (!key && (!prior || changedScope)) throw new Error("请为此供应商和端点输入API Key")
-    const revoked = !!key || changedScope || (prior && (prior.enabled !== draft.enabled || prior.modelId !== draft.modelId))
+    const revoked = !!key || changedScope || (prior && (prior.enabled !== draft.enabled || prior.modelId !== draft.modelId || (prior.wire ?? "auto") !== (draft.wire ?? "auto")))
     const next = modelSchema.parse({ ...properties, id: prior?.id ?? creationId ?? randomUUID(), authRevision: prior ? prior.authRevision + (revoked ? 1 : 0) : 1,
       encryptedKey: key ? this.encrypt(key) : prior!.encryptedKey,
       keyMask: "••••••••" })

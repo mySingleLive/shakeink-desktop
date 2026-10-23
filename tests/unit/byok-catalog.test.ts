@@ -71,7 +71,8 @@ test("B01/B12: China defaults and exact legacy official addresses", async () => 
     assert.equal(rejected.ok, false); assert.equal(calls, 2)
   })
 })
-test("B02/B03: exact OpenAI snapshots, lifecycle and unknown future IDs", async () => {
+test("B02/B03: exact OpenAI snapshots, lifecycle and unknown future IDs", async t => {
+  t.mock.method(Date, "now", () => Date.parse("2026-10-09T12:00:00Z"))
   await run(async () => json({ data: [
     { id: "gpt-4.1-mini-2025-04-14" }, { id: "gpt-5.5-pro-2026-04-23" },
     { id: "gpt-4o", shutdown_date: "2000-01-01" },
@@ -100,7 +101,8 @@ test("MC-02/B02: canonical metadata does not add unlisted API models to discover
     assert.deepEqual(result.models, [])
   })
 })
-test("B03: published shutdown dates override stale live search aliases and retain future lifecycle notes", async () => {
+test("B03: published shutdown dates override stale live search aliases and retain future lifecycle notes", async t => {
+  t.mock.method(Date, "now", () => Date.parse("2026-10-09T12:00:00Z"))
   assert.equal(officialModel("openai", "o3-pro")?.deprecated, true)
   assert.equal(officialModel("openai", "o3-pro")?.shutdownDate, "2026-12-11")
   await run(async () => json({ data: [{ id: "gpt-4o-search-preview" }, { id: "gpt-4o-mini-search-preview" }, { id: "gpt-4.1-nano" }] }), async s => {
