@@ -23,7 +23,9 @@ test('MACREL-02 actual release policy rejects unknown/ambiguous targets and pres
   assert.equal(releaseMode('win32',[]),'windows')
   assert.equal(releaseMode('win32',['--dir']),'windows')
   assert.equal(releaseMode('win32',['--zip']),'windows')
-  for(const [platform,args] of [['darwin',['--oops']],['darwin',['--dir','--zip']],['win32',['--dmg']],['linux',[]]] as const)assert.throws(()=>releaseMode(platform,[...args]))
+  assert.equal(releaseMode('linux',[]),'linux')
+  for(const target of ['--dir','--AppImage','--deb','--rpm'])assert.equal(releaseMode('linux',[target]),'linux')
+  for(const [platform,args] of [['darwin',['--oops']],['darwin',['--dir','--zip']],['win32',['--dmg']],['linux',['--dmg']],['linux',['--dir','--AppImage']]] as const)assert.throws(()=>releaseMode(platform,[...args]))
   const base:any={publish:null,forceCodeSigning:true,mac:{hardenedRuntime:true},win:{signAndEditExecutable:true,signExecutable:false},dmg:{sign:false},directories:{output:'release'}}
   const config=createPackagingConfiguration(base,{platform:'darwin',target:'dmg',identity,staging:'/tmp/stage'})
   assert.equal(config.mac.identity,identity.hash); assert.equal(config.mac.notarize,true); assert.equal(config.forceCodeSigning,true); assert.equal(config.dmg.sign,true); assert.equal(config.dmg.writeUpdateInfo,false); assert.equal(config.directories.output,'/tmp/stage')
@@ -31,6 +33,8 @@ test('MACREL-02 actual release policy rejects unknown/ambiguous targets and pres
   assert.equal(local.mac.identity,null);assert.equal(local.mac.notarize,false);assert.equal(local.forceCodeSigning,false)
   const win=createPackagingConfiguration(base,{platform:'win32'})
   assert.equal(win.forceCodeSigning,false);assert.deepEqual(win.win,base.win);assert.equal(win.publish,null);assert.equal(base.dmg.sign,false)
+  const linux=createPackagingConfiguration(base,{platform:'linux'})
+  assert.equal(linux.forceCodeSigning,false);assert.deepEqual(linux.mac,base.mac);assert.equal(linux.publish,null)
 })
 
 test('MACREL-03 identity parsing requires valid Developer ID and a unique selection', async () => {

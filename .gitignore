@@ -12,7 +12,9 @@ playwright-report/
 *.db-wal
 *.sqlite*
 .DS_Store
-
+.npm-cache
+.playwright
+.xdg-cache
 
 src/generated/
 tests/generated/

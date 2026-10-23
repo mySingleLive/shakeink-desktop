@@ -42,7 +42,7 @@ export async function launchRootMaintenance(bootstrap:string,defaultRoot:string)
  }
  syncNativeThemeSource(nativeTheme,theme)
  const nativeAppearance=nativeWindowAppearance(theme,nativeTheme.shouldUseDarkColors)
- current=new BrowserWindow({width:680,height:510,minWidth:560,minHeight:440,show:false,title:'迁移应用数据 · 玄印写作',backgroundColor:nativeAppearance.backgroundColor,titleBarStyle:'hidden',trafficLightPosition:{x:14,y:14},...(process.platform==='win32'?{titleBarOverlay:nativeAppearance.titleBarOverlay}:{}),webPreferences:{session:isolated,preload:join(__dirname,'../preload/maintenance.cjs'),contextIsolation:true,sandbox:true,nodeIntegration:false,webSecurity:true}})
+ current=new BrowserWindow({width:680,height:510,minWidth:560,minHeight:440,show:false,title:'迁移应用数据 · 玄印写作',backgroundColor:nativeAppearance.backgroundColor,...(process.platform==='linux'?{}:{titleBarStyle:'hidden',trafficLightPosition:{x:14,y:14}}),...(process.platform==='win32'?{titleBarOverlay:nativeAppearance.titleBarOverlay}:{}),webPreferences:{session:isolated,preload:join(__dirname,'../preload/maintenance.cjs'),contextIsolation:true,sandbox:true,nodeIntegration:false,webSecurity:true}})
  const owned=current
  if(process.platform==='win32')installWindowsCloseAccent(owned,{BaseWindow,ImageView,nativeImage,screen},nativeAppearance.titleBarOverlay.symbolColor)
  owned.webContents.setWindowOpenHandler(()=>({action:'deny'}))

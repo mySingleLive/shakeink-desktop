@@ -499,14 +499,12 @@ function registerIpc() {
     if(!current||current.owner!==event.sender.id)throw new Error("草稿所属窗口已变化")
     const state=await repository.read();trusted(event)
     if(draftSession!==current)throw new Error("草稿所属窗口已变化")
-    // Bootstrap.platform is the renderer's darwin|win32 contract, but
-    // process.platform reports "linux" (and other POSIX values) on hosts the
-    // renderer has no namespace for: settings.shortcuts["linux"] is undefined,
-    // which crashed composer/command consumers and blanked the whole tree.
-    // Non-darwin hosts keep the win32 contract, matching the menus (:660),
-    // shortcut read (:677) and text context menu (:479) that already do this.
-    const rendererPlatform=process.platform==="darwin"?"darwin":"win32"
-    return {...state,platform:rendererPlatform,version:displayAppVersion(app.getVersion()),dataRoot,draftSessionId:current.id,systemDark:nativeTheme.shouldUseDarkColors}
+    // Bootstrap.platform carries the real host platform: "linux" is a
+    // first-class value the renderer handles explicitly (shortcut lookup maps
+    // it to the win32 namespace via shortcutNamespace()), and window chrome
+    // (caption bar, in-app menu button) must not treat a natively-framed
+    // Linux window as win32.
+    return {...state,platform:process.platform,version:displayAppVersion(app.getVersion()),dataRoot,draftSessionId:current.id,systemDark:nativeTheme.shouldUseDarkColors}
   })
   businessHandle("desktop:directory", async (event, purpose) => { trusted(event); return chooseDirectory(directoryPurpose.parse(purpose), String(event.sender.id)) })
   businessHandle("desktop:model-discover", async (event, id, draft) => { trusted(event); return modelConfiguration.discover(String(event.sender.id), z.uuid().parse(id), draft) })
@@ -682,7 +680,7 @@ function refreshMenus(state: Awaited<ReturnType<ModelRepository["read"]>>) {
   windowTheme=state.settings.appearance.theme
   applyMainWindowAppearance()
   menuShortcuts=structuredClone(state.settings.shortcuts[process.platform === "darwin" ? "darwin" : "win32"])
-  if (process.platform === "darwin" && app.isReady()) Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate()))
+  if ((process.platform === "darwin" || process.platform === "linux") && app.isReady()) Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate()))
 }
 async function executeCommand(id: string, fromRenderer=false) {
   if((closingFlow||businessGate.closed)&&!["app.quit","window.close"].includes(id))return
@@ -746,7 +744,7 @@ async function createWindow() {
   const state = await repository.read()
   refreshMenus(state)
   const nativeAppearance = nativeWindowAppearance(state.settings.appearance.theme, nativeTheme.shouldUseDarkColors)
-  window = new BrowserWindow({ width: 1440, height: 940, minWidth: 760, minHeight: 580, show: false, title: "玄印写作", backgroundColor: nativeAppearance.backgroundColor, titleBarStyle: "hidden", trafficLightPosition: { x: 14, y: 14 }, ...(process.platform === "win32" ? { titleBarOverlay: nativeAppearance.titleBarOverlay } : {}), webPreferences: { preload: join(__dirname, "../preload/index.cjs"), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true } })
+  window = new BrowserWindow({ width: 1440, height: 940, minWidth: 760, minHeight: 580, show: false, title: "玄印写作", backgroundColor: nativeAppearance.backgroundColor, ...(process.platform === "linux" ? {} : { titleBarStyle: "hidden", trafficLightPosition: { x: 14, y: 14 } }), ...(process.platform === "win32" ? { titleBarOverlay: nativeAppearance.titleBarOverlay } : {}), webPreferences: { preload: join(__dirname, "../preload/index.cjs"), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true } })
   const current = window
   if (process.platform === "win32") installWindowsCloseAccent(current, { BaseWindow, ImageView, nativeImage, screen }, nativeAppearance.titleBarOverlay.symbolColor)
   current.webContents.setZoomFactor(state.settings.appearance.zoom)
@@ -778,9 +776,9 @@ async function createWindow() {
     if(mainFrame!==false&&sameDocument!==true){releaseOwner();if((details.url??legacyUrl)==="shakeink://app/")draftSession={owner:ownerId,id:randomUUID(),ready:false,release:draftJournal.activate(String(ownerId))}}
   })
   current.on("closed", () => { releaseOwner(); if (window === current) window = null })
-  current.on("close",event=>{if(quitting||closePermits.delete(current))return;event.preventDefault();beginClose(process.platform==="win32"?"quit":"window")})
+  current.on("close",event=>{if(quitting||closePermits.delete(current))return;event.preventDefault();beginClose(process.platform==="darwin"?"window":"quit")})
   refreshMenus(state)
-  if (process.platform !== "darwin") current.setMenu(null)
+  if (process.platform === "win32") current.setMenu(null)
   current.once("ready-to-show", () => current.show())
   await current.loadURL("shakeink://app/")
 }

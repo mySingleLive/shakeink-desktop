@@ -45,9 +45,10 @@ async function regular(path){const stat=await lstat(path);if(!stat.isFile()||sta
 async function digestFile(path,algorithm,encoding='hex'){const hash=createHash(algorithm);for await(const chunk of createReadStream(path))hash.update(chunk);return hash.digest(encoding)}
 
 export function releaseMode(platform,args=[]) {
- if(!Array.isArray(args)||args.length>1||args.some(arg=>!['--dir','--dmg','--zip'].includes(arg)))throw new Error('用法：[--dir|--dmg|--zip]')
+ if(!Array.isArray(args)||args.length>1||args.some(arg=>!['--dir','--dmg','--zip','--AppImage','--deb','--rpm'].includes(arg)))throw new Error('用法：[--dir|--dmg|--zip|--AppImage|--deb|--rpm]')
  if(platform==='darwin')return args[0]==='--dir'?'local':'release'
  if(platform==='win32'){if(args[0]&&!['--dir','--zip'].includes(args[0]))throw new Error('Windows 仅支持默认 NSIS、--zip 或 --dir');return 'windows'}
+ if(platform==='linux'){if(args[0]&&!['--dir','--AppImage','--deb','--rpm'].includes(args[0]))throw new Error('Linux 仅支持默认 AppImage、--deb、--rpm 或 --dir');return 'linux'}
  throw new Error('仅支持本机 macOS 或 Windows 打包')
 }
 
@@ -80,6 +81,7 @@ export async function preflightMacRelease({env=process.env,run=runChecked}={}) {
 export function createPackagingConfiguration(base,{platform,target,identity,staging}={}) {
  releaseMode(platform,target?[`--${target}`]:[])
  if(platform==='win32')return {...base,forceCodeSigning:false}
+ if(platform==='linux')return {...base,forceCodeSigning:false}
  if(target==='dir')return {...base,forceCodeSigning:false,mac:{...base.mac,identity:null,notarize:false},dmg:{...base.dmg,sign:false,writeUpdateInfo:false}}
  if(!identity||!/^[A-Fa-f0-9]{40}$/.test(identity.hash)||!staging)throw new Error('正式发布必须先选择有效签名身份和隔离 staging')
  requireTeam(identity.teamId)

@@ -31,7 +31,7 @@ export const requestSchema = z.object({
 export type LocalRequest = z.infer<typeof requestSchema>
 export interface LocalResponse { id: string; status: number; headers: Record<string, string> }
 export interface StateSnapshot { revision: number; settings: Settings; models: PublicModel[]; onboarding?: import("./onboarding").OnboardingProgress | null }
-export interface Bootstrap extends StateSnapshot { platform: "darwin" | "win32"; version: string; dataRoot: string; draftSessionId: string; systemDark: boolean }
+export interface Bootstrap extends StateSnapshot { platform: "darwin" | "win32" | "linux"; version: string; dataRoot: string; draftSessionId: string; systemDark: boolean }
 export type DesktopBootstrap=Bootstrap
 export interface AvatarDraft { draftId: string; previewDataUrl: string; width: number; height: number; bytes: number }
 export interface ModelRequiredNotice { type: "model-required"; role: "text" | "review" | "image"; code: "MODEL_NOT_CONFIGURED" | "MODEL_NOT_SELECTED" | "MODEL_NOT_FOUND" | "MODEL_DISABLED" | "MODEL_KEY_MISSING" | "MODEL_KIND_MISMATCH" | "MODEL_UNAVAILABLE" | "AUTHORIZATION_REVOKED"; task?: ModelTask }
