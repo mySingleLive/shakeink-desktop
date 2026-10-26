@@ -47,7 +47,7 @@ async function openRestrictedWindow(bootstrap:string,entry:{mode:'lost'|'blocked
  const platform=process.platform==='win32'?'win32':process.platform==='darwin'?'darwin':'linux'
  // The constructor title is only a pre-show placeholder: the controller
  // subscription re-titles the still-hidden window before ready-to-show.
- current=new BrowserWindow({width:680,height:540,minWidth:360,minHeight:440,show:false,title:'定位原数据目录 · 玄印写作',backgroundColor:nativeAppearance.backgroundColor,titleBarStyle:'hidden',trafficLightPosition:{x:14,y:14},...(process.platform==='win32'?{titleBarOverlay:nativeAppearance.titleBarOverlay}:{}),webPreferences:{session:isolated,preload:join(__dirname,'../preload/root-relocation.cjs'),contextIsolation:true,sandbox:true,nodeIntegration:false,webSecurity:true}})
+ current=new BrowserWindow({width:680,height:540,minWidth:360,minHeight:440,show:false,title:'定位原数据目录 · 玄印写作',backgroundColor:nativeAppearance.backgroundColor,...(process.platform==='linux'?{}:{titleBarStyle:'hidden',trafficLightPosition:{x:14,y:14}}),...(process.platform==='win32'?{titleBarOverlay:nativeAppearance.titleBarOverlay}:{}),webPreferences:{session:isolated,preload:join(__dirname,'../preload/root-relocation.cjs'),contextIsolation:true,sandbox:true,nodeIntegration:false,webSecurity:true}})
  const owned=current,owner=randomUUID(),contentsId=owned.webContents.id
  if(process.platform==='win32')installWindowsCloseAccent(owned,{BaseWindow,ImageView,nativeImage,screen},nativeAppearance.titleBarOverlay.symbolColor)
  const assertOwner=(nonce:string)=>{assertCold();if(nonce!==owner||!ownerAlive||current!==owned||owned.isDestroyed()||owned.webContents.id!==contentsId)throw Error('OWNER_EXPIRED')}
@@ -127,7 +127,7 @@ async function openRestrictedWindow(bootstrap:string,entry:{mode:'lost'|'blocked
   {label:'帮助',submenu:[{label:'关于玄印写作',click:about},{label:'帮助文档',enabled:false}]},
  ]
  if(platform==='darwin')Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'玄印',submenu:[{label:'关于玄印写作',click:about},{type:'separator'},{label:'隐藏玄印',role:'hide'},{label:'隐藏其他',role:'hideOthers'},{label:'显示全部',role:'unhide'},{type:'separator'},{label:'退出玄印',accelerator:'Cmd+Q',click:close}]},...groups]))
- else{owned.setMenu(null);if(platform==='win32')popup=Menu.buildFromTemplate(groups)}
+ else{if(platform==='win32'){owned.setMenu(null);popup=Menu.buildFromTemplate(groups)}else owned.setMenu(Menu.buildFromTemplate(groups))}
  owned.once('ready-to-show',()=>{if(!exiting&&!owned.isDestroyed())owned.show()})
  // Reserve owner synchronously before load/ready/close callbacks can run.
  const started=controller.start(owner);void started.catch(()=>{})

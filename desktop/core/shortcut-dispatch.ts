@@ -1,6 +1,6 @@
 import {bindingsFor,canonicalKey,capturedKey,type ShortcutCommand} from "./shortcuts"
 export interface ShortcutContext {
- commands:ShortcutCommand[];overrides:Record<string,string[]>;platform:"darwin"|"win32"
+ commands:ShortcutCommand[];overrides:Record<string,string[]>;platform:"darwin"|"win32"|"linux"
  scope:"none"|"markdown"|"composer"|"input"|"preview";focus:unknown;modal?:boolean;recording?:boolean
  enabled?(id:string):boolean;repeatable?(id:string):boolean
 }

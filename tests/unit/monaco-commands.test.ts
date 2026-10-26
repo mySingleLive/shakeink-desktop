@@ -105,7 +105,7 @@ test("MONACO-10: installed registration API supplies primary and secondary bindi
   const registration = KeybindingsRegistry.registerKeybindingRule({ id: "unit.monaco.registry", primary: 2048 | 41, secondary: [(2048 | 41) | ((2048 | 33) << 16)], weight: 100, when: expr("editorTextFocus") })
   try {
     const source: MonacoRuntimeRegistries = { version: "0.56.0", os: OS, keys: KeybindingsRegistry, keyName: KeyCodeUtils.toUserSettingsUS, editors: { getEditorActions: () => [{ id: "unit.unbound", label: "Unbound" }], getEditorCommand: () => null }, commands: { getCommand: () => ({}) }, contextKeyToken: "unitContext" }
-    const platform = OS === 2 ? "darwin" : "win32"
+    const platform = OS === 2 ? "darwin" : OS === 3 ? "linux" : "win32"
     const r = monacoRuntimeFromRegistries(source, platform), rows = buildMonacoCommandCatalog(r, platform)
     const item = rows.find(c => c.monacoId === "unit.monaco.registry")!
     const mod = platform === "darwin" ? "Cmd" : "Ctrl"
@@ -122,6 +122,8 @@ test("MONACO-11: private context adapter is version guarded and a missing scoped
   const scoped = Object.assign(e.value, { invokeWithinContext: (run: (accessor: { get(t: unknown): unknown }) => unknown) => run({ get: value => { assert.equal(value, token); return { contextMatchesRules: (rule: { serialize(): string }) => rule.serialize() === "editorWritable" } } }) })
   assert.equal(r.contextMatches(scoped, expr("editorWritable")), true)
   assert.throws(() => monacoRuntimeFromRegistries({ ...source, os: 1 }, "darwin"), /MONACO_RUNTIME_PLATFORM_MISMATCH/)
+  assert.throws(() => monacoRuntimeFromRegistries({ ...source, os: 2 }, "linux"), /MONACO_RUNTIME_PLATFORM_MISMATCH/)
+  assert.throws(() => monacoRuntimeFromRegistries({ ...source, os: 2 }, "win32"), /MONACO_RUNTIME_PLATFORM_MISMATCH/)
   assert.throws(() => monacoRuntimeFromRegistries({ ...source, version: "0.57.0" }, "darwin"), /MONACO_RUNTIME_VERSION_UNSUPPORTED/)
 })
 test("MONACO-12: editor registration publishes its supported actions, refreshes on focus and disposes every owner/subscription", async () => {

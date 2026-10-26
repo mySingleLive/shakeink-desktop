@@ -10,7 +10,17 @@ import {writeFile} from 'node:fs/promises'
 import {installMacMenuLocalization} from './macos-menu-localization.mjs'
 import {prunePackagedDependencies,createPruneSession} from './runtime-dependencies.mjs'
 import {mkdtemp, mkdir} from 'node:fs/promises'
+import {rm} from 'node:fs/promises'
 import {releaseMode, preflightMacRelease, createPackagingConfiguration, verifyMacSignature, finalizeMacRelease} from './macos-release.mjs'
+
+// Chromium aborts when chrome-sandbox exists but is not root-owned with
+// mode 4755; it falls back to the user-namespace sandbox only when the
+// helper is absent. Unsigned local builds cannot create a setuid helper,
+// so remove it and rely on unprivileged user namespaces (the same choice
+// as flatpak/AppImage distributions).
+async function removeChromeSandbox(path){
+  await rm(path,{force:true})
+}
 
 const project = dirname(dirname(fileURLToPath(import.meta.url)))
 const arguments_ = process.argv.slice(2)
@@ -37,6 +47,7 @@ const config = {
   afterPack: async context => {
     const application = context.electronPlatformName === 'darwin' ? join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`) : context.appOutDir
     const appRoot = context.electronPlatformName === 'darwin' ? join(application, 'Contents/Resources/app') : join(application, 'resources/app')
+    if (context.electronPlatformName === 'linux') await removeChromeSandbox(join(context.appOutDir, 'chrome-sandbox'))
     const runtimeDependencies=await prunePackagedDependencies(project,appRoot,pruneSession)
     if(context.electronPlatformName==='darwin')await installMacMenuLocalization(application)
     const contents = context.electronPlatformName === 'darwin' ? await inspectPackagedApp(project, application) : await verifyProjectResources(project, appRoot)
@@ -51,7 +62,7 @@ const config = {
     console.log(JSON.stringify({stage: 'signed-app-verified', platform: process.platform, arch: process.arch}))
   },
 }
-const platform = process.platform === 'darwin' ? Platform.MAC : Platform.WINDOWS
+const platform = process.platform === 'darwin' ? Platform.MAC : process.platform === 'linux' ? Platform.LINUX : Platform.WINDOWS
 console.log(JSON.stringify({stage: 'native-preflight', ...runtime, publish: 'never', mode, signing: signing ? 'developer-id-required' : 'local-or-windows', target: target ?? 'configured'}, null, 2))
 const artifacts = await build({projectDir: project, config, publish: 'never', targets: platform.createTarget(target, Arch[process.arch])})
 if (signing) {

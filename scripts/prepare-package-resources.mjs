@@ -57,7 +57,7 @@ export async function preparePackageResources(project) {
     resources.push({source, packagedPath: `runtime-licenses/${name}`, sha256: sha(await readFile(join(project, source)))})
   }
   const platform = `${process.platform}-${process.arch}`
-  const nativeRoot = process.platform === 'darwin' ? `@img/sharp-libvips-${platform}` : `@img/sharp-${platform}`
+  const nativeRoot = process.platform === 'darwin' || process.platform === 'linux' ? `@img/sharp-libvips-${platform}` : `@img/sharp-${platform}`
   const nativeMetadata = JSON.parse(await readFile(join(project, 'node_modules', nativeRoot, 'package.json'), 'utf8'))
   const versionsPath = join(project, 'node_modules', nativeRoot, 'versions.json')
   const versions = JSON.parse(await readFile(versionsPath, 'utf8'))

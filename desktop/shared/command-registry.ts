@@ -1,6 +1,6 @@
 import catalog from "./commands.json"
 import { bindingsFor, validShortcut, type ShortcutCommand, type ShortcutScope } from "../core/shortcuts"
-export type DesktopPlatform = "darwin" | "win32"
+export type DesktopPlatform = "darwin" | "win32" | "linux"
 export interface DesktopCommand extends ShortcutCommand { group: string }
 export interface DesktopMenuItem { id: string; label: string; binding?: string; enabled: boolean }
 export interface DesktopMenu { id: string; label: string; items: DesktopMenuItem[] }

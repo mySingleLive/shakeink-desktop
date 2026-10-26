@@ -112,7 +112,7 @@ test('MB119-N03 locale and metadata links are rejected and existing metadata is 
   } finally {await rm(directory, {recursive: true, force: true})}
 })
 
-test('MB119-N04 actual inspector rejects wrong raw runtime, display, executable or version metadata before resource probes', {timeout: 5000}, async () => {
+test('MB119-N04 actual inspector rejects wrong raw runtime, display, executable or version metadata before resource probes', {timeout: 5000, skip: process.platform !== 'darwin' ? 'inspectPackagedApp 仅支持 macOS，非 darwin 平台跳过' : false}, async () => {
   const {inspectPackagedApp} = await import('../../scripts/inspect-packaged-app.mjs')
   const directory = await realpath(await mkdtemp(join(tmpdir(), 'xuanxiang-plist119-')))
   try {

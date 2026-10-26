@@ -4,7 +4,7 @@ import {toast} from "sonner"
 import {useDesktopStore,updateDesktopSettings} from "@/stores/desktop"
 import {useTabsStore} from "@/stores/tabs"
 import {ShortcutDispatcher} from "@desktop/core/shortcut-dispatch"
-import {bindingsFor,canonicalKey,capturedKey} from "@desktop/core/shortcuts"
+import {bindingsFor,canonicalKey,capturedKey,shortcutNamespace} from "@desktop/core/shortcuts"
 import {desktopCommandCatalog,desktopCommandTargets,desktopCommandTarget,desktopEditorTarget,rememberDesktopCommandTarget} from "@/lib/desktop/command-runtime"
 import {useDesktopCommands} from "@/lib/desktop/use-command-target"
 import {installInputCommands,isAPIKeyControl} from "@/lib/desktop/input-commands"
@@ -65,7 +65,7 @@ export function DesktopCommandController(){
    // Escape belongs to the top dialog/menu (including its nested widgets),
    // even when an ordinary input's cancel binding was removed or rebound.
    if(document.querySelector(dialogSelector)&&event.key==="Escape"&&!event.metaKey&&!event.ctrlKey&&!event.altKey&&!event.shiftKey){dispatcher.reset();return}
-   const currentScope=scope(target),commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[bootstrap.platform]
+   const currentScope=scope(target),commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[shortcutNamespace(bootstrap.platform)]
    const stroke=capturedKey({...event,key:event.key,code:event.code,metaKey:event.metaKey,ctrlKey:event.ctrlKey,altKey:event.altKey,shiftKey:event.shiftKey,isComposing:event.isComposing,repeat:false,keyCode:event.keyCode},bootstrap.platform)
    if(!stroke){if(!["Control","Shift","Alt","Meta","AltGraph"].includes(event.key))dispatcher.reset();return}
    const normalized=canonicalKey(stroke)
