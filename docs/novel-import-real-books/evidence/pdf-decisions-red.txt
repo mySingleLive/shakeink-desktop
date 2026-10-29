@@ -1,0 +1,21 @@
+✖ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (944.093708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1508.707417
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:3084
+✖ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (944.093708ms)
+  Error: 导入操作参数无效
+      at NovelImportController.act (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:92:77)
+      at command (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:23:178)
+      at async <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:27:18)
+      at async controllerFixture (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:21:74)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

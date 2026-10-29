@@ -1,0 +1,4 @@
+Service reverse-delta byte identity: PASS (two independent narrative refinements and array selection only; original worldline branches/feedback, helpers and late calls byte exact).
+Old test reverse-delta byte identity: PASS (only preapproved J04 native premise/J05 ordinary early plus real reconcile/J06 early plus real late adaptations; J07 appended).
+Main fee/payload 239/AI test 663 control SHA: unchanged.
+No transform, alias fallback, catalog/chapter filtering for validation, invented entities, empty-result bypass, budget/retry/authorization or workflow change.

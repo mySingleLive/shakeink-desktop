@@ -1,0 +1,46 @@
+{
+  "scope": "Read-only source review and in-memory test reverse-delta; no production execution or source writes",
+  "filesSha256": {
+    "desktop/service/novel-import-ai.ts": "f5a40da9ff693a1dd7e06b49d42375e6e509a8c0aa475c52885c223d54b90f4f",
+    "tests/unit/novel-import-request-schema.test.ts": "ae6df2ab4089965fad4004127d5395ae402da61a33dc48f08f4d48a0d80bd9d8",
+    "tests/unit/novel-import-semantic.test.ts": "96a4d55ada73949086511752ffd2645dcaa990b144be218e0e251a6d3cb1adc8",
+    "desktop/core/novel-import-ai-payload.ts": "4bc384917f7a723375090cec38be180e561bfe7b2b5b3fba8317167a4a2098e6",
+    "desktop/main/novel-import.ts": "b869c4034c9eb86e3cee4f5fee642c5cd25f1b10feeaf7e06549d221672250c9",
+    "src/lib/ai/generate.ts": "51612305662fdbc383f01516c2fa5baf83c37e97123391752bdbdf3c9631fe22"
+  },
+  "testRestored50Sha256": "dff93ef7aad8d61b3cddc339f591c8f666303d913e1f59af4fbbb0cfc1a4a644",
+  "testDelta": "Only three new lines inside existing NI-J01/02; all prior test bytes restored exactly",
+  "serviceReview": "Factory body and early schema construction/reused post-generation parse read in full; original defaults bridge and later gates retained. No whole-file reverse-SHA assertion without an exact 50 source snapshot.",
+  "commands": [
+    {
+      "pattern": "^NI-J0[12]:",
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "duration_ms": 719.379,
+      "log": "kind-feedback-independent-j01-j02.txt"
+    },
+    {
+      "pattern": "^NI-A0[356]:",
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "duration_ms": 154.497917,
+      "log": "kind-feedback-independent-a03-a05-a06.txt"
+    },
+    {
+      "pattern": "^NI-SEM0[1234]:",
+      "pass": 4,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "duration_ms": 197.406209,
+      "log": "kind-feedback-independent-sem01-04.txt"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (4.316583ms)
+✔ NI-PDF09: old non-PDF hashes and restored checkpoints remain byte identical with absent PDF fields (0.962583ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 338.680459

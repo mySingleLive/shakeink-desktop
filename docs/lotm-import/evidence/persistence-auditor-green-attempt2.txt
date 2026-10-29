@@ -1,0 +1,16 @@
+✔ LOTM-AUD01: full 1394-chapter eight-volume audit reads only the closed own-work copy (15507.691041ms)
+✔ LOTM-AUD02: frozen source and exact inserted headers reject byte/newline/chapter tampering (11.309209ms)
+✔ LOTM-AUD03: one missing/duplicate/reordered/wrong-volume chapter or word count fails (108.290209ms)
+✔ LOTM-AUD04: actual native fields, multisets, hierarchy and narrative fragments/references are exact (101.744334ms)
+✔ LOTM-AUD05: completion, identity, schema, receipt and shutdown freshness fail closed (192.125583ms)
+✔ LOTM-AUD06: links, wrong storage candidate, required-without-pointer and existing labels are blocked (120.105375ms)
+✔ LOTM-AUD07: original global/model/other-session paths are never traversed and originals stay stable (10402.276042ms)
+✔ LOTM-AUD08: a real synthetic same-request publication retry has one entity set; absent real-book retry evidence stays unexercised (13.73825ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 27183.362542

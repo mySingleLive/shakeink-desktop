@@ -1,0 +1,40 @@
+▶ LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely
+  ✔ unknown-unit (242.510583ms)
+  ✔ too-short (1.347958ms)
+  ✔ ambiguous (0.917292ms)
+  ✔ no-match (0.685333ms)
+  ✔ seventh-type-abort (1.437917ms)
+  ✔ extra-root-key (1.4895ms)
+  ✔ other-custom (1.197333ms)
+  ✔ new-round-invalid-json-clears-prior-classification (0.830917ms)
+  ✔ success-after-pure-evidence-failure (0.709542ms)
+  ✔ ordinary-error-has-no-schema-provenance (0.402917ms)
+  ✔ incomplete-new-round-cannot-use-old-evidence-reason (1.062458ms)
+  ✔ cancelled-schema-error-does-not-become-evidence-retry (0.967584ms)
+✔ LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely (256.570125ms)
+✔ LOTM-E02: exact failed units halve through RPC with fresh context and frozen budget, then do not re-expand (208.383458ms)
+✔ LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay (178.032875ms)
+▶ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split
+  ✔ synthetic HTTP_429 (60.360584ms)
+  ✔ 模型证据无法定位（invented） (56.072ms)
+  ✔ 模型证据无法定位（no-match）  (57.053333ms)
+  ✔ 模型返回结构不完整 (54.843375ms)
+  ✔ finite-one-unit-stop (81.680917ms)
+  ✔ actual-service-rejects-cross-phase-conflict (50.393708ms)
+  ✔ legitimate-merge-conflict-stops-unprocessed-siblings (81.918709ms)
+  ✔ authorization-change-after-failed-parent-prevents-child-send (58.69675ms)
+✔ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split (501.937083ms)
+✔ LOTM-E05: pause drains a late right result without covering or publishing it (79.400209ms)
+▶ LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback
+  ✔ legacy (66.8455ms)
+  ✔ review (91.059125ms)
+  ✔ classify (28.776042ms)
+✔ LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback (187.148959ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1760.06775

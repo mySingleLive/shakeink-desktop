@@ -1,0 +1,25 @@
+{
+  "recordedAt": "2026-10-26T07:43:54.006718+00:00",
+  "scope": "60 final frozen code; type checks only",
+  "sourceSha256": {
+    "desktop/core/novel-import-ai-payload.ts": "8edd5629d1f5153d00a5b4c0bfd90dd0bddcad29b7409f5b9546869ed6cb2d98",
+    "desktop/core/novel-import-review-tasks.ts": "89e9c39e8a0c362d34baa5b393f44ca3dbfda1a52022ebc4ce66c9e6da566a82",
+    "desktop/core/novel-import-semantics.ts": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874",
+    "desktop/core/novel-import-semantic-state.ts": "592563c09ea0a12fed399a2f8eeef8016c5e9c099d46de9ab6f66e99a99f05d5",
+    "desktop/main/novel-import.ts": "a0acd1a282eea4dc874ff45fa4b4b143cc2c2fe688880a235399bcff1d49bcd7",
+    "desktop/service/novel-import-ai.ts": "312fe64bf374168f6ec33267006a5c64d7e8b934093a33f4ef57398cf9271cd6",
+    "tests/unit/novel-import-semantic-session.test.ts": "8c9df1bcec64315bd6a585e89e994ec7f1bde302a5df169ddccafb3104ce6d6f"
+  },
+  "checks": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "diagnostics": []
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false -p /tmp/shakeink-real-audit-tsconfig.json",
+      "exitCode": 0,
+      "diagnostics": []
+    }
+  ]
+}

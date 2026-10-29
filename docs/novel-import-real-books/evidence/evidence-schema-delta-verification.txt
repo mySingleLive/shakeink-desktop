@@ -1,0 +1,3 @@
+Production reverse-delta byte identity: PASS (entry refinement + requested evidence field only).
+Existing J01/J02 reverse-delta byte identity: PASS (only the approved J02 evidence case split).
+Original anchorEvidence, all late gates, generation bridge, defaults, other phases and legacy: unchanged.

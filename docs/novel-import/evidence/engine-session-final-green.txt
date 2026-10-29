@@ -1,0 +1,17 @@
+✔ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (359.25975ms)
+✔ NI-S02: full-book batches checkpoint successful work and retry the failed batch (367.787375ms)
+✔ NI-S03: requested stages run in reverse-creation order and disabled stages skip (688.996167ms)
+✔ NI-S04: no prose and inference-disabled pure-copy have zero AI calls including review (227.499542ms)
+✔ NI-S05: source/body contradictions block publication and retaining a setting needs reviewed explanation (173.782416ms)
+✔ NI-S06: prose patches preserve original and invalidate analysis authorization (113.096667ms)
+✔ NI-S07: pause drains an operation and a late success never advances stale epoch (35.177584ms)
+✔ NI-S08: journal restores checkpoints but target authorization must be renewed (191.227542ms)
+✔ NI-S09: discard preserves unknown draft files and complete does not block new import (85.193792ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2615.979916

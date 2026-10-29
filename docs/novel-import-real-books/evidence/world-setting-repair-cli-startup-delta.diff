@@ -1,0 +1,59 @@
+--- approved-candidate-916f63f7.ts
++++ startup-handle-cb157247.ts
+@@ -80,6 +80,9 @@
+ 
+ export interface WorldRepairCliEnvironment {repoRoot:string;corpusRoot:string;appRoot:string;authorizedRun:string}
+ const envSchema=z.object({repoRoot:z.string().min(1),corpusRoot:z.string().min(1),appRoot:z.string().min(1),authorizedRun:z.string().regex(identifier)}).strict()
++/** Synchronous construction fault seam for isolated WR02 fixtures. The formal
++ * main never passes it; argv, the environment schema and plans cannot enable it. */
++export interface WorldRepairCliTestOnly {constructEngine(options:ConstructorParameters<typeof PGlite>[0]):PGlite}
+ type ServiceResult=Awaited<ReturnType<typeof repairWorldSettings>>
+ export interface WorldRepairCliResult {status:string;mode:'dry-run'|'apply'|'rollback';run:string;result:ServiceResult;evidenceDirectory:string;cleanupStatus:'closed'|'failed'}
+ export class WorldRepairCliFailure extends Error {
+@@ -88,7 +91,7 @@
+ const safeCode=(error:unknown)=>{const message=error instanceof Error?error.message:'';return /^(?:WR_|WORLD_REPAIR_)[A-Z0-9_]{1,100}$/u.test(message)?message:'WR_CLI_FAILED'}
+ 
+ /** No roots or database paths can be supplied through argv. */
+-export async function runWorldRepairCli(argv:string[],environment:WorldRepairCliEnvironment):Promise<WorldRepairCliResult>{
++export async function runWorldRepairCli(argv:string[],environment:WorldRepairCliEnvironment,testOnly?:Readonly<WorldRepairCliTestOnly>):Promise<WorldRepairCliResult>{
+  const env=envSchema.parse(environment),{values}=parseArgs({args:argv,options:{run:{type:'string'},plan:{type:'string'},label:{type:'string'},mode:{type:'string'},'app-closed':{type:'boolean'}},strict:true,allowPositionals:false})
+  const mode=values.mode??'dry-run',run=values.run,label=values.label
+  requireCli(mode==='dry-run'||mode==='apply'||mode==='rollback','MODE_INVALID')
+@@ -136,7 +139,7 @@
+   if((error as {code?:string})?.code==='WORK_LEASE_STALE')throw Error('WR_CLI_WORK_LEASE_STALE')
+   throw Error('WR_CLI_WORK_LEASE_UNAVAILABLE')
+  }
+- let engine:PGlite|undefined,db:PrismaClient|undefined,result:ServiceResult|undefined,cleanupStatus:'closed'|'failed'='closed',failure:unknown,serviceStarted=false
++ let engine:PGlite|undefined,db:PrismaClient|undefined,result:ServiceResult|undefined,cleanupStatus:'closed'|'failed'='closed',failure:unknown,serviceStarted=false,startupAttempted=false
+  let evidenceRoot:Pin|undefined
+  const assertCurrent=async()=>{assertStatic();await unlock.assertHeld();assertStatic()}
+  const writeEvidence=async(kind:'before'|'preview'|'after'|'ack',value:unknown)=>{
+@@ -153,7 +156,12 @@
+   pins.push(worldRepairDirectoryPin(storagePath),worldRepairDirectoryPin(join(storagePath,'database')))
+   const version=await readWorldRepairRegular(join(storagePath,'database','PG_VERSION'),4096);pins.push(version);requireCli(/^\d+\s*$/u.test(version.bytes.toString('utf8')),'PG_VERSION_INVALID')
+   await assertCurrent()
+-  engine=await PGlite.create({dataDir:join(storagePath,'database'),relaxedDurability:false,startParams:[...PGlite.defaultStartParams,'-c','shared_buffers=32MB']})
++  // Hold the instance before readiness can reject. PGlite.create() otherwise
++  // loses its newly constructed instance when waitReady fails.
++  startupAttempted=true
++  const options={dataDir:join(storagePath,'database'),relaxedDurability:false,startParams:[...PGlite.defaultStartParams,'-c','shared_buffers=32MB']}
++  engine=testOnly?testOnly.constructEngine(options):new PGlite(options)
++  await engine.waitReady
+   await assertCurrent()
+   let installed:{id:string;checksum:string}[]
+   try{installed=await engine.transaction(async tx=>{await assertCurrent();await tx.exec('SET TRANSACTION READ ONLY');const rows=await tx.query<{id:string;checksum:string}>('SELECT id, checksum FROM "_desktop_migrations" ORDER BY id');await assertCurrent();return rows.rows})}catch{throw Error('WR_CLI_MIGRATION_LEDGER_UNAVAILABLE')}
+@@ -164,9 +172,11 @@
+  }catch(error){failure=error}
+  finally{
+   try{await db?.$disconnect()}catch{cleanupStatus='failed'}
+-  try{if(engine&&!engine.closed)await engine.close()}catch{cleanupStatus='failed'}
+-  // Never remove authority while an engine might still hold the data directory.
+-  if(!engine||engine.closed){try{await unlock()}catch{cleanupStatus='failed'}}else cleanupStatus='failed'
++  let closedConfirmed=!startupAttempted
++  try{if(engine){if(engine.closed!==true)await engine.close();closedConfirmed=engine.closed===true}}catch{cleanupStatus='failed'}
++  // Construction/readiness failures are not proof that no engine exists. Only
++  // a confirmed close (or no startup attempt) permits releasing authority.
++  if(closedConfirmed){try{await unlock()}catch{cleanupStatus='failed'}}else cleanupStatus='failed'
+  }
+  if(failure!==undefined)throw new WorldRepairCliFailure(serviceStarted&&mode!=='dry-run'?'acknowledgement-unknown':'blocked',cleanupStatus,safeCode(failure))
+  requireCli(result,'RESULT_UNAVAILABLE')

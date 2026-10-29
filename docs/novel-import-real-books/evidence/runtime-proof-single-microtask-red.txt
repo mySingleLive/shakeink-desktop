@@ -1,0 +1,74 @@
+▶ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier
+  ✔ pending-real-promise-and-delayed-resources (77.318209ms)
+  ✔ pre-invoke-source-work-and-synchronous-throw (93.465833ms)
+  ✖ fresh-task-flushes-resolver-before-observer-race (3.4255ms)
+  ✔ settled-raw-promise-with-stale-disk-and-live-operation-is-missed (48.601333ms)
+  ✖ lineage-change-does-not-sign-or-stop-new-owner (45.462875ms)
+  ✔ hard-token-and-byte-capacity-before-invoke (4.268917ms)
+  ✔ synchronous-cancel-failure-still-waits-raw-job (43.493875ms)
+  ✔ proof-write-failure-still-drains (39.014625ms)
+✖ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier (357.750875ms)
+✔ NI-RT02: private runtime diagnostics survive restart without changing content identities (210.022125ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 7
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 974.064459
+
+✖ failing tests:
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:8739
+✖ fresh-task-flushes-resolver-before-observer-race (3.4255ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + [
+  +   {
+  +     epoch: 4,
+  +     operationId: '88b4539d-0714-42d6-a0cd-c5f22b21b870',
+  +     outcome: 'fulfilled',
+  +     payloadHash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  +     phase: 'analyze',
+  +     processRunId: '72ac6fe3-7535-4e0c-932b-50277871dc6c',
+  +     scopeHash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  +     sessionId: '3b939a84-8298-4887-ab85-a3a61515741e',
+  +     settledObservedAt: '2026-10-26T03:09:18.578Z',
+  +     startedAt: '2026-10-26T03:09:18.577Z',
+  +     state: 'settled',
+  +     version: 1,
+  +     workingRevision: 0
+  +   }
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:25:732)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:25:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ { version: 1, processRunId: '72ac6fe3-7535-4e0c-932b-50277871dc6c', sessionId: '3b939a84-8298-4887-ab85-a3a61515741e', operationId: '88b4539d-0714-42d6-a0cd-c5f22b21b870', epoch: 4, phase: 'analyze', workingRevision: 0, scopeHash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', payloadHash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', startedAt: '2026-10-26T03:09:18.577Z', state: 'settled', outcome: 'fulfilled', settledObservedAt: '2026-10-26T03:09:18.578Z' } ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:10990
+✖ lineage-change-does-not-sign-or-stop-new-owner (45.462875ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:27:734)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:27:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /版本|过期|暂停|lineage/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

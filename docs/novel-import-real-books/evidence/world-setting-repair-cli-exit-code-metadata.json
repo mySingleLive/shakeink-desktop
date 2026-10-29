@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-10-26T16:26:04.460400+00:00",
+  "finding": "WG-TR03 returned acknowledgement-unknown must not exit0",
+  "baselineSha256": "cb15724745989cd70f0a74b7a425826c53e2a05385bcc293c5cef28a1c167005",
+  "fixedCliSha256": "15971f7374aa2cf45426d5795cf61fedaf2e2dae93c2c75831618dd80b7e2a27",
+  "deltaSha256": "90aed13f017a19dc1329c8d9d7032e0211251a2bfa0ace0f3aeda6bc7003288e",
+  "scope": "pure closed-success status whitelist and main exitCode call only",
+  "actualRunOrDatabaseAccess": false,
+  "tests": "pure helper assertions integrated by WR02 author; not run here"
+}

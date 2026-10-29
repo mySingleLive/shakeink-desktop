@@ -1,0 +1,98 @@
+--- B4/desktop/service/novel-import-ai.ts
++++ current/desktop/service/novel-import-ai.ts
+@@ -1,3 +1,4 @@
++import {isAbsolute} from 'node:path'
+ import type {generateJSON as GenerateImportJSON} from '../../src/lib/ai/generate'
+ import type {ResolvedModel} from '../../src/lib/ai/provider'
+ import {z} from 'zod'
+@@ -58,16 +59,64 @@
+   try{validateSemanticLinks(request,result.artifacts)}catch{ctx.addIssue({code:'custom',path:['artifacts'],message:'people只能引用已提供角色id或唯一name；父级只能为同类既有或本批真实节点，ID身份不可混用。缺可引用角色时保留有据事件及人物原称谓、认知归属在text/attribution，people只填已存在可引用部分；不造外键、不删改正文、不丢有据事件；空people不证明角色或两线完整，仍须完整性审核补齐'})}
+  })
+ }
++type AnchorDiagnosticEntry={reason:ImportEvidenceAnchorReason;unitId:string;quote:string}
++type AnchorDiagnosticCandidate={issues:number;entries:AnchorDiagnosticEntry[]}
++function anchorDiagnosticsEnabled(){return process.env.SHAKEINK_IMPORT_ANCHOR_DIAGNOSTICS==='1'&&!!process.env.SHAKEINK_TEST_ROOT&&isAbsolute(process.env.SHAKEINK_TEST_ROOT)}
++/** Local, bounded observations only. Never used by the evidence acceptor. */
++function reportAnchorDiagnostics(request:ImportSemanticAiRequest,candidate:AnchorDiagnosticCandidate|undefined){
++ try{
++  if(!candidate||!anchorDiagnosticsEnabled()||!IMPORT_TARGETS.some(kind=>kind===request.kind))return
++  const cap=(value:number)=>Math.min(1000,value)
++  const record={version:1,kind:request.kind,issues:cap(candidate.issues),inspected:candidate.entries.length,unknownUnit:0,tooShort:0,ambiguous:0,noMatch:0,otherUnitUnique:0,adjacentBoundaryUnique:0,unclassified:0,truncated:cap(candidate.issues-candidate.entries.length)}
++  let remaining=2_000_000
++  const spend=(length:number)=>{if(length>remaining)return false;remaining-=length;return true}
++  const valid=(unit:ImportUnit)=>Number.isSafeInteger(unit.start)&&unit.start>=0&&Number.isSafeInteger(unit.end)&&unit.end>=0&&unit.end-unit.start===unit.text.length
++  const classify=(entry:AnchorDiagnosticEntry):'otherUnitUnique'|'adjacentBoundaryUnique'|'unclassified'|'truncated'=>{
++   if(entry.reason!=='unknown-unit'&&entry.reason!=='no-match')return 'unclassified'
++   const quote=entry.quote
++   if(quote.length>2000)return 'truncated'
++   let matches=0
++   for(const unit of request.units){
++    if(unit.id===entry.unitId)continue
++    if(!spend(unit.text.length))return 'truncated'
++    for(let position=unit.text.indexOf(quote);position!==-1;position=unit.text.indexOf(quote,position+1)){matches=Math.min(2,matches+1);if(matches===2)break}
++   }
++   if(matches===1)return 'otherUnitUnique'
++   matches=0
++   for(let i=1;i<request.units.length;i++){
++    const left=request.units[i-1],right=request.units[i]
++    if(left.fileId!==right.fileId||!valid(left)||!valid(right)||left.end!==right.start)continue
++    // Only the suffix/prefix capable of truly crossing this two-unit seam is
++    // searched; UTF16 lengths and offsets agree with ImportUnit geometry.
++    const seam=Math.min(quote.length-1,left.text.length),rightLength=Math.min(quote.length-1,right.text.length)
++    if(!spend(seam+rightLength))return 'truncated'
++    const text=left.text.slice(left.text.length-seam)+right.text.slice(0,rightLength)
++    for(let position=text.indexOf(quote);position!==-1;position=text.indexOf(quote,position+1)){
++     if(position<seam&&position+quote.length>seam)matches=Math.min(2,matches+1)
++     if(matches===2)break
++    }
++   }
++   return matches===1?'adjacentBoundaryUnique':'unclassified'
++  }
++  for(const entry of candidate.entries){
++   record[entry.reason==='unknown-unit'?'unknownUnit':entry.reason==='too-short'?'tooShort':entry.reason==='no-match'?'noMatch':'ambiguous']++
++   const category=classify(entry)
++   if(category==='truncated'){record.truncated=cap(record.truncated+1);record.unclassified++}else record[category]++
++  }
++  const line='[novel-import-anchor-diagnostics] '+JSON.stringify(record)
++  if(Buffer.byteLength(line,'utf8')<=768)console.warn(line)
++ }catch{/* Diagnostics, encoding and logger failures cannot replace the original error. */}
++}
+ /** Internal service generation bridge. Production resolves its own model/user;
+  * tests may inject only generateJSON's existing generateText dependency. */
+ export async function generateImportAiJson(request:ImportSemanticAiRequest,context:{userId:string;resolvedModel:ResolvedModel},signal:AbortSignal,prompt:string,deps?:Parameters<typeof GenerateImportJSON>[1]):Promise<ImportSemanticAiResult>{
+  const {generateJSON,generateText,StructuredGenerationError}=await import('../../src/lib/ai/generate')
+  const ordinary=request.semanticVersion===1&&request.phase==='analyze'&&request.intent!=='reconcile'
+- let evidenceReason:ImportEvidenceAnchorReason|undefined
++ let evidenceReason:ImportEvidenceAnchorReason|undefined,diagnosticCandidate:AnchorDiagnosticCandidate|undefined
+  // Observe all local issues, not generateJSON's first six display diagnostics.
+  // Each parse and generation clears provenance; an aborting structural issue
+  // skips the final check and therefore cannot inherit an earlier reason.
+- const base=importAiResponseSchema(request),schema=ordinary?z.preprocess(value=>{evidenceReason=undefined;return value},base.check(ctx=>{
++ const base=importAiResponseSchema(request),schema=ordinary?z.preprocess(value=>{evidenceReason=undefined;diagnosticCandidate=undefined;return value},base.check(ctx=>{
+   if(!ctx.issues.length)return
+   let reason:ImportEvidenceAnchorReason|undefined
+   for(const issue of ctx.issues){
+@@ -78,10 +127,21 @@
+    reason??=matched
+   }
+   evidenceReason=reason
++  // Keep only bounded references from this final parsed candidate. No scan or
++  // output occurs here: generateJSON may still parse or generate successfully.
++  try{if(anchorDiagnosticsEnabled()){
++   const entries:AnchorDiagnosticEntry[]=[],result=ctx.value as ImportSemanticAiResult
++   for(const issue of ctx.issues.slice(0,100)){
++    const entry=result.artifacts![issue.path![1] as number].evidence[issue.path![3] as number]
++    const matched=(Object.keys(IMPORT_EVIDENCE_FEEDBACK) as ImportEvidenceAnchorReason[]).find(key=>IMPORT_EVIDENCE_FEEDBACK[key]===issue.message)!
++    entries.push({reason:matched,unitId:entry.unitId,quote:entry.quote})
++   }
++   diagnosticCandidate={issues:ctx.issues.length,entries}
++  }}catch{diagnosticCandidate=undefined}
+  })):base
+- const generation=ordinary?{generateText:((options:Parameters<typeof generateText>[0])=>{evidenceReason=undefined;return (deps?.generateText??generateText)(options)})}:deps
++ const generation=ordinary?{generateText:((options:Parameters<typeof generateText>[0])=>{evidenceReason=undefined;diagnosticCandidate=undefined;return (deps?.generateText??generateText)(options)})}:deps
+  try{return (await generateJSON({userId:context.userId,role:request.phase==='review'?'review':'text',action:'novel.import.'+request.phase,prompt,schema,resolvedModel:context.resolvedModel,abortSignal:signal},generation)).data}catch(error){
+-  if(!signal.aborted&&ordinary&&error instanceof StructuredGenerationError&&error.kind==='invalid_schema'&&evidenceReason){error.message=new ImportEvidenceAnchorError(evidenceReason).message;throw error}
++  if(!signal.aborted&&ordinary&&error instanceof StructuredGenerationError&&error.kind==='invalid_schema'&&evidenceReason){error.message=new ImportEvidenceAnchorError(evidenceReason).message;reportAnchorDiagnostics(request,diagnosticCandidate);throw error}
+   if(signal.aborted||request.semanticVersion!==1||request.phase!=='analyze'||request.kind!=='character'||request.intent==='reconcile'||!(error instanceof StructuredGenerationError)||error.kind!=='invalid_schema')throw error
+   const fields:Record<string,string>={id:'角色标识',kind:'资料类别',name:'角色名称',text:'角色正文',facts:'角色资料',evidence:'来源证据',sourceUnitIds:'来源单元',origin:'来源类型'},facts:Record<string,string>={roleType:'角色类型',aliases:'别名',age:'年龄',gender:'性别',occupation:'职业',personality:'性格',appearance:'外貌',clothing:'服饰',catchphrase:'口头禅',growthArc:'成长轨迹',relationships:'人物关系',reliability:'可靠性',attribution:'信息归属',temporalScope:'适用时段',characterId:'关联角色',sceneId:'关联地点',itemId:'关联物品'},labels=new Set<string>()
+   const index=(value:string|undefined)=>typeof value==='string'&&/^(?:0|[1-9]\d{0,15})$/u.test(value)&&Number.isSafeInteger(Number(value))&&String(Number(value))===value

@@ -1,0 +1,64 @@
+▶ LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely
+  ✔ unknown-unit (242.173917ms)
+  ✔ too-short (1.49425ms)
+  ✔ ambiguous (0.9465ms)
+  ✔ no-match (0.779916ms)
+  ✔ seventh-type-abort (1.564208ms)
+  ✔ extra-root-key (1.587ms)
+  ✔ other-custom (1.302917ms)
+  ✔ new-round-invalid-json-clears-prior-classification (1.127375ms)
+  ✔ success-after-pure-evidence-failure (1.051542ms)
+  ✔ ordinary-error-has-no-schema-provenance (0.397208ms)
+  ✔ incomplete-new-round-cannot-use-old-evidence-reason (0.850875ms)
+  ✔ cancelled-schema-error-does-not-become-evidence-retry (1.144416ms)
+✔ LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely (257.719208ms)
+✔ LOTM-E02: exact failed units halve through RPC with fresh context and frozen budget, then do not re-expand (253.272917ms)
+✔ LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay (208.132917ms)
+▶ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split
+  ✔ synthetic HTTP_429 (76.097583ms)
+  ✔ 模型证据无法定位（invented） (73.61475ms)
+  ✔ 模型证据无法定位（no-match）  (76.55125ms)
+  ✔ 模型返回结构不完整 (76.80975ms)
+  ✔ finite-one-unit-stop (102.234625ms)
+  ✔ actual-service-rejects-cross-phase-conflict (77.668042ms)
+  ✔ legitimate-merge-conflict-stops-unprocessed-siblings (104.258875ms)
+  ✔ authorization-change-after-failed-parent-prevents-child-send (77.797125ms)
+✔ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split (666.280375ms)
+✔ LOTM-E05: pause drains a late right result without covering or publishing it (82.764417ms)
+▶ LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback
+  ✔ legacy (74.021042ms)
+  ✔ review (112.426833ms)
+  ✔ classify (35.398208ms)
+✔ LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback (222.341959ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (9.697042ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (1.901083ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (14.515084ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.617375ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (28.863083ms)
+▶ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority
+  ✔ unknown-unit uses the production bridge and preserves exact late-gate evidence (2.538375ms)
+  ✔ too-short uses the production bridge and preserves exact late-gate evidence (1.521084ms)
+  ✔ ambiguous uses the production bridge and preserves exact late-gate evidence (1.374125ms)
+  ✔ no-match uses the production bridge and preserves exact late-gate evidence (2.029958ms)
+  ✔ all twelve ordinary target schemas reject the same four reasons without transforming input (16.251709ms)
+  ✔ matching text in another supplied unit never repairs a wrong declared unit (3.116625ms)
+  ✔ Abort identity remains unchanged through the real correction bridge (0.387334ms)
+✔ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority (27.95575ms)
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✔ migration-post-rename-rejection-adopts-and-blocks-the-committed-candidate (172.811542ms)
+  ✔ omission-post-rename-rejection-adopts-and-blocks-the-committed-candidate (213.060917ms)
+  ✔ same-draft-migrates-old-pending-after-authorization (287.016208ms)
+  ✔ all-preflight-refusals-keep-credit-and-policy (529.997084ms)
+  ✔ same-policy-reopen-keeps-successful-credit (299.370458ms)
+  ✔ publication-resumes-before-policy-and-legacy-zero-ai-remain-unversioned (289.716042ms)
+  ✔ first-omission-conflict-stops-before-later-work (105.15125ms)
+✔ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (1898.455791ms)
+ℹ tests 50
+ℹ suites 0
+ℹ pass 50
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2224.197

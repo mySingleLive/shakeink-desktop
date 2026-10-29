@@ -1,0 +1,15 @@
+✔ NI-U01: source inclusion, real file icons, order, complete paged text and manual range/encoding/chapter controls (1479.940458ms)
+✔ NI-U02: v4 ordinary source checkboxes, always expanded inference cards, independent selection and no-body eligibility (762.396667ms)
+✔ NI-U03: classification consent precedes pending recognition, background result does not reopen, no-model local path (1193.56025ms)
+✔ NI-U04: title, isolated target and pinned model/range consent gate the real start action (1101.039792ms)
+✔ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (660.068ms)
+✔ NI-U06: conflict has no default; source explanation, setting confirmation, patch preview and selected second approval (858.972292ms)
+✔ NI-U07: result opens original work tabs, original outline record pages and modal keyboard remain usable (1539.330958ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8030.425125

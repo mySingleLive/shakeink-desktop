@@ -1,0 +1,38 @@
+src/components/content/setting-content.ts(1,34): error TS2307: Cannot find module '@/generated/prisma/enums' or its corresponding type declarations.
+src/lib/ai/generate.ts(1,35): error TS2307: Cannot find module '@desktop/service/models' or its corresponding type declarations.
+src/lib/ai/generate.ts(2,66): error TS2307: Cannot find module '@/lib/long-task' or its corresponding type declarations.
+src/lib/ai/generate.ts(6,38): error TS2307: Cannot find module '@/lib/chat-execution' or its corresponding type declarations.
+src/lib/ai/generate.ts(7,31): error TS2307: Cannot find module '@/lib/abortable-stream' or its corresponding type declarations.
+src/lib/ai/generate.ts(8,32): error TS2307: Cannot find module '@/generated/prisma/client' or its corresponding type declarations.
+src/lib/ai/generate.ts(9,59): error TS2307: Cannot find module '@/lib/ai/network-retry' or its corresponding type declarations.
+src/lib/ai/generate.ts(10,53): error TS2307: Cannot find module '@/lib/ai/provider' or its corresponding type declarations.
+src/lib/ai/generate.ts(11,30): error TS2307: Cannot find module '@/lib/prompts/render' or its corresponding type declarations.
+src/lib/ai/generate.ts(12,41): error TS2307: Cannot find module '@/lib/quota' or its corresponding type declarations.
+src/lib/ai/generate.ts(13,32): error TS2307: Cannot find module '@/lib/story-draft' or its corresponding type declarations.
+src/lib/ai/generate.ts(89,143): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/lib/ai/generate.ts(103,53): error TS7031: Binding element 'retryNumber' implicitly has an 'any' type.
+src/lib/ai/generate.ts(103,66): error TS7031: Binding element 'maxRetries' implicitly has an 'any' type.
+src/lib/ai/provider.ts(6,41): error TS2307: Cannot find module '@/generated/prisma/client' or its corresponding type declarations.
+src/lib/ai/provider.ts(7,38): error TS2307: Cannot find module '@/lib/chat-execution' or its corresponding type declarations.
+src/lib/ai/provider.ts(8,131): error TS2307: Cannot find module '@desktop/service/models' or its corresponding type declarations.
+src/lib/ai/provider.ts(9,31): error TS2307: Cannot find module '@desktop/shared/provider-capabilities' or its corresponding type declarations.
+src/lib/ai/provider.ts(15,30): error TS2307: Cannot find module '@desktop/service/task-defaults' or its corresponding type declarations.
+src/lib/ai/provider.ts(16,32): error TS2307: Cannot find module '@desktop/shared/task-defaults' or its corresponding type declarations.
+src/lib/ai/provider.ts(17,30): error TS2307: Cannot find module '@/lib/content-errors' or its corresponding type declarations.
+src/lib/ai/provider.ts(39,47): error TS7006: Parameter 'level' implicitly has an 'any' type.
+src/lib/ai/provider.ts(78,81): error TS7006: Parameter 'url' implicitly has an 'any' type.
+src/lib/ai/provider.ts(78,86): error TS7006: Parameter 'init' implicitly has an 'any' type.
+src/lib/ai/thinking-effort.ts(16,31): error TS2307: Cannot find module '@desktop/shared/provider-capabilities' or its corresponding type declarations.
+src/lib/ai/thinking-effort.ts(92,75): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/lib/ai/thinking-effort.ts(94,76): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/lib/ai/timeouts.ts(1,40): error TS2307: Cannot find module '@/lib/db' or its corresponding type declarations.
+src/lib/ai/timeouts.ts(2,31): error TS2307: Cannot find module '@/lib/abortable-stream' or its corresponding type declarations.
+src/lib/chat-execution.ts(2,43): error TS2307: Cannot find module '@/generated/prisma/client' or its corresponding type declarations.
+src/lib/chat-execution.ts(7,35): error TS2307: Cannot find module '@desktop/shared/task-defaults' or its corresponding type declarations.
+src/lib/chat-execution.ts(8,37): error TS2307: Cannot find module '@desktop/service/task-defaults' or its corresponding type declarations.
+src/lib/chat-execution.ts(110,36): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/lib/local-chat-cancellation.ts(1,36): error TS2307: Cannot find module '@desktop/service/context' or its corresponding type declarations.
+tests/unit/novel-import-anchor-diagnostics.test.ts(53,208): error TS18046: 'on.error' is of type 'unknown'.
+tests/unit/novel-import-anchor-diagnostics.test.ts(53,230): error TS18046: 'on.error' is of type 'unknown'.
+tests/unit/novel-import-anchor-diagnostics.test.ts(53,251): error TS18046: 'on.error' is of type 'unknown'.
+tests/unit/novel-import-anchor-diagnostics.test.ts(53,283): error TS18046: 'on.error' is of type 'unknown'.

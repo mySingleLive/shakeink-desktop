@@ -1,0 +1,90 @@
+✖ LOTM-AUD01: full 1394-chapter eight-volume audit reads only the closed own-work copy (4850.314042ms)
+✖ LOTM-AUD02: frozen source and exact inserted headers reject byte/newline/chapter tampering (2.90475ms)
+✖ LOTM-AUD03: one missing/duplicate/reordered/wrong-volume chapter or word count fails (0.120834ms)
+✖ LOTM-AUD04: actual native fields, multisets, hierarchy and narrative fragments/references are exact (0.022458ms)
+✖ LOTM-AUD05: completion, identity, schema, receipt and shutdown freshness fail closed (0.027ms)
+✖ LOTM-AUD06: links, wrong storage candidate, required-without-pointer and existing labels are blocked (0.030667ms)
+✖ LOTM-AUD07: original global/model/other-session paths are never traversed and originals stay stable (0.019625ms)
+✖ LOTM-AUD08: a real synthetic same-request publication retry has one entity set; absent real-book retry evidence stays unexercised (0.02025ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 0
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5629.893292
+
+✖ failing tests:
+
+test at tests/unit/lotm-import-audit.test.ts:3:9621
+✖ LOTM-AUD01: full 1394-chapter eight-volume audit reads only the closed own-work copy (4850.314042ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:10646
+✖ LOTM-AUD02: frozen source and exact inserted headers reject byte/newline/chapter tampering (2.90475ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:11089
+✖ LOTM-AUD03: one missing/duplicate/reordered/wrong-volume chapter or word count fails (0.120834ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:11637
+✖ LOTM-AUD04: actual native fields, multisets, hierarchy and narrative fragments/references are exact (0.022458ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:12363
+✖ LOTM-AUD05: completion, identity, schema, receipt and shutdown freshness fail closed (0.027ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:13403
+✖ LOTM-AUD06: links, wrong storage candidate, required-without-pointer and existing labels are blocked (0.030667ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:15177
+✖ LOTM-AUD07: original global/model/other-session paths are never traversed and originals stay stable (0.019625ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:16189
+✖ LOTM-AUD08: a real synthetic same-request publication retry has one entity set; absent real-book retry evidence stays unexercised (0.02025ms)
+  Error: NOT_IMPLEMENTED
+      at describeAuditBuild (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:6:75)
+      at TestContext.timeout (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:41:118)
+      at async TestHook.run (node:internal/test_runner/test:1332:7) {
+    code: 'NOT_IMPLEMENTED'
+  }

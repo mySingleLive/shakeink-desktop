@@ -1,0 +1,466 @@
+▶ NI-R01: bounded review projections and targeted omissions preserve full artifacts
+  ✔ position-bound-projections-and-partial-transport (150.735041ms)
+  ✔ two-fields-extra-units-use-reconcile-with-exact-context (170.677083ms)
+  ✔ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (324.671042ms)
+  ✔ same-base-pending-and-committed-repairs-append-context-without-erasing-credit (323.061708ms)
+  ✔ oversized-omission-context-fails-before-new-work-or-done-credit (93.279458ms)
+  ✔ invalid-triples-and-unseen-text-have-no-review-credit (866.484666ms)
+✔ NI-R01: bounded review projections and targeted omissions preserve full artifacts (1930.696458ms)
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✖ migration-post-rename-rejection-adopts-and-blocks-the-committed-candidate (54.451834ms)
+  ✖ omission-post-rename-rejection-adopts-and-blocks-the-committed-candidate (97.041875ms)
+  ✔ same-draft-migrates-old-pending-after-authorization (222.438458ms)
+  ✔ all-preflight-refusals-keep-credit-and-policy (461.755709ms)
+  ✔ same-policy-reopen-keeps-successful-credit (314.487791ms)
+  ✔ publication-resumes-before-policy-and-legacy-zero-ai-remain-unversioned (246.118041ms)
+  ✔ first-omission-conflict-stops-before-later-work (115.922666ms)
+✖ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (1513.894083ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 12
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3860.567042
+
+✖ failing tests:
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:29334
+✖ migration-post-rename-rejection-adopts-and-blocks-the-committed-candidate (54.451834ms)
+  AssertionError [ERR_ASSERTION]: live must adopt exactly the renamed candidate
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      analysisCheckpoint: {
+        hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd',
+  -     reviewPolicy: 2,
+        target: {
+          device: '16777233',
+          inode: '356425736',
+          path: '/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/semantic-session-2MLZ3R/target'
+        }
+      },
+  +   artifacts: [
+  +     {
+  +       evidence: [
+  +         {
+  +           quote: '第一章 合成早期\r\n合成角色甲在早期整理资料，合',
+  +           unitId: 'working-0:0:49'
+  +         }
+  +       ],
+  +       facts: {
+  +         aliases: '[]',
+  +         appearance: '未争议外貌',
+  +         occupation: '早期整理资料',
+  +         personality: '未争议性格',
+  +         relationships: '[]',
+  +         roleType: 'PROTAGONIST'
+  +       },
+  +       id: 'person-a',
+  +       kind: 'character',
+  +       name: '合成角色甲',
+  +       origin: 'inferred',
+  +       sourceUnitIds: [
+  +         'working-0:0:49'
+  +       ],
+  +       text: '旧断言：后来已经离开。保留未争议的其余简介。'
+  -   analysisGrant: {
+  -     hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd',
+  -     reviewModel: {
+  -       authRevision: 1,
+  -       contextWindow: 16000,
+  -       endpoint: 'https://model.invalid/v1',
+  -       id: 'semantic-session-review',
+  -       modelId: 'synthetic',
+  -       name: '合成模型'
+        },
+  +   ],
+  -     textModel: {
+  -       authRevision: 1,
+  -       contextWindow: 16000,
+  -       endpoint: 'https://model.invalid/v1',
+  -       id: 'semantic-session-text',
+  -       modelId: 'synthetic',
+  -       name: '合成模型'
+  -     }
+  -   },
+  -   artifacts: [],
+      chapterDetection: {
+        mode: 'auto'
+      },
+      chapters: [
+        {
+  ...
+      ],
+  +   conflicts: [
+  +     {
+  +       candidate: {
+  +         text: '不能覆盖整个简介的候选文字',
+  +         unitId: 'working-0:0:49',
+  +         value: '仅早期整理资料；后来未证实'
+  +       },
+  +       entity: '合成角色甲',
+  +       evidence: [
+  +         {
+  +           quote: '第一章 合成早期\r\n合成角色甲在早期整理资料，合',
+  +           unitId: 'working-0:0:49'
+  +         }
+  +       ],
+  +       field: 'occupation',
+  +       hash: 'same-persistent-conflict-hash',
+  +       id: 'persistent-semantic-conflict',
+  +       kind: 'character',
+  +       source: {
+  +         artifactId: 'person-a',
+  +         text: '旧断言：后来已经离开。保留未争议的其余简介。',
+  +         value: '早期整理资料'
+  +       },
+  +       status: 'pending',
+  +       type: 'setting-body'
+  +     }
+  +   ],
+  +   coverage: {
+  +     character: [
+  +       'working-0:0:49',
+  +       'working-0:49:87'
+  +     ],
+  +     review: [
+  +       'working-0:0:49'
+  +     ],
+  +     reviewFacts: [
+  +       'old-review-key'
+  +     ]
+  +   },
+  -   conflicts: [],
+  -   coverage: {},
+      createdAt: '2026-10-26T07:35:13.889Z',
+      decisions: [],
+  +   epoch: 4,
+  -   epoch: 5,
+      files: [
+        {
+          bytes: 241,
+          format: 'txt',
+          hash: '338ee2a9a1541d670dd93a9d2335e5fe0ebb0ec42370aa8c361effb7e315eab8',
+  ...
+      patches: [],
+  +   phase: 'conflicts',
+  -   phase: 'running',
+      resumePhase: 'running',
+  +   revision: 8,
+  -   revision: 9,
+      selected: [
+        'body'
+      ],
+      semanticVersion: 1,
+      steps: [
+  ...
+      ],
+  +   updatedAt: '2026-10-26T07:35:13.916Z',
+  -   updatedAt: '2026-10-26T07:35:13.921Z',
+      version: 1,
+      workingProse: '第一章 合成早期\r\n' +
+        '合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n' +
+        '\r\n' +
+        '第二章 合成后来\n' +
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:88:11)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:82:55)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: {
+      semanticVersion: 1,
+      version: 1,
+      id: 'ca18b4ab-e2eb-49f6-930f-df015d740ec9',
+      revision: 8,
+      phase: 'conflicts',
+      title: '合成语义会话',
+      files: [ [Object] ],
+      units: [ [Object], [Object] ],
+      selected: [ 'body' ],
+      targets: [ 'character' ],
+      infer: true,
+      artifacts: [ [Object] ],
+      conflicts: [ [Object] ],
+      patches: [],
+      originalProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingRevision: 0,
+      chapters: [ [Object], [Object] ],
+      steps: [
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object]
+      ],
+      coverage: { character: [Array], review: [Array], reviewFacts: [Array] },
+      notFound: [],
+      epoch: 4,
+      createdAt: '2026-10-26T07:35:13.889Z',
+      updatedAt: '2026-10-26T07:35:13.916Z',
+      decisions: [],
+      chapterDetection: { mode: 'auto' },
+      models: { text: [Object], review: [Object] },
+      legacyBudget: { version: 1, text: [Object], review: [Object] },
+      target: { path: '/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/semantic-session-2MLZ3R/target', device: '16777233', inode: '356425736' },
+      targetNeedsAuthorization: false,
+      resumePhase: 'running',
+      workingUnits: [ [Object], [Object] ],
+      analysisCheckpoint: { hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', target: [Object] }
+    },
+    expected: {
+      semanticVersion: 1,
+      version: 1,
+      id: 'ca18b4ab-e2eb-49f6-930f-df015d740ec9',
+      revision: 9,
+      phase: 'running',
+      title: '合成语义会话',
+      files: [ [Object] ],
+      units: [ [Object], [Object] ],
+      selected: [ 'body' ],
+      targets: [ 'character' ],
+      infer: true,
+      artifacts: [],
+      conflicts: [],
+      patches: [],
+      originalProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingRevision: 0,
+      chapters: [ [Object], [Object] ],
+      steps: [
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object]
+      ],
+      coverage: {},
+      notFound: [],
+      epoch: 5,
+      createdAt: '2026-10-26T07:35:13.889Z',
+      updatedAt: '2026-10-26T07:35:13.921Z',
+      decisions: [],
+      chapterDetection: { mode: 'auto' },
+      models: { text: [Object], review: [Object] },
+      legacyBudget: { version: 1, text: [Object], review: [Object] },
+      target: { path: '/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/semantic-session-2MLZ3R/target', device: '16777233', inode: '356425736' },
+      targetNeedsAuthorization: false,
+      resumePhase: 'running',
+      workingUnits: [ [Object], [Object] ],
+      analysisCheckpoint: { hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', target: [Object], reviewPolicy: 2 },
+      analysisGrant: { hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', textModel: [Object], reviewModel: [Object] }
+    },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:29334
+✖ omission-post-rename-rejection-adopts-and-blocks-the-committed-candidate (97.041875ms)
+  AssertionError [ERR_ASSERTION]: live must adopt exactly the renamed candidate
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      analysisCheckpoint: {
+        hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd',
+        reviewPolicy: 2,
+        target: {
+  ...
+      epoch: 3,
+  +   error: '受控提交后目录拒绝 SYNTHETIC-POST-COMMIT-SECRET',
+      files: [
+        {
+          bytes: 241,
+          format: 'txt',
+          hash: '338ee2a9a1541d670dd93a9d2335e5fe0ebb0ec42370aa8c361effb7e315eab8',
+  ...
+      patches: [],
+  +   phase: 'failed',
+  -   phase: 'running',
+      resumePhase: 'running',
+      revision: 20,
+      runtimeAiCall: {
+        epoch: 3,
+        operationId: 'e1537ef5-6796-4dda-b185-f331a52a596a',
+  ...
+            baseHash: '5d8c42061259da91584bb41d6ab225f6c8dce2339e7e6b0a60dc86290fe39505',
+  +         completedUnitIds: [],
+  +         done: false,
+  -         completedUnitIds: [
+  -           'working-0:0:49'
+  -         ],
+  -         done: true,
+            evidence: [
+              {
+                quote: '第一章 合成早期\r\n合成角色甲在早期整理资料，合',
+                unitId: 'working-0:0:49'
+              }
+  ...
+        persistentConflicts: [],
+  +     repairs: [],
+  -     repairs: [
+  -       {
+  -         artifactId: 'person-a',
+  -         baseHash: '5d8c42061259da91584bb41d6ab225f6c8dce2339e7e6b0a60dc86290fe39505',
+  -         committed: false,
+  -         original: {
+  -           evidence: [
+  -             {
+  -               quote: '第一章 合成早期\r\n合成角色甲在早期整理资料，合',
+  -               unitId: 'working-0:0:49'
+  -             }
+  -           ],
+  -           facts: {
+  -             aliases: '[]',
+  -             appearance: '未争议外貌',
+  -             occupation: '早期整理资料',
+  -             personality: '未争议性格',
+  -             relationships: '[]',
+  -             roleType: 'PROTAGONIST'
+  -           },
+  -           id: 'person-a',
+  -           kind: 'character',
+  -           name: '合成角色甲',
+  -           origin: 'inferred',
+  -           sourceUnitIds: [
+  -             'working-0:0:49'
+  -           ],
+  -           text: '旧断言：后来已经离开。保留未争议的其余简介。'
+  -         },
+  -         tasks: [
+  -           {
+  -             done: false,
+  -             edits: [],
+  -             end: 22,
+  -             key: '513f78a598e269c0a9a6210164414114229e2a83bf50077a997ad5ba3eb1de7e',
+  -             omissionKeys: [
+  -               '8456b47266fda5335601368b633813c831ffca8c550eefe7694cb0698bdfedfe'
+  -             ],
+  -             start: 0,
+  -             unitIds: [
+  -               'working-0:0:49'
+  -             ]
+  -           }
+  -         ]
+  -       }
+  -     ],
+        round: 1,
+        seenOmissions: [
+          '8456b47266fda5335601368b633813c831ffca8c550eefe7694cb0698bdfedfe'
+        ],
+        stage: 'repair',
+  ...
+      ],
+  +   updatedAt: '2026-10-26T07:35:14.029Z',
+  -   updatedAt: '2026-10-26T07:35:14.025Z',
+      version: 1,
+      workingProse: '第一章 合成早期\r\n' +
+        '合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n' +
+        '\r\n' +
+        '第二章 合成后来\n' +
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:88:11)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:82:55)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: {
+      semanticVersion: 1,
+      version: 1,
+      id: '858d8391-7b75-4861-bb02-c32b2017977c',
+      revision: 20,
+      phase: 'failed',
+      title: '合成语义会话',
+      files: [ [Object] ],
+      units: [ [Object], [Object] ],
+      selected: [ 'body' ],
+      targets: [ 'character' ],
+      infer: true,
+      artifacts: [ [Object] ],
+      conflicts: [],
+      patches: [],
+      originalProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingRevision: 0,
+      chapters: [ [Object], [Object] ],
+      steps: [
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object]
+      ],
+      coverage: { character: [Array], review: [], reviewFacts: [] },
+      notFound: [],
+      epoch: 3,
+      createdAt: '2026-10-26T07:35:13.944Z',
+      updatedAt: '2026-10-26T07:35:14.029Z',
+      decisions: [],
+      analysisGrant: { hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', textModel: [Object], reviewModel: [Object] },
+      error: '受控提交后目录拒绝 SYNTHETIC-POST-COMMIT-SECRET',
+      workingUnits: [ [Object], [Object] ],
+      chapterDetection: { mode: 'auto' },
+      models: { text: [Object], review: [Object] },
+      legacyBudget: { version: 1, text: [Object], review: [Object] },
+      target: { path: '/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/semantic-session-tBJLYx/target', device: '16777233', inode: '356425755' },
+      targetNeedsAuthorization: false,
+      analysisCheckpoint: { hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', target: [Object], reviewPolicy: 2 },
+      resumePhase: 'running',
+      semanticState: { version: 1, inputHash: 'e98075df1d544fe13bfd2ea17e9fe558cf63840ad509f158ed5280276cbc2eb3', decisionHash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945', workingRevision: 0, round: 1, stage: 'repair', locks: [], repairs: [], omissions: [Array], seenOmissions: [Array], persistentConflicts: [], conflictBases: {} },
+      runtimeAiCall: { version: 1, processRunId: 'eee45325-ee1c-49af-b540-046cb9ce48b4', sessionId: '858d8391-7b75-4861-bb02-c32b2017977c', operationId: 'e1537ef5-6796-4dda-b185-f331a52a596a', epoch: 3, phase: 'review', workingRevision: 0, scopeHash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', payloadHash: '06825e33f1a56b523e18a71e4a1777973439c182eb2ed3aba7356693269510c8', startedAt: '2026-10-26T07:35:14.007Z', state: 'settled', outcome: 'fulfilled', settledObservedAt: '2026-10-26T07:35:14.007Z' }
+    },
+    expected: {
+      semanticVersion: 1,
+      version: 1,
+      id: '858d8391-7b75-4861-bb02-c32b2017977c',
+      revision: 20,
+      phase: 'running',
+      title: '合成语义会话',
+      files: [ [Object] ],
+      units: [ [Object], [Object] ],
+      selected: [ 'body' ],
+      targets: [ 'character' ],
+      infer: true,
+      artifacts: [ [Object] ],
+      conflicts: [],
+      patches: [],
+      originalProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingProse: '第一章 合成早期\r\n合成角色甲在早期整理资料，合成关联乙只是转述。伏笔首证是一枚合成蓝签。\r\n\r\n第二章 合成后来\n后来是否离开并未证实。合成蓝签再次出现，是伏笔末证。😀尾',
+      workingRevision: 0,
+      chapters: [ [Object], [Object] ],
+      steps: [
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object]
+      ],
+      coverage: { character: [Array], review: [], reviewFacts: [] },
+      notFound: [],
+      epoch: 3,
+      createdAt: '2026-10-26T07:35:13.944Z',
+      updatedAt: '2026-10-26T07:35:14.025Z',
+      decisions: [],
+      analysisGrant: { hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', textModel: [Object], reviewModel: [Object] },
+      workingUnits: [ [Object], [Object] ],
+      chapterDetection: { mode: 'auto' },
+      models: { text: [Object], review: [Object] },
+      legacyBudget: { version: 1, text: [Object], review: [Object] },
+      target: { path: '/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/semantic-session-tBJLYx/target', device: '16777233', inode: '356425755' },
+      targetNeedsAuthorization: false,
+      analysisCheckpoint: { hash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', target: [Object], reviewPolicy: 2 },
+      resumePhase: 'running',
+      semanticState: { version: 1, inputHash: 'e98075df1d544fe13bfd2ea17e9fe558cf63840ad509f158ed5280276cbc2eb3', decisionHash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945', workingRevision: 0, round: 1, stage: 'repair', locks: [], repairs: [Array], omissions: [Array], seenOmissions: [Array], persistentConflicts: [], conflictBases: {} },
+      runtimeAiCall: { version: 1, processRunId: 'eee45325-ee1c-49af-b540-046cb9ce48b4', sessionId: '858d8391-7b75-4861-bb02-c32b2017977c', operationId: 'e1537ef5-6796-4dda-b185-f331a52a596a', epoch: 3, phase: 'review', workingRevision: 0, scopeHash: '1dc82c9893ca2067608a958e5426a8fd5bcf02a4785c16d7deba2b65e8834ccd', payloadHash: '06825e33f1a56b523e18a71e4a1777973439c182eb2ed3aba7356693269510c8', startedAt: '2026-10-26T07:35:14.007Z', state: 'settled', outcome: 'fulfilled', settledObservedAt: '2026-10-26T07:35:14.007Z' }
+    },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

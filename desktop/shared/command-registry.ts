@@ -21,6 +21,7 @@ export function desktopMenu(platform: DesktopPlatform, overrides: Record<string,
     if (platform === "win32" && group === "file") ids.push("app.settings","app.quit")
     if (platform === "win32" && group === "help") ids.push("app.about")
     return { id:group, label:labels[group], items:ids.flatMap(id => {
+      if (id === "file.import-folder") return []
       const command=commands.find(command=>command.id===id)
       if (!command) return []
       const binding=(command.locked ? command.defaults : bindingsFor(command,overrides))[0]

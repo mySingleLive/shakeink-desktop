@@ -1,0 +1,59 @@
+✔ NI-CH03: ambiguous prose and title sequences never create guessed chapter cuts (3.477ms)
+✖ NI-CH04: unchanged manual session chapters survive implicit calculation with validation (2.176083ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 402.418166
+
+✖ failing tests:
+
+test at tests/unit/novel-import-chapters.test.ts:2:7536
+✖ NI-CH04: unchanged manual session chapters survive implicit calculation with validation (2.176083ms)
+  AssertionError [ERR_ASSERTION]: implicit calculation retains every manual id/title/start/end/content
+  + actual - expected
+  
+    [
+      {
+  +     content: '合成前记😀。\r\n\r\n合成记事甲。\r\n\r\n合成记事乙。\r\n',
+  +     end: 29,
+  -     content: '合成前记😀。\r\n\r\n',
+  -     end: 11,
+        id: 'chapter-1',
+        start: 0,
+  +     title: '未分章正文'
+  -     title: '人工前记'
+      },
+  -   {
+  -     content: '合成记事甲。\r\n\r\n',
+  -     end: 21,
+  -     id: 'chapter-2',
+  -     start: 11,
+  -     title: ' 人工甲 '
+  -   },
+  -   {
+  -     content: '合成记事乙。\r\n',
+  -     end: 29,
+  -     id: 'chapter-3',
+  -     start: 21,
+  -     title: '人工乙'
+  -   }
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-chapters.test.ts:56:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { id: 'chapter-1', title: '未分章正文', start: 0, end: 29, content: '合成前记😀。\r\n\r\n合成记事甲。\r\n\r\n合成记事乙。\r\n' } ],
+    expected: [ { id: 'chapter-1', title: '人工前记', start: 0, end: 11, content: '合成前记😀。\r\n\r\n' }, { id: 'chapter-2', title: ' 人工甲 ', start: 11, end: 21, content: '合成记事甲。\r\n\r\n' }, { id: 'chapter-3', title: '人工乙', start: 21, end: 29, content: '合成记事乙。\r\n' } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

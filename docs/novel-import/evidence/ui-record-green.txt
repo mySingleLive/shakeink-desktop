@@ -1,0 +1,10 @@
+✔ NI-U06: conflict has no default; source explanation, setting confirmation, patch preview and selected second approval (2785.189416ms)
+✔ NI-U07: result opens original work tabs, original outline record pages and modal keyboard remain usable (1623.028ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4900.519583

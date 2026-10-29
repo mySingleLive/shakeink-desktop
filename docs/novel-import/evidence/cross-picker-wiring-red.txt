@@ -1,0 +1,88 @@
+✖ NI-L01: unified source selection uses macOS native panel or Windows picker service without mode choice (9.568542ms)
+✖ CP-L01: main lifecycle cancels source choice before pause, gate drain and owner revocation (2.601958ms)
+✖ UP-05: one full sidebar button and default native command; mac menu deduplicates with legacy command retained (37.465291ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 0
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 553.336292
+
+✖ failing tests:
+
+test at tests/unit/novel-import-integration.test.ts:2:12186
+✖ NI-L01: unified source selection uses macOS native panel or Windows picker service without mode choice (9.568542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '/native/body.txt',
+  +   '/native/settings.md'
+  -   {
+  -     path: '/owned/body.txt',
+  -     proof: {
+  -       device: '1',
+  -       inode: '2'
+  -     }
+  -   }
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:71:56)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '/native/body.txt', '/native/settings.md' ],
+    expected: [ { path: '/owned/body.txt', proof: [Object] } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-integration.test.ts:2:15017
+✖ CP-L01: main lifecycle cancels source choice before pause, gate drain and owner revocation (2.601958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'cancel-picker'
+  
+      at Object.pauseAll (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:83:136)
+      at eval (eval at evaluate (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:2:11152), <anonymous>:8:26)
+      at eval (eval at evaluate (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:2:11152), <anonymous>:10:7)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:84:8)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'cancel-picker',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-picker.test.ts:2:5703
+✖ UP-05: one full sidebar button and default native command; mac menu deduplicates with legacy command retained (37.465291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'file.import',
+  +   'file.import-folder'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:51:57)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'file.import', 'file.import-folder' ],
+    expected: [ 'file.import' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

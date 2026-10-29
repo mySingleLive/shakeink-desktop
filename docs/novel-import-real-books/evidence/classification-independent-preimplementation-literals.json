@@ -1,0 +1,50 @@
+{
+  "referenceMethod": "independent literal strings + Python ordered JSON/SHA; no production imports or helper output",
+  "preChangePromptPayload": {
+    "legacy-classify": {
+      "payload": "6eb9fcbaae2b37fc8cd1eb134fc908ec4eef4fe9df5af507297d74bb1f067abb",
+      "prompt": "5a12a3238f265fda34712616d1bf5490507f0e60b1961856fd4c7d96bf54bf15"
+    },
+    "legacy-analyze": {
+      "payload": "3f4c906b73e265197497bd6fefd530f1c1b74f8ed9638cf32f73fd75222b6741",
+      "prompt": "9f73c43f422932be5641323f6fe58a798b1cb2a271e6cd13c362d659f1450962"
+    },
+    "legacy-review": {
+      "payload": "2dc8b8e801492678f688b218f03e6265fb5596113a4c234e6f468215a6b0c8f5",
+      "prompt": "5bcc47ecbd5a5067a323cd89ab53a59eb2efafdae0257a4a80eaf50c5d2fe707"
+    },
+    "legacy-patch": {
+      "payload": "2c73b5060513a9f4a4a26d96356fe6499fc9a986dc06c3b6b84eea7afb12a96d",
+      "prompt": "495aba442670cdc725ace4aced5d3f85556aedfffb9dd4600011ebf6d0a359ed"
+    },
+    "semantic-classify": {
+      "payload": "900e6aebcda79dc2bb6d903634227b6e591757ebde719263310b5d3cd374a5b8",
+      "prompt": "f7c451ef509943f3b543d0c5a1072452cc8bcd8880a9c17fbdaedbff625b650e"
+    },
+    "semantic-analyze": {
+      "payload": "2aa81b7dc161ae4baaeba4182fbaa601217f7fd6b94d119722ae8c424ac3ca40",
+      "prompt": "31f85f4a59b4de70e286b1342d8d42f292774b99131cbf84fa0dfe11112d809b"
+    },
+    "semantic-review": {
+      "payload": "b6467af2a6317b02e0b329dc12d7e5bfe5178261106e4a4a69ee7544c9a215b5",
+      "prompt": "a1ea1131e8436c7c18382668c546aa4262ea94d2eafc0f6cfb7020c5b4dab822"
+    },
+    "semantic-patch": {
+      "payload": "9b91a1549898a4c4c00935a1cbfe4b50c81cee8b3c2260725d16872062d53ea7",
+      "prompt": "bc149638f2afc594354b587f78aca86cabcf14712455acff752f608710a28a4b"
+    },
+    "semantic-reconcile": {
+      "payload": "d576d6cf844bfc6b2eb29dbcf04dcce5bde9a5260fcae16c87941302af0a6b1c",
+      "prompt": "dc079f47fc34b9cfe1bf673ffbbb3627ac8a85688d1b20ab7a0b971e19b7a478"
+    }
+  },
+  "oldSemanticEmptyClassifyPromptHash": "2e539e4f7975bd340b00595d11614bb4653025f4fa011aad81b476aaca3f47ec",
+  "oldClassificationSourceHash": {
+    "legacy": "241469228452a71e7b7804ad95660360bf17d3c8cfcbe01e1570298f383da277",
+    "semantic": "741c847ef5a3cf7eeec1e9e550d54e643ee71aba1c5c6a27617234e87624cf83"
+  },
+  "sourceGeometryHash": "366ab6d6f96deb2cf96003befed5224ffa56aa18cd7741aedb3aa20af431595b",
+  "legacyWorkingGeometryHash": "538e1f219e8990c2f959922b1da6dc6490839bc91c511d9fcc9b42932fc3fb93",
+  "sourceUnits": 91,
+  "sourceUtf16Characters": 90012
+}

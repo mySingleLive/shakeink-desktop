@@ -1,0 +1,33 @@
+✔ CP-U01: real metadata rows/icons, disabled items, current directory, filtering and cross-directory removal (2962.363292ms)
+✔ CP-U01: folder double click restores only its first-click selection before navigating (3329.7305ms)
+✖ CP-U02: errors, empty/loading, keyboard navigation and short viewports retain focus and footer (470.306792ms)
+✔ CP-L01: immediate cancel bypasses navigation/checking and late replies/events cannot reopen or replace a new picker (1049.931584ms)
+✔ CP-L01: canceled initial current response is retired and suspension releases the pending choose (404.772791ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8733.695458
+
+✖ failing tests:
+
+test at tests/browser/novel-import-source-picker.test.ts:2:6365
+✖ CP-U02: errors, empty/loading, keyboard navigation and short viewports retain focus and footer (470.306792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-source-picker.test.ts:56:64)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-source-picker.test.ts:19:346)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

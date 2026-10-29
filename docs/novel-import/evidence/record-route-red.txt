@@ -1,0 +1,30 @@
+✖ NI-W02: the registered desktop route scopes and returns the complete original record (2536.485708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3292.222209
+
+✖ failing tests:
+
+test at tests/integration/novel-import-publish.test.ts:2:10424
+✖ NI-W02: the registered desktop route scopes and returns the complete original record (2536.485708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'novel'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-publish.test.ts:40:386)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'novel',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

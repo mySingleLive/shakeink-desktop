@@ -1,0 +1,95 @@
+{
+  "sourceBeforeSha256": "7229da8f8841317ba46d393914943aacbf1f99ad93449cf84501ecd8f3bd169e",
+  "sourceAfterSha256": "ab7956120d2269a3db3d280d6beb66703aec438e36143a3351caf16e9dd61e0d",
+  "runs": [
+    {
+      "log": "red.log",
+      "exitCode": 1,
+      "tests": 51,
+      "pass": 22,
+      "fail": 29,
+      "skipped": 0
+    },
+    {
+      "log": "red-final.log",
+      "exitCode": 1,
+      "tests": 50,
+      "pass": 21,
+      "fail": 29,
+      "skipped": 0
+    },
+    {
+      "log": "green-attempt-1.log",
+      "exitCode": 0,
+      "tests": 50,
+      "pass": 50,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "log": "green-final.log",
+      "exitCode": 1,
+      "tests": 58,
+      "pass": 56,
+      "fail": 2,
+      "skipped": 0
+    },
+    {
+      "log": "green-final-corrected.log",
+      "exitCode": 1,
+      "tests": 58,
+      "pass": 56,
+      "fail": 2,
+      "skipped": 0
+    },
+    {
+      "log": "green-verified.log",
+      "exitCode": 0,
+      "tests": 58,
+      "pass": 58,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "log": "green-delivery.log",
+      "exitCode": 0,
+      "tests": 59,
+      "pass": 59,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "log": "e01-e04.log",
+      "exitCode": 0,
+      "tests": 26,
+      "pass": 22,
+      "fail": 0,
+      "skipped": 4
+    },
+    {
+      "log": "green-isolated-fixtures.log",
+      "exitCode": 0,
+      "tests": 59,
+      "pass": 59,
+      "fail": 0,
+      "skipped": 0
+    }
+  ],
+  "typechecks": [
+    {
+      "log": "typecheck-attempt-1.log",
+      "exitCode": 2,
+      "note": "CLI omitted repository aliases; also exposed missing test narrowing."
+    },
+    {
+      "log": "typecheck-final.log",
+      "exitCode": 0
+    },
+    {
+      "log": "typecheck-delivery.log",
+      "exitCode": 0
+    }
+  ],
+  "realModelCalls": 0,
+  "realImportAcceptanceClaimed": false
+}

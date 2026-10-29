@@ -1,0 +1,65 @@
+--- 64-baseline/desktop/core/novel-import.ts
++++ desktop/core/novel-import.ts
+@@ -107,6 +107,7 @@
+ export function importSessionChapters(session:ImportSession,text:string,cuts?:{start:number;title:string}[]):ImportChapter[]{
+  if(session.semanticVersion!==1)return importChapters(text,cuts)
+  if(cuts){session.chapterDetection={mode:'manual',...(session.chapterDetection?.diagnostic?{diagnostic:session.chapterDetection.diagnostic}:{})};return importChapters(text,cuts,1)}
++ if(session.chapterDetection?.mode==='manual'&&text.length>0&&session.chapters.length>0&&session.chapters.every(chapter=>typeof chapter.content==='string')&&session.chapters.map(chapter=>chapter.content).join('')===text)return importChapters(text,session.chapters.map(({start,title})=>({start,title})),1)
+  const detected=detectImportChapterCuts(text);session.chapterDetection={mode:'auto',...(detected.diagnostic?{diagnostic:detected.diagnostic}:{})};return importChapters(text,detected.cuts,1)
+ }
+ function chineseNumber(value:string):string{
+--- 64-baseline/tests/unit/novel-import-chapters.test.ts
++++ tests/unit/novel-import-chapters.test.ts
+@@ -2,7 +2,8 @@
+ import {test} from 'node:test'
+ import {createHash} from 'node:crypto'
+ import {detectImportChapterCuts} from '../../desktop/core/novel-import-chapters'
+-import {importChapters} from '../../desktop/core/novel-import'
++import {importChapters,importSessionChapters} from '../../desktop/core/novel-import'
++import type {ImportSession} from '../../desktop/shared/novel-import'
+ 
+ const words='One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Thirteen|Fourteen|Fifteen|Sixteen|Seventeen|Eighteen|Nineteen|Twenty|Twenty-One|Twenty-Two|Twenty-Three|Twenty-Four|Twenty-Five|Twenty-Six|Twenty-Seven|Twenty-Eight|Twenty-Nine|Thirty|Thirty-One|Thirty-Two|Thirty-Three|Thirty-Four|Thirty-Five|Thirty-Six|Thirty-Seven|Thirty-Eight|Thirty-Nine|Forty|Forty-One|Forty-Two|Forty-Three|Forty-Four|Forty-Five|Forty-Six|Forty-Seven|Forty-Eight|Forty-Nine|Fifty|Fifty-One|Fifty-Two|Fifty-Three|Fifty-Four|Fifty-Five|Fifty-Six|Fifty-Seven|Fifty-Eight'.split('|')
+ const roman='I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI'.split('|')
+@@ -47,3 +48,19 @@
+  assert.deepEqual(manualResult.map(c=>({start:c.start,title:c.title})),manual);assert.equal(manualResult.map(c=>c.content).join(''),manualText);assert.equal(JSON.stringify(manual),manualBefore)
+  assert.deepEqual(detectImportChapterCuts('').cuts,[])
+ })
++
++test('NI-CH04: unchanged manual session chapters survive implicit calculation with validation',()=>{
++ const text='合成前记😀。\r\n\r\n合成记事甲。\r\n\r\n合成记事乙。\r\n',cuts=[{start:0,title:'人工前记'},{start:text.indexOf('合成记事甲'),title:' 人工甲 '},{start:text.indexOf('合成记事乙'),title:'人工乙'}]
++ const session={semanticVersion:1,chapters:importChapters(text,cuts,1),chapterDetection:{mode:'manual',diagnostic:'合成歧义须人工核对'}} as ImportSession,before=structuredClone(session),bytes=hash(text)
++ const retained=importSessionChapters(session,text)
++ assert.deepEqual(retained,before.chapters,'implicit calculation retains every manual id/title/start/end/content');assert.deepEqual(session,before,'manual diagnostic and existing chapter objects are not rewritten');assert.equal(retained.map(c=>c.content).join(''),text);assert.equal(hash(retained.map(c=>c.content).join('')),bytes)
++ const explicit=[{start:0,title:'重新确认合成前段'},{start:text.indexOf('合成记事乙'),title:'重新确认合成末段'}],changed=importSessionChapters(session,text,explicit)
++ assert.deepEqual(changed,importChapters(text,explicit,1));assert.equal(session.chapterDetection?.mode,'manual');assert.equal(session.chapterDetection?.diagnostic,before.chapterDetection?.diagnostic)
++ for(const nextText of [text+'追加一句。',text.replace('记事甲','记事丙')]){const s=structuredClone(before),detected=detectImportChapterCuts(nextText);assert.deepEqual(importSessionChapters(s,nextText),importChapters(nextText,detected.cuts,1));assert.deepEqual(s.chapterDetection,{mode:'auto',...(detected.diagnostic?{diagnostic:detected.diagnostic}:{})});assert.equal(hash(text),bytes)}
++ const automatic=structuredClone(before);automatic.chapterDetection={mode:'auto'};assert.deepEqual(importSessionChapters(automatic,text),importChapters(text,detectImportChapterCuts(text).cuts,1));assert.equal(automatic.chapterDetection.mode,'auto')
++ const empty=structuredClone(before);empty.chapters=[];assert.deepEqual(importSessionChapters(empty,text),importChapters(text,detectImportChapterCuts(text).cuts,1));assert.equal(empty.chapterDetection?.mode,'auto')
++ const legacy=structuredClone(before);delete legacy.semanticVersion;assert.deepEqual(importSessionChapters(legacy,text),importChapters(text));assert.deepEqual(legacy.chapterDetection,before.chapterDetection)
++ for(const invalid of [-1, text.indexOf('😀')+1, 0, text.length]){const s=structuredClone(before);s.chapters[1].start=invalid;assert.equal(s.chapters.map(c=>c.content).join(''),text);assert.throws(()=>importSessionChapters(s,text),/章节|范围|原文|顺序/);assert.equal(s.chapterDetection?.mode,'manual')}
++ const blank=structuredClone(before);blank.chapters[1].title=' \t';assert.throws(()=>importSessionChapters(blank,text),/章节|范围/)
++ assert.equal(hash(text),bytes)
++})
+--- 64-baseline/tests/unit/novel-import-session.test.ts
++++ tests/unit/novel-import-session.test.ts
+@@ -73,6 +73,20 @@
+ async function control(controller:NovelImportController,type:string,extra:Record<string,unknown>={}){const v=(await controller.act({type:'current'})).view!;return controller.act({type,...(type==='current'?{}:{id:v.id,revision:v.revision}),...extra})}
+ async function drained(controller:NovelImportController){for(let i=0;i<400&&controller.active;i++)await new Promise(resolve=>setTimeout(resolve,3));assert.equal(controller.active,0);return (await controller.act({type:'current'})).view!}
+ async function until(check:()=>boolean){for(let i=0;i<400&&!check();i++)await new Promise(resolve=>setTimeout(resolve,3));assert.ok(check(),'expected in-flight synthetic operation')}
++
++test('NI-S12: local and synthetic AI source confirmation retain manual chapters across reopen',async()=>{
++ const prefix='合成前记😀。\r\n\r\n',entries=Array.from({length:13},(_,i)=>`合成记事${i+1}。\r\n这一则的完整合成文字。\r\n\r\n`),text=prefix+entries.join(''),cuts=[{start:0,title:'人工确认前记'},...entries.map((entry,i)=>({start:text.indexOf(entry),title:'人工确认记事'+(i+1)}))],requests:ImportAiRequest[]=[]
++ const f=await fixture([source(text)],async request=>{requests.push(structuredClone(request));assert.equal(request.phase,'classify','this scenario never starts setting analysis');return {classifications:request.units.map(unit=>({unitId:unit.id,kind:'body'}))}});let restored:NovelImportController|undefined
++ try{
++  await f.act('choose',{mode:'files'});await f.act('classify',{mode:'local',consent:false});await f.act('select',{selected:['body'],targets:['character','worldline','narrative'],infer:true});await f.act('set-chapters',{cuts});const manual=await saved(f)
++  assert.equal(manual.chapters.length,14);assert.equal(manual.chapterDetection?.mode,'manual');assert.equal(manual.chapters.map(c=>c.content).join(''),text);assert.equal(requests.length,0)
++  const assertRetained=(s:ImportSession)=>{assert.deepEqual(s.chapters,manual.chapters);assert.deepEqual(s.chapterDetection,manual.chapterDetection);assert.equal(s.chapters.map(c=>c.content).join(''),text);assert.equal(importHash(s.chapters.map(c=>c.content).join('')),importHash(text));assert.deepEqual(s.files,manual.files);assert.deepEqual(s.units,manual.units);assert.deepEqual(s.selected,manual.selected);assert.deepEqual(s.targets,manual.targets);assert.equal(s.infer,manual.infer);assert.equal(s.originalProse,'');assert.equal(s.workingProse,'');assert.equal(s.workingRevision,0);assert.deepEqual(s.artifacts,[]);assert.deepEqual(s.decisions,[]);assert.equal(s.publication,undefined)}
++  await f.act('classify',{mode:'local',consent:false});const local=await saved(f);assertRetained(local);assert.equal(requests.length,0,'local confirmation remains zero AI');assert.deepEqual(local.coverage,{})
++  await f.act('classify',{mode:'ai',consent:true});assert.equal((await f.settle()).phase,'select');const classified=await saved(f);assertRetained(classified);assert.ok(requests.length>0);assert.deepEqual(classified.coverage.classify,manual.units.map(unit=>unit.id));assert.equal(classified.classificationGrant,undefined);assert.equal(classified.analysisGrant,undefined);assert.equal(f.published,0)
++  await f.controller.close();restored=new NovelImportController(f.options);await restored.initialize();let view=(await restored.act({type:'current'})).view!;const path=join(f.root,'novel-imports',view.id,'session.json'),reopened=JSON.parse(await readFile(path,'utf8')) as ImportSession;assertRetained(reopened);assert.deepEqual(reopened.coverage,classified.coverage);const callCount=requests.length
++  await control(restored,'classify',{mode:'local',consent:false});assertRetained(JSON.parse(await readFile(path,'utf8')) as ImportSession);assert.equal(requests.length,callCount);assert.equal(f.published,0)
++ }finally{await restored?.close();await f.dispose()}
++})
+ const factReview=(r:ImportAiRequest)=>r.phase==='review'&&r.instruction?.startsWith('这是设定完整文本')
+ function expectedReviewTasks(s:ImportSession,budget:number){
+  const units=[...workingImportUnits(s),...selectedImportUnits(s).filter(u=>u.kind!=='body')],lookup=new Map(units.map(u=>[u.id,u])),tasks:{key:string;units:ImportUnit[];artifact:ImportArtifact}[]=[]

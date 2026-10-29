@@ -1,0 +1,42 @@
+
+> shakeink@0.1.0 build
+> npm run generate && npm run build:ui && npm run build:desktop
+
+
+> shakeink@0.1.0 generate
+> prisma generate --schema prisma/schema.prisma
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.8.0) to ./src/generated/prisma in 196ms
+
+
+> shakeink@0.1.0 build:ui
+> next build
+
+▲ Next.js 16.2.10 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 7.0s
+  Running TypeScript ...
+  Finished TypeScript in 21.4s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/3) ...
+✓ Generating static pages using 4 workers (3/3) in 186ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+└ ○ /_not-found
+
+
+○  (Static)  prerendered as static content
+
+
+> shakeink@0.1.0 build:desktop
+> node scripts/build-desktop.mjs
+
+(node:29270) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/dt_flys/Projects/shakeink-desktop/desktop/shared/database-seed.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/dt_flys/Projects/shakeink-desktop/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)

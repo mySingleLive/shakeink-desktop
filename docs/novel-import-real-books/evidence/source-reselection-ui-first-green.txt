@@ -1,0 +1,15 @@
+▶ NI-U12: same-source reselection preserves the draft, exposes failures and never sends AI
+  ✔ per-file actions preserve source/selection/chapter identity and fit both themes (870.581209ms)
+  ✔ native selection in progress disables actions without a duplicate mutation (522.347208ms)
+  ✔ cancel keeps the same visible source draft (537.868458ms)
+  ✔ error keeps the same visible source draft (516.094125ms)
+  ✔ started import/publication/modified draft and unsupported files have no refresh action (476.665041ms)
+✔ NI-U12: same-source reselection preserves the draft, exposes failures and never sends AI (3693.211ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4129.694458

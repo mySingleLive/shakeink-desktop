@@ -1,0 +1,69 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (58.661833ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (16.7995ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (0.9995ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (1.094667ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (9.232209ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.365167ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (13.2615ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (7.764959ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (25.113166ms)
+  ✔ formatted unknown references stay schema-valid and fail only at the existing graph gate (2.553709ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.364959ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.094125ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.138125ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (38.108584ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ actual valid worldline requests reach both distinct character-reference late failures (1.2655ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (0.98075ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (2.514542ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✖ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (3.467667ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (5.323583ms)
+  ✔ empty results keep the original late gate and narrative references stay at the original late helper (1.090125ms)
+✖ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (10.341167ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 19
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1072.53775
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:63794
+✖ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (3.467667ms)
+  AssertionError [ERR_ASSERTION]: unknown-character
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      artifacts: [
+        {
+          evidence: [
+            {
+  ...
+            lineName: '合成事件线',
+  +         people: '["MODEL-FOREIGN-SYNTHETIC-SECRET"]',
+  -         people: '["existing-character"]',
+            reliability: '客观事实',
+            timeKind: 'unknown'
+          },
+          id: 'j06-event',
+          kind: 'worldline',
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:307:11)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:302:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { artifacts: [ [Object] ] },
+    expected: { artifacts: [ [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

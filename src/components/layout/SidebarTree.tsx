@@ -5,6 +5,8 @@ import { worldForest } from "@/lib/world-tree"
 import { useDesktopCommands } from "@/lib/desktop/use-command-target"
 import { useNovelList } from "@/lib/novel-list"
 import { UnavailableWorks } from "@/components/desktop/UnavailableWorks"
+import {NovelImportTaskButton} from '@/components/desktop/NovelImportDialog'
+import {requestNovelImport} from '@/lib/desktop/novel-import'
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -40,6 +42,7 @@ import {
   Plus,
   Pointer,
   NotebookPen,
+  FileInput,
   RefreshCw,
   Settings,
   Settings2,
@@ -1404,7 +1407,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
   const [titleInput, setTitleInput] = useState("")
   /** 创建作品两步向导（书名 + 创作切入方式） */
   const [createOpen, setCreateOpen] = useState(false)
-  useDesktopCommands({"file.new":()=>setCreateOpen(true)})
+  useDesktopCommands({"file.new":()=>setCreateOpen(true),'file.import':()=>requestNovelImport().then(()=>{}),'file.import-folder':()=>requestNovelImport().then(()=>{})})
 
   const { data: novelList, isPending, isError, isFetching, refetch } = useNovelList()
   const novels = novelList?.novels
@@ -1766,6 +1769,8 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       <div className="sidebar-brand"><span aria-hidden="true"><Seal variant="mark" className="brand-logo size-[30px]" /></span><span className="brand-title">玄印写作</span></div>
       <div className="create-actions">
         <button type="button" className="create-action" onClick={() => setCreateOpen(true)}><NotebookPen aria-hidden="true" size={18} strokeWidth={1.7} /><NavigationLabel>创建作品</NavigationLabel></button>
+        <button type="button" className="create-action" onClick={()=>void requestNovelImport()}><FileInput aria-hidden="true" size={18} strokeWidth={1.7}/><NavigationLabel>导入作品</NavigationLabel></button>
+        <NovelImportTaskButton/>
         <button type="button" className="create-action" onClick={() => useChatStore.getState().requestNewConversation()}><MessageCirclePlus aria-hidden="true" size={18} strokeWidth={1.7} /><NavigationLabel>新对话</NavigationLabel></button>
       </div>
       <div role="tablist" aria-label="导航分类" className="nav-tabs">

@@ -1,0 +1,22 @@
+{"body":"导入作品 查看导入记录\n\n合成图像页.pdf · 图像页 1 / 2\n\n第 1 页\n\n逐页核对图像是否含需要导入的小说内容。\n\n上一页\n图像页\n第 1 页 · 待核对\n第 3 页 · 待核对\n下一页\n正在读取原页预览…\n\n可以切换页码或取消，不会保存未确认的更改。\n\n含图像 · 本页可提取文字 0 字符\n\n已保存：待核对。本页提取文字始终保留。\n\n选择只作用于当前页。切换页码保留本次更改；只有保存才应用，未操作页保持原决定。\n\n已核对，确认本页图像不含需要导入的正文或设定\n图像含正文或设定\n无法确定\n\n本页没有本次更改。\n\n确认仅对当前来源有效。文件变化、预览失败、未确认页及无可提取正文都会阻止继续。\n\n本次明确更改 0 页；保存后预计确认 0 / 2 页。其余未确认页或预览异常仍阻断继续。\n\n取消或按 Escape 不保存本次更改，保留已保存的决定（当前 0 页已确认）。\n\n返回，暂不确认\n保存本次更改","calls":[{"type":"current"},{"type":"choose"}],"state":{"view":{"id":"51000000-0000-4000-8000-000000000001","revision":1,"phase":"source","title":"合成页核对","files":[{"id":"pdf-file-1","name":"合成图像页.pdf","format":"pdf","bytes":1000,"hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","included":true,"characters":120,"unitCount":1,"unknownCount":0,"pdfInspection":{"schemaVersion":1,"sourceHash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","inspectionId":"51000000-0000-4000-8000-000000000002","extractorVersion":"fixture","resourceProfileHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","ledgerHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","sourceKey":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","pageCount":4,"scanState":"complete","textOnlyPageCount":2,"imagePageCount":2,"totalTextCharacters":120,"pages":[{"page":1,"start":0,"end":0,"textCharacters":0,"textState":"empty","raster":"present"},{"page":2,"start":0,"end":60,"textCharacters":60,"textState":"extracted","raster":"none"},{"page":3,"start":60,"end":80,"textCharacters":20,"textState":"extracted","raster":"present"},{"page":4,"start":80,"end":120,"textCharacters":40,"textState":"extracted","raster":"none"}]},"pdfPendingPages":2,"pdfReady":false}],"found":{"body":1,"outline":0,"theme":0,"style":0,"world":0,"character":0,"scene":0,"item":0,"foreshadow":0,"goldenFinger":0,"trope":0,"worldline":0,"narrative":0},"selected":["body"],"targets":["outline","theme","style","world","character","scene","item","foreshadow","goldenFinger","trope","worldline","narrative"],"infer":true,"steps":[],"conflicts":[],"patches":[],"models":{},"targetReady":false,"sourceReady":false,"chapters":[{"id":"chapter","title":"正文","start":0,"end":120}],"notFound":[],"modified":false,"pdfReady":false,"pdfPendingPages":2},"open":true,"screen":"source","busy":0,"error":null,"source":null,"previewReturn":"source","decisionDrafts":{}}}
+✖ NI-PDF11: two-page review drafts survive navigation and cancel retains saved decisions (8444.182417ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8931.634667
+
+✖ failing tests:
+
+test at tests/browser/novel-import-pdf-pages.test.ts:2:3853
+✖ NI-PDF11: two-page review drafts survive navigation and cancel retains saved decisions (8444.182417ms)
+  page.waitForFunction: Timeout 7000ms exceeded.
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-pdf-pages.test.ts:26:65)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-pdf-pages.test.ts:18:394)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-pdf-pages.test.ts:25:2) {
+    name: 'TimeoutError',
+    log: []
+  }

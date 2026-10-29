@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type { DesktopBridge, DesktopEvent } from "../shared/ipc"
 const bridge: DesktopBridge = {
+  novelImport: action=>ipcRenderer.invoke('desktop:novel-import',action),
+  novelImportSources: action=>ipcRenderer.invoke('desktop:novel-import-sources',action),
   bootstrap: () => ipcRenderer.invoke("desktop:bootstrap"),
   persistDraft: (sessionId,snapshot) => ipcRenderer.invoke("desktop:draft-persist",sessionId,snapshot),
   readDraft: sessionId => ipcRenderer.invoke("desktop:draft-read",sessionId),

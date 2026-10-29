@@ -1,0 +1,2 @@
+observe-real-novel-import.py: py_compile OK
+verify-real-novel-source-adoption.py: py_compile OK

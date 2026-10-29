@@ -1,0 +1,43 @@
+▶ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority
+  ✔ actual analyze, reconcile and review prompts keep guidance outside untrusted data (14.729ms)
+  ✔ true preimplementation prompt and serialization goldens protect unchanged branches (1.30675ms)
+  ✔ projection and locked targeted-reconcile gates still reject unauthorized results (1.846042ms)
+✔ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority (24.637167ms)
+▶ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract
+  ✖ all twelve actual generation paths retain exact data, notFound, role and signal (3.988208ms)
+  ✔ invalid and missing targets keep the original helper contract and zero-resolution guard (0.801708ms)
+  ✔ independent preimplementation hashes retain every unaffected phase (0.910375ms)
+✖ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract (6.986792ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 6
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 432.123708
+
+✖ failing tests:
+
+test at tests/unit/novel-import-ai.test.ts:4:21100
+✖ all twelve actual generation paths retain exact data, notFound, role and signal (3.988208ms)
+  AssertionError [ERR_ASSERTION]: outline has exactly one JSON string target binding
+  + actual - expected
+  
+  + []
+  - [
+  -   'outline'
+  - ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:239:111)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:232:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'outline' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

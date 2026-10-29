@@ -1,0 +1,31 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: faction-optional-id-omitted-by-real-json-persistence-is-not-lost-native-content
++ actual - expected
+
++ [
++   {
++     name: 'semantic-nine-world-setting-content-world-and-map-parent-exact',
++     passed: false
++   }
++ ]
+- []
+
+    at positive (/private/tmp/real-novel-semantic-assertions-check.mts:33:179)
+    at <anonymous> (/private/tmp/real-novel-semantic-assertions-check.mts:88:487) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      name: 'semantic-nine-world-setting-content-world-and-map-parent-exact',
+      passed: false
+    }
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

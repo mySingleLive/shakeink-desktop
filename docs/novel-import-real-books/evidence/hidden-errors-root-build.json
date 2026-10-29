@@ -1,0 +1,40 @@
+{
+  "recordedAt": "2026-10-26T14:15:02.469851+00:00",
+  "scope": "85 fixed hidden failure diagnostics; actual S02 diagnostic recovery pending",
+  "commands": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "execSession": 17129
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false -p /tmp/shakeink-real-audit-tsconfig.json",
+      "exitCode": 0,
+      "execSession": 65593
+    },
+    {
+      "command": "node scripts/build-desktop.mjs",
+      "exitCode": 0,
+      "execSession": 67312
+    }
+  ],
+  "files": {
+    "desktop/main/novel-import.ts": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d",
+    "tests/unit/novel-import-request-schema.test.ts": "afb0983cc6536549a7826ef30284e9784ac2de0964d80e79cfa2084cf11c250d",
+    "desktop/service/novel-import-ai.ts": "d86eb08bcb6c909a5338c76efab787ccb8a1cbf9ef9c2d40a4b90c46679d98ad",
+    "desktop/core/novel-import-ai-payload.ts": "239cac9bf2f40c7e1004ffb28cfc36ff834f98b549f6ae7326cfafb42187ab55",
+    "tests/unit/novel-import-ai.test.ts": "663097fb08265b6467aafc43223724b88287cfcc6c27342c84716206cf9c9903",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "dist/main/index.cjs": "b1ddacd5cf4021225b60b248b340056d41cb927cd94d625507626629c7eb1609",
+    "dist/service/index.cjs": "de199d8041f95579787b8b2b7e438ae91d4b533bff8f1af7ea0285569fc6d49a",
+    "dist/main/novel-import-pdf-worker.cjs": "52645a7d85a982d1b4135fb09109061162d596f450c37abbc07be2e32e6e810a",
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92"
+  },
+  "monacoWorkers": [
+    "out/_next/static/media/css.worker.2r476vc_4i3t-.js",
+    "out/_next/static/media/editor.worker.1duyl2hr9iop5.js",
+    "out/_next/static/media/html.worker.37dgn6mporn0e.js",
+    "out/_next/static/media/json.worker.14wrjaz43tsbz.js",
+    "out/_next/static/media/ts.worker.30escle32bmbw.js"
+  ]
+}

@@ -1,0 +1,36 @@
+▶ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits
+  ✔ initial choose keeps one admitted real FS chain and an empty session until canceled resources settle (97.338042ms)
+  ✖ renderer cancel enters before a reselect inspection queued inside the real controller tail (810.03075ms)
+  ✔ real worker exit remains charged after pending preview is canceled (698.229458ms)
+✖ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits (1606.498167ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 2
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2371.150417
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:5603
+✖ renderer cancel enters before a reselect inspection queued inside the real controller tail (810.03075ms)
+  AssertionError [ERR_ASSERTION]: cancel must reach registry before controller.serial can complete
+  
+  false !== true
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:43:158)
+      at async isolatedPdf (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:26:85)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:42:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:39:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,37 @@
+{
+  "baselinePayloadSha": "8edd5629d1f5153d00a5b4c0bfd90dd0bddcad29b7409f5b9546869ed6cb2d98",
+  "cases": {
+    "legacy-classify": {
+      "prompt": "372ad263b8aa5c573120879f383997d5058bbad250402943b6a7e6fbf8a98045",
+      "payload": "c03ba6c47f1822a049ffe5e818c37fc8281c7ca1c6dae5cb5cbef76c115f6e5a"
+    },
+    "legacy-analyze": {
+      "prompt": "d34044ab9db4b6c94c48cee381ec1b966de0ab0434e5631cc6824de3ab9263f6",
+      "payload": "432d10ee0ca2525d07eafb59805d8e2daa1c0f6214f27d44b83b3c821debd6e9"
+    },
+    "legacy-worldline": {
+      "prompt": "27c5917d3a97f48b2bd5f5f58590ed6ee3c978d6dda0e130de48420134d33ea9",
+      "payload": "035e8e6721919cf55592bbca3a55ea2fde20e147c3e3f29441eeedbf63aaf2d3"
+    },
+    "legacy-narrative": {
+      "prompt": "ad7513df28960889f068515bb24f76739e7c2d8b40cdd882054e831443c2e950",
+      "payload": "cafd4f5df7dd185ef7d0e0fb4e7d5c7c5e3e55963d22019935202b0a8a27e7e4"
+    },
+    "legacy-review": {
+      "prompt": "37946b49d2a1a42584e3cf49da2e416a62126a76c8ff5f9b99175869cf2eb528",
+      "payload": "2edda7147222ced05c8331f3c08f2d9f02c3fe7efdf59077024e37c2739d2120"
+    },
+    "legacy-patch": {
+      "prompt": "994b5675c5541649fbbfccf473459dd7397c7e22c6d09a7ee559c779dfdf4962",
+      "payload": "94591dcf698f8d8ef1f7668a5219d1a8f663997fd9ea714692ddf0893e99cab2"
+    },
+    "semantic-classify": {
+      "prompt": "bd1c1545cb2689861d80325b981487e7f58ca622ea09e39c7a7a39a75bf15505",
+      "payload": "1fd22a3addb4958c2a00f1bc77a7ec3a4b59cbbf51c68933a19b0cbd677b401f"
+    },
+    "semantic-patch": {
+      "prompt": "aa06a5f4cc8f4e2cb5250f5b5db690efc5640844dd539a50c7ea698fc126332b",
+      "payload": "681ebe6ab732c552015154c095ff5865d726607e5fec2713d233bea537206d99"
+    }
+  }
+}

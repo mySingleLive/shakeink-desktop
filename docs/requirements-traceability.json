@@ -4007,6 +4007,357 @@
       "verificationKind": "UI",
       "status": "planned",
       "evidence": []
+    },
+    {
+      "id": "NI-01",
+      "requirement": "已有小说七类扩展名/目录导入，来源与正文保真",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/main/novel-import-files.ts",
+        "desktop/shared/novel-import.ts"
+      ],
+      "testIds": [
+        "NI-F01",
+        "NI-F02",
+        "NI-F03",
+        "NI-F04",
+        "NI-F05",
+        "NI-F06",
+        "NI-F07",
+        "NI-F08",
+        "NI-D01"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/native.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-02",
+      "requirement": "13类来源识别、默认/禁用、完整覆盖",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/core/novel-import.ts",
+        "desktop/main/novel-import.ts"
+      ],
+      "testIds": [
+        "NI-D02",
+        "NI-D04",
+        "NI-S01",
+        "NI-S02"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-03",
+      "requirement": "普通来源复选框与始终展开补全卡片独立",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "src/components/desktop/NovelImportDialog.tsx",
+        "src/components/desktop/novel-import.css",
+        "src/lib/desktop/novel-import.ts"
+      ],
+      "testIds": [
+        "NI-D03",
+        "NI-U01",
+        "NI-U02"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-04",
+      "requirement": "独立目标、模型真实授权、两次发送范围确认",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/shared/ipc.ts",
+        "desktop/preload/index.ts",
+        "desktop/main/index.ts",
+        "desktop/service/novel-import-ai.ts"
+      ],
+      "testIds": [
+        "NI-P01",
+        "NI-P02",
+        "NI-A01",
+        "NI-A02",
+        "NI-A03",
+        "NI-A04",
+        "NI-U03",
+        "NI-U04"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-05",
+      "requirement": "正文起点逆向导入与两条线，原大纲/资料可追溯",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/service/novel-import-publish.ts",
+        "desktop/service/workspaces.ts",
+        "desktop/handlers/novels/[id]/import-record/route.ts",
+        "docs/migration-map.json"
+      ],
+      "testIds": [
+        "NI-S03",
+        "NI-S04",
+        "NI-W01",
+        "NI-W02"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/record-route-green.txt"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-06",
+      "requirement": "冲突询问、正文逐处修改批准与依赖重检",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/core/novel-import.ts",
+        "desktop/main/novel-import.ts",
+        "src/components/desktop/NovelImportDialog.tsx"
+      ],
+      "testIds": [
+        "NI-D05",
+        "NI-D06",
+        "NI-D07",
+        "NI-D08",
+        "NI-S05",
+        "NI-S06",
+        "NI-U06"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-07",
+      "requirement": "中断/停止/取消/收起即删除未保存草稿，下次导入为全新；仅已开始保存的导入保留恢复；暂停可继续；导入指纹幂等发布",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json",
+        "docs/235-import-abandon-plan.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/main/index.ts",
+        "desktop/service/index.ts",
+        "desktop/service/work-creation-reservations.ts",
+        "desktop/core/root-inventory-paths.ts",
+        "desktop/core/root-ownership.ts",
+        "src/lib/desktop/novel-import.ts",
+        "src/components/desktop/NovelImportDialog.tsx",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "NI-S07",
+        "NI-S08",
+        "NI-W03",
+        "NI-W04",
+        "NI-W05",
+        "NI-W06",
+        "NI-L01",
+        "NI-L02",
+        "NI-L03",
+        "NI-L04",
+        "NI-U05",
+        "IA-01",
+        "IA-02",
+        "IA-03",
+        "IA-04",
+        "IA-05",
+        "IA-07",
+        "IA-08",
+        "IA-10",
+        "IA-12",
+        "IA-14",
+        "IA-15",
+        "IA-20",
+        "IA-23",
+        "IA-24",
+        "IA-27",
+        "IA-29",
+        "IA-30",
+        "IA-B01",
+        "IA-B04",
+        "IA-B05",
+        "IA-B09",
+        "IA-R01",
+        "IA-R02",
+        "IA-R03"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/native.json",
+        "docs/novel-import/evidence/import-journal-migration-green.txt",
+        "docs/236-import-abandon-cases.md",
+        "docs/237-import-abandon-verification.md",
+        "docs/evidence/237-import-abandon-real.txt"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本",
+        "IA-R 真实Electron使用隔离数据根与替换的原生打开对话框；Windows 未执行"
+      ]
+    },
+    {
+      "id": "NI-08",
+      "requirement": "真实摘要、原业务组件、双主题/键盘/实际目标",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "src/components/layout/SidebarTree.tsx",
+        "src/components/desktop/DesktopApp.tsx",
+        "src/components/desktop/NovelImportRecord.tsx",
+        "src/components/content/NovelOverview.tsx",
+        "src/components/content/planning/PlanningWorkspace.tsx",
+        "desktop/shared/commands.json",
+        "scripts/runtime-dependencies.mjs"
+      ],
+      "testIds": [
+        "NI-U07",
+        "NI-B01",
+        "NI-N01",
+        "NI-N02",
+        "NI-N03"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-macos-verified-external-targets-pending",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/native.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
     }
   ],
   "developmentRecordUpdated": "2026-10-09",
@@ -5203,5 +5554,562 @@
       "fullSuite": "2251 tests / 2194 passed / 40 failed（P1 收紧前执行）；P1 收紧后受影响用例已复跑：unit 9/9、interaction-stale-terminal 2/2、story-navigation-refresh 7/7、browser 31/31。40 条失败均为基线既有平台/环境问题（macOS 签名、Windows 路径分隔符、重型桌面/OPT 用例超时），已用 git stash 基线复跑 3 条代表性失败确认与本次无关"
     },
     "limits": "未做真实 Electron 安装包验证；CES-12 仅覆盖本地 fixture，不覆盖真实 conversationId 下的查看最新选项按钮；!answer 与内容失效仍合并为同一终态（UI 不会产生非标准回答文本），未新增回答格式错误码"
+  },
+  "novelImportRevision": {
+    "date": "2026-10-25",
+    "uiRevision": "v4",
+    "userApproval": "UI 设计审核通过，可以继续",
+    "approval": "design/novel-import/approval-v4.json",
+    "stage": "implementation-and-scoped-verification-finished",
+    "fullSuiteProhibited": true,
+    "plan": "docs/novel-import/06-technical-plan.md",
+    "planReview": "docs/novel-import/07-technical-review.md",
+    "tests": "docs/novel-import/08-test-cases.md",
+    "status": "implemented-macos-verified-external-targets-pending",
+    "testReview": "docs/novel-import/09-test-review.md",
+    "implementation": "docs/novel-import/10-implementation.md",
+    "codeReviews": [
+      "docs/novel-import/11-review-engine.md",
+      "docs/novel-import/11-review-ui.md",
+      "docs/novel-import/11-review-runtime.md",
+      "docs/novel-import/11-review-publish.md"
+    ],
+    "verification": "docs/novel-import/12-verification.md",
+    "summary": "docs/novel-import/13-summary.md",
+    "automatedTests": {
+      "tests": 58,
+      "pass": 58,
+      "fail": 0,
+      "skipped": 0
+    },
+    "nativeMacOS": "passed",
+    "windows": "not-executed",
+    "realProvider": "not-executed",
+    "newInstaller": "not-built-or-executed",
+    "fullSuiteExecuted": false
+  },
+  "novelImportSourcePickerRevision": {
+    "date": "2026-10-26",
+    "requirement": "单一导入入口，由实际来源类型区分多文件/文件夹；macOS原生、Windows统一界面",
+    "status": "implemented-targeted-verified",
+    "uiApproval": "用户明确回复UI审核通过，继续技术方案与实现",
+    "documents": [
+      "docs/novel-import/17-cross-platform-picker-product.md",
+      "docs/novel-import/18-cross-platform-picker-ui.md",
+      "docs/novel-import/19-cross-platform-picker-ui-review.md",
+      "docs/novel-import/20-cross-platform-picker-technical.md",
+      "docs/novel-import/21-cross-platform-picker-technical-review.md",
+      "docs/novel-import/22-cross-platform-picker-tests.md",
+      "docs/novel-import/23-cross-platform-picker-test-review.md",
+      "docs/novel-import/24-cross-platform-picker-code-review.md",
+      "docs/novel-import/25-cross-platform-picker-verification.md",
+      "docs/novel-import/26-cross-platform-picker-summary.md"
+    ],
+    "tests": {
+      "unit": 28,
+      "browser": 6,
+      "failed": 0,
+      "fullSuiteRun": false
+    },
+    "evidence": "docs/novel-import/evidence/cross-picker-verification.json",
+    "limits": [
+      "Windows真实目标机未执行",
+      "新安装包未构建/运行",
+      "Linux不是当前完整发行目标",
+      "HTML file预览被策略拦截；用户已明确批准，未绕过"
+    ]
+  },
+  "novelImportThemeCorrection": {
+    "date": "2026-10-26",
+    "request": "restore approved novel import dialog styling and current application theme",
+    "status": "targeted-verified-current-macos-ink",
+    "implementation": [
+      "src/components/desktop/novel-import.css"
+    ],
+    "reusedComponents": [
+      "src/components/ui/button.tsx",
+      "src/components/ui/dialog.tsx"
+    ],
+    "globalComponentsModified": false,
+    "plan": "docs/novel-import/25-theme-style-fix-plan.md",
+    "planReview": "docs/novel-import/26-theme-style-plan-review.md",
+    "codeReview": "docs/novel-import/27-theme-style-code-review.md",
+    "verification": "docs/novel-import/28-theme-style-verification.md",
+    "tests": [
+      "NI-UT01",
+      "NI-UT02",
+      "NI-U02"
+    ],
+    "fullSuiteExecuted": false,
+    "nativeThemes": [
+      "ink"
+    ],
+    "isolatedThemes": [
+      "ink",
+      "paper"
+    ],
+    "realNovelImportAcceptance": "pending; tracked separately"
+  },
+  "novelImportRealBookRecoveries": {
+    "date": "2026-10-26",
+    "status": "AI retesting paused by explicit user request; DeepSeek retained; original M01 draft remains failed81 with all successful material preserved; aggregate acceptance not passed",
+    "executionLog": "docs/novel-import-real-books/05-execution-log.md",
+    "fullSuiteExecuted": false,
+    "realNovelImportAcceptance": "not passed: original M01 draft preserved and source-reselection passed; character failed29/41 retained, clarified generic format retest running; previous literary failures and remaining samples/directory/LIFE pending",
+    "fixes": [
+      {
+        "scope": "retain manually confirmed chapters when the selected body is unchanged",
+        "implementation": [
+          "desktop/core/novel-import.ts"
+        ],
+        "tests": [
+          "NI-CH03",
+          "NI-CH04",
+          "NI-S12"
+        ],
+        "plan": "docs/novel-import-real-books/64-manual-chapter-retention-plan.md",
+        "planReview": "docs/novel-import-real-books/65-manual-chapter-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/66-manual-chapter-code-review.md",
+        "actualVerification": "S02 rev19 after real UI re-entry and local classification retains all14 manual units and exact5310-character body; original reset failure retained",
+        "actualReview": "docs/novel-import-real-books/reviews/S02-C1-manual-retention.md"
+      },
+      {
+        "scope": "resume source/select/confirm drafts before invoking analysis migration checks",
+        "implementation": [
+          "desktop/main/novel-import.ts"
+        ],
+        "tests": [
+          "NI-S12",
+          "NI-S13",
+          "NI-R02"
+        ],
+        "plan": "docs/novel-import-real-books/67-preanalysis-resume-plan.md",
+        "planReview": "docs/novel-import-real-books/68-preanalysis-resume-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/69-preanalysis-resume-code-review.md",
+        "actualVerification": "same S02 draft resumes from paused to select with no AI or target selection; existing analysis target reauthorization preserved"
+      },
+      {
+        "scope": "precheck evidence with the unchanged anchor matcher in ordinary semantic analyze response schema",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-A03",
+          "NI-A05",
+          "NI-A06"
+        ],
+        "plan": "docs/novel-import-real-books/70-evidence-schema-plan.md",
+        "planReview": "docs/novel-import-real-books/71-evidence-schema-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/72-evidence-schema-code-review.md",
+        "actualVerification": "same S02 rev39 outline coverage6/6 after recorded rev26 no-match failure, exact body/manual14 preserved; literary outline gaps remain under review",
+        "retryPolicy": "unchanged existing generateJSON maximum one schema correction; no added retry layer"
+      },
+      {
+        "scope": "generic short exact evidence and narrative attribution guidance for semantic analyze/review",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts"
+        ],
+        "tests": [
+          "NI-A03",
+          "NI-A05",
+          "NI-A06",
+          "NI-A07",
+          "NI-J03",
+          "NI-SEM04"
+        ],
+        "plan": "docs/novel-import-real-books/73-evidence-attribution-guidance-plan.md",
+        "planReview": "docs/novel-import-real-books/74-evidence-attribution-guidance-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/75-evidence-attribution-guidance-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/evidence-attribution-guidance-root-build.json",
+        "status": "targeted contract and gate checks passed; actual S02 item retest in progress",
+        "actualVerification": "same S02 rev61/62 preserves all24 data/checkpoint fields,12 successful artifacts and exact5310-character body/manual14 before and after original target authorization; resumed item call observed at rev75",
+        "literaryAcceptance": "pending; existing outline/character omissions and attribution problems are not marked repaired",
+        "validatorsBudgetsAndRetries": "unchanged"
+      },
+      {
+        "scope": "bind the whitelisted requested kind and inferred origin in the ordinary semantic analyze output contract",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03"
+        ],
+        "plan": "docs/novel-import-real-books/76-requested-kind-prompt-plan.md",
+        "planReview": "docs/novel-import-real-books/77-requested-kind-prompt-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/78-requested-kind-prompt-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/requested-kind-root-build.json",
+        "status": "targeted contract/gate checks passed; same S02 item retest in progress",
+        "actualVerification": "same S02 rev79/80 preserves all24 data/checkpoint fields and12 prior artifacts, exact body/manual14 before and after original target authorization; incomplete item resumed",
+        "validatorsBudgetsAndRetries": "unchanged; no default or translation for invalid targets",
+        "literaryAcceptance": "pending; no six-book acceptance claim"
+      },
+      {
+        "scope": "ordinary semantic worldline native precheck and bounded safe failure messages",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts",
+          "desktop/main/novel-import.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-A07",
+          "NI-A08"
+        ],
+        "plan": "docs/novel-import-real-books/79-worldline-native-feedback-plan.md",
+        "planReview": "docs/novel-import-real-books/80-worldline-native-feedback-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/81-worldline-native-feedback-code-review.md",
+        "status": "targeted acceptance-parity and safety checks passed; actual S02 worldline retest in progress",
+        "actualCause": "earlier generic failures remain unlocated; no retrospective causal claim",
+        "validatorsBudgetsAndRetries": "same native helper and late graph gates; no new retries"
+      },
+      {
+        "scope": "trope business contract explains independent satisfaction and tear judgments",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-A09",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04"
+        ],
+        "plan": "docs/novel-import-real-books/82-trope-business-guidance-plan.md",
+        "planReview": "docs/novel-import-real-books/83-trope-business-guidance-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/84-trope-business-guidance-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/worldline-trope-root-build.json",
+        "status": "targeted contract/gate checks passed; actual full semantic review pending",
+        "actualVerification": "same S02 rev167/168 preserves all24 data/checkpoint fields and43 prior artifacts, exact body/manual14 before and after original target authorization; worldline resumed",
+        "literaryAcceptance": "prior trope notFound remains recorded semantic FAIL until actual correction and independent final review",
+        "validatorsBudgetsAndRetries": "unchanged; old notFound credit not manually cleared"
+      },
+      {
+        "scope": "exact fixed diagnostic messages for existing reference failures and canonical provider labels",
+        "implementation": [
+          "desktop/main/novel-import.ts"
+        ],
+        "tests": [
+          "NI-J05",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-A07",
+          "NI-A08",
+          "NI-A09"
+        ],
+        "plan": "docs/novel-import-real-books/85-hidden-error-diagnostics-plan.md",
+        "planReview": "docs/novel-import-real-books/86-hidden-error-diagnostics-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/87-hidden-error-diagnostics-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/hidden-errors-root-build.json",
+        "actualVerification": "S02 rev242 newly identifies an absent or ambiguous character reference; old generic failures remain unlocated; source/body/manual14/43 artifacts preserved",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary semantic worldline references prechecked against the original complete trusted catalog within the existing correction",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-A07",
+          "NI-A08",
+          "NI-A09"
+        ],
+        "plan": "docs/novel-import-real-books/88-worldline-reference-schema-plan.md",
+        "planReview": "docs/novel-import-real-books/89-worldline-reference-schema-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/90-worldline-reference-schema-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/worldline-references-root-build.json",
+        "actualVerification": "same S02 rev286 produces7 worldline artifacts with coverage6/6; original43 artifacts and body/manual14 preserved; narrative remains failed and all literary/final acceptance pending",
+        "retryPolicy": "unchanged existing maximum one schema correction; no added retry or reference fallback",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary semantic narrative native and full-catalog references prechecked within the existing bounded correction",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-A07",
+          "NI-A08",
+          "NI-A09"
+        ],
+        "plan": "docs/novel-import-real-books/91-narrative-validation-schema-plan.md",
+        "planReview": "docs/novel-import-real-books/92-narrative-validation-schema-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/93-narrative-validation-schema-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/narrative-schema-root-build.json",
+        "actualVerification": "same S02 rev289 confirm preserves all24 fields and50 artifacts before target reauthorization; analysis not started after user steered to legacy world-setting correction",
+        "retryPolicy": "unchanged existing maximum one schema correction; native/link helpers and all late gates unchanged",
+        "realNovelImportAcceptance": "pending; narrative recovery and final literary quality not yet verified",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "world-setting grouping guidance and explicit reversible repair of the identified legacy S01 work",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts",
+          "desktop/service/novel-import-world-repair.ts",
+          "scripts/repair-real-novel-world-structure.ts",
+          "desktop/service/workspaces.ts (lockDirectory export only)"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-A09",
+          "NI-A10",
+          "NI-WR01",
+          "NI-WR02",
+          "NI-SEM-P01",
+          "RB-WORLD-FIX01"
+        ],
+        "plan": "docs/novel-import-real-books/94-world-setting-grouping-plan.md",
+        "planReview": "docs/novel-import-real-books/95-world-setting-grouping-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/96-world-setting-grouping-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/world-setting-repair-wg-cr02-root-build.json",
+        "actualVerification": "RB-WORLD-FIX01 PASS: identified legacy S01 now has1 neutral World and7 world Settings (CULTURE2/SOCIETY5), all names/texts and13 protected groups unchanged; independent readback and real macOS UI confirmed",
+        "actualReport": "docs/novel-import-real-books/97-world-setting-grouping-verification.md",
+        "actualDataReview": "docs/novel-import-real-books/reviews/S01-legacy-world-setting-actual.md",
+        "realNovelImportAcceptance": "pending; legacy S01 whole-book literary FAIL retained, S02 narrative and remaining samples/LIFE unfinished",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "S02 D1 actual full import/publish/native open/normal shutdown/own-work audit/reopen",
+        "run": "S02-20261027-D1",
+        "sessionId": "3666f5dc-a7b8-4584-a633-cb9dbc0b9742",
+        "actualReport": "docs/novel-import-real-books/98-S02-D1-final-result.md",
+        "actualVerification": "Completed rev83; body5310 exact and14 chapters persisted;59 artifacts;12 analysis targets and6/6 review with363 fact tasks; own-work mechanical audit passed; actual native reopen confirmed",
+        "literaryAcceptance": "FAIL: subject reversal, source/order accuracy and missing world settings/meaningful timeline links remain in final objects; application completed does not certify quality",
+        "nextSample": "M01-20261027-D1 blocked before first AI by actual ctime mismatch with unchanged source bytes; waiting specific zero-artifact draft discard approval",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary same-source native reselection preserves the existing zero-analysis draft",
+        "implementation": [
+          "desktop/main/novel-import.ts",
+          "src/components/desktop/NovelImportDialog.tsx"
+        ],
+        "tests": [
+          "NI-SR01",
+          "NI-SR02",
+          "NI-SR03",
+          "NI-U12",
+          "NI-PDF04",
+          "NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits",
+          "NI-R02"
+        ],
+        "plan": "docs/novel-import-real-books/99-source-reselection-plan.md",
+        "planReview": "docs/novel-import-real-books/100-source-reselection-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/101-source-reselection-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/source-reselection-root-build.json",
+        "actualReport": "docs/novel-import-real-books/102-source-reselection-verification.md",
+        "actualDataReview": "docs/novel-import-real-books/reviews/M01-D1-source-reselection-actual.md",
+        "actualVerification": "PASS: independent70 narrow checks; native cancel rev5 retains all fields, same-file success rev7 only refreshes proof.ctime plus control fields; original M01 session/source/units/chapters/budget preserved; actual classification and full analysis resumed after new consent",
+        "realNovelImportAcceptance": "not passed: M01 classification precise boundary FAIL preserved, manually confirmed body23257 and9 chapters exact; all12-target actual analysis running; S02 literary FAIL and remaining samples/LIFE still pending",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "diagnostic-only static business labels for final ordinary character schema errors",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-J08"
+        ],
+        "plan": "docs/novel-import-real-books/103-character-schema-diagnostics-plan.md",
+        "planReview": "docs/novel-import-real-books/104-character-schema-diagnostics-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/105-character-schema-diagnostics-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/character-schema-diagnostics-root-build.json",
+        "status": "independent34/34 narrow checks passed; actual single diagnostic recovery in progress",
+        "actualVerification": "same M01 rev32/33 before/after target reauthorization preserves18/21 assertions, outline1 and25 coverage exact; rev40 pending character call has identical scope/payload hashes to failed rev29",
+        "actualCause": "rev29 exact bad fields remain unknown; no retrospective guess or generation/schema change",
+        "validatorsBudgetsAndRetries": "unchanged original schema/helpers/late gates and at most one existing JSON correction; mapper adds no generation",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary-character facts string encoding guidance without changing acceptance",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts",
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-A09",
+          "NI-A10",
+          "NI-A11",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-J08",
+          "NI-J09"
+        ],
+        "plan": "docs/novel-import-real-books/106-character-facts-contract-plan.md",
+        "planReview": "docs/novel-import-real-books/107-character-facts-contract-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/108-character-facts-contract-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/character-facts-contract-root-build.json",
+        "status": "independent A19/19 and J43/43 passed; actual character18 and scene9 generated; partial literary completeness NOT PASS pending final QA",
+        "actualVerification": "same original M01 reached rev62 with outline1/character18/scene9 each25 coverage, body23257/manual9 exact; subsequent item rev63 failed independently",
+        "actualCause": "prior29/41 specific bad fields remain unknown; static ambiguous encoding contract clarified, no retrospective root-cause claim",
+        "validatorsBudgetsAndRetries": "same acceptance/schema shape, no transform/coerce, original105 mapper and all late gates retained; same existing one JSON correction",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "fixed evidence-anchor correction messages without changing acceptance",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-J08",
+          "NI-J09",
+          "NI-J10",
+          "NI-A03",
+          "NI-A06"
+        ],
+        "plan": "docs/novel-import-real-books/109-evidence-feedback-plan.md",
+        "planReview": "docs/novel-import-real-books/110-evidence-feedback-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/111-evidence-feedback-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/evidence-feedback-root-build.json",
+        "actualVerification": "docs/novel-import-real-books/112-evidence-feedback-verification.md",
+        "status": "independent51/51+2/2 narrow checks passed; actual single item retest failed at rev81, no further retry; original material retained",
+        "validatorsBudgetsAndRetries": "same matching algorithm and accepted set; no ID relocation or third generation; original late gates/budget remain",
+        "fullSuiteExecuted": false
+      }
+    ],
+    "currentActualState": {
+      "run": "M01-20261027-D1",
+      "sessionId": "439f1633-9d21-40f5-9d8b-7f165cc66265",
+      "revision": 81,
+      "phase": "failed",
+      "bodyExact": true,
+      "manualChapters": 9,
+      "adoptedArtifacts": {
+        "outline": 1,
+        "character": 18,
+        "scene": 9
+      },
+      "coveragePerCompletedKind": 25,
+      "failedKind": "item",
+      "actualError": "artifacts.8.evidence.0 invalid_schema; exact anchor reason unknown",
+      "pendingPlan": null,
+      "partialLiteraryReview": "docs/novel-import-real-books/reviews/M01-D1-partial-characters-scenes.md",
+      "partialLiteraryResult": "NOT PASS pending later QA; mechanical links/exact evidence valid",
+      "actualRunningOperation": null,
+      "actualStartedAt": "2026-10-26T20:09:55.640Z",
+      "verification": "docs/novel-import-real-books/112-evidence-feedback-verification.md",
+      "latestRejectedOperation": "4c7c35bc-bfaa-4bcc-9bb9-cdd8809ffe19",
+      "latestRejectedAt": "2026-10-26T20:12:07.445Z",
+      "pendingUserChoice": null,
+      "userDecision": {
+        "at": "2026-10-26T20:53:55.825762+00:00",
+        "choice": "保留 DeepSeek，先暂停 AI 重测",
+        "aiRetestPaused": true,
+        "modelChanged": false,
+        "draftRetained": true,
+        "additionalAiRequests": 0,
+        "applicationCheckpointPhase": "failed",
+        "formalLIFE": false
+      }
+    }
+  },
+  "lordOfMysteriesImport20261027": {
+    "date": "2026-10-27",
+    "scope": "Lord of Mysteries first novel full main narrative; prose plus outline, character, item, scene, world, foreshadow, worldline and narrative import",
+    "status": "explicit human authorization received 2026-10-28 for full novel/settings to https://api.deepseek.com/; real B2 accepted first outline leaf (23 units), then normally paused/exited for requested copy build; B3 resumed same session for whole-book outline analysis; B1 evidence failures retained; eight-category semantic/publication acceptance pending",
+    "documents": [
+      "docs/lotm-import/01-research.md",
+      "docs/lotm-import/04-test-cases.md",
+      "docs/lotm-import/09-test-execution.md",
+      "docs/lotm-import/14-prepared-input-review.md",
+      "docs/lotm-import/20-evidence-batch-implementation.md",
+      "docs/lotm-import/21-evidence-batch-code-review.md"
+    ],
+    "implementation": [
+      "desktop/core/novel-import-chapters.ts",
+      "desktop/core/novel-import.ts",
+      "desktop/shared/novel-import.ts",
+      "desktop/main/novel-import.ts",
+      "desktop/service/novel-import-publish.ts",
+      "src/components/desktop/NovelImportDialog.tsx"
+    ],
+    "testIds": [
+      "LOTM-IN01",
+      "LOTM-IN02",
+      "LOTM-PREP01",
+      "LOTM-PREP02",
+      "LOTM-PREP03",
+      "LOTM-V01",
+      "LOTM-V02",
+      "LOTM-V03",
+      "LOTM-V04",
+      "LOTM-V05",
+      "LOTM-FLOW01",
+      "LOTM-FLOW02",
+      "LOTM-BODY01",
+      "LOTM-BODY02",
+      "LOTM-OUT01",
+      "LOTM-CHAR01",
+      "LOTM-ITEM01",
+      "LOTM-SCENE01",
+      "LOTM-WORLD01",
+      "LOTM-FORESHADOW01",
+      "LOTM-WLINE01",
+      "LOTM-NARR01",
+      "LOTM-PERSIST01",
+      "LOTM-HEAL01"
+    ],
+    "limits": [
+      "No full-repository test run",
+      "Synthetic volume tests do not substitute real whole-book import",
+      "Downloaded originals and derived test input are distinct; narration unchanged",
+      "All later published bonus stories are outside the frozen main-narrative scope",
+      "Source B has no exhaustive authoritative word-for-word certification"
+    ],
+    "automaticReviewBlock": {
+      "action": "allow B2 analysis and import",
+      "destination": "https://api.deepseek.com/",
+      "data": "full main narrative and this import inferred settings",
+      "status": "resolved by explicit human authorization on 2026-10-28; authorized B2 analysis started 2026-10-27T18:50:24.219Z",
+      "bypassAttempted": false
+    }
   }
 }

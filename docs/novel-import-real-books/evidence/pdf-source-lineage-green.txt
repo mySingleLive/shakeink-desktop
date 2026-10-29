@@ -1,0 +1,16 @@
+✔ NI-PDF05: only bounded PNG previews issue page and source bound confirmation tokens (78.366625ms)
+▶ NI-PDF04: preview verifies authorized source identity before cache use and after rendering
+  ✔ same-bytes-file (1318.239292ms)
+  ✔ ancestor-directory (1214.258584ms)
+  ✔ ancestor-link (1226.077875ms)
+  ✔ replacement after snapshot but before render result is checked again (1186.379542ms)
+✔ NI-PDF04: preview verifies authorized source identity before cache use and after rendering (4945.482375ms)
+✔ NI-PDF05: decode failures bind issued lineage, preserve saved decisions and stay blocked until successful retry (1199.009625ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6762.269667

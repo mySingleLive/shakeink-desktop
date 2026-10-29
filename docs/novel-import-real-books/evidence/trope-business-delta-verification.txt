@@ -1,0 +1,4 @@
+Production reverse-delta byte identity: PASS (explicit trope-scope predicate + fixed emotional contract and concatenation only).
+All old AI test bytes including NI-A07/A08: PASS (unchanged prefix; only NI-A09 appended).
+79 service/main/J04 control SHA: unchanged.
+73 guidance, 76 kind contract, serialization, notFound persistence, budgets, validators, retry and authorization: unchanged.

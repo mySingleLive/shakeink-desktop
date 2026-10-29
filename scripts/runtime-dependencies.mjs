@@ -6,7 +6,7 @@ import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
 import {pathToFileURL,fileURLToPath} from 'node:url'
 
-export const runtimeEntries=['dist/main/index.cjs','dist/service/index.cjs','dist/preload/index.cjs','dist/preload/maintenance.cjs','dist/preload/root-relocation.cjs']
+export const runtimeEntries=['dist/main/index.cjs','dist/service/index.cjs','dist/preload/index.cjs','dist/preload/maintenance.cjs','dist/preload/root-relocation.cjs','dist/main/novel-import-pdf-worker.cjs']
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex')
 const inside=(root,path)=>path===root||path.startsWith(root+sep)
 const slash=path=>path.split(sep).join('/')
@@ -116,7 +116,10 @@ async function manifestFor(appRoot){
 async function packageAt(appRoot,from,name,optional=false){
  runtimePackageName(name)
  const require=createRequire(join(from,'__runtime_dependency_probe.cjs'))
- for(const directory of require.resolve.paths(name)??[]){
+ // A declared npm dependency can also be a Node builtin (string_decoder in
+ // JSZip's stream stack). Resolve search paths via its metadata subpath so the
+ // builtin's null search-path result cannot hide the installed npm package.
+ for(const directory of require.resolve.paths(name+'/package.json')??[]){
   const candidate=join(directory,name)
   if(!inside(appRoot,candidate))continue
   try{
@@ -202,6 +205,20 @@ export async function prunePackagedDependencies(project,applicationRoot,session=
  if(stage.dev!==capability.device||stage.ino!==capability.inode)throw Error('Staging identity changed')
  const inputManifest=await regularBytes(project,'dist/runtime-dependencies.json')
  if(!inputManifest.equals(capability.manifest)||!(await regularBytes(appRoot,'dist/runtime-dependencies.json')).equals(inputManifest))throw Error('Runtime manifest differs from build input')
+ // Builder strips descriptive metadata from dependency package.json files.
+ // PDF's offline resource profile seals the official original bytes. Restore
+ // only that known transformation in this new capability-bound build output;
+ // any other metadata change still fails before pruning or packaging.
+ const pdfProfile=JSON.parse(await regularBytes(project,'desktop/main/novel-import-pdf-resource-manifest.json'))
+ const pdfMetadataPath='node_modules/pdfjs-dist/package.json',pdfMetadata=await regularBytes(project,pdfMetadataPath)
+ if(digest(pdfMetadata)!==pdfProfile.files['package.json'])throw Error('PDF metadata input differs from locked resource profile')
+ const packagedPdf=await regularBytes(appRoot,pdfMetadataPath)
+ if(!packagedPdf.equals(pdfMetadata)){
+  const source=JSON.parse(pdfMetadata),actual=JSON.parse(packagedPdf)
+  for(const key of ['keywords','bugs','scripts'])if(!Object.hasOwn(actual,key))delete source[key]
+  if(JSON.stringify(actual)!==JSON.stringify(source))throw Error('Unexpected packaged PDF metadata transformation')
+  await writeFile(join(appRoot,pdfMetadataPath),pdfMetadata)
+ }
  const result=await verifyRuntimeDependencies(appRoot)
  const metadataPath=join(appRoot,'package.json'),metadata=JSON.parse(await regularBytes(appRoot,'package.json'))
  const dependencies={}

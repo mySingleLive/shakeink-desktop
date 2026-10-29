@@ -1,0 +1,14 @@
+▶ LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback
+  ✔ legacy (100.5925ms)
+  ✔ review (106.103084ms)
+  ✔ classify (33.945667ms)
+  ✔ reconcile-after-real-author-decision (152.535333ms)
+✔ LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback (394.165084ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 724.487208

@@ -1,0 +1,37 @@
+{
+  "purpose": "Licensed Word fixtures and locally generated synthetic PDFs; no user data",
+  "repository": "morungos/node-word-extractor",
+  "files": [
+    {
+      "file": "test01.doc",
+      "source": "https://github.com/morungos/node-word-extractor/blob/develop/__tests__/data/test01.doc",
+      "gitBlobSha": "7a07fcbfec25f670aa5aa03c340d1627d563d3f5",
+      "license": "MIT"
+    },
+    {
+      "file": "test13.doc",
+      "source": "https://github.com/morungos/node-word-extractor/blob/develop/__tests__/data/test13.doc",
+      "gitBlobSha": "61760fd69be0f7ff753e027a0e5c0b90a722a040",
+      "license": "MIT"
+    },
+    {
+      "file": "test15.doc",
+      "source": "https://github.com/morungos/node-word-extractor/blob/develop/__tests__/data/test15.doc",
+      "gitBlobSha": "990a3b94e3a23c108715d52e6d468b215842c7d3",
+      "license": "MIT"
+    },
+    {
+      "file": "test06.doc",
+      "source": "https://github.com/morungos/node-word-extractor/blob/develop/__tests__/data/test06.doc",
+      "gitBlobSha": "6114a76572d64e4c2a737eaae149246175b18854",
+      "license": "MIT"
+    }
+  ],
+  "generatedPdf": {
+    "source": "generate-pdf.py",
+    "license": "CC0-1.0",
+    "chinese-two-pages.pdf": "python3 tests/fixtures/novel-import/generate-pdf.py",
+    "password.pdf": "gs -q -sDEVICE=pdfwrite -dBATCH -dNOPAUSE -sOwnerPassword=synthetic-owner -sUserPassword=synthetic-password -dEncryptionR=3 -dKeyLength=128 -sOutputFile=tests/fixtures/novel-import/password.pdf tests/fixtures/novel-import/chinese-two-pages.pdf",
+    "password": "synthetic-password (synthetic fixture only)"
+  }
+}

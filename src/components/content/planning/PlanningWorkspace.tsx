@@ -28,6 +28,7 @@ import {
 import { Slider } from "@base-ui/react/slider";
 import { BookOpen, ChevronRight, MoreHorizontal } from "lucide-react";
 import { MarkdownEditor } from "@/components/editor/MarkdownEditor";
+import {NovelImportRecord} from '@/components/desktop/NovelImportRecord';
 import { ReviewHistory } from "../ReviewHistory";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { ScoreIndicator } from "@/components/score/ScoreIndicator";
@@ -1250,6 +1251,7 @@ function PlanningWorkspace({
       <>
         <div className={s.toolbar}>
           <strong>{projection ? "大纲 · 只读投影" : "卷章大纲"}</strong>
+          {projection&&<NovelImportRecord novelId={novelId} outlineOnly/>}
           {projection ? (
             <button
               onClick={() =>

@@ -540,6 +540,20 @@ export function validatePlanning(input: unknown): PlanningData {
       data.lines.some((l) => l.id === v.line),
       "卷所属叙事线不存在",
     );
+  const childCounts = new Map<string, number>();
+  for (const card of data.cards)
+    if (card.parent)
+      childCounts.set(card.parent, (childCounts.get(card.parent) ?? 0) + 1);
+  const chapterCards = new Map<string, NarrativeCard[]>();
+  for (const card of data.cards) {
+    if (!card.narrateSummary && (childCounts.get(card.id) ?? 0) > 0)
+      continue;
+    const chapter = cardChapter(data, card);
+    if (!chapter) continue;
+    const cards = chapterCards.get(chapter);
+    if (cards) cards.push(card);
+    else chapterCards.set(chapter, [card]);
+  }
   for (const ch of data.chapters) {
     check(
       ch.wordMin <= ch.wordBudget,
@@ -555,9 +569,7 @@ export function validatePlanning(input: unknown): PlanningData {
         data.volumes.some((v) => v.id === ch.volume && v.line === ch.line),
         "章所属卷不存在或跨叙事线",
       );
-    const cards = readingCards(data, ch.line).filter(
-        (c) => cardChapter(data, c) === ch.id,
-      ),
+    const cards = chapterCards.get(ch.id) ?? [],
       sum = cards.reduce((n, c) => n + (c.wordBudget ?? 0), 0);
     check(
       sum <= ch.wordBudget,

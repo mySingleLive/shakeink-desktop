@@ -1,0 +1,43 @@
+✖ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (35.827375ms)
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (2.444583ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 873.499167
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:3117
+✖ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (35.827375ms)
+  AssertionError [ERR_ASSERTION]: enum-inside/outside both identify the single allowed world target
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:31:1385)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:10882
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (2.444583ms)
+  AssertionError [ERR_ASSERTION]: invalid/missing target never enters generation
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:37:466)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

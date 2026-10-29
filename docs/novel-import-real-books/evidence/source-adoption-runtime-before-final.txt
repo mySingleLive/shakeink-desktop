@@ -1,0 +1,1 @@
+{"passed": 24, "failed": 0, "output": "/private/tmp/novel-import-adoption-runtime-author-final-1.json"}

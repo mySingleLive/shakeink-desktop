@@ -1,0 +1,94 @@
+25 implementation handoff, 2026-10-26
+
+Approved scope: 25/ST01-ST03, ST01-R, then the two 28-reviewed dangerous-name
+sentinel refinements. No model request, actual app, existing user journal or
+original corpus modification. Parent owns final package and external v3 evidence.
+
+Production
+- main/novel-import-pdf-source-text.ts: <=8MiB whole-byte preflight, 100000 name
+  starts, 20000 obj keywords, seven-byte exact dangerous-name sentinel, complete
+  one-pass #xx consumption, literal non-hex # and encoded delimiters; ObjStm,
+  XRef and Encrypt stop before PDFDocument.load. No fallback parser/decompression.
+- PDFDocument.load receives an exact Buffer alias of the admitted source
+  ArrayBuffer with updateMetadata:false, ignoreEncryption:false,
+  throwOnInvalidObject:true and ParseSpeeds.Slow. Actual raw stream contents
+  share the source buffer, including a tested nonzero-offset source view.
+- Raw PDFDict/PDFArray/PDFRef traversal uses explicit tree/parent/resource
+  limits, complete reference checking, PDFNull preservation and fixed resource
+  closure. No getPages/Resources/ascend convenience API, save, normalize,
+  getContents/decode or pdf.getData is used by production proof code.
+- The 20000 object/edge budget stops all later lookups; repeated immutable font
+  dictionaries reuse their already validated closure proof. This is memoization
+  of the same source object, not a relaxation of font/resource validation.
+- LTR scalar correspondence requires complete non-layout sequence equality,
+  homogeneous single-scalar U+22EF glyphs all carrying originalCharCode A1AD,
+  valid actual font state, supported rendering state, no bidi/vertical/Cf/control
+  or unpaired surrogate ambiguity. Exact UTF-16 offsets preserve every other
+  character and all item/EOL whitespace. Page changes are atomic.
+- Only actual corrections create sourceTextDecoding. The strict schema binds
+  source/closure/glyph/correspondence hashes, before/after UTF-8 hashes and
+  increasing offsets. Core validates final and inverse page digests, counts,
+  page ranges, total size, proof hash and ledger/source binding.
+- Pure-text corrected PDFs enter scope/plan/private publication audit despite
+  having no raster image. Read-record and FileView expose only policy/page-count/
+  changed-character-count summaries. Full proof remains private; no PNG/path.
+- choose/reselect use current strategy. Legacy supplementation explicitly uses
+  legacy and compares the temporary result before adopting any ledger. A text
+  mismatch preserves old prose, units, working units, successful coverage and
+  checkpoints, reports invalidation, and requires explicit re-selection.
+- Preview still renders the original PDF.js glyph stream. Locked CMaps, original
+  201 resources/font bytes, and AI budget/semantic/chapter algorithms are untouched.
+
+Exact executed target tests (Node 24.18.0, every worker explicitly source .ts)
+node --import tsx --test --test-name-pattern='^NI-PDF(?:16|17):'
+  tests/unit/novel-import-pdf-source-text.test.ts
+Result: 10/10, exit 0, no fail/cancel/skip.
+Evidence: pdf-source-text-final-green.txt.
+
+node --import tsx --test --test-name-pattern='^NI-PDF(?:01|02|07|09|10|14):'
+  tests/unit/novel-import-pdf.test.ts
+  tests/integration/novel-import-pdf-publish.test.ts
+Result: 19/19, exit 0, no fail/cancel/skip.
+Evidence: pdf-source-text-regressions-green.txt.
+No other test suite, full file without a name filter, package suite or real model
+was run. NI17 includes actual isolated PGlite publication, durable private proof,
+public summary and same-request/different-proof rejection. Existing NI10 is the
+approved directly related original audit regression.
+
+RED evidence retained
+- pdf-source-text-initial-red: missing helpers before implementation.
+- pdf-source-text-sentinel-red -> sentinel-green: approved revised preflight.
+- pdf-source-text-budget-red -> budget-green: exhausted/missing glyph evidence
+  must block an apparent candidate, not treat it as a no-candidate result.
+- pdf-source-text-font-state-red -> font-state-green: TextContent.styles may
+  omit a real defined whitespace font. Actual commonObjs validates font state;
+  unknown fonts still block. This fixes the actual page-3 diagnostic without
+  introducing a source/page/font-name exception.
+- pdf-source-text-global-budget-red -> global-budget-green: global exhaustion
+  prevents subsequent page lookups. The 2500-page fixture reaches exactly 20000.
+- pdf-source-text-legacy-blocker-red: old no-ledger mismatch was not projected
+  as source invalidation; now the same existing re-selection barrier is visible.
+
+Real component counts only
+pdf-source-text-real-counts-final.json records metadata/hashes, no source text or
+pixels. It is an input-verification component run, not actual app/AI/publication
+acceptance. It checks source/oracle and all frozen implementation hashes before
+and after. Parent exclusively writes the full external production-v3 evidence.
+Original source and independent oracle are unchanged; all 178 physical pages
+match the oracle after necessary whitespace representation removal. The 269
+proved points are page3=135, page4=124 and pages40/46/92/121/172=2 each. Body
+UTF-8 SHA256 remains df2c0077a06e3935e05b7e9b9bdd802bafae9c2ca2bb79a8c65c80228712c6de.
+No global Unicode replacement was used in either production or comparison.
+
+Known execution boundary
+- Original long-binary-name/invalid-# conservative preflight failures were
+  reported to parent before the two technical revisions; they were not silently
+  bypassed. Only the independently approved sentinel contract was implemented.
+- Whole-project tsc latest output is pdf-source-text-typecheck.txt. A concurrent
+  SEM new-test type error was reported to root and is owned separately; this
+  handoff does not claim a clean global typecheck until that file is corrected.
+- No actual Windows, actual Electron UI or RB-L01/12-target model/semantic flow
+  is claimed. Parent must rebuild the worker runtime graph (pdf-lib is a locked
+  production dependency), run NI15 and obtain independent code review.
+
+Frozen file/test hashes: pdf-source-text-final-sha.txt.

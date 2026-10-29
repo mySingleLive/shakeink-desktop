@@ -116,4 +116,5 @@ export const routes: Route[] = [
   { scope: "novel", path: "/api/novels/[id]/worlds", methods: ["GET","POST"], load: () => import("../handlers/novels/[id]/worlds/route") },
   { scope: "global", path: "/api/novels", methods: ["GET","POST"], load: () => import("../handlers/novels/route") },
   { scope: "subagent", path: "/api/subagent-runs/[id]", methods: ["GET"], load: () => import("../handlers/subagent-runs/[id]/route") },
+  { scope: "novel", path: "/api/novels/[id]/import-record", methods: ["GET"], load: () => import("../handlers/novels/[id]/import-record/route") },
 ]

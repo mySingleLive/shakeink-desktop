@@ -1,0 +1,29 @@
+✔ NI-PDF10: real publication audit binds PDF page decisions and history without paths pixels or preview tokens (3715.8125ms)
+✔ NI-PDF14: actual missing-dimension and decode warnings block otherwise visible PDF pages (2399.9625ms)
+✔ NI-PDF01: full PDF inspection retains cover, every text page and mixed-page text without image approval (715.219625ms)
+✔ NI-PDF02: scan and partial PDF failures keep explicit blocked page ledgers instead of truncated success (3146.877167ms)
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (4.440959ms)
+✔ NI-PDF09: old non-PDF hashes and restored checkpoints remain byte identical with absent PDF fields (0.508417ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (2.017292ms)
+▶ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation
+  ✔ cancel (31.029625ms)
+  ✔ timeout (125.472541ms)
+✔ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation (156.877917ms)
+▶ NI-PDF14: initial PDF identity metadata is admitted before the first real source filesystem call
+  ✔ native (39.81175ms)
+  ✔ grant (39.274375ms)
+  ✔ discovered (44.079ms)
+✔ NI-PDF14: initial PDF identity metadata is admitted before the first real source filesystem call (123.575708ms)
+✔ NI-PDF14: a directory named PDF releases preparation before child PDF admission without nested jobs (635.588ms)
+✔ NI-PDF02: budget failure keeps already extracted text and marks every remaining physical page unscanned (15.760167ms)
+✔ NI-PDF14: actual page and operator caps keep bounded ledgers instead of continued success (1919.016083ms)
+✔ NI-PDF07: controller sending, retry, conflict and patch actions cannot bypass pending pages (727.232459ms)
+✔ NI-PDF07: source replacement after an AI send discards the late response before coverage adoption (686.514125ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11156.573458

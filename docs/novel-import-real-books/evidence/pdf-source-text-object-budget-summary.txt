@@ -1,0 +1,44 @@
+32 P1 follow-up: permissive object-header admission
+
+Only production change: desktop/main/novel-import-pdf-source-text.ts.
+Only test change: existing tests/unit/novel-import-pdf-source-text.test.ts, NI-PDF16.
+
+The locked PDFParser.parseIndirectObjectHeader permits no whitespace before obj;
+BaseParser.matchKeyword does not require a trailing keyword delimiter. A real
+small PDFDocument.load fixture parses 1 0obj<</...>>, 2 0obj<</...>>, and
+3 0objnullendobj into three indirect objects. The old gate failed the added
+20001-entry 1 0obj admission assertion with status closed (exit 1).
+
+The gate now counts every raw lowercase obj substring, without keyword bounds,
+including Name contents, stream bytes, and endobj. This is intentionally a
+conservative raw-occurrence budget, not an exact count of parsed PDF objects.
+Top-level current offsets and each Name-loop offset are checked once. The only
+skipped bytes are the two valid hexadecimal digits after #; neither can be a
+raw o starting obj. The original single bounded input traversal, 8MiB input
+limit, 64KiB yield points, Name matching, and all other proof limits remain.
+No second byte pass or new byte/string allocation was introduced.
+
+RED command (exit 1):
+/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-PDF16: parsing admission counts permissive raw obj entries' tests/unit/novel-import-pdf-source-text.test.ts
+Log: pdf-source-text-object-budget-red.txt
+
+GREEN command (exit 0; 11 tests passed, 0 failed/skipped/cancelled):
+/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-PDF(?:16|17):' tests/unit/novel-import-pdf-source-text.test.ts
+Log: pdf-source-text-object-budget-green.txt
+
+Added table cases: conventional header; 1 0obj; 1 0objnull; comments between
+header components; raw obj inside Names and streams; endobj conservative
+counting; single raw occurrences at EOF/Name/valid and invalid # spellings.
+Every over-limit input yields budget before load (load spy 0), exactly at raw
+occurrence 20001. Existing actual-worker and isolated PGlite NI17 cases pass.
+
+New frozen SHA list: pdf-source-text-object-budget-sha.txt.
+Production helper SHA256:
+9b8a7c0ed93b9e7c974a582c5e1c00893ec34123fb18a769c42f6f3d23f0d9c3
+Test SHA256:
+859b96904c0d529497a0982eea483a4564764d5de07fc93675c9d6d2e8c76219
+
+No original novel, external v3 evidence, installed app, package, model or user
+database was read or changed in this follow-up. Decoding/proof code and all
+other production files are unchanged; the parent owns the final package and
+any new real-source hash-binding verification. Earlier evidence is preserved.

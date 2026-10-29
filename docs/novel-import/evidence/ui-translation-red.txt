@@ -1,0 +1,28 @@
+✖ NI-U02: v4 ordinary source checkboxes, always expanded inference cards, independent selection and no-body eligibility (2385.908708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2984.193208
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:4951
+✖ NI-U02: v4 ordinary source checkboxes, always expanded inference cards, independent selection and no-body eligibility (2385.908708ms)
+  AssertionError [ERR_ASSERTION]: {"x":-280,"y":-368,"width":920,"height":768}
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:38:54)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processImmediate (node:internal/timers:472:9)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:18:401)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

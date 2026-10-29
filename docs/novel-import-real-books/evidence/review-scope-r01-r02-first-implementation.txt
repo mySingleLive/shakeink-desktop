@@ -1,0 +1,20 @@
+▶ NI-R01: bounded review projections and targeted omissions preserve full artifacts
+  ✔ position-bound-projections-and-partial-transport (146.686291ms)
+  ✔ two-fields-extra-units-use-reconcile-with-exact-context (162.694709ms)
+  ✔ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (288.746375ms)
+  ✔ invalid-triples-and-unseen-text-have-no-review-credit (687.643583ms)
+✔ NI-R01: bounded review projections and targeted omissions preserve full artifacts (1287.041042ms)
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✔ same-draft-migrates-old-pending-after-authorization (221.455542ms)
+  ✔ all-preflight-refusals-keep-credit-and-policy (415.09775ms)
+  ✔ same-policy-reopen-keeps-successful-credit (157.102333ms)
+  ✔ first-omission-conflict-stops-before-later-work (99.384125ms)
+✔ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (894.039833ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2599.47125

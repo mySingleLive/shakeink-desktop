@@ -1,0 +1,80 @@
+▶ NI-SR01: fresh same-file grants retain complete preanalysis drafts and exact decoding
+  ✔ TXT (84.829208ms)
+  ✔ MD with another source (56.699916ms)
+  ✔ HTML (49.634583ms)
+  ✔ HTM (50.906333ms)
+  ✔ DOCX (62.123333ms)
+  ✔ permitted DOC (46.535084ms)
+  ✔ confirmed GB18030 (52.471958ms)
+  ✔ confirmed BOMless UTF16 (63.194708ms)
+  ✔ fresh ancestor, excluded source and classification credit survive without authorization reuse (70.284959ms)
+✔ NI-SR01: fresh same-file grants retain complete preanalysis drafts and exact decoding (547.31725ms)
+▶ NI-SR02: rejection preserves owners and drafts and gates the picker before analysis
+  ✔ cancel preserves all business fields (39.073208ms)
+  ✔ multiple (37.929292ms)
+  ✔ directory (42.391709ms)
+  ✔ other-path (40.678542ms)
+  ✔ changed-bytes (35.544834ms)
+  ✔ symlink (34.884958ms)
+  ✔ stale-grant (35.173666ms)
+  ✔ ancestor-drift (33.738333ms)
+  ✔ protected (35.061875ms)
+  ✔ scan-read-race (42.218792ms)
+  ✔ format-mismatch (41.582917ms)
+  ✔ decoded-text-mismatch (45.155166ms)
+  ✔ encoding-mismatch (38.770375ms)
+  ✔ decode-fails (39.103375ms)
+  ✔ docx-scan-error (39.825833ms)
+  ✔ fresh source changes after successful redecode still reject (43.027875ms)
+  ✔ before picker: running (37.701375ms)
+  ✔ before picker: recognizing (35.1775ms)
+  ✔ before picker: conflicts (36.37575ms)
+  ✔ before picker: publication (42.025875ms)
+  ✔ before picker: steps (32.436542ms)
+  ✔ before picker: artifacts (46.547958ms)
+  ✔ before picker: decisions (33.836875ms)
+  ✔ before picker: semanticState (32.982667ms)
+  ✔ before picker: workingRevision (32.994291ms)
+  ✔ before picker: coverage (36.653625ms)
+  ✔ before picker: analysisCheckpoint (37.294459ms)
+  ✔ before picker: jobs (40.31925ms)
+  ✔ before picker: pdf-request (40.15475ms)
+  ✔ before picker: pdf-active (42.932583ms)
+  ✔ before picker: old-error (42.042709ms)
+  ✔ before picker: unconfirmed (42.02625ms)
+✔ NI-SR02: rejection preserves owners and drafts and gates the picker before analysis (1238.702042ms)
+▶ NI-SR03: real candidate writes preserve precommit state and park post-rename commits as source
+  ✔ actual temporary write failure does not adopt or alter old journal (47.97ms)
+  ✖ post-rename owner failure adopts identical paused source candidate and blocks until reopen (73.85525ms)
+✖ NI-SR03: real candidate writes preserve precommit state and park post-rename commits as source (122.839125ms)
+ℹ tests 46
+ℹ suites 0
+ℹ pass 44
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2311.568042
+
+✖ failing tests:
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:18972
+✖ post-rename owner failure adopts identical paused source candidate and blocks until reopen (73.85525ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'confirm'
+  - 'source'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-reselection.test.ts:60:1395)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-reselection.test.ts:60:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'confirm',
+    expected: 'source',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

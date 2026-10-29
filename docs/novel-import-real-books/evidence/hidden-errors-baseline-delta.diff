@@ -1,0 +1,81 @@
+--- /private/tmp/hidden-errors-85-baseline/novel-import.ts
++++ desktop/main/novel-import.ts
+@@ -291,7 +291,23 @@
+     '未知事件时间不得制造数值':'世界线结果将未知时间填写为数值，请核对后重试',
+     '事件时间数值无效':'世界线结果的时间数值无效，请核对后重试',
+     '事件时间范围无效':'世界线结果的时间范围无效，请核对后重试',
+-    '确定事件时间不能混入候选窗口':'世界线结果混用了确定时间与候选窗口，请核对后重试'
++    '确定事件时间不能混入候选窗口':'世界线结果混用了确定时间与候选窗口，请核对后重试',
++    '语义实体目录类型无效':'导入实体目录的类型无效，请核对资料后重试',
++    '角色引用类型无效':'导入结果将非角色实体用作角色引用，请核对后重试',
++    '角色引用不存在或同名不明确':'导入结果引用的角色不存在或同名不明确，请核对角色资料后重试',
++    '地点父引用必须为PLACE':'地点结果的父级必须是地点，请核对后重试',
++    '世界父引用必须为WORLD':'世界结果的父级必须是世界，请核对后重试',
++    '世界设定归属引用无效':'世界设定结果的归属引用无效，请核对后重试',
++    'MAP父引用必须属于同世界MAP':'地图结果的父级必须是同一世界的地图，请核对后重试',
++    '语义父级引用形成循环':'导入结果的父级引用形成循环，请核对后重试',
++    '叙事章节引用无效':'叙事结果引用的章节无效，请核对后重试',
++    'Invalid Format':'模型服务返回请求格式无效提示，请核对配置后重试',
++    'Authentication Fails':'模型服务返回身份验证失败提示，请核对供应商授权',
++    'Insufficient Balance':'模型服务返回余额不足提示，请核对供应商账户',
++    'Invalid Parameters':'模型服务返回参数无效提示，请核对配置后重试',
++    'Rate Limit Reached':'模型服务返回请求频率限制提示，请稍后重试',
++    'Server Error':'模型服务返回服务器错误提示，请稍后重试',
++    'Server Overloaded':'模型服务返回服务过载提示，请稍后重试'
+    }
+    if(Object.hasOwn(worldline,message))return worldline[message]
+    if(message.startsWith('未知事件时间'))return '导入处理失败，请核对来源、模型配置后重试'
+--- /private/tmp/hidden-errors-85-baseline/novel-import-request-schema.test.ts
++++ tests/unit/novel-import-request-schema.test.ts
+@@ -235,3 +235,51 @@
+   for(const length of [180,181,320]){const message=make(length);assert.equal(message.length,length);const output=isolated.safeError(new Error(message));assert.equal(output,'模型返回结构不完整，请核对后重试');assert.ok(!output.includes(secret));for(const near of [message+'\n',message+' '+secret,message.replace('完整（','完整('),' '+message])assert.equal(isolated.safeError(new Error(near)),generic);assert.equal(isolated.safeError({message}),generic)}
+  })
+ })
++
++test('NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics',async t=>{
++ const h=await import('../../desktop/core/novel-import-semantics'),factory=api.importAiResponseSchema;assert.ok(factory)
++ const isolated=Object.create(NovelImportController.prototype) as {safeError(error:unknown):string},generic='导入处理失败，请核对来源、模型配置后重试',secret='HIDDEN-ERROR-SYNTHETIC-SECRET',mappings=[
++  ['语义实体目录类型无效','导入实体目录的类型无效，请核对资料后重试'],
++  ['角色引用类型无效','导入结果将非角色实体用作角色引用，请核对后重试'],
++  ['角色引用不存在或同名不明确','导入结果引用的角色不存在或同名不明确，请核对角色资料后重试'],
++  ['地点父引用必须为PLACE','地点结果的父级必须是地点，请核对后重试'],
++  ['世界父引用必须为WORLD','世界结果的父级必须是世界，请核对后重试'],
++  ['世界设定归属引用无效','世界设定结果的归属引用无效，请核对后重试'],
++  ['MAP父引用必须属于同世界MAP','地图结果的父级必须是同一世界的地图，请核对后重试'],
++  ['语义父级引用形成循环','导入结果的父级引用形成循环，请核对后重试'],
++  ['叙事章节引用无效','叙事结果引用的章节无效，请核对后重试'],
++  ['Invalid Format','模型服务返回请求格式无效提示，请核对配置后重试'],
++  ['Authentication Fails','模型服务返回身份验证失败提示，请核对供应商授权'],
++  ['Insufficient Balance','模型服务返回余额不足提示，请核对供应商账户'],
++  ['Invalid Parameters','模型服务返回参数无效提示，请核对配置后重试'],
++  ['Rate Limit Reached','模型服务返回请求频率限制提示，请稍后重试'],
++  ['Server Error','模型服务返回服务器错误提示，请稍后重试'],
++  ['Server Overloaded','模型服务返回服务过载提示，请稍后重试']
++ ] as const
++ await t.test('actual valid worldline requests reach both distinct character-reference late failures',async()=>{
++  const observations:{message:string;safe:string}[]=[]
++  for(const item of [{people:foreignId,expected:'角色引用不存在或同名不明确',context:[]},{people:scene.id,expected:'角色引用类型无效',context:[scene]}]){
++   const input={...knowledgeRequest('worldline'),artifacts:[structuredClone(existing),...structuredClone(item.context)]},before=structuredClone(input),a={...knowledgeArtifact('worldline',{reliability:'客观事实',people:JSON.stringify([item.people])}),id:'j05-worldline-event'},raw={artifacts:[a]},rawBefore=structuredClone(raw),controller=new AbortController(),roles:string[]=[];let generated=0,asserted=0,output:unknown,error:unknown
++   h.validateImportSemanticArtifact(a);assert.deepEqual(factory(input).parse(raw),raw,'complete native format must pass before the graph gate')
++   try{output=await ai.runImportAi(input,controller.signal,{resolve:async(role,id)=>{roles.push(role);assert.equal(id,model.id);return model},assert:async()=>{asserted++},generate:async(actual,pinned,signal)=>{generated++;assert.equal(actual,input);assert.equal(pinned,model);assert.equal(signal,controller.signal);return raw}})}catch(caught){error=caught}
++   assert.ok(error instanceof Error,'the actual graph gate rejects instead of producing an accepted result');assert.equal(error.message,item.expected,'no earlier schema/native/authorization failure may stand in for the graph error');assert.equal(output,undefined);assert.equal(generated,1);assert.equal(asserted,1);assert.deepEqual(roles,['text']);assert.deepEqual(input,before);assert.deepEqual(raw,rawBefore)
++   const safe=isolated.safeError(error);for(const value of [secret,item.people,foreignId,scene.id,sourceText,a.name,a.text,model.endpoint])assert.ok(!safe.includes(value));observations.push({message:error.message,safe})
++  }
++  assert.deepEqual(observations.map(item=>item.message),['角色引用不存在或同名不明确','角色引用类型无效'])
++  // The original main returns generic for these two actual late-gate Errors.
++  // Keep that clean baseline RED; no hand-created replacement Error is used.
++  assert.deepEqual(observations.map(item=>item.safe),[mappings[2][1],mappings[1][1]])
++ })
++ await t.test('only the sixteen approved complete strings map and every variant stays generic',()=>{
++  assert.equal(mappings.length,16);assert.deepEqual(Object.getOwnPropertyNames(isolated),[])
++  assert.deepEqual(mappings.map(([message])=>isolated.safeError(new Error(message))),mappings.map(([,expected])=>expected))
++  for(const [message,expected] of mappings){
++   assert.ok(expected.length<180);for(const value of [secret,foreignId,scene.id,sourceText,model.endpoint])assert.ok(!expected.includes(value))
++   const variants=new Set([message.toLowerCase(),message.toUpperCase(),message.replace(' ','  '),message.slice(0,-1),' '+message,'\t'+message,message+' ',message+'\n',message+'\r\n',message+' '+secret,message+' https://redaction.invalid/'+secret,message+' model-'+secret,'API error: '+message])
++   for(const variant of variants)if(variant!==message)assert.equal(isolated.safeError(new Error(variant)),generic,'nonexact variants never enter the new dictionary')
++   assert.equal(isolated.safeError({message}),generic);assert.equal(isolated.safeError(message),generic)
++  }
++  for(const message of ['UNKNOWN-'+secret,'toString','constructor','__proto__'])assert.equal(isolated.safeError(new Error(message)),generic)
++  const lookalike=Object.create(null,{message:{get(){throw Error('non-Error message must not be read')}}});assert.equal(isolated.safeError(lookalike),generic);assert.equal(isolated.safeError(null),generic);assert.deepEqual(Object.getOwnPropertyNames(isolated),[])
++ })
++})

@@ -1,0 +1,19 @@
+✖ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (56.116459ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 581.42325
+
+✖ failing tests:
+
+test at tests/unit/novel-import-integration.test.ts:2:23085
+✖ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (56.116459ms)
+  ReferenceError: novelImportSourcePicker is not defined
+      at eval (eval at evaluate (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:2:11340), <anonymous>:4:3)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:143:54)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

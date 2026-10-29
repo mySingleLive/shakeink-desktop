@@ -1,0 +1,98 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (52.936ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (17.587333ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.347375ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.930375ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (7.89375ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.377417ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (12.081875ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (9.061042ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (18.536417ms)
+  ✖ formatted unknown worldline references fail early while native and other-phase gates remain (4.709834ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.285625ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.06625ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.130334ms)
+✖ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (34.8515ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.620916ms)
+  ✖ actual valid narrative requests reach both distinct character-reference late failures (0.530792ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.106625ms)
+✖ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (3.571167ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (23.16675ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (5.505625ms)
+  ✖ empty results keep the original late gate and narrative references stay at the original late helper (0.707041ms)
+✖ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (29.860834ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✔ original native constraints enter the real bridge correction without transforming values (26.598125ms)
+  ✔ strict catalog and global chapter constraints enter the same bounded correction (20.241875ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (9.53575ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (1.724833ms)
+✔ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (58.881125ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 21
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1066.954209
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:45985
+✖ formatted unknown worldline references fail early while native and other-phase gates remain (4.709834ms)
+  AssertionError [ERR_ASSERTION]: narrative native validation is not moved in this change
+  
+  false !== true
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:205:147)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:200:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:57710
+✖ actual valid narrative requests reach both distinct character-reference late failures (0.530792ms)
+  ZodError: [
+    {
+      "code": "custom",
+      "path": [
+        "artifacts"
+      ],
+      "message": "narrator只用已提供角色id或唯一name；refs.eventId只引用可信worldline事件，refs.character只用角色id，chapterIndex沿用全书索引；ID身份不可混用。无法链接框架叙述者时保留原称谓及讲述/转述归属在text/attribution，不冒用角色、不造外键、不丢叙事点、不改正文；空refs不证明叙事或角色完整，仍须完整性审核"
+    }
+  ]
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:269:72)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:265:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-request-schema.test.ts:2:69589
+✖ empty results keep the original late gate and narrative references stay at the original late helper (0.707041ms)
+  ZodError: [
+    {
+      "code": "custom",
+      "path": [
+        "artifacts"
+      ],
+      "message": "narrator只用已提供角色id或唯一name；refs.eventId只引用可信worldline事件，refs.character只用角色id，chapterIndex沿用全书索引；ID身份不可混用。无法链接框架叙述者时保留原称谓及讲述/转述归属在text/attribution，不冒用角色、不造外键、不丢叙事点、不改正文；空refs不证明叙事或角色完整，仍须完整性审核"
+    }
+  ]
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:325:249)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:323:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)

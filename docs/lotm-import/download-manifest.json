@@ -1,0 +1,41 @@
+{
+  "title": "诡秘之主（第一部八卷主线）",
+  "downloadedAt": "2026-10-27T14:06:02.173866+00:00",
+  "sourcePage": "https://qweree.cn/index.php/356/",
+  "downloadPage": "https://url03.ctfile.com/f/24333903-1252641986-8b67f5?p=5831",
+  "httpStatus": 200,
+  "originalPath": "/private/tmp/shakeink-lotm-import-20261027/诡秘之主-候选B.txt",
+  "originalBytes": 9589841,
+  "originalSha256": "4788fadd0f6946a262c639af31c3abc7d7648ad7373d8044a754d8aedf2a09b9",
+  "originalEncoding": "gb18030",
+  "chapterCount": 1394,
+  "volumeChapterCounts": [
+    213,
+    269,
+    250,
+    214,
+    204,
+    116,
+    87,
+    41
+  ],
+  "mainNarrativeUtf8Sha256": "d935eb09b87c07d412bc64c63fd8f95ef34f4984e92df1b3a1ae0f939ab97974",
+  "actualTestInput": {
+    "type": "explicitly derived UTF-8 main narrative plus eight official catalogue headings",
+    "path": "/private/tmp/shakeink-lotm-import-20261027/LOTM-20261027-B1/正文 诡秘之主 主线与目录卷名.txt",
+    "sha256": "125ac5619f1903bb1ef6759a52f74c49a0302a664e938f5b6003eefc2abd70e8",
+    "characters": 4884348,
+    "bytes": 14139740,
+    "bodyCharactersChanged": 0,
+    "newlineConversions": 0
+  },
+  "limits": [
+    "Includes first novel full main narrative; does not certify all later published bonus stories",
+    "Original candidate B lacks eighth standalone volume heading; test input adds independently verified catalogue headings",
+    "No authoritative word-for-word edition certification claimed"
+  ],
+  "verification": [
+    "docs/lotm-import/10-input-B-review.md",
+    "docs/lotm-import/14-prepared-input-review.md"
+  ]
+}

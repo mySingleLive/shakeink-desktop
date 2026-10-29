@@ -1,0 +1,6 @@
+desktop/core/novel-import-pdf-source-text.ts(1,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+desktop/core/novel-import-pdf-source-text.ts(14,5): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+desktop/core/novel-import-pdf.ts(1,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+desktop/core/novel-import.ts(2,26): error TS2307: Cannot find module 'node:crypto' or its corresponding type declarations.
+desktop/core/novel-import.ts(84,143): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+scripts/real-novel-semantic-assertions.ts(5,33): error TS2307: Cannot find module 'node:util' or its corresponding type declarations.

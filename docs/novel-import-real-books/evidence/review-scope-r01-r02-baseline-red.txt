@@ -1,0 +1,144 @@
+▶ NI-R01: bounded review projections and targeted omissions preserve full artifacts
+  ✖ position-bound-projections-and-partial-transport (128.797917ms)
+  ✖ two-fields-extra-units-use-reconcile-with-exact-context (70.336334ms)
+  ✖ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (98.354042ms)
+  ✔ invalid-triples-and-unseen-text-have-no-review-credit (681.194375ms)
+✖ NI-R01: bounded review projections and targeted omissions preserve full artifacts (979.82675ms)
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✖ same-draft-migrates-old-pending-after-authorization (49.367708ms)
+  ✖ all-preflight-refusals-keep-credit-and-policy (45.173833ms)
+  ✔ same-policy-reopen-keeps-successful-credit (140.66225ms)
+  ✖ first-omission-conflict-stops-before-later-work (108.053333ms)
+✖ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (344.181208ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 2
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1714.429625
+
+✖ failing tests:
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:11321
+✖ position-bound-projections-and-partial-transport (128.797917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:54:84)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:49:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:13907
+✖ two-fields-extra-units-use-reconcile-with-exact-context (70.336334ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:63:162)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:59:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:16504
+✖ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (98.354042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:66:900)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:65:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:21783
+✖ same-draft-migrates-old-pending-after-authorization (49.367708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'conflicts'
+  - 'completed'
+       ^
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:76:340)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:76:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'conflicts',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:22569
+✖ all-preflight-refusals-keep-credit-and-policy (45.173833ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:78:109)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:77:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /允许|配置|来源|预算|决定|锁|策略|版本|保存/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:25599
+✖ first-omission-conflict-stops-before-later-work (108.053333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'conflicts'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:82:642)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:82:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'conflicts',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

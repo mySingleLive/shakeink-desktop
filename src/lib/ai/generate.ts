@@ -12,8 +12,12 @@ import { renderPrompt } from "@/lib/prompts/render"
 import { checkQuota, recordUsage } from "@/lib/quota"
 import { storyDraftText } from "@/lib/story-draft"
 
+export type GenerateUsage = { checkQuota: typeof checkQuota; recordUsage: typeof recordUsage }
+
 interface GenerateBaseOptions {
   userId: string
+  usage?: GenerateUsage
+  maxNetworkRetries?: number
   novelId?: string
   /** Retained signature only; desktop never routes by platform tier. */
   tier?: ModelTier
@@ -70,7 +74,8 @@ async function generateTextInSlot(opts: GenerateOptions): Promise<GenerateResult
   const execution = currentChatExecution()
   const signals = [opts.abortSignal, execution?.signal].filter((signal): signal is AbortSignal => !!signal)
   const abortSignal = AbortSignal.any(signals)
-  await checkQuota(opts.userId)
+  if (opts.maxNetworkRetries !== undefined && (!Number.isSafeInteger(opts.maxNetworkRetries) || opts.maxNetworkRetries < 0 || opts.maxNetworkRetries > 5)) throw new Error("模型网络重试预算无效")
+  await (opts.usage?.checkQuota ?? checkQuota)(opts.userId)
   const { model, modelRecord, providerOptions } = opts.resolvedModel ?? await getModelForUser(opts.userId, { tier: opts.tier, role: opts.role, fetch: currentChatExecution()?.networkRetry?.fetch })
   const prompt = await resolvePrompt(opts)
 
@@ -97,7 +102,7 @@ async function generateTextInSlot(opts: GenerateOptions): Promise<GenerateResult
     return { text, usage, finishReason }
   }
   const result = await runWithNetworkRetry(callModel, {
-    maxRetries: execution?.networkRetry?.maxRetries ?? await getMaxNetworkRetries(),
+    maxRetries: opts.maxNetworkRetries ?? execution?.networkRetry?.maxRetries ?? await getMaxNetworkRetries(),
     shouldRetry: execution?.networkRetry?.canRetry,
     signal: abortSignal,
     onRetry: execution?.networkRetry?.notify ?? (({ retryNumber, maxRetries }) =>
@@ -107,7 +112,7 @@ async function generateTextInSlot(opts: GenerateOptions): Promise<GenerateResult
   })
   const promptTokens = result.usage.inputTokens ?? 0
   const completionTokens = result.usage.outputTokens ?? 0
-  const cost = result.usage.inputTokens === undefined && result.usage.outputTokens === undefined ? 0 : await recordUsage({
+  const cost = result.usage.inputTokens === undefined && result.usage.outputTokens === undefined ? 0 : await (opts.usage?.recordUsage ?? recordUsage)({
     userId: opts.userId,
     novelId: opts.novelId,
     modelId: modelRecord.id,

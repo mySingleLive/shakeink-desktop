@@ -1,0 +1,19 @@
+{
+  "recordedAt": "2026-10-26T16:08:12.524852+00:00",
+  "sourceFrozen": true,
+  "hashes": {
+    "desktop/core/novel-import-ai-payload.ts": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+    "tests/unit/novel-import-ai.test.ts": "401630f0fbef55ad0c4d7fed37d491c66e2d69050786a9ea94d2e14b898d2d28",
+    "docs/novel-import-real-books/world-guidance-a10-implementation.md": "85a1fdb1ed92ab8967febadda38c6c365ae1906c5948bc1fc82c2c86c0fc23ea",
+    "docs/novel-import-real-books/evidence/world-guidance-a10-20261027-baseline.json": "3af99189f22877371e9c37b79f23ed6f950496e06926fdedceb8daa09bc05c6c",
+    "docs/novel-import-real-books/evidence/world-guidance-a10-20261027-clean-red.txt": "a78ccf43c859a76f8a5deccf24bdecc2e8599e2062036873b3f161ca6fa36780",
+    "docs/novel-import-real-books/evidence/world-guidance-a10-20261027-green.txt": "5a35ef124119e76efa4e3ffb5308477406c4cb33d172a30fa4ce829afac58193",
+    "docs/novel-import-real-books/evidence/world-guidance-a10-20261027-owned.diff": "c77b92a8f0783e4f028845378c255c273017de3315eec95909578dc4d54610fe",
+    "docs/novel-import-real-books/evidence/world-guidance-a10-20261027-red.txt": "fc4cb2c247fb4f75e30767fed66ee29796326f4e4d5fead1135d50c17ebac049",
+    "docs/novel-import-real-books/evidence/world-guidance-a10-20261027-typecheck-config.json": "1436f1fc5dfbf3c94422bd4bcbd31dba1ff9078cff421ab7244031dd29c18b01",
+    "docs/novel-import-real-books/evidence/world-guidance-a10-20261027-typecheck.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "oldTestWholeBytePrefixUnchanged": true,
+  "commandScope": "Only NI-A(07|08|09|10) exact unit file; separate owned-root TypeScript check",
+  "realAppModelCorpusDatabaseAccess": false
+}

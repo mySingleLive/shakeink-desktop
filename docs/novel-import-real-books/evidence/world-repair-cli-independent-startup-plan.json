@@ -1,0 +1,16 @@
+{
+  "recordedAt": "2026-10-26T16:21:48.469196+00:00",
+  "scope": "WG-CR01 narrow startup DI plan addendum only",
+  "planConclusion": "PASS",
+  "codeConclusion": "PENDING new CLI freeze and WR02",
+  "mainRequirement": "two arguments, fixed real new PGlite; fault factory inaccessible from argv/environment/plan",
+  "failureBranches": [
+    "synchronous constructor throw",
+    "waitReady rejection with confirmed close",
+    "waitReady rejection with close failure/unknown closed state"
+  ],
+  "safeFailure": "startupAttempted set before construction; unknown state retains lease, cleanup failed, zero service",
+  "testsExecuted": false,
+  "realDatabaseAccess": false,
+  "reportSha256": "3e028488744ca3ad1b0272b560e9e4448f1268fd90aac44c7d5651d9b8848972"
+}

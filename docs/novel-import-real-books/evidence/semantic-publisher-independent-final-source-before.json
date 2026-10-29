@@ -1,0 +1,19 @@
+{
+  "scope": "38 final publisher P01-P03 only",
+  "allAuthorFrozenHashesMatch": true,
+  "sha256": {
+    "desktop/main/novel-import.ts": "6292d4567fe3e7a06b6ec86265b28a9b3a79158e8cdd899d4be859d92b8837b3",
+    "desktop/shared/novel-import.ts": "3aeb90fded876870a83d272ba3d9a24b75fde397cebcb8182ae2dbf40f3a1db2",
+    "desktop/core/novel-import.ts": "854c734df935bb7631e71bf3c7e9d9a1f70a1c582a6d50ba102d5ba491793dbc",
+    "desktop/core/novel-import-semantics.ts": "30ea421c4c70008ca1b975a16bfc9a83b70ed7dfbab1c9bfc7bac1312ef704ab",
+    "desktop/core/novel-import-semantic-state.ts": "57bc498f75b800fc602666f984594bb7ec10e59207d5ee709f8dacda7272f60c",
+    "desktop/core/novel-import-ai-payload.ts": "9e26d2c5751550b6410b3b6d00a3e220e4b917ac7b5124fad493e25b75e76051",
+    "desktop/service/novel-import-ai.ts": "803de671b3a9ec5e764d8b9bcabe081835750984acd862597fb5d87718e02599",
+    "desktop/service/novel-import-publish.ts": "790c360ebe5e734cdfe5b95c68d58c25f512a4acf01cafb97baa04655ac92dde",
+    "tests/unit/novel-import-semantic.test.ts": "d822a3eed0f3ca1698d7326ffd70370269786fab0a95412a32e3efd3eee2787c",
+    "tests/unit/novel-import-semantic-session.test.ts": "730343f42e7ddfca71fd1c9912d40966cb49c5ba22c2bbd5084101512b1aa8dc",
+    "tests/integration/novel-import-semantic-publish.test.ts": "b1ae2f06289b3279d60469d088988af8181185780d6c85d5c1d64b6216eb6469",
+    "src/components/desktop/NovelImportRecord.tsx": "93da972ef693c3fdca37508085121c2f5c31d9714ae166c8c265a4b16c2cb61c",
+    "scripts/real-novel-semantic-assertions.ts": "6a4cc340689a71ff93c53e6091e794edaa35461e6ebdf26dc761a0399e415748"
+  }
+}

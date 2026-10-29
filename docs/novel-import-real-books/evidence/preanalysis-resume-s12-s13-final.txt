@@ -1,0 +1,15 @@
+✔ NI-S12: local and synthetic AI source confirmation retain manual chapters across reopen (118.372041ms)
+▶ NI-S13: preanalysis drafts resume their exact review stage without consent or AI
+  ✔ source (39.129417ms)
+  ✔ select (39.946125ms)
+  ✔ confirm (49.687625ms)
+  ✔ existing-target-still-requires-explicit-reauthorization-first (73.120125ms)
+✔ NI-S13: preanalysis drafts resume their exact review stage without consent or AI (202.488208ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 731.86925

@@ -46,6 +46,7 @@ export class WorkCreationReservations{
   });assertCurrent();return result
  }
  async directories(){return this.withGlobal(async database=>(await database.systemConfig.findMany({where:{key:{startsWith:'desktop:work-creation-reservation:'}}})).map(row=>reservationSchema.parse(row.value).selection.path))}
+ async requireExisting(value:Input){const input=inputSchema.parse(value);return this.withGlobal(async database=>{const row=await database.systemConfig.findUnique({where:{key:key(input.requestId)}});if(!row)throw Error('原导入目录预留记录缺失');const previous=reservationSchema.parse(row.value);assertSame(previous,input);return previous})}
  async assertNoPendingCreation(requestId:string){return this.withGlobal(async database=>{
   const row=await database.systemConfig.findUnique({where:{key:key(requestId)}})
   if(row){const value=reservationSchema.parse(row.value);if(value.requestId!==requestId)throw new ContentError('REQUEST_CONFLICT','建书请求目录记录不匹配');throw new ContentError('WORK_CREATION_PENDING','原建书请求已有目录预留，请重新选择原目录以完成恢复',409)}

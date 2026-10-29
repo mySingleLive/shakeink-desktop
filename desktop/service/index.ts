@@ -20,6 +20,10 @@ import {parseConversationWorkerRequest} from './conversation-request'
 import {configureConversationTransfers,recoverConversationTransfers} from './conversation-runtime'
 import {getDatabaseContext,runInDatabaseContext} from './context'
 import {loadDatabaseSeed} from './database/seed'
+import {ImportAiJobs,runImportAi} from './novel-import-ai'
+import {publishNovelImport,importLeaseTarget} from './novel-import-publish'
+import type {ImportAiRequest,ImportPublishInput,ImportReceipt} from '../shared/novel-import'
+import {z} from 'zod'
 
 if (!parentPort) throw new Error("Desktop service requires an isolated worker")
 // Any retained Web path attempting a direct network call fails closed. SDKs use
@@ -31,8 +35,11 @@ interface ActiveResponse { reader: ReadableStreamDefaultReader<Uint8Array>; abor
 const responses = new Map<string, ActiveResponse>()
 const starting = new Map<string, AbortController>()
 const pendingStarts = new Set<Promise<void>>()
+const importJobs=new ImportAiJobs()
+const importPublications=new Map<string,Promise<ImportReceipt>>()
 let closing = false
 let closedForMaintenance = false
+let stoppingImports=false
 const ready = (async () => {
   let openedWorks: Workspaces | undefined
   try {
@@ -105,11 +112,26 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
   await ready
   if (method === "ready") return true
   if(method === "closed-work-lease-target")return closedWorkLeaseTarget(works,data,()=>{
-    if(!closedForMaintenance||closing||responses.size||starting.size||pendingStarts.size||localAttemptCount())throw Error("本地数据尚未关闭")
+    if(!closedForMaintenance||closing||responses.size||starting.size||pendingStarts.size||localAttemptCount()||importJobs.active||importPublications.size)throw Error("本地数据尚未关闭")
   })
-  if(["start","image-asset","create-work","open-work"].includes(method)){
+  if(method==='novel-import-lease-target')return importLeaseTarget(works,data as ImportPublishInput,()=>{
+    if(!closedForMaintenance||closing||responses.size||starting.size||pendingStarts.size||localAttemptCount()||importJobs.active||importPublications.size)throw Error('本地数据尚未关闭')
+  })
+  if(["start","image-asset","create-work","open-work","novel-import-ai","novel-import-publish"].includes(method)){
     if(closing)throw Error("本地服务正在关闭")
+    if(stoppingImports&&method.startsWith('novel-import-'))throw Error('导入任务正在停止')
     closedForMaintenance=false
+  }
+  if(method==='novel-import-ai'){
+    const request=data as ImportAiRequest;z.uuid().parse(request?.operationId)
+    return importJobs.run(request,(input,signal)=>works.runWithGlobal('inbox',()=>runImportAi(input,signal)))
+  }
+  if(method==='novel-import-cancel'){importJobs.cancel(z.uuid().parse(data));return true}
+  if(method==='novel-import-publish'){
+    const input=data as ImportPublishInput,id=z.uuid().parse(input?.session?.id)
+    if(importPublications.has(id))throw Error('导入正在保存，请等待原请求完成')
+    const done=Promise.resolve().then(()=>publishNovelImport(works,input,()=>{if(closedForMaintenance)throw Error('本地数据已关闭')})).finally(()=>{importPublications.delete(id)})
+    importPublications.set(id,done);return done
   }
   if(method==="protected-directories")return works.protectedDirectories()
   if(method==="image-asset"){
@@ -126,21 +148,24 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
       return{bytes,mime:response.headers.get("content-type")}
     })
   }
-  if (method === "task-status") return {active:localAttemptCount()}
+  if (method === "task-status") return {active:localAttemptCount()+importJobs.active+importPublications.size}
   if (method === "stop-tasks") {
+    stoppingImports=true
     let active=true
     const timeout=Promise.withResolvers<never>()
     const timer=setTimeout(()=>{active=false;timeout.reject(new Error("创作任务仍在保存停止状态，请稍后重试"))},8000)
     const pending=[...pendingStarts]
     const stopping=(async()=>{
       abortAllLocalAttempts()
+      const imports=importJobs.stop()
       await Promise.all([...responses.keys(),...starting.keys()].map(cancel))
       if(!active)return
       await Promise.all(pending)
+      await imports;await Promise.allSettled([...importPublications.values()])
       while(active&&localAttemptCount())await delay(25)
     })()
     try{await Promise.race([stopping,timeout.promise]);return true}
-    finally{active=false;clearTimeout(timer)}
+    finally{active=false;clearTimeout(timer);stoppingImports=false}
   }
   if (method === "start") return start(data)
   if (method === "read") {
@@ -162,7 +187,7 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
     return works.run(record.id, async () => ({ novel: await prisma.novel.findUniqueOrThrow({ where: { id: record.novelId } }) }))
   }
   if (method === "open-work") return works.open(data as DirectoryProof)
-  if (method === "close") { closedForMaintenance=false;closing = true; try { await Promise.all([...responses.keys(), ...starting.keys()].map(cancel)); await Promise.all(pendingStarts); await works.close();closedForMaintenance=true; return true } finally { closing = false } }
+  if (method === "close") { closedForMaintenance=false;closing = true; try { await importJobs.stop();await Promise.allSettled([...importPublications.values()]);await Promise.all([...responses.keys(), ...starting.keys()].map(cancel)); await Promise.all(pendingStarts); await works.close();closedForMaintenance=true; return true } finally { closing = false } }
   throw new Error("未知本地服务命令")
 })
 

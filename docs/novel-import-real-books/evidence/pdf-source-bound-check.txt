@@ -1,0 +1,78 @@
+▶ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains
+  ✔ legacy PDF supplementation is owned and canceled without changing frozen checkpoints (846.732584ms)
+  ✔ actual beginClose revokes initial choose before its real FS and BusinessGate settle (69.273375ms)
+✔ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains (916.656209ms)
+✔ NI-PDF05: only bounded PNG previews issue page and source bound confirmation tokens (14.967666ms)
+✔ NI-PDF14: actual missing-dimension and decode warnings block otherwise visible PDF pages (1187.679ms)
+▶ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits
+  ✔ initial choose keeps one admitted real FS chain and an empty session until canceled resources settle (29.630958ms)
+  ✔ renderer cancel enters before a reselect inspection queued inside the real controller tail (639.8755ms)
+  ✔ real worker exit remains charged after pending preview is canceled (605.554958ms)
+✔ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits (1275.5025ms)
+▶ NI-PDF04: preview verifies authorized source identity before cache use and after rendering
+  ✔ same-bytes-file (1204.672959ms)
+  ✔ ancestor-directory (1227.012125ms)
+  ✔ ancestor-link (1209.4605ms)
+  ✔ replacement after snapshot but before render result is checked again (1183.667834ms)
+✔ NI-PDF04: preview verifies authorized source identity before cache use and after rendering (4825.358708ms)
+✔ NI-PDF05: decode failures bind issued lineage, preserve saved decisions and stay blocked until successful retry (1208.653791ms)
+✔ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (1773.08125ms)
+✔ NI-PDF01: full PDF inspection retains cover, every text page and mixed-page text without image approval (599.108875ms)
+✔ NI-PDF02: scan and partial PDF failures keep explicit blocked page ledgers instead of truncated success (2856.978791ms)
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (1.007042ms)
+✔ NI-PDF09: old non-PDF hashes and restored checkpoints remain byte identical with absent PDF fields (0.311ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (1.347542ms)
+▶ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation
+  ✖ cancel (14.458ms)
+  ✖ timeout (113.139084ms)
+✖ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation (128.003666ms)
+✔ NI-PDF02: budget failure keeps already extracted text and marks every remaining physical page unscanned (8.377959ms)
+✔ NI-PDF03: page preview actions reject unsafe schemas, foreign files and stale revisions before IO (0.821083ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 23
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15617.383208
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:35480
+✖ cancel (14.458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  3 !== 2
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:182:405)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:174:50)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 3,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-pdf.test.ts:2:35480
+✖ timeout (113.139084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  3 !== 2
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:182:405)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:174:50)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 3,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

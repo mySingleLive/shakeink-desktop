@@ -1,0 +1,23 @@
+✔ NI-PDF11: two-page review drafts survive navigation and cancel retains saved decisions (2149.970542ms)
+✖ NI-PDF12: failed previews, OCR and changed sources cannot be confirmed by the review UI (9752.015875ms)
+✔ NI-PDF13: PDF review keeps fixed controls, readable zoom and focus at 390 by 600 in both themes (2149.768625ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14553.551625
+
+✖ failing tests:
+
+test at tests/browser/novel-import-pdf-pages.test.ts:2:5828
+✖ NI-PDF12: failed previews, OCR and changed sources cannot be confirmed by the review UI (9752.015875ms)
+  page.waitForFunction: Timeout 7000ms exceeded.
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-pdf-pages.test.ts:39:540)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-pdf-pages.test.ts:18:394)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-pdf-pages.test.ts:39:2) {
+    name: 'TimeoutError',
+    log: []
+  }

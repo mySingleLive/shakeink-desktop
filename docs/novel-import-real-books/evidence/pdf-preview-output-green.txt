@@ -1,0 +1,11 @@
+✔ NI-PDF05: only bounded PNG previews issue page and source bound confirmation tokens (62.9ms)
+✔ NI-PDF14: actual missing-dimension and decode warnings block otherwise visible PDF pages (1321.37075ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (2.098875ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1856.016458

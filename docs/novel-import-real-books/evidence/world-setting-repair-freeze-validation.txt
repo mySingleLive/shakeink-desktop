@@ -1,0 +1,11 @@
+{
+  "recordedAt": "2026-10-26T16:37:53.345Z",
+  "sourceAndControlFilesMatched": 9,
+  "logsMatched": 3,
+  "newFileDeltaReconstructionMatched": 2,
+  "documentation": {
+    "path": "docs/novel-import-real-books/world-setting-repair-implementation-evidence.md",
+    "sha256": "46aedf890bf0f76d8a61514712e8d627080482985f97737ee7c6d383cc54bd26"
+  },
+  "manifestSha256": "1bca4d5a93826f40744c2219ca86c40bd320d765b24855e3e3205b7959dd0796"
+}

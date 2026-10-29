@@ -1,0 +1,38 @@
+▶ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership
+  ✔ metadata binds analysis and plan; legacy goldens remain byte-identical (9.907666ms)
+  ✔ manual re-confirmation derives labels and rejects moved/deleted boundaries (5.909375ms)
+  ✖ v2 missing-volume warnings remain visible after unchanged manual confirmation and recovery (2.500458ms)
+  ✔ normal controller choose/set-chapters/save/reopen and old journal recovery (108.787667ms)
+✖ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership (128.948083ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 643.391334
+
+✖ failing tests:
+
+test at tests/unit/novel-import-volumes.test.ts:7:7492
+✖ v2 missing-volume warnings remain visible after unchanged manual confirmation and recovery (2.500458ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /卷|归属/. Input:
+  
+  ''
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:48:347)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:47:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /卷|归属/,
+    operator: 'match',
+    diff: 'simple'
+  }

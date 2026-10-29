@@ -1,0 +1,124 @@
+{
+  "independentScreenshots": [
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-source-1280x800-5efe93c3d138.png",
+      "sha256": "ee07acf8f73486cdd958fa58000220d5ce71292aed14cef11492e89e0207c9f1",
+      "sourceName": "theme-paper-source-1280x800-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-confirm-680x460-5efe93c3d138.png",
+      "sha256": "615fc998fb9d93c6fdb90fa2c2cf5014c21306834b28a069083834fde5899399",
+      "sourceName": "theme-ink-confirm-680x460-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-source-680x460-5efe93c3d138.png",
+      "sha256": "ae0fc8f1ecbc17354b2ad330d3a237cf0ab0cca414ea10b21e9d1b31852da3bc",
+      "sourceName": "theme-paper-source-680x460-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-confirm-1280x800-5efe93c3d138.png",
+      "sha256": "6ac8368eb79cc863a47277c5e8064fe450413b145c3c95c1268c6d9ae467d2d7",
+      "sourceName": "theme-ink-confirm-1280x800-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-select-390x640-5efe93c3d138.png",
+      "sha256": "db8029023c12744bbd99b2cc6b9b9ba9767788956463291090017924cae84b9f",
+      "sourceName": "theme-ink-select-390x640-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-source-390x640-5efe93c3d138.png",
+      "sha256": "6b166d5acbb12c70f5c4f00b45a0688ee39d6ad7ec202d95ffbf0da480eec217",
+      "sourceName": "theme-paper-source-390x640-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-confirm-1280x800-5efe93c3d138.png",
+      "sha256": "6dcbf37a471e9b18b8510721d1bff68eaf84e3af7b272c1218e9432f6b24eb95",
+      "sourceName": "theme-paper-confirm-1280x800-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-confirm-390x640-5efe93c3d138.png",
+      "sha256": "895877ff3262c7b7cf30b9229826a9e6158e7981c1d392ba343110e2e2bc33c9",
+      "sourceName": "theme-ink-confirm-390x640-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-buttons-5efe93c3d138.png",
+      "sha256": "01632f88e302c504399693c2d40b60e2446cb4ab811c4e9200c1509bfbdcfaee",
+      "sourceName": "theme-paper-buttons-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-reference-5efe93c3d138.png",
+      "sha256": "dded4aeb584301add9e4ae2321eaa55154d18580e15aa14e355304995e669e0f",
+      "sourceName": "theme-paper-reference-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-reference-5efe93c3d138.png",
+      "sha256": "73496eefb710ffd1503ab2d91dd190e5a495d94af57a217048c54bf7e90cbb52",
+      "sourceName": "theme-ink-reference-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-select-1280x800-5efe93c3d138.png",
+      "sha256": "5eb59cba11b4983105ed233594763fb664cc915cbd92f27f376613d707560ec4",
+      "sourceName": "theme-ink-select-1280x800-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-select-680x460-5efe93c3d138.png",
+      "sha256": "97341d728d2ff1e8d1607ff15ec69777c494011c5ea0586c4929df90feb817fe",
+      "sourceName": "theme-ink-select-680x460-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-select-680x460-5efe93c3d138.png",
+      "sha256": "34c7d3adafd7d5f579fef35e701d3a51c87394373cda87041466d4e8d62a995b",
+      "sourceName": "theme-paper-select-680x460-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-select-1280x800-5efe93c3d138.png",
+      "sha256": "91e416123c2e9cecccbc99ff12d848e17c4857a7bff2d201a262dca257614bd7",
+      "sourceName": "theme-paper-select-1280x800-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-confirm-390x640-5efe93c3d138.png",
+      "sha256": "57d1a0576f8189ab7bcfb58e75d61d2597c8e56f47977c49a02056adbba7a54b",
+      "sourceName": "theme-paper-confirm-390x640-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-source-390x640-5efe93c3d138.png",
+      "sha256": "a00fa81a0d631dac61b8875f26ba66358c8eaab9d5df49d98a84ee2e21478488",
+      "sourceName": "theme-ink-source-390x640-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-select-390x640-5efe93c3d138.png",
+      "sha256": "c166e39350cd351b5b500d26956608b2dc918222f7788e82d0700cf1433b8d92",
+      "sourceName": "theme-paper-select-390x640-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-source-1280x800-5efe93c3d138.png",
+      "sha256": "7a053c1d0d81a09754a86a2718151f8b802b6966224f0dde7396e354f48925fe",
+      "sourceName": "theme-ink-source-1280x800-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-source-680x460-5efe93c3d138.png",
+      "sha256": "4c564e23e27fc3bfd283c25cf882490d210d16fe1ce331b75e23b9b4913fb012",
+      "sourceName": "theme-ink-source-680x460-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-ink-buttons-5efe93c3d138.png",
+      "sha256": "6808f8927a522e30ecb7203416994cd99908f77c8f675be2fbf10ea190ee29fb",
+      "sourceName": "theme-ink-buttons-5efe93c3d138.png"
+    },
+    {
+      "path": "docs/novel-import/evidence/theme-independent-27-paper-confirm-680x460-5efe93c3d138.png",
+      "sha256": "216a15d5acacf6a991efb24fe57d960709345db93f743dfce3e24103f55b7f3c",
+      "sourceName": "theme-paper-confirm-680x460-5efe93c3d138.png"
+    }
+  ],
+  "authorScreenshotsRestoredByteExact": true,
+  "authorCount": 25,
+  "baseline": {
+    "src/components/desktop/novel-import.css": "a96bddd9bc22fbba32f35e48eb75bc5e4527442fc1b5c9a8e6c2e7dc835efebd",
+    "src/components/ui/button.tsx": "d14549ab3ba7a9d5d1f424c2599233bffa0b317121abf3b6efa2fb902d5e2781",
+    "src/app/globals.css": "17ff1e3b5c20d221c7310778c93e23fce742d7f9e9a86309b83df5ebb8019e70",
+    "design/novel-import/preview.css": "389c6260351b1eb6a0dc10313fa959e05bdb02c9fc94f0ca3ac487583d816829",
+    "tests/browser/novel-import.test.ts": "0393063f5a73cc0f98dbc89469f36e9fdd89c621a95e21f190c22dcceaa83516",
+    "tests/helpers/novel-import-ui-fixture.tsx": "c39878c8ccda0c32d65aea7e8f93ef17df577ed664c5811f24ba2219fff314ac"
+  }
+}

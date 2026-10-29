@@ -1,0 +1,10 @@
+✔ NI-U04: title, isolated target and pinned model/range consent gate the real start action (9232.023958ms)
+✔ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (3472.134125ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15075.520542

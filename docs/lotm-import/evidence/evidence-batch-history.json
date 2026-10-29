@@ -1,0 +1,144 @@
+{
+  "recordedAt": "2026-10-27T14:56:36.729623+00:00",
+  "scope": "Synthetic LOTM-E01..06 and directly related anchor/phase regressions; no real input, model or database",
+  "runs": [
+    {
+      "log": "evidence-batches-red.txt",
+      "sha256": "3cedc70961e4db26261108c4893572013c40a6a717dadd7f48f65bb727acdcad",
+      "counts": {
+        "tests": 19,
+        "pass": 7,
+        "fail": 12,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-green-attempt-1.txt",
+      "sha256": "4ef4ba3fe7ae15d66024989b7d8d8aead66fbc9bc14a06a2a8d15480d93caf6c",
+      "counts": {
+        "tests": 25,
+        "pass": 21,
+        "fail": 4,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-green-attempt-2.txt",
+      "sha256": "10a77ec0a9e7a2c21896d5ecbca679d544b27074fc52854193dc0e7d55aa019e",
+      "counts": {
+        "tests": 25,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-final-green.txt",
+      "sha256": "38a6b1a5fc4fc9af20eba59ef5cba23ece6e763dedbede66a1cc68c6cef3ae87",
+      "counts": {
+        "tests": 29,
+        "pass": 29,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-anchor-regression.txt",
+      "sha256": "d079b7d5ae37580547cfc590a5ea8e4d138506c4d6095fbca1716eafaa30213b",
+      "counts": {
+        "tests": 25,
+        "pass": 18,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-combined-green.txt",
+      "sha256": "ddf70914d75ad6df10dc70d81fc21ac122986ae779de9e0a296f446b114f38a6",
+      "counts": {
+        "tests": 62,
+        "pass": 62,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-verified-green.txt",
+      "sha256": "fcf4f20d6fed8ee70038e86485e127eab63fe1dccacc9eb00b5646a0cc996577",
+      "counts": {
+        "tests": 63,
+        "pass": 61,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-reconcile-fixture.txt",
+      "sha256": "80548f1559495c1e8d8f9675d58f8f168e291f011d977d9cb9816cd663bbc1f4",
+      "counts": {
+        "tests": 5,
+        "pass": 3,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-reconcile-fixture-2.txt",
+      "sha256": "1a495bc26f957f4439376c7d8169cb9c4c4a2b87d793cb6bd6598b65cdd005e8",
+      "counts": {
+        "tests": 5,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "log": "evidence-batches-accepted-green.txt",
+      "sha256": "855517109326ca51f247ca44782cdc81c443740534c96ae3fbb3dea4ab384aff",
+      "counts": {
+        "tests": 63,
+        "pass": 63,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "fixtureCorrections": [
+    "Before start workingProse is empty; compare unchanged source text rather than claiming initialized prose",
+    "Legacy means semanticVersion absent, not merely a small model context; construct an isolated legacy journal",
+    "Absent uncompleted classify coverage is undefined rather than an empty array",
+    "Synthetic review conflict must name an artifact actually included in its package; production correctly rejected off-package reference; fixture moved conflict to valid review package"
+  ],
+  "knownCompatibilityFailure": "J03/J10 final schema error class expected StructuredGenerationError; fixed-message conversion changed class; minimal preservation proposed to root",
+  "completedAt": "2026-10-27T15:01:36.188138+00:00",
+  "compatibilityResolution": "Pure local complete evidence classification retains original StructuredGenerationError instance/kind/safe fields; only fixed message changes; old tests unmodified",
+  "finalGreen": {
+    "log": "evidence-batches-accepted-green.txt",
+    "exitCode": 0,
+    "tests": 63,
+    "passCount": 63,
+    "failCount": 0,
+    "durationMs": 4813.450875
+  },
+  "static": {
+    "log": "evidence-batches-accepted-static.txt",
+    "sha256": "adb4e246ab48ecfbbf790a1d7a336c79a2ebbcd33c2b5d74dabf46cc20b0497a",
+    "exitCode": 0,
+    "diagnostics": 0,
+    "existingAmbientDeclarationIncluded": "desktop/shared/word-extractor.d.ts"
+  },
+  "productionSha256": {
+    "desktop/service/novel-import-ai.ts": "7229da8f8841317ba46d393914943aacbf1f99ad93449cf84501ecd8f3bd169e",
+    "desktop/main/novel-import.ts": "e4c25bcdf16ac4475ca8259961a1904a7318a31e99946798f68182064fff6c67"
+  }
+}

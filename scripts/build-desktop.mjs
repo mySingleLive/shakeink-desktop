@@ -16,4 +16,5 @@ results.push(await build({ bundle: true, platform: 'node', target: 'node24', for
 
 results.push(await build({ bundle: true, platform: 'node', target: 'node24', format: 'cjs', metafile:true, external: ['electron'], entryPoints: ['desktop/preload/maintenance.ts'], outfile: 'dist/preload/maintenance.cjs' }))
 results.push(await build({ bundle: true, platform: 'node', target: 'node24', format: 'cjs', metafile:true, external: ['electron'], entryPoints: ['desktop/preload/root-relocation.ts'], outfile: 'dist/preload/root-relocation.cjs' }))
+results.push(await build({ ...common, entryPoints: ['desktop/main/novel-import-pdf-worker.ts'], outfile: 'dist/main/novel-import-pdf-worker.cjs' }))
 await writeRuntimeDependencyManifest(process.cwd(),results)

@@ -1,0 +1,16 @@
+{
+  "id": "UP-06",
+  "passed": true,
+  "completedAt": "2026-10-25T18:31:17.987Z",
+  "platform": "darwin",
+  "root": "/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/shakeink-import-native-TsMyOs",
+  "driver": "CUA actual native dialogs + isolated journal assertions; automated harness first/cancel assertions, manual folder continuation",
+  "checks": [
+    "single sidebar entry and real macOS menu without folder mode",
+    "two supported files selected together in same native panel; exact text asserted by initial driver",
+    "cancel append preserves revision and files, asserted before discard-first stage",
+    "folder selected through same sidebar/native panel; two nested files extracted with exact filesystem text",
+    "isolated data root, no configured models, no classification or publish invoked"
+  ],
+  "driverLimit": "Initial harness incorrectly advanced between manual stages and failed its folder-session assertion. Fixed wait loop; folder acceptance completed through CUA and journal assertions, not a successful rerun of that harness."
+}

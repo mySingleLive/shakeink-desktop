@@ -1,0 +1,62 @@
+{
+  "completedAt": "2026-10-25T18:59:31.739Z",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v24.18.0",
+  "scope": "unified novel import source picker only",
+  "unit": {
+    "passed": 28,
+    "failed": 0,
+    "log": "cross-picker-unit-final.txt"
+  },
+  "browser": {
+    "passed": 6,
+    "failed": 0,
+    "log": "cross-picker-browser-final.txt",
+    "kind": "actual React + controlled semantic bridge, not Windows target"
+  },
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "independentReview": "docs/novel-import/24-cross-platform-picker-code-review.md",
+  "fullSuiteRun": false,
+  "realMacOS": {
+    "pid": 29884,
+    "window": "玄印写作",
+    "singleImportButton": true,
+    "nativeDialogTitle": "选择小说文本文件或文件夹",
+    "cancelReturnedToWorkspace": true,
+    "sourceSelected": false,
+    "isolatedFileAndFolderEvidence": "unified-picker-native.json"
+  },
+  "realWindows": "not-run; target unavailable",
+  "newInstaller": "not-built-or-run",
+  "htmlPreview": "file: navigation blocked by browser policy; no workaround, user explicitly approved UI",
+  "hashes": {
+    "desktop/shared/novel-import-source-picker.ts": "d1651611e72afad6b4978625b3e94c1769f0707e64d49fe86ef7175e0acc865c",
+    "desktop/main/novel-import-source-picker.ts": "f5d58b984611eabf131557ee9a2f94cbc9921ece6afe5416584a5b317952b673",
+    "desktop/main/novel-import-files.ts": "77d8003c18268aa962d3ae72c1c4591dbf03cb176747e2de4fd37957426fc294",
+    "desktop/main/novel-import.ts": "28b86bcb4fcdfc542bb6e7bb1abb64ce459b99479ca01c22050cc0f4b8dad64f",
+    "desktop/main/index.ts": "f11ebe82f1e87d48f8cd1172d2ab01f03c0389b15e4b062556b1c713d62a723b",
+    "desktop/preload/index.ts": "f1cdd4e06a649fb2b7a6a8d3c3646e61bafa9b4e05484cadf9acc1d2d316549e",
+    "desktop/shared/ipc.ts": "6f4c8d9907155958fea20e45562a725d260818f7ef52095dbdf19ca411fcff17",
+    "desktop/shared/command-registry.ts": "6adf0c3252978ebacb281a9c2981f8fa268ca20a87d59891eed6c65f05d5e3fd",
+    "desktop/shared/commands.json": "4025c9c351b6c9a4fe87e43cf443a9f392ff828ce36b4c8e54b801bb46e0a8eb",
+    "desktop/shared/command-catalogs.generated.json": "a84b85f4f1e42dae06be5437347e053ac69a8814ef4f43e3eab872a9afbcae01",
+    "src/components/desktop/NovelImportSourcePickerDialog.tsx": "ce2c5c0b1919377f7b5c231b44f6da22491ebfafc41bc6d28cc864fd9acd2fb5",
+    "src/components/desktop/novel-import-source-picker.css": "9cd4aa287dbfbe383dc2069206245afaa9a0929ff5cfd0b2a59986a6c4e4500c",
+    "src/lib/desktop/novel-import-source-picker.ts": "b8e98e1afdab55d12b9cb3bd551935655770a079be7e2ab56e5e1f619304a3be",
+    "src/lib/desktop/novel-import.ts": "fcb216ee41daee2447acc4bd4737ec41720aebab59469f04d97c2a007c28df45",
+    "src/components/desktop/DesktopApp.tsx": "76c5d04e93a933c0a7c72d9a9c872d6c475f4309f97e0cc13e5b045e3c8b8594",
+    "src/components/desktop/NovelImportDialog.tsx": "a0a280d270cb874c4c3dbced9f27a99da97449fea02dbd968e4d0ae88b16ba5c",
+    "src/components/layout/SidebarTree.tsx": "75473d1320179ba38baa37c95f49752256bf16617677709acbba1bead8828b4a",
+    "tests/unit/novel-import-source-picker.test.ts": "3fa453105b4f5020bf6c945df98007bdc8d7cc2ca70575eb854b6a00385dc34a",
+    "tests/unit/novel-import-integration.test.ts": "ca92c694ec7132a893ee199a75a7c1f15a597dad0b083967303fb156e3e822d8",
+    "tests/unit/novel-import-picker.test.ts": "0161a6902c2361a643103aea0d0446398dd9229816f20f10c6ebe47fa9b14186",
+    "tests/browser/novel-import-source-picker.test.ts": "706bc8122c9a2d2d156be091940d7441304f90002191979bf17ee986682aa243",
+    "tests/browser/novel-import.test.ts": "0393063f5a73cc0f98dbc89469f36e9fdd89c621a95e21f190c22dcceaa83516",
+    "tests/helpers/novel-import-source-picker-fixture.tsx": "909d7f0c36269770de6f9f0dc0e41abd1fceb7e06b6d63c572d481f99f06ae14",
+    "tests/helpers/novel-import-ui-fixture.tsx": "c39878c8ccda0c32d65aea7e8f93ef17df577ed664c5811f24ba2219fff314ac",
+    "dist/main/index.cjs": "25bf25eb82c85f093e0bb354caf30434bc8081f732f7b04c265d652ef7f0ae98",
+    "dist/preload/index.cjs": "b1aa9792e02bed32da858ce66d645e4aaedadab67b534c87f16b2ab997bccba4"
+  }
+}

@@ -1,0 +1,18 @@
+▶ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority
+  ✔ actual analyze, reconcile and review prompts keep guidance outside untrusted data (9.85125ms)
+  ✔ true preimplementation prompt and serialization goldens protect unchanged branches (1.582ms)
+  ✔ projection and locked targeted-reconcile gates still reject unauthorized results (2.003667ms)
+✔ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority (20.063125ms)
+▶ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract
+  ✔ all twelve actual generation paths retain exact data, notFound, role and signal (12.460334ms)
+  ✔ invalid and missing targets keep the original helper contract and zero-resolution guard (0.550791ms)
+  ✔ independent preimplementation hashes retain every unaffected phase (0.854125ms)
+✔ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract (15.201083ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 254.57075

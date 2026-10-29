@@ -1,0 +1,1 @@
+{"passed": 130, "failed": 0, "output": "/private/tmp/novel-import-adoption-independent-63.json"}

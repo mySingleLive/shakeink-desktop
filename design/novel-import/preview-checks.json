@@ -1,0 +1,279 @@
+{
+  "revision": "v4",
+  "scope": "D-19 only: selection layout revision; D-01..D-18 not re-executed; no product/full tests",
+  "status": "pass",
+  "checks": [
+    {
+      "id": "D-19",
+      "name": "Only current layout revision: ordinary source checkboxes, always-visible inference cards without collapse controls; independent source/targets, whole-card/Space/focus, master-off keeps cards, preview/back/body eligibility and 8 themed size states",
+      "status": "pass"
+    }
+  ],
+  "errors": [],
+  "httpRequests": [],
+  "screenshots": [
+    "preview-choices-v4-ink-1280x800.png",
+    "preview-choices-v4-ink-390x600.png",
+    "preview-choices-v4-paper-1280x800.png",
+    "preview-choices-v4-paper-390x600.png"
+  ],
+  "productTests": "not-run",
+  "fullSuite": "not-run",
+  "browser": "155.0.8059.86",
+  "geometry": [
+    {
+      "theme": "ink",
+      "size": "1280,800",
+      "viewport": [
+        1278,
+        798
+      ],
+      "left": 179,
+      "right": 1099,
+      "top": 33.046875,
+      "bottom": 764.9375,
+      "headerTop": 34.046875,
+      "footerBottom": 763.9375,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    },
+    {
+      "theme": "ink",
+      "size": "900,640",
+      "viewport": [
+        898,
+        638
+      ],
+      "left": 16,
+      "right": 882,
+      "top": 16,
+      "bottom": 622,
+      "headerTop": 17,
+      "footerBottom": 621,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    },
+    {
+      "theme": "ink",
+      "size": "560,640",
+      "viewport": [
+        558,
+        638
+      ],
+      "left": 16,
+      "right": 542,
+      "top": 16,
+      "bottom": 622,
+      "headerTop": 17,
+      "footerBottom": 621,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    },
+    {
+      "theme": "ink",
+      "size": "390,600",
+      "viewport": [
+        388,
+        598
+      ],
+      "left": 16,
+      "right": 372,
+      "top": 16,
+      "bottom": 582,
+      "headerTop": 17,
+      "footerBottom": 581,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    },
+    {
+      "theme": "paper",
+      "size": "1280,800",
+      "viewport": [
+        1278,
+        798
+      ],
+      "left": 179,
+      "right": 1099,
+      "top": 33.046875,
+      "bottom": 764.9375,
+      "headerTop": 34.046875,
+      "footerBottom": 763.9375,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    },
+    {
+      "theme": "paper",
+      "size": "900,640",
+      "viewport": [
+        898,
+        638
+      ],
+      "left": 16,
+      "right": 882,
+      "top": 16,
+      "bottom": 622,
+      "headerTop": 17,
+      "footerBottom": 621,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    },
+    {
+      "theme": "paper",
+      "size": "560,640",
+      "viewport": [
+        558,
+        638
+      ],
+      "left": 16,
+      "right": 542,
+      "top": 16,
+      "bottom": 622,
+      "headerTop": 17,
+      "footerBottom": 621,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    },
+    {
+      "theme": "paper",
+      "size": "390,600",
+      "viewport": [
+        388,
+        598
+      ],
+      "left": 16,
+      "right": 372,
+      "top": 16,
+      "bottom": 582,
+      "headerTop": 17,
+      "footerBottom": 581,
+      "overflow": 0,
+      "sourceBorders": [
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px",
+        "0px"
+      ]
+    }
+  ],
+  "sources": {
+    "index.html": "439c0a497f25b5931d16792e75c49527f0ae5e0e56c1db69b26119576dd450ba",
+    "flow.html": "865919e2b995a4e23fc78e0c3f8199ee5b6a150077dbde4a495e7133c331f48a",
+    "preview.css": "389c6260351b1eb6a0dc10313fa959e05bdb02c9fc94f0ca3ac487583d816829",
+    "preview.js": "8a63805a527fdf0f334106fb836c57f908877c37ea7e973d43b0cefb027e9c8f",
+    "verify-preview.mjs": "0cdb7493450cea85251dec3463ba6f41945a7b2fc29b165dc95522b2d7a1f326",
+    "assets/file-icons/text.svg": "b8f380ee5bf76befed8c6fdae524f0c6a99a8370a14effb566dedebc878f4cbc",
+    "assets/file-icons/markdown.svg": "eae21ad9763bc5a13898ded2d105937d07f577bb9799825d777bd5607cd99f20",
+    "assets/file-icons/word.svg": "3bc0ae0256ca978c8614eea9ce79eb08fb5b5d4521e81f40561af003e1842459",
+    "assets/file-icons/pdf.svg": "5653a913cdb9e51a809c616b565ecf2e716791378b8fa7ce0c8af8802af25142",
+    "assets/file-icons/html.svg": "6a5cfad64d74cee26abfb808dc62c17d0e4644412e63e44f4743833164b8e6e4",
+    "assets/file-icons/LICENSE.txt": "6871eaa1f7a51fbc5f482bec82c3d30a0c61b6889865a03f998c2be9860bdb20",
+    "assets/file-icons/provenance.json": "78e9cdf84360dc07842c1fa4318069350d9c5be6dd62a1aebe96a2b990317224"
+  }
+}

@@ -1,0 +1,46 @@
+✖ LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay (184.929208ms)
+✖ LOTM-E05: pause drains a late right result without covering or publishing it (97.576708ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3564.591167
+
+✖ failing tests:
+
+test at tests/unit/novel-import-evidence-batches.test.ts:2:13769
+✖ LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay (184.929208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 6
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-evidence-batches.test.ts:66:370)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 6,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-evidence-batches.test.ts:2:19732
+✖ LOTM-E05: pause drains a late right result without covering or publishing it (97.576708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 6
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-evidence-batches.test.ts:80:239)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 6,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

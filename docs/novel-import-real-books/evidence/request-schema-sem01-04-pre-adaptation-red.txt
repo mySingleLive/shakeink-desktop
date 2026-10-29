@@ -1,0 +1,32 @@
+✔ NI-SEM01: native character facts preserve supported profile fields and unknown values (16.749209ms)
+✔ NI-SEM02: place and world-setting identities retain typed parents without merging unrelated entities (5.401708ms)
+✔ NI-SEM03: all nine world setting contents survive the native editor content contract (10.156042ms)
+✖ NI-SEM04: knowledge qualifiers survive every selected kind and native timeline reliability (15.958667ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 295.14625
+
+✖ failing tests:
+
+test at tests/unit/novel-import-semantic.test.ts:2:30113
+✖ NI-SEM04: knowledge qualifiers survive every selected kind and native timeline reliability (15.958667ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(prompt.includes('roleType')&&prompt.includes('PLACE')&&prompt.includes('WORLD')&&prompt.includes('SETTING'))
+  
+      at semanticAdapterContracts (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic.test.ts:29:618)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic.test.ts:106:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,10 @@
+✔ NI-WR01: explicit legacy repair is read-only by default, atomic and idempotent (1824.301166ms)
+✔ NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative (14048.046292ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16383.803917

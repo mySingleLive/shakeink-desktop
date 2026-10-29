@@ -1,0 +1,781 @@
+{
+ "date": "2026-10-28T22:05:39.798Z",
+ "checks": [
+  {
+   "ok": true,
+   "what": "ink/1280 编码自动识别，无确认按钮"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 确认文件页无需确认编码即可继续"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 可手动改编码"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 确认文件之后是作品与目录"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 未选目录不能继续"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 作品与目录之后是选择内容"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 勾选后焦点留在原复选框"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 卷章计数 149/154"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 选择卷章页即授权"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 发送范围在卷章页，无写死模型名"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 角色行只显示名称与类型"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 生成头像/立绘两个选项默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 勾选后按钮说明将生成图像"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 角色类型可改"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 暂停后显示已暂停"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 有失败项时可跳过并继续"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 角色导入后自动生成图像"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 场景有外景图/内景图选项且默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 场景勾选后按钮说明"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 物品有物品图标选项且默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 取消父世界取消子世界"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 父世界半选计入子世界"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 校验页列出跳过项（含跳过的图像）"
+  },
+  {
+   "ok": true,
+   "what": "ink/1280 任务条用统一步号"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 编码自动识别，无确认按钮"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 确认文件页无需确认编码即可继续"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 可手动改编码"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 确认文件之后是作品与目录"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 未选目录不能继续"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 作品与目录之后是选择内容"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 勾选后焦点留在原复选框"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 卷章计数 149/154"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 选择卷章页即授权"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 发送范围在卷章页，无写死模型名"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 角色行只显示名称与类型"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 生成头像/立绘两个选项默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 勾选后按钮说明将生成图像"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 角色类型可改"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 暂停后显示已暂停"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 有失败项时可跳过并继续"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 角色导入后自动生成图像"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 场景有外景图/内景图选项且默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 场景勾选后按钮说明"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 物品有物品图标选项且默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 取消父世界取消子世界"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 父世界半选计入子世界"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 校验页列出跳过项（含跳过的图像）"
+  },
+  {
+   "ok": true,
+   "what": "paper/1280 任务条用统一步号"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 编码自动识别，无确认按钮"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 确认文件页无需确认编码即可继续"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 可手动改编码"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 确认文件之后是作品与目录"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 未选目录不能继续"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 作品与目录之后是选择内容"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 勾选后焦点留在原复选框"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 卷章计数 149/154"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 选择卷章页即授权"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 发送范围在卷章页，无写死模型名"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 角色行只显示名称与类型"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 生成头像/立绘两个选项默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 勾选后按钮说明将生成图像"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 角色类型可改"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 暂停后显示已暂停"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 有失败项时可跳过并继续"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 角色导入后自动生成图像"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 场景有外景图/内景图选项且默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 场景勾选后按钮说明"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 物品有物品图标选项且默认不勾选"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 取消父世界取消子世界"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 父世界半选计入子世界"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 校验页列出跳过项（含跳过的图像）"
+  },
+  {
+   "ok": true,
+   "what": "ink/390 任务条用统一步号"
+  },
+  {
+   "ok": true,
+   "what": "无模型时推断不可选"
+  },
+  {
+   "ok": true,
+   "what": "无模型时卷章页为仅拷贝"
+  },
+  {
+   "ok": true,
+   "what": "无模型时角色只来自资料"
+  },
+  {
+   "ok": true,
+   "what": "无图像模型时生成选项禁用"
+  },
+  {
+   "ok": true,
+   "what": "未识别到卷章的空状态"
+  },
+  {
+   "ok": true,
+   "what": "conflict 有问题时不能保存"
+  },
+  {
+   "ok": true,
+   "what": "broken 有问题时不能保存"
+  },
+  {
+   "ok": true,
+   "what": "停止导入有确认"
+  },
+  {
+   "ok": true,
+   "what": "停止并保留草稿：收起且保留进度"
+  },
+  {
+   "ok": true,
+   "what": "从任务条恢复到原步骤"
+  },
+  {
+   "ok": true,
+   "what": "丢弃草稿需二次确认"
+  },
+  {
+   "ok": true,
+   "what": "返回修改选择列出可返回步骤"
+  },
+  {
+   "ok": true,
+   "what": "返回后进入所选步骤"
+  },
+  {
+   "ok": true,
+   "what": "Esc 收起且任务条显示等待确认"
+  },
+  {
+   "ok": true,
+   "what": "减弱动态时显示\"导入中\"文字"
+  }
+ ],
+ "results": [
+  {
+   "tag": "ink-1280",
+   "name": "01-entry",
+   "title": "选择来源"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "02-files",
+   "title": "确认文件"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "03-work",
+   "title": "作品与目录"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "04-kinds",
+   "title": "选择内容"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "05b-tree-search",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "05-tree",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "09a-detect-failed",
+   "title": "识别角色"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "09-characters",
+   "title": "识别角色"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "10-import-characters-running",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "10c-paused",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "10b-import-characters-failed",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "10d-image-failed",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "10e-images-done",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "11-scenes",
+   "title": "识别场景"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "12-import-scenes-images",
+   "title": "导入场景"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "13-items",
+   "title": "识别物品"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "14-import-items-images",
+   "title": "导入物品"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "15-world-tree",
+   "title": "识别世界观"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "16-import-world",
+   "title": "导入世界观"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "20-foreshadow",
+   "title": "导入伏笔"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "20b-rail-open",
+   "title": "导入伏笔"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "21-verify",
+   "title": "校验"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "22-done",
+   "title": "完成"
+  },
+  {
+   "tag": "ink-1280",
+   "treeCount": "已选 149 / 154 章 · 7 卷",
+   "summary": "149章节9角色7场景5物品7世界观设定6伏笔"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "01-entry",
+   "title": "选择来源"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "02-files",
+   "title": "确认文件"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "03-work",
+   "title": "作品与目录"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "04-kinds",
+   "title": "选择内容"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "05b-tree-search",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "05-tree",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "09a-detect-failed",
+   "title": "识别角色"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "09-characters",
+   "title": "识别角色"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "10-import-characters-running",
+   "title": "导入角色"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "10c-paused",
+   "title": "导入角色"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "10b-import-characters-failed",
+   "title": "导入角色"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "10d-image-failed",
+   "title": "导入角色"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "10e-images-done",
+   "title": "导入角色"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "11-scenes",
+   "title": "识别场景"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "12-import-scenes-images",
+   "title": "导入场景"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "13-items",
+   "title": "识别物品"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "14-import-items-images",
+   "title": "导入物品"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "15-world-tree",
+   "title": "识别世界观"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "16-import-world",
+   "title": "导入世界观"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "20-foreshadow",
+   "title": "导入伏笔"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "20b-rail-open",
+   "title": "导入伏笔"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "21-verify",
+   "title": "校验"
+  },
+  {
+   "tag": "paper-1280",
+   "name": "22-done",
+   "title": "完成"
+  },
+  {
+   "tag": "paper-1280",
+   "treeCount": "已选 149 / 154 章 · 7 卷",
+   "summary": "149章节9角色7场景5物品7世界观设定6伏笔"
+  },
+  {
+   "tag": "ink-390",
+   "name": "01-entry",
+   "title": "选择来源"
+  },
+  {
+   "tag": "ink-390",
+   "name": "02-files",
+   "title": "确认文件"
+  },
+  {
+   "tag": "ink-390",
+   "name": "03-work",
+   "title": "作品与目录"
+  },
+  {
+   "tag": "ink-390",
+   "name": "04-kinds",
+   "title": "选择内容"
+  },
+  {
+   "tag": "ink-390",
+   "name": "05b-tree-search",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "ink-390",
+   "name": "05-tree",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "ink-390",
+   "name": "09a-detect-failed",
+   "title": "识别角色"
+  },
+  {
+   "tag": "ink-390",
+   "name": "09-characters",
+   "title": "识别角色"
+  },
+  {
+   "tag": "ink-390",
+   "name": "10-import-characters-running",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-390",
+   "name": "10c-paused",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-390",
+   "name": "10b-import-characters-failed",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-390",
+   "name": "10d-image-failed",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-390",
+   "name": "10e-images-done",
+   "title": "导入角色"
+  },
+  {
+   "tag": "ink-390",
+   "name": "11-scenes",
+   "title": "识别场景"
+  },
+  {
+   "tag": "ink-390",
+   "name": "12-import-scenes-images",
+   "title": "导入场景"
+  },
+  {
+   "tag": "ink-390",
+   "name": "13-items",
+   "title": "识别物品"
+  },
+  {
+   "tag": "ink-390",
+   "name": "14-import-items-images",
+   "title": "导入物品"
+  },
+  {
+   "tag": "ink-390",
+   "name": "15-world-tree",
+   "title": "识别世界观"
+  },
+  {
+   "tag": "ink-390",
+   "name": "16-import-world",
+   "title": "导入世界观"
+  },
+  {
+   "tag": "ink-390",
+   "name": "20-foreshadow",
+   "title": "导入伏笔"
+  },
+  {
+   "tag": "ink-390",
+   "name": "20b-rail-open",
+   "title": "导入伏笔"
+  },
+  {
+   "tag": "ink-390",
+   "name": "21-verify",
+   "title": "校验"
+  },
+  {
+   "tag": "ink-390",
+   "name": "22-done",
+   "title": "完成"
+  },
+  {
+   "tag": "ink-390",
+   "treeCount": "已选 149 / 154 章 · 7 卷",
+   "summary": "149章节9角色7场景5物品7世界观设定6伏笔"
+  },
+  {
+   "tag": "ink-1280-nomodel",
+   "name": "04-kinds",
+   "title": "选择内容"
+  },
+  {
+   "tag": "ink-1280-nomodel",
+   "name": "05-tree-nomodel",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "ink-1280-nomodel",
+   "name": "09-characters-source-only",
+   "title": "识别角色"
+  },
+  {
+   "tag": "paper-1280-nochapters",
+   "name": "05-tree-empty",
+   "title": "选择卷章"
+  },
+  {
+   "tag": "ink-1280-conflict",
+   "name": "21-verify-problem",
+   "title": "校验"
+  },
+  {
+   "tag": "ink-1280-conflict",
+   "name": "21b-conflict",
+   "title": "校验"
+  },
+  {
+   "tag": "ink-1280-conflict",
+   "name": "21c-verify-fixed",
+   "title": "校验"
+  },
+  {
+   "tag": "ink-1280-broken",
+   "name": "21-verify-problem",
+   "title": "校验"
+  },
+  {
+   "tag": "ink-1280-broken",
+   "name": "21c-verify-fixed",
+   "title": "校验"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "stop-confirm",
+   "title": "导入场景"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "discard-confirm",
+   "title": "导入场景"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "revise-confirm",
+   "title": "导入场景"
+  },
+  {
+   "tag": "ink-1280",
+   "name": "10-reduced-motion",
+   "title": "导入角色"
+  }
+ ],
+ "errors": []
+}

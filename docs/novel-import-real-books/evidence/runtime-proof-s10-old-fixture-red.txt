@@ -1,0 +1,148 @@
+▶ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints
+  ✖ none (1448.947ms)
+  ✖ legacy (1424.396875ms)
+  ✖ double-reopen (1418.161458ms)
+  ✖ range (1417.212709ms)
+  ✖ selection (1431.696084ms)
+  ✖ target (1456.468833ms)
+  ✖ replaced-target (3012.02825ms)
+  ✖ working-revision (253.759791ms)
+✖ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints (11866.862625ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 0
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12126.78075
+
+✖ failing tests:
+
+test at tests/unit/novel-import-session.test.ts:2:24230
+✖ none (1448.947ms)
+  AssertionError [ERR_ASSERTION]: expected in-flight synthetic operation
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:75:130)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:103:82)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:95:112)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:24230
+✖ legacy (1424.396875ms)
+  AssertionError [ERR_ASSERTION]: expected in-flight synthetic operation
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:75:130)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:103:82)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:95:112)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:24230
+✖ double-reopen (1418.161458ms)
+  AssertionError [ERR_ASSERTION]: expected in-flight synthetic operation
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:75:130)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:103:82)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:95:112)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:24230
+✖ range (1417.212709ms)
+  AssertionError [ERR_ASSERTION]: expected in-flight synthetic operation
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:75:130)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:103:82)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:95:112)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:24230
+✖ selection (1431.696084ms)
+  AssertionError [ERR_ASSERTION]: expected in-flight synthetic operation
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:75:130)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:103:82)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:95:112)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:24230
+✖ target (1456.468833ms)
+  AssertionError [ERR_ASSERTION]: expected in-flight synthetic operation
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:75:130)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:103:82)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:95:112)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:24230
+✖ replaced-target (3012.02825ms)
+  AssertionError [ERR_ASSERTION]: expected in-flight synthetic operation
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:75:130)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:103:82)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:95:112)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:28625
+✖ working-revision (253.759791ms)
+  TypeError: Cannot read properties of undefined (reading 'id')
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:134:189)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:128:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

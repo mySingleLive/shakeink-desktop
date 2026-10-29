@@ -1,0 +1,10 @@
+✔ NI-PDF16: source-proven GBK glyph decoding preserves explicit Unicode and every other character (11.059333ms)
+✔ NI-PDF17: decoded PDF ledgers bind the policy without rewriting legacy checkpoints (739.553375ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 986.687625

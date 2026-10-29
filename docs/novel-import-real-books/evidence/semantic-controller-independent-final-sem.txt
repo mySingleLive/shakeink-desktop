@@ -1,0 +1,37 @@
+▶ NI-SEM06: author decisions reconcile linked artifacts and both lines before full-book review
+  ✔ body-only-explanation-still-reconciles-linked-settings (140.774458ms)
+  ✔ cross-unit-bidirectional-typed-and-unique-name-links (255.607ms)
+✔ NI-SEM06: author decisions reconcile linked artifacts and both lines before full-book review (705.058458ms)
+▶ NI-SEM07: inferred and merge decisions apply only the chosen field before reconciliation
+  ✔ inferred (108.938584ms)
+  ✔ merge-source-fields-without-AI (61.018959ms)
+  ✔ actual-adapter-projects-fragment-and-off-package-locks (409.790708ms)
+  ✔ actual-adapter-omission-cannot-fill-author-locked-empty-field (146.2015ms)
+  ✔ reopen-without-grant-rejects-whole-decision-atomically (152.933333ms)
+✔ NI-SEM07: inferred and merge decisions apply only the chosen field before reconciliation (880.100834ms)
+▶ NI-SEM08: bounded semantic repair checkpoints atomically and resumes without stale credit
+  ✔ repair-cartesian-product-is-bounded-before-task-allocation (1.426042ms)
+  ✔ fragment-success-pending-pause-reopen (298.52725ms)
+  ✔ same-hash-persistent-conflict-survives-reopen-and-retry (180.089459ms)
+  ✔ invalid-second-fragment-retries-without-credit (338.342167ms)
+  ✔ two-round-limit-is-durable (347.949208ms)
+✔ NI-SEM08: bounded semantic repair checkpoints atomically and resumes without stale credit (1167.308042ms)
+✔ NI-SEM09: source-only and inference-disabled imports never invoke semantic inference (822.336125ms)
+▶ NI-SEM10: evidence-backed omission work adds missing selected targets without oracle input
+  ✔ selected-evidence-completion (228.257292ms)
+  ✔ out-of-scope-omission-rejected (94.870291ms)
+  ✔ selected-nonbody-source-omission (159.677417ms)
+✔ NI-SEM10: evidence-backed omission work adds missing selected targets without oracle input (483.646583ms)
+✔ NI-SEM01: native character facts preserve supported profile fields and unknown values (6.00425ms)
+✔ NI-SEM02: place and world-setting identities retain typed parents without merging unrelated entities (2.057875ms)
+✔ NI-SEM03: all nine world setting contents survive the native editor content contract (7.591917ms)
+✔ NI-SEM04: knowledge qualifiers survive every selected kind and native timeline reliability (18.767833ms)
+✔ NI-SEM05: artifact field edits preserve unrelated facts and immutable prose (1.59225ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4555.933

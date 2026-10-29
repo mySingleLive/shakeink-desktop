@@ -1,0 +1,122 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (50.638958ms)
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (15.156958ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✖ production bridge corrects a bad location exactly once with safe bounded feedback (0.995458ms)
+  ✖ two invalid attempts stop and a first valid answer needs only one generation (0.417375ms)
+  ✖ literal acceptance cases agree with the unchanged legacy late matcher (4.802584ms)
+  ✖ each entry has its own safe path and other stages keep their original schema (0.384875ms)
+✖ NI-J03: evidence location uses the existing bounded correction without transforming quotes (7.140542ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 1
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 902.533084
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:16370
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (15.156958ms)
+  AssertionError [ERR_ASSERTION]: evidence location now participates in the existing correction schema
+  
+  true !== false
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:78:101)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:28583
+✖ production bridge corrects a bad location exactly once with safe bounded feedback (0.995458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      artifacts: [
+        {
+          evidence: [
+            {
+  +           quote: 'EVIDENCE-QUOTE-SYNTHETIC-SECRET',
+  -           quote: '这里是一处小室',
+              unitId: 'unit-current-SYNTHETIC-SECRET'
+            }
+          ],
+          facts: {
+            coordinates: '',
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:100:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:93:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { artifacts: [ [Object] ] },
+    expected: { artifacts: [ [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:30416
+✖ two invalid attempts stop and a first valid answer needs only one generation (0.417375ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:107:15)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:106:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:31220
+✖ literal acceptance cases agree with the unchanged legacy late matcher (4.802584ms)
+  AssertionError [ERR_ASSERTION]: no-match early schema has the original acceptance set
+  
+  true !== false
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:127:11)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:110:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:35432
+✖ each entry has its own safe path and other stages keep their original schema (0.384875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:142:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:140:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

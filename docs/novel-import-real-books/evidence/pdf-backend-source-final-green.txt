@@ -1,0 +1,52 @@
+▶ NI-PDF08: initial choose real worker exit precedes migration data close and owner revocation drain
+  ✔ main-begin-close (150.731208ms)
+  ✔ stop-tasks (57.18675ms)
+  ✔ migration-close (54.943125ms)
+  ✔ owner-revoked (43.384292ms)
+✔ NI-PDF08: initial choose real worker exit precedes migration data close and owner revocation drain (307.090584ms)
+✔ NI-PDF08: close deadline preserves the data root while a real source read remains outstanding (40.062625ms)
+▶ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains
+  ✔ legacy PDF supplementation is owned and canceled without changing frozen checkpoints (677.418542ms)
+  ✔ actual beginClose revokes initial choose before its real FS and BusinessGate settle (40.037959ms)
+✔ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains (717.855041ms)
+✔ NI-PDF05: only bounded PNG previews issue page and source bound confirmation tokens (15.98875ms)
+✔ NI-PDF14: actual missing-dimension and decode warnings block otherwise visible PDF pages (1769.150458ms)
+▶ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits
+  ✔ initial choose keeps one admitted real FS chain and an empty session until canceled resources settle (28.451916ms)
+  ✔ renderer cancel enters before a reselect inspection queued inside the real controller tail (610.484625ms)
+  ✔ real worker exit remains charged after pending preview is canceled (610.716125ms)
+✔ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits (1250.063291ms)
+▶ NI-PDF04: preview verifies authorized source identity before cache use and after rendering
+  ✔ same-bytes-file (1184.816167ms)
+  ✔ ancestor-directory (1166.310209ms)
+  ✔ ancestor-link (1180.435541ms)
+  ✔ replacement after snapshot but before render result is checked again (1222.057708ms)
+✔ NI-PDF04: preview verifies authorized source identity before cache use and after rendering (4754.083875ms)
+✔ NI-PDF05: decode failures bind issued lineage, preserve saved decisions and stay blocked until successful retry (1197.306292ms)
+✔ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (1787.661583ms)
+✔ NI-PDF01: full PDF inspection retains cover, every text page and mixed-page text without image approval (587.166625ms)
+✔ NI-PDF02: scan and partial PDF failures keep explicit blocked page ledgers instead of truncated success (2817.858875ms)
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (0.904041ms)
+✔ NI-PDF09: old non-PDF hashes and restored checkpoints remain byte identical with absent PDF fields (0.323167ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (2.06425ms)
+▶ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation
+  ✔ cancel (24.768625ms)
+  ✔ timeout (124.122875ms)
+✔ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation (149.182583ms)
+✔ NI-PDF02: budget failure keeps already extracted text and marks every remaining physical page unscanned (15.348708ms)
+✔ NI-PDF14: actual page and operator caps keep bounded ledgers instead of continued success (1904.318916ms)
+✔ NI-PDF03: page preview actions reject unsafe schemas, foreign files and stale revisions before IO (0.983084ms)
+✔ NI-PDF03: runtime page checks reject foreign, excluded and non-PDF sources before any IO (849.71ms)
+✔ NI-PDF03: actual main IPC protects page reads and keeps preview cancellation outside business admission (28.690333ms)
+✔ NI-PDF05: preview capabilities expire, remain page scoped and respect the bounded LRU (3281.483583ms)
+✔ NI-PDF07: controller sending, retry, conflict and patch actions cannot bypass pending pages (642.639208ms)
+✔ NI-PDF07: source replacement after an AI send discards the late response before coverage adoption (631.138875ms)
+✔ NI-PDF04: source re-selection preserves canceled choices and never inherits a prior page confirmation (2591.398208ms)
+ℹ tests 39
+ℹ suites 0
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 25961.869667

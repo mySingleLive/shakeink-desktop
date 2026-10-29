@@ -1,0 +1,3 @@
+tests/unit/novel-import-semantic.test.ts(43,189): error TS2345: Argument of type 'ImportAiRequest' is not assignable to parameter of type 'ImportAiRequest & Record<string, unknown>'.
+  Type 'ImportAiRequest' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'ImportAiRequest'.

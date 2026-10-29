@@ -1,0 +1,16 @@
+✔ NI-A03: missing ids, unknown categories and fabricated evidence are rejected (4.890417ms)
+✔ NI-A05: phase output contracts allow empty no-op arrays while rejecting actual cross-phase mutations (1.527208ms)
+✔ NI-A06: evidence layout anchoring restores unique exact source spans without changing text or word boundaries (3.238833ms)
+▶ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority
+  ✔ actual analyze, reconcile and review prompts keep guidance outside untrusted data (7.835834ms)
+  ✔ true preimplementation prompt and serialization goldens protect unchanged branches (0.813667ms)
+  ✔ projection and locked targeted-reconcile gates still reject unauthorized results (2.296792ms)
+✔ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority (16.834166ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 300.709042

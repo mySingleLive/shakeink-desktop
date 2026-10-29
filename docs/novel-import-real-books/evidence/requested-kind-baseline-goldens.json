@@ -1,0 +1,38 @@
+{
+  "baselinePayloadSha": "49482e28232c89c8eb1276ed7c2b755e496d9b26607329cac9d5f34a07a5bb21",
+  "guidance73": "758b417005d08edae0c4f601705026cea79a417a2e68e6f393395ba925a415ad",
+  "cases": {
+    "legacy-classify": {
+      "prompt": "372ad263b8aa5c573120879f383997d5058bbad250402943b6a7e6fbf8a98045",
+      "payload": "c03ba6c47f1822a049ffe5e818c37fc8281c7ca1c6dae5cb5cbef76c115f6e5a"
+    },
+    "legacy-analyze": {
+      "prompt": "5e7aa94c3e8461a12510bbbdd81836a91670577772e77e95adcb43be71f6bf4b",
+      "payload": "48c657e636ad32598f3010d86fed12faa7afe88cb3d6a3cb239e769b7dcaf8e0"
+    },
+    "legacy-review": {
+      "prompt": "37946b49d2a1a42584e3cf49da2e416a62126a76c8ff5f9b99175869cf2eb528",
+      "payload": "2edda7147222ced05c8331f3c08f2d9f02c3fe7efdf59077024e37c2739d2120"
+    },
+    "legacy-patch": {
+      "prompt": "994b5675c5541649fbbfccf473459dd7397c7e22c6d09a7ee559c779dfdf4962",
+      "payload": "94591dcf698f8d8ef1f7668a5219d1a8f663997fd9ea714692ddf0893e99cab2"
+    },
+    "semantic-classify": {
+      "prompt": "95d0d565dc1993566aae6cb1464193acdd63cb2f1a66ff8ec4cc396caddb2928",
+      "payload": "181e4012651e8f8397de2e89dc7c0b9f5ac8f5eec136cf0c07ed10a1db49b41b"
+    },
+    "semantic-review": {
+      "prompt": "2a85ef4674af804bd5b4d37efe93265060b1baba055324c888a8a1dbb1e64bb9",
+      "payload": "3dc644941c2f819f9923087107494c19a82e7db64cfb1c9deb9a3fab1cb13ab7"
+    },
+    "semantic-patch": {
+      "prompt": "c3f18e3c6caaeb0fef5c3e65e0d98130eee10041257e9edbc34107bb2ae2f097",
+      "payload": "c53897ecc9f81547a6f8b0f9d3c2bbe380db313f5c71e1a4cc54e5d77287c4b0"
+    },
+    "semantic-reconcile": {
+      "prompt": "fe047530145f45bdaf6d5ccbcdefcb8d0d1c929a2010cce638d29ac068254b0d",
+      "payload": "8fbbdd1b9e20f6d020b560a850d87b295ebba7b53d21edc694bab701cd70f774"
+    }
+  }
+}

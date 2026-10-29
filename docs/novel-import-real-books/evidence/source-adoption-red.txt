@@ -1,0 +1,1 @@
+{"passed": 0, "failed": 1, "output": "/private/tmp/novel-import-adoption-author-red-1.json", "failure": "AssertionError: real freeze CLI accepts explicit existing source adoption (old CLI has no such mode)"}

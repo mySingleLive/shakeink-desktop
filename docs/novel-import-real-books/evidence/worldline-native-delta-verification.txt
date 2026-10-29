@@ -1,0 +1,4 @@
+Service reverse-delta byte identity: PASS (worldline-only nontransforming strict native refinement and array selection only).
+Main outside safeError byte identity: PASS; original three knowledge mappings and short fallback bytes remain exact.
+Old J01-J03 bytes: PASS (exact unchanged prefix; only NI-J04 appended).
+Original helper/graph/late gates, bridge/defaults/retry, payload/prompt, budget, authorization and lifecycle: unchanged.

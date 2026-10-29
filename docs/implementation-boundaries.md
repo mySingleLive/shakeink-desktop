@@ -1,5 +1,9 @@
 # UI 批准与实施边界
 
+<!-- USER-2026-10-25-NOVEL-IMPORT BEGIN -->
+> **2026-10-25 用户“UI 设计审核通过，可以继续”，批准导入作品 v4。** 来源为 `docs/novel-import/02-product.md`、`04-ui-design.md` 和 `design/novel-import/approval-v4.json` 绑定的 HTML：普通来源复选框、补全卡片始终展开、真实设定分类与文件图标、AI 识别等待、三类冲突与正文逐处批准。继续技术方案及独立审核 → 本任务定向用例及独立审核 → TDD/代码审核 → 本任务定向验证。**用户明确禁止全量测试，本任务不运行全仓测试。** 仍复用真实工作台/业务面板，批准不代表实现或真实平台验证通过。
+<!-- USER-2026-10-25-NOVEL-IMPORT END -->
+
 <!-- USER-2026-10-13-CONTENT-DRAWER BEGIN -->
 > **2026-10-13 用户“UI 交互审核通过，可以继续”，批准右侧内容抽屉设计。** 来源为 `design/content-drawer/product-design.md` 和对应 HTML：收放期间完整宽度及布局固定、向右平移与裁切，沿用左侧曲线和时长；快速换向、状态保活、焦点、窄窗口及 resize 边界按设计落实。本范围覆盖原总体显隐动画不得修改的限制，继续复用真实 DashboardShell、Group/Panel、ContentTabs、29 类面板和 MarkdownEditor。按技术方案及独立审核、用例及独立审核、TDD、code review、回归和实际目标验证自动推进；批准不代表实现或测试通过。
 <!-- USER-2026-10-13-CONTENT-DRAWER END -->

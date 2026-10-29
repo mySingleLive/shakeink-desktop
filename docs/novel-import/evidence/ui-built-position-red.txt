@@ -1,0 +1,10 @@
+AssertionError [ERR_ASSERTION]: production: [data-slot=dialog-content].ni-dialog must reuse the shared DialogContent translation
+    at verifyImportPopupPosition (file:///Users/dt_flys/Projects/shakeink-desktop/tests/helpers/novel-import-css-check.mjs:8:45)
+    at verifyBuild (file:///Users/dt_flys/Projects/shakeink-desktop/tests/helpers/novel-import-css-check.mjs:19:67) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'box-sizing:border-box;z-index:51;border:1px solid var(--border,#deddd7);background:var(--popover,var(--background,#fff));width:min(920px,100vw - 32px);max-width:none;max-height:calc(100dvh - 32px);color:var(--popover-foreground,var(--foreground,#292923));font:13px/1.5 var(--font-ui,system-ui,sans-serif);border-radius:16px;outline:none;flex-direction:column;gap:0;padding:0;display:flex;position:fixed;top:50%;left:50%;overflow:hidden;transform:translate(-50%,-50%);box-shadow:0 20px 80px #0002',
+  expected: /(?:^|;)\s*(?:translate|transform)\s*:/,
+  operator: 'doesNotMatch',
+  diff: 'simple'
+}

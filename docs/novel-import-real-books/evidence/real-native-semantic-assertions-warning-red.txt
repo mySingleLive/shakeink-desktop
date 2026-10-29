@@ -1,0 +1,15 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: [{"name":"source-role-mapping-warning-must-persist","passed":false,"allOldAssertionsPassed":true},{"name":"source-level-structure-warning-must-persist","passed":false,"allOldAssertionsPassed":true}]
+    at <anonymous> (/private/tmp/real-novel-semantic-assertions-check.mts:62:1372) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

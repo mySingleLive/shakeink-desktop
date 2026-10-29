@@ -1,0 +1,59 @@
+{
+  "scope": "90 independent bounded code review; no actual app/model/data access",
+  "sources": [
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "baselineHash": "d86eb08bcb6c909a5338c76efab787ccb8a1cbf9ef9c2d40a4b90c46679d98ad",
+      "finalHash": "f29c2c6003c6aa513471ff3fa5acfa132ae9cade1ce7ed9baf1860950aeb1d68"
+    },
+    {
+      "path": "tests/unit/novel-import-request-schema.test.ts",
+      "baselineHash": "afb0983cc6536549a7826ef30284e9784ac2de0964d80e79cfa2084cf11c250d",
+      "finalHash": "5e44faf4e835a8a9102c5ab6492cfc2b468f4b9d22146af67e2c296a62690471"
+    }
+  ],
+  "diffHash": "7c7ea5d366e509f207b6ae663d96c161cc31e354f918eaa9d5f1a7bca53343dd",
+  "diffMatchesAuthor": true,
+  "serviceOnlyApprovedWorldlineResponsePrecheck": true,
+  "originalLinkHelperAndLateCallsByteExact": true,
+  "oldJ01J03ByteExact": true,
+  "J04OnlyApprovedLocalSpacedNameAndEarlyReferencePremise": true,
+  "J05OnlyApprovedWorldlineEarlyCasesAndNarrativeActualLateRoute": true,
+  "preservedFiles": {
+    "desktop/main/novel-import.ts": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d",
+    "desktop/core/novel-import-ai-payload.ts": "239cac9bf2f40c7e1004ffb28cfc36ff834f98b549f6ae7326cfafb42187ab55",
+    "tests/unit/novel-import-ai.test.ts": "663097fb08265b6467aafc43223724b88287cfcc6c27342c84716206cf9c9903"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-J0[123456]:",
+        "tests/unit/novel-import-request-schema.test.ts"
+      ],
+      "pass": 22,
+      "skip": 0,
+      "exit": 0,
+      "log": "worldline-references-independent-j01-j06.txt",
+      "logHash": "5bb2f1f0008f4118cc9953d9b985326eb535e0a7a46c524fa5333b4191a075ae"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-A0[789]:",
+        "tests/unit/novel-import-ai.test.ts"
+      ],
+      "pass": 12,
+      "skip": 0,
+      "exit": 0,
+      "log": "worldline-references-independent-a07-a09.txt",
+      "logHash": "0bf79d3eb623f8781556338582f53fba6aa2d66388c18aedb31b87c38b85d81c"
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "review": "111-evidence-feedback-code-review",
+  "recordedAt": "2026-10-26T20:09:07.263867+00:00",
+  "conclusion": "PASS",
+  "p1": [],
+  "p2": [],
+  "approvedPlanSha256": "48ed7a65ad9c856e5a49b3d3f3a2d3b13b37e1cec6b0a9894c543c9b726b1013",
+  "frozenSourcesBeforeAfter": {
+    "desktop/service/novel-import-ai.ts": "10c0f32e4107c338a0d132ab2692711a2c97f7f2e721e24e813f3f404f97ee13",
+    "tests/unit/novel-import-request-schema.test.ts": "5374a2364388ac87c335f132a487ca0c76f8a9d1874f6432ca6dfc4672b5b74e"
+  },
+  "unchangedControls": {
+    "desktop/core/novel-import-ai-payload.ts": "4cdd2e4e1461c209b7ef60d491584910393c5e11870a92ae685ac1347bf38c59",
+    "src/lib/ai/generate.ts": "51612305662fdbc383f01516c2fa5baf83c37e97123391752bdbdf3c9631fe22",
+    "desktop/main/novel-import.ts": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "desktop/core/novel-import-semantics.ts": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874",
+    "desktop/shared/novel-import.ts": "4b13236a2e14a0c55454fce4115784f8cb3145e6acd7a8b8fc193515b7754ef1",
+    "src/components/desktop/NovelImportDialog.tsx": "f3459f47b2b59ccd3ba10d2e703e888700e2175d89e80737b6ccb6066a6ea046",
+    "tests/unit/novel-import-ai.test.ts": "1bb78bd1f79d4f00bf32640f5f223036d464b38b6fc1aa1626aed22219f688e6"
+  },
+  "staticVerification": {
+    "wholeServiceReverseEqualsActualBaseline": "c1bc6dc62d7b40180287c98f5ebb940e7499d1812cc59277b286a59a6f109c4d",
+    "onlyOriginalAnchorFailConstructionChanged": true,
+    "matchingAndOrderingAndQuoteReturnUnchanged": true,
+    "lateErrorMessageUnchanged": true,
+    "mapper105AndString106Unchanged": true,
+    "oldJTestPrefixRestoredAfterOnlyTwoAssertionsAndLiteralMapping": "2dc40c44b7b539286f8a4cff348aba653928b2f6a39abab94a2382bacfaa32fa",
+    "oldJTestPrefixBytes": 95061,
+    "feedbackUtf16Lengths": {
+      "unknown-unit": 77,
+      "too-short": 86,
+      "ambiguous": 80,
+      "no-match": 85
+    }
+  },
+  "independentExecution": [
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-J(?:0[1-9]|10):' tests/unit/novel-import-request-schema.test.ts",
+      "exitCode": 0,
+      "stats": {
+        "tests": 51,
+        "pass": 51,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "durationMs": 1076.381958,
+      "log": "docs/novel-import-real-books/evidence/evidence-feedback-independent-j01-j10.txt",
+      "sha256": "754247c5e7cdae7377162f4b7482805de29b220e1a5ebf88e4d0314129bec86a"
+    },
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-A0[36]:' tests/unit/novel-import-ai.test.ts",
+      "exitCode": 0,
+      "stats": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "durationMs": 221.324833,
+      "log": "docs/novel-import-real-books/evidence/evidence-feedback-independent-a03-a06.txt",
+      "sha256": "0761b37d2b16d6e44d4a8c6c832d6d97b7f29fbd97ebbdb29b70e439032fa06d"
+    }
+  ],
+  "authorHistory": {
+    "evidence-feedback-red.log": {
+      "sha256": "6f3897180ecfd925afb2555ec793cb06f4f6a2b4d680e24436bd88199705c5c2",
+      "stats": {
+        "tests": 51,
+        "pass": 41,
+        "fail": 10,
+        "skipped": 0
+      }
+    },
+    "evidence-feedback-clean-red.log": {
+      "sha256": "224904ed8600e1ffcec6cdd2f127f88471286c2be39074037a71676af5273cc8",
+      "stats": {
+        "tests": 51,
+        "pass": 44,
+        "fail": 7,
+        "skipped": 0
+      }
+    },
+    "evidence-feedback-green.log": {
+      "sha256": "0e0f610019b2225d3d90041e9a5502a423c811659c9ea5302c0004c3d5e8fa92",
+      "stats": {
+        "tests": 51,
+        "pass": 51,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    "evidence-feedback-anchor-regression.log": {
+      "sha256": "2d771a1b86ac38aa7b12a3761bf7a1b2dc7e0ca5bb37317147a6133a0a4f38a6",
+      "stats": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    "cleanRedOldJParentGroupsPassed": true
+  },
+  "limits": [
+    "Initial41/51 RED included pre-adapted J03; clean44/51 RED is the meaningful new-J10-only preimplementation evidence.",
+    "No production/test edits, extra suites, builds/typechecks, app/models/private journals/DB/original novels accessed.",
+    "Real rev63 four paths do not establish any particular anchor reason or resolved root cause; literary gaps remain."
+  ]
+}

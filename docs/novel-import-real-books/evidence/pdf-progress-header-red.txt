@@ -1,0 +1,28 @@
+✖ NI-PDF02: budget failure keeps already extracted text and marks every remaining physical page unscanned (63.428833ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 701.253625
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:38942
+✖ NI-PDF02: budget failure keeps already extracted text and marks every remaining physical page unscanned (63.428833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  null !== 3
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:194:137)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,23 @@
+✖ NI-U06: conflict has no default; source explanation, setting confirmation, patch preview and selected second approval (7619.853292ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8313.375916
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:11402
+✖ NI-U06: conflict has no default; source explanation, setting confirmation, patch preview and selected second approval (7619.853292ms)
+  locator.waitFor: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByText('正在生成正文修改提案，请稍候。', { exact: true }) to be visible[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:70:52)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:18:401) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByText('正在生成正文修改提案，请稍候。', { exact: true }) to be visible" ]
+  }

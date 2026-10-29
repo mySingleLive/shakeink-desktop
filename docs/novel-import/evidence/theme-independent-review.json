@@ -1,0 +1,94 @@
+{
+  "status": "PASS",
+  "scope": "27 independent CSS/code/cascade/browser/representative-visual review; no real app or user preference changes",
+  "frozenSha256": {
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92",
+    "tests/helpers/novel-import-theme-fixture.tsx": "9f2709d95fc2cff9512e3fac7a2b908a8df23f91cba7fe63a2f4435c6d2c2530",
+    "tests/browser/novel-import-theme.test.ts": "7ff5fd38e47dc72574d0725818e2cd3ea6243f5d32ab9b9baa0b4b2b72313499"
+  },
+  "sixBaselinesVerified": {
+    "src/components/desktop/novel-import.css": "a96bddd9bc22fbba32f35e48eb75bc5e4527442fc1b5c9a8e6c2e7dc835efebd",
+    "src/components/ui/button.tsx": "d14549ab3ba7a9d5d1f424c2599233bffa0b317121abf3b6efa2fb902d5e2781",
+    "src/app/globals.css": "17ff1e3b5c20d221c7310778c93e23fce742d7f9e9a86309b83df5ebb8019e70",
+    "design/novel-import/preview.css": "389c6260351b1eb6a0dc10313fa959e05bdb02c9fc94f0ca3ac487583d816829",
+    "tests/browser/novel-import.test.ts": "0393063f5a73cc0f98dbc89469f36e9fdd89c621a95e21f190c22dcceaa83516",
+    "tests/helpers/novel-import-ui-fixture.tsx": "c39878c8ccda0c32d65aea7e8f93ef17df577ed664c5811f24ba2219fff314ac"
+  },
+  "unchangedControlsSha256": {
+    "src/components/ui/button.tsx": "d14549ab3ba7a9d5d1f424c2599233bffa0b317121abf3b6efa2fb902d5e2781",
+    "src/app/globals.css": "17ff1e3b5c20d221c7310778c93e23fce742d7f9e9a86309b83df5ebb8019e70",
+    "design/novel-import/preview.css": "389c6260351b1eb6a0dc10313fa959e05bdb02c9fc94f0ca3ac487583d816829",
+    "tests/browser/novel-import.test.ts": "0393063f5a73cc0f98dbc89469f36e9fdd89c621a95e21f190c22dcceaa83516",
+    "tests/helpers/novel-import-ui-fixture.tsx": "c39878c8ccda0c32d65aea7e8f93ef17df577ed664c5811f24ba2219fff314ac"
+  },
+  "backend59IdentitiesUnchanged": {
+    "desktop/main/novel-import.ts": "a0acd1a282eea4dc874ff45fa4b4b143cc2c2fe688880a235399bcff1d49bcd7",
+    "desktop/service/novel-import-ai.ts": "312fe64bf374168f6ec33267006a5c64d7e8b934093a33f4ef57398cf9271cd6",
+    "desktop/core/novel-import-ai-payload.ts": "8edd5629d1f5153d00a5b4c0bfd90dd0bddcad29b7409f5b9546869ed6cb2d98",
+    "desktop/core/novel-import-review-tasks.ts": "89e9c39e8a0c362d34baa5b393f44ca3dbfda1a52022ebc4ce66c9e6da566a82",
+    "desktop/core/novel-import-semantics.ts": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874",
+    "desktop/core/novel-import-semantic-state.ts": "592563c09ea0a12fed399a2f8eeef8016c5e9c099d46de9ab6f66e99a99f05d5",
+    "tests/unit/novel-import-semantic-session.test.ts": "8c9df1bcec64315bd6a585e89e994ec7f1bde302a5df169ddccafb3104ce6d6f"
+  },
+  "independentlyRegeneratedDiffMatchesAuthorBytes": true,
+  "fullDiffSha256": "be70a4dd90d6a724f73baba4806704045cca27b5da9e1e4e48ff1356d3df2852",
+  "commands": [
+    {
+      "pattern": "^NI-UT0[12]:",
+      "exitCode": 0,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 14508.583208
+    },
+    {
+      "pattern": "^NI-U02:",
+      "exitCode": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 1978.1125
+    }
+  ],
+  "logsSha256": {
+    "theme-independent-ut01-ut02.txt": "03805fa4aa5c1aab2374a5d132d5160aaa487f76b24f60e41bfd957bb0f5b3a8",
+    "theme-independent-u02.txt": "68393688a630c357c6be118e7934f7801833164ff2fa6a84ea62213eb6ebb6ff",
+    "theme-ut01-ut02-red.txt": "5f54f63152c2fa485f75402f09c9f860a784f8c4e06c85f0c1af160cd1bc6c99",
+    "theme-ut01-ut02-launch-failure.txt": "c66dd246c7327c549f6fce451726e5339a3d5d6498c7412ce20e57053fbc1213",
+    "theme-ut01-ut02-first-implementation.txt": "9c83883d4eeae1cee52c42fc61100476250a77cad4b21aed9a8241eaca11854a",
+    "theme-ut01-ut02-green-attempt.txt": "eecb52d3b1c20f0d1116cecb3d25e0b4f6257205a9f77d3b179097c4289a6286"
+  },
+  "compiledCssId": "5efe93c3d138",
+  "independentScreenshots": 22,
+  "author25ScreenshotsRestoredByteExact": true,
+  "screenshotManifestSha256": "c166c8a3ecd8e1ee42bca13030f3a63e30bd9fac38b480f6e0b9b57fea050fad",
+  "visuallyReviewed": [
+    {
+      "path": "theme-ink-source-1280x800-909301f9998f.png",
+      "sha256": "e0e8dbf4932318ad74be05521ee5fb8d6f93dea8d44103e2f53510e79bf489c1"
+    },
+    {
+      "path": "theme-independent-27-ink-source-1280x800-5efe93c3d138.png",
+      "sha256": "7a053c1d0d81a09754a86a2718151f8b802b6966224f0dde7396e354f48925fe"
+    },
+    {
+      "path": "theme-independent-27-paper-select-390x640-5efe93c3d138.png",
+      "sha256": "c166e39350cd351b5b500d26956608b2dc918222f7788e82d0700cf1433b8d92"
+    },
+    {
+      "path": "theme-independent-27-ink-confirm-680x460-5efe93c3d138.png",
+      "sha256": "615fc998fb9d93c6fdb90fa2c2cf5014c21306834b28a069083834fde5899399"
+    },
+    {
+      "path": "theme-independent-27-paper-confirm-1280x800-5efe93c3d138.png",
+      "sha256": "6dcbf37a471e9b18b8510721d1bff68eaf84e3af7b272c1218e9432f6b24eb95"
+    },
+    {
+      "path": "theme-independent-27-paper-reference-5efe93c3d138.png",
+      "sha256": "dded4aeb584301add9e4ae2321eaa55154d18580e15aa14e355304995e669e0f"
+    }
+  ],
+  "boundary": "Same two approved commands with isolated temporary headless Chrome and network interception; no source/test modifications, global UI preferences, user profile, real model/data/app, whole suite or independent typecheck"
+}

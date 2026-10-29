@@ -1,0 +1,181 @@
+[data-slot="dialog-content"].ni-source-picker {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  width: min(940px, calc(100vw - 32px));
+  height: min(680px, calc(100dvh - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--input);
+  border-radius: 12px;
+  background: var(--popover);
+  color: var(--foreground);
+  font: 13px/1.6 var(--font-ui);
+}
+.ni-source-picker *, .ni-source-picker *::before, .ni-source-picker *::after { box-sizing: border-box; }
+.ni-source-picker button, .ni-source-picker input { font: inherit; color: inherit; }
+.ni-source-picker button { cursor: pointer; }
+.ni-source-picker button:disabled { cursor: not-allowed; opacity: .5; }
+.ni-source-picker button:focus-visible, .ni-source-picker input:focus-visible, .ni-source-picker [tabindex]:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.ni-source-picker input[type="checkbox"] { width: 15px; height: 15px; margin: 0; accent-color: var(--primary); flex-shrink: 0; cursor: pointer; }
+.ni-source-picker input:disabled { cursor: not-allowed; }
+.ni-source-picker svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.6; }
+.ni-source-picker p, .ni-source-picker h3 { margin: 0; }
+.nisp-header { display: flex; justify-content: space-between; align-items: start; gap: 16px; padding: 21px 24px 17px; flex-shrink: 0; }
+.nisp-eyebrow { color: var(--muted-foreground); font-size: 9px; letter-spacing: 1.8px; }
+.nisp-header [data-slot="dialog-title"] { margin: 2px 0 0; font-size: 21px; line-height: 1.4; font-weight: 500; letter-spacing: .6px; }
+.nisp-header [data-slot="dialog-description"] { color: var(--muted-foreground); font-size: 11px; line-height: 1.6; margin: 4px 0 0; }
+.nisp-header > button { display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; border: 0; background: transparent; border-radius: 6px; }
+.nisp-muted { color: var(--muted-foreground); font-size: 11px; }
+.nisp-location { display: flex; gap: 5px; align-items: center; margin: 0 24px 12px; padding: 5px 6px; border: 1px solid var(--border); border-radius: 7px; min-width: 0; flex-shrink: 0; background: var(--card); }
+.nisp-location > button { width: 28px; height: 28px; padding: 5px; display: grid; place-items: center; border: 0; background: transparent; border-radius: 5px; flex-shrink: 0; }
+.nisp-breadcrumbs { display: flex; align-items: center; min-width: 0; flex: 1; overflow: auto; scrollbar-width: thin; }
+.nisp-breadcrumbs > span { display: inline-flex; align-items: center; flex-shrink: 0; }
+.nisp-breadcrumbs svg { width: 12px; height: 12px; color: var(--muted-foreground); }
+.nisp-breadcrumbs button { min-height: 26px; white-space: nowrap; padding: 2px 5px; border: 0; background: transparent; border-radius: 4px; font-size: 11px; }
+.nisp-search { display: flex; align-items: center; gap: 5px; width: 188px; min-width: 0; flex-shrink: 0; border-left: 1px solid var(--border); padding-left: 12px; margin-left: 6px; }
+.nisp-search svg { width: 14px; height: 14px; color: var(--muted-foreground); }
+.nisp-search input { width: 100%; min-width: 0; padding: 4px 2px; border: 0; background: transparent; font-size: 11px; outline: none; }
+.nisp-search input::placeholder { color: var(--muted-foreground); }
+.nisp-search:focus-within { outline: 1px solid var(--primary); outline-offset: 3px; border-radius: 3px; }
+.nisp-browser { display: grid; grid-template-columns: 155px minmax(0, 1fr); min-height: 0; flex: 1; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); overflow: hidden; }
+.nisp-places { padding: 14px 10px; border-right: 1px solid var(--border); overflow-y: auto; background: var(--card); }
+.nisp-place-label { display: block; padding: 3px 10px 8px; color: var(--muted-foreground); font-size: 9px; letter-spacing: 1.4px; }
+.nisp-places button { display: flex; justify-content: start; align-items: center; gap: 9px; width: 100%; min-height: 34px; margin: 1px 0; padding: 6px 10px; border: 0; background: transparent; border-radius: 6px; font-size: 11px; text-align: left; overflow-wrap: anywhere; }
+.nisp-places button svg { width: 15px; height: 15px; color: var(--muted-foreground); }
+.nisp-places button[aria-current] { background: var(--selected-surface); color: var(--primary); }
+.nisp-directory { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 0 14px; }
+.nisp-directory-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 43px; flex-shrink: 0; }
+.nisp-directory-summary label { display: flex; align-items: center; gap: 8px; font-size: 11px; cursor: pointer; }
+.nisp-directory-summary label:has(input:disabled) { color: var(--muted-foreground); cursor: not-allowed; }
+.nisp-directory-summary > span { font-size: 10px; color: var(--muted-foreground); white-space: nowrap; }
+.nisp-columns { display: grid; grid-template-columns: minmax(0,1fr) 78px 52px 28px; gap: 12px; padding: 5px 10px 7px 35px; font-size: 9px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.nisp-directory-content { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; margin: 0 -5px; padding: 4px 5px; }
+.nisp-entries { list-style: none; padding: 0; margin: 0; }
+.nisp-entry { display: grid; grid-template-columns: 15px 23px minmax(0,1fr) 78px 52px 28px; gap: 12px; align-items: center; min-height: 45px; border: 1px solid transparent; border-radius: 6px; padding: 6px 9px; cursor: pointer; user-select: none; }
+.nisp-entry:hover { background: var(--hover-wash); }
+.nisp-entry.is-selected { background: var(--selected-surface); border-color: color-mix(in srgb, var(--primary) 35%, transparent); }
+.nisp-entry.is-disabled { color: var(--muted-foreground); cursor: not-allowed; }
+.nisp-file-icon { width: 23px; height: 28px; display: grid; place-items: center; flex-shrink: 0; }
+.nisp-file-icon img { width: 22px; height: 27px; object-fit: contain; }
+.nisp-file-icon svg { width: 22px; height: 22px; color: var(--gold); }
+.ink .nisp-file-icon img[alt="MD 文件"] { filter: brightness(1.65) saturate(.7); }
+.nisp-entry-name { min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nisp-entry-type, .nisp-entry-size { font-size: 10px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nisp-entry > button { width: 26px; height: 26px; padding: 5px; border: 0; background: transparent; border-radius: 5px; display: grid; place-items: center; }
+.nisp-entry > button svg { width: 14px; height: 14px; }
+.nisp-browse-help { color: var(--muted-foreground); font-size: 9px; padding: 8px 10px; flex-shrink: 0; }
+.nisp-state { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; color: var(--muted-foreground); gap: 7px; }
+.nisp-state > svg { width: 28px; height: 28px; margin-bottom: 5px; color: var(--primary); }
+.nisp-state h3 { font-size: 13px; font-weight: 500; color: var(--foreground); }
+.nisp-state p { font-size: 11px; max-width: 320px; }
+.nisp-state button, .nisp-error button { padding: 4px 10px; margin-top: 5px; border: 1px solid var(--border); border-radius: 6px; background: transparent; font-size: 11px; }
+.nisp-spinner { animation: nisp-spin 1.2s linear infinite; }
+@keyframes nisp-spin { to { transform: rotate(360deg); } }
+.nisp-error { padding: 12px; margin: 4px 0 8px; border: 1px solid color-mix(in srgb,var(--destructive) 25%,var(--border)); border-radius: 6px; font-size: 11px; color: var(--destructive); overflow-wrap: anywhere; }
+.nisp-selection { display: flex; flex-direction: column; flex-shrink: 0; min-height: 69px; max-height: 145px; padding: 11px 24px 13px; }
+.nisp-selection-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-shrink: 0; }
+.nisp-selection-head h3 { font-size: 11px; font-weight: 500; }
+.nisp-selection-head > button { min-height: 24px; padding: 2px 6px; border: 0; background: transparent; color: var(--muted-foreground); font-size: 10px; }
+.nisp-selection-content { min-height: 0; overflow: auto; scrollbar-width: thin; }
+.nisp-selection-content > p { color: var(--muted-foreground); font-size: 10px; padding-top: 3px; }
+.nisp-selection-content > ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 5px 0 0; }
+.nisp-selection-content li { display: flex; align-items: center; gap: 7px; min-width: 0; max-width: 100%; padding: 4px 5px 4px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); }
+.nisp-selection-content .nisp-file-icon { width: 17px; height: 22px; }
+.nisp-selection-content .nisp-file-icon svg, .nisp-selection-content .nisp-file-icon img { width: 17px; height: 21px; }
+.nisp-selection-content li > div { min-width: 0; max-width: 245px; }
+.nisp-selection-content strong, .nisp-selection-content small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nisp-selection-content strong { font-size: 10px; font-weight: 500; }
+.nisp-selection-content small { color: var(--muted-foreground); font-size: 8px; }
+.nisp-selection-content li > button { display: grid; place-items: center; width: 23px; height: 24px; padding: 4px; border: 0; background: transparent; border-radius: 4px; }
+.nisp-selection-content li > button svg { width: 12px; height: 12px; }
+.nisp-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; gap: 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.nisp-footer > p { font-size: 9px; line-height: 1.8; color: var(--muted-foreground); }
+.nisp-footer > p span { display: block; }
+.nisp-footer > div { display: flex; gap: 9px; flex-shrink: 0; }
+.nisp-footer button { min-height: 34px; min-width: 72px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: transparent; font-weight: 500; }
+.nisp-footer button:last-child { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); min-width: 92px; }
+@media(max-width:850px) {
+ .nisp-header { padding: 18px 18px 14px; }
+ .nisp-location { margin: 0 18px 10px; }
+ .nisp-browser { grid-template-columns: 128px minmax(0,1fr); }
+ .nisp-places button { font-size: 10px; padding: 6px 8px; }
+ .nisp-search { width: 155px; }
+ .nisp-entry { grid-template-columns: 15px 22px minmax(0,1fr) 65px 28px; gap: 8px; }
+ .nisp-entry-size { display: none; }
+ .nisp-columns { grid-template-columns: minmax(0,1fr) 65px 28px; gap: 8px; }
+ .nisp-columns span:nth-child(3) { display: none; }
+ .nisp-selection { padding: 9px 18px 11px; }
+ .nisp-footer { padding: 12px 18px; }
+}
+@media(max-width:600px) {
+ .nisp-header { padding: 13px 14px 11px; }
+ .nisp-header [data-slot="dialog-title"] { font-size: 18px; }
+ .nisp-header [data-slot="dialog-description"] { font-size: 10px; }
+ .nisp-location { margin: 0 14px 9px; flex-wrap: wrap; gap: 3px; padding: 4px; }
+ .nisp-breadcrumbs { flex-basis: calc(100% - 32px); }
+ .nisp-breadcrumbs button { font-size: 10px; min-height: 24px; }
+ .nisp-search { width: auto; flex-basis: 100%; border-left: 0; border-top: 1px solid var(--border); padding: 5px 4px 0; margin: 1px 2px 0; }
+ .nisp-search input { font-size: 10px; padding: 2px 0; }
+ .nisp-browser { display: flex; flex-direction: column; }
+ .nisp-places { display: flex; gap: 3px; flex-shrink: 0; padding: 6px 9px; border-right: 0; border-bottom: 1px solid var(--border); overflow-x: auto; overflow-y: hidden; }
+ .nisp-place-label { display: none; }
+ .nisp-places button { width: auto; flex-shrink: 0; white-space: nowrap; min-height: 27px; padding: 4px 8px; font-size: 9px; gap: 6px; }
+ .nisp-places button svg { width: 13px; height: 13px; }
+ .nisp-directory { flex: 1; padding: 0 9px; }
+ .nisp-directory-summary { min-height: 34px; padding: 0 4px; }
+ .nisp-directory-summary label { font-size: 10px; gap: 7px; }
+ .nisp-directory-summary > span { font-size: 9px; }
+ .nisp-columns { display: none; }
+ .nisp-entry { min-height: 40px; grid-template-columns: 15px 21px minmax(0,1fr) 25px; gap: 8px; padding: 5px 7px; }
+ .nisp-entry-name { font-size: 11px; }
+ .nisp-entry-type { display: none; }
+ .nisp-browse-help { font-size: 8px; padding: 5px; }
+ .nisp-selection { padding: 7px 14px 8px; max-height: 116px; min-height: 55px; }
+ .nisp-selection-head h3 { font-size: 10px; }
+ .nisp-selection-content > p { font-size: 9px; }
+ .nisp-selection-content > ul { margin-top: 3px; gap: 4px; }
+ .nisp-selection-content li { padding: 3px 4px 3px 7px; gap: 5px; }
+ .nisp-selection-content li > div { max-width: 215px; }
+ .nisp-selection-content strong { font-size: 9px; }
+ .nisp-selection-content small { font-size: 7px; }
+ .nisp-footer { padding: 9px 14px; gap: 9px; align-items: end; }
+ .nisp-footer > p { font-size: 8px; max-width: 165px; }
+ .nisp-footer > p span { display: none; }
+ .nisp-footer > div { gap: 6px; }
+ .nisp-footer button { font-size: 11px; padding: 5px 10px; min-height: 31px; min-width: 58px; }
+ .nisp-footer button:last-child { min-width: 65px; }
+}
+@media(max-height:600px) {
+ .nisp-header { padding: 10px 15px 8px; }
+ .nisp-eyebrow { display: none; }
+ .nisp-header [data-slot="dialog-title"] { font-size: 17px; line-height: 1.3; }
+ .nisp-header [data-slot="dialog-description"] { font-size: 9px; margin-top: 2px; }
+ .nisp-location { margin: 0 15px 7px; padding: 3px 4px; }
+ .nisp-location > button { height: 26px; width: 26px; padding: 4px; }
+ .nisp-breadcrumbs button { min-height: 24px; font-size: 10px; }
+ .nisp-search input { font-size: 10px; padding: 2px; }
+ .nisp-places { padding: 7px; }
+ .nisp-places button { min-height: 28px; font-size: 10px; }
+ .nisp-directory-summary { min-height: 30px; }
+ .nisp-columns, .nisp-browse-help { display: none; }
+ .nisp-entry { min-height: 36px; }
+ .nisp-state { padding: 10px; }
+ .nisp-state h3 { font-size: 11px; }
+ .nisp-state p { font-size: 9px; }
+ .nisp-selection { padding: 7px 15px 8px; min-height: 44px; max-height: 86px; }
+ .nisp-selection-head h3 { font-size: 10px; }
+ .nisp-selection-head > button { min-height: 20px; }
+ .nisp-selection-content > p { font-size: 9px; }
+ .nisp-footer { padding: 8px 15px; }
+ .nisp-footer > p { font-size: 8px; line-height: 1.6; }
+ .nisp-footer > p span { display: none; }
+ .nisp-footer button { min-height: 30px; font-size: 11px; padding: 4px 11px; }
+}
+@media(prefers-reduced-motion:reduce) { .nisp-spinner { animation: none; } }

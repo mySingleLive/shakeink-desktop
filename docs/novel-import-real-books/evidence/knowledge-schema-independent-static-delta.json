@@ -1,0 +1,51 @@
+{
+  "scope": "Read-only full-file baseline comparisons and explicit in-memory reversal; no source writes or production execution",
+  "filesSha256": {
+    "desktop/service/novel-import-ai.ts": "816982eca792a4e3a6c2de0e87e1c646ef2442056456cda68285cd04b79de446",
+    "desktop/main/novel-import.ts": "05a4d5d59484a4b46e09b3a66317ea1e1c623080673b2a161e8d471272b453a0",
+    "tests/unit/novel-import-request-schema.test.ts": "29fa63a1a0b9746ebaa0dcc02a6a27e8acbcefd9193daade4880a6c5daf73868",
+    "desktop/core/novel-import-semantics.ts": "30ea421c4c70008ca1b975a16bfc9a83b70ed7dfbab1c9bfc7bac1312ef704ab",
+    "desktop/core/novel-import-ai-payload.ts": "4bc384917f7a723375090cec38be180e561bfe7b2b5b3fba8317167a4a2098e6",
+    "src/lib/ai/generate.ts": "51612305662fdbc383f01516c2fa5baf83c37e97123391752bdbdf3c9631fe22",
+    "tests/unit/novel-import-semantic.test.ts": "96a4d55ada73949086511752ffd2645dcaa990b144be218e0e251a6d3cb1adc8"
+  },
+  "baselineRoot": "/private/tmp/novel-import-knowledge-54-baseline",
+  "restored53Sha256": {
+    "service": "f5a40da9ff693a1dd7e06b49d42375e6e509a8c0aa475c52885c223d54b90f4f",
+    "main": "b869c4034c9eb86e3cee4f5fee642c5cd25f1b10feeaf7e06549d221672250c9",
+    "test": "ae6df2ab4089965fad4004127d5395ae402da61a33dc48f08f4d48a0d80bd9d8"
+  },
+  "fullBytesEqualToVerified53Baselines": true,
+  "serviceDelta": "Only reliability enum import, facts record superRefine, and attaching that field schema",
+  "mainDelta": "Only three exact static safeError mappings; original fallback bytes unchanged",
+  "testDelta": "Only insertions; all original lines/assertions remain byte-exact",
+  "testInsertionRanges": [
+    {
+      "oldLineBefore": 8,
+      "newStartLine": 9,
+      "newEndLine": 9
+    },
+    {
+      "oldLineBefore": 20,
+      "newStartLine": 22,
+      "newEndLine": 34
+    },
+    {
+      "oldLineBefore": 32,
+      "newStartLine": 47,
+      "newEndLine": 59
+    },
+    {
+      "oldLineBefore": 36,
+      "newStartLine": 64,
+      "newEndLine": 72
+    }
+  ],
+  "logsSha256": {
+    "knowledge-schema-independent-j01-j02.txt": "54b242af991ef4e15cd6be58919afdab0b4a8ed7add6eceaa37a7144f68ef2b9",
+    "knowledge-schema-independent-a03-a05-a06.txt": "525a8bcbe9bdd18c7f68eb7d937374d9a42fdf96f74e1a2397634599162aa3d2",
+    "knowledge-schema-independent-sem01-04.txt": "8a4ca3444157c880897150b781cab431b6f072724840bfb73f162b8c19017e1f",
+    "knowledge-schema-j01-j02-red.txt": "66205a21e746dc13dc45e0a238e1c7a854b5a1447adc645b384acc2457dbb28f",
+    "knowledge-schema-typecheck-fixture-red.txt": "3ddfb61c0ae39d97049d8ae0030957a03bfb24779808927e4af7034f898ff6cb"
+  }
+}

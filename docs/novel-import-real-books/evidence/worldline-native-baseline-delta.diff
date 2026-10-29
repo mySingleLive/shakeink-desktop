@@ -1,0 +1,135 @@
+--- /private/tmp/worldline-native-79-baseline/novel-import-ai.ts
++++ desktop/service/novel-import-ai.ts
+@@ -37,7 +37,11 @@
+   try{anchorEvidence([entry],request.units)}catch{ctx.addIssue({code:'custom',message:'证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'})}
+  })
+  const requestedArtifact=artifact.extend({text:z.string(),kind:z.literal(kind,{error:'kind必须为本次唯一目标 '+kind+'，子类型不能放到kind'}),origin:z.literal('inferred',{error:'origin必须为 inferred'}),sourceUnitIds:z.array(z.string()).min(1,{error:'必须提供本次来源单元'}).refine(ids=>ids.every(id=>unitIds.has(id)),{error:'来源单元必须全部属于本次输入'}),facts,evidence:z.array(requestedEvidence).min(1)}).strict()
+- return base.extend({artifacts:z.array(requestedArtifact).optional()}).strict()
++ const checkedArtifact=kind==='worldline'?requestedArtifact.superRefine((item,ctx)=>{
++  // Reuse the final native validator without transforming provider values.
++  try{validateImportSemanticArtifact(item)}catch{ctx.addIssue({code:'custom',path:['facts'],message:'worldline必须提供非空lineId、lineName、timeKind(unknown/exact/window)及people(JSON字符串数组)；eventId若提供须等于artifact.id；unknown不带timeValue/timeEnd，exact需有限timeValue且无timeEnd，window需有限timeValue/timeEnd且timeEnd不小于timeValue'})}
++ }):requestedArtifact
++ return base.extend({artifacts:z.array(checkedArtifact).optional()}).strict()
+ }
+ /** Internal service generation bridge. Production resolves its own model/user;
+  * tests may inject only generateJSON's existing generateText dependency. */
+--- /private/tmp/worldline-native-79-baseline/novel-import.ts
++++ desktop/main/novel-import.ts
+@@ -280,7 +280,24 @@
+  private canRestoreAnalysis(s:ImportSession){const checkpoint=(s as CheckpointSession).analysisCheckpoint;return !!checkpoint&&checkpoint.hash===importScopeHash(s,'analyze')&&sameTarget(checkpoint.target,s.target)}
+  private async chooseTarget(s:ImportSession){const target=await this.options.chooseTarget(s.title);this.assert();if(!target)return;const actual=await this.identity(target.path);if(actual.device!==target.device||actual.inode!==target.inode)throw Error('保存目录身份已变化，请重新选择');const path=resolve(target.path);const restoring=!!s.publication&&sameTarget(s.target,{...target,path});const protectedRoots=[this.options.root,...await this.options.protectedDirectories()];if(protectedRoots.some(root=>!(restoring&&resolve(root)===path)&&(within(path,resolve(root))||within(resolve(root),path)))||s.files.some(file=>within(file.path,path)||within(path,file.sourceRoot??file.path)))throw Error('保存目录不能与来源或应用目录重叠');if(s.publication&&s.target&&!restoring)throw Error('恢复保存必须重新授权原来的目录');if(this.canRestoreAnalysis(s)&&!sameTarget(s.target,{...target,path}))throw Error('恢复分析必须重新授权原来的目录');s.target={...target,path};s.targetNeedsAuthorization=false}
+  private launch(s:ImportSession,work:(epoch:number)=>Promise<void>){const epoch=s.epoch;let done:Promise<void>;done=Promise.resolve().then(()=>work(epoch)).catch(async error=>{if(error instanceof CandidateCommittedBlocked||error instanceof DOMException&&error.name==='AbortError')return;await this.serial(async()=>{if(this.session!==s||s.epoch!==epoch)return;if(error instanceof PdfFileChanged){this.markPdfSourceChanged(s,this.file(s,error.fileId));await this.save();return}s.resumePhase=s.phase;s.phase='failed';s.error=this.safeError(error);for(const step of s.steps)if(step.state==='running')step.state='failed';try{await this.save()}catch(saveError){if(!(error instanceof ImportRuntimePersistenceError))throw saveError;delete s.runtimePauseProof;s.runtimeDiagnosticsStatus='unavailable';s.resumePhase??=s.phase==='failed'?'running':s.phase;s.phase='failed';s.error=this.safeError(error);for(const step of s.steps)if(step.state==='running')step.state='failed'}})}).finally(()=>this.jobs.delete(done));this.jobs.add(done)}
+- private safeError(error:unknown){const message=error instanceof Error?error.message:'';if(message==='事实可靠性类型无效')return '推断结果的可靠性类型无效，请核对后重试';if(message==='非客观事实缺少知识归属说明')return '推断结果缺少非客观信息的归属说明，请核对后重试';if(message==='事件或叙事必须明确可靠性')return '事件或叙事结果缺少明确可靠性，请核对后重试';return /^(?:请|来源|保存|模型|导入|正文|分类|推断|当前|未|受控|冲突|单个|爽点)/u.test(message)&&message.length<180?message:'导入处理失败，请核对来源、模型配置后重试'}
++ private safeError(error:unknown){const message=error instanceof Error?error.message:'';if(message==='事实可靠性类型无效')return '推断结果的可靠性类型无效，请核对后重试';if(message==='非客观事实缺少知识归属说明')return '推断结果缺少非客观信息的归属说明，请核对后重试';if(message==='事件或叙事必须明确可靠性')return '事件或叙事结果缺少明确可靠性，请核对后重试';
++  if(typeof message==='string'){
++   const worldline:Record<string,string>={
++    '世界事件缺少类型、时间或角色结构':'世界线结果缺少事件线、时间类型或角色结构，请核对后重试',
++    '世界事件角色引用结构无效':'世界线结果的角色引用结构无效，请核对后重试',
++    '世界事件角色引用结构、字符或字段类型无效':'世界线结果的角色引用结构无效，请核对后重试',
++    '世界事件ID引用不一致':'世界线结果的事件标识不一致，请核对后重试',
++    '事件时间类型无效':'世界线结果的时间类型无效，请核对后重试',
++    '未知事件时间不得制造数值':'世界线结果将未知时间填写为数值，请核对后重试',
++    '事件时间数值无效':'世界线结果的时间数值无效，请核对后重试',
++    '事件时间范围无效':'世界线结果的时间范围无效，请核对后重试',
++    '确定事件时间不能混入候选窗口':'世界线结果混用了确定时间与候选窗口，请核对后重试'
++   }
++   if(Object.hasOwn(worldline,message))return worldline[message]
++   if(message.startsWith('未知事件时间'))return '导入处理失败，请核对来源、模型配置后重试'
++   if(message.length>=180&&message.startsWith('模型返回结构不完整（')&&message.endsWith('）'))return '模型返回结构不完整，请核对后重试'
++  }
++  return /^(?:请|来源|保存|模型|导入|正文|分类|推断|当前|未|受控|冲突|单个|爽点)/u.test(message)&&message.length<180?message:'导入处理失败，请核对来源、模型配置后重试'}
+  private current(s:ImportSession,epoch:number){this.assertCandidateOpen();this.assert();if(this.session!==s||s.epoch!==epoch)throw stopped()}
+  private async checkpoint(s:ImportSession,epoch:number,fn:()=>void){await this.serial(async()=>{this.assertCandidateOpen();this.current(s,epoch);fn();await this.save()})}
+  private async verify(s:ImportSession){
+--- /private/tmp/worldline-native-79-baseline/novel-import-request-schema.test.ts
++++ tests/unit/novel-import-request-schema.test.ts
+@@ -148,3 +148,89 @@
+   assert.deepEqual(raw,rawBefore);assert.deepEqual(r,before)
+  })
+ })
++
++test('NI-J04: worldline native validation uses bounded correction and exact safe diagnostics',async t=>{
++ const h=await import('../../desktop/core/novel-import-semantics'),factory=api.importAiResponseSchema,bridge=api.generateImportAiJson;assert.ok(factory);assert.ok(bridge)
++ const r=knowledgeRequest('worldline'),before=structuredClone(r),secret='WORLDLINE-NATIVE-SYNTHETIC-SECRET',facts:Record<string,string>={lineId:' synthetic-line ',lineName:' 合成主线 ',timeKind:'unknown',people:'[]',reliability:'客观事实'},event:ImportArtifact={...scene,id:'event-'+secret,kind:'worldline',text:'完整合成事件资料',facts}
++ const good={artifacts:[event]},context={userId:'synthetic-worldline-user',resolvedModel:{} as ResolvedModel},prompt=importAiPrompt(r),guidance='worldline必须提供非空lineId、lineName、timeKind(unknown/exact/window)及people(JSON字符串数组)；eventId若提供须等于artifact.id；unknown不带timeValue/timeEnd，exact需有限timeValue且无timeEnd，window需有限timeValue/timeEnd且timeEnd不小于timeValue'
++ const cases:{name:string;valid:boolean;facts:Record<string,string>}[]=[
++  {name:'unknown',valid:true,facts},
++  {name:'empty-people-and-time-text',valid:true,facts:{...facts,people:' [ ] ',time:' 原时间资料 '}},
++  {name:'exact-raw-number',valid:true,facts:{...facts,eventId:event.id,timeKind:'exact',timeValue:' \t-2.5 \r\n'}},
++  {name:'window-equal-boundary',valid:true,facts:{...facts,timeKind:'window',timeValue:'1e2',timeEnd:' 100 '}},
++  {name:'people-raw-strings',valid:true,facts:{...facts,people:' [ " '+existing.name+' " ] '}},
++  {name:'missing-line-id',valid:false,facts:Object.fromEntries(Object.entries(facts).filter(([key])=>key!=='lineId'))},
++  {name:'blank-line-name',valid:false,facts:{...facts,lineName:' \t\r\n'}},
++  {name:'missing-time-kind',valid:false,facts:Object.fromEntries(Object.entries(facts).filter(([key])=>key!=='timeKind'))},
++  {name:'unknown-time-kind',valid:false,facts:{...facts,timeKind:secret}},
++  {name:'missing-people',valid:false,facts:Object.fromEntries(Object.entries(facts).filter(([key])=>key!=='people'))},
++  {name:'people-invalid-json',valid:false,facts:{...facts,people:secret}},
++  {name:'people-object',valid:false,facts:{...facts,people:'{"private":"'+secret+'"}'}},
++  {name:'people-number',valid:false,facts:{...facts,people:'[1]'}},
++  {name:'people-empty-string',valid:false,facts:{...facts,people:'[""]'}},
++  {name:'people-blank-string',valid:false,facts:{...facts,people:'[" "]'}},
++  {name:'people-invalid-character',valid:false,facts:{...facts,people:'["\\ud800"]'}},
++  {name:'event-id-mismatch',valid:false,facts:{...facts,eventId:secret}},
++  {name:'unknown-time-value',valid:false,facts:{...facts,timeValue:''}},
++  {name:'unknown-time-end',valid:false,facts:{...facts,timeEnd:'0'}},
++  {name:'exact-missing-number',valid:false,facts:{...facts,timeKind:'exact'}},
++  {name:'exact-blank-number',valid:false,facts:{...facts,timeKind:'exact',timeValue:' \t'}},
++  {name:'exact-infinite-number',valid:false,facts:{...facts,timeKind:'exact',timeValue:'Infinity'}},
++  {name:'exact-nonnumeric-value',valid:false,facts:{...facts,timeKind:'exact',timeValue:secret}},
++  {name:'exact-window-property',valid:false,facts:{...facts,timeKind:'exact',timeValue:'0',timeEnd:''}},
++  {name:'window-missing-end',valid:false,facts:{...facts,timeKind:'window',timeValue:'1'}},
++  {name:'window-invalid-end',valid:false,facts:{...facts,timeKind:'window',timeValue:'1',timeEnd:secret}},
++  {name:'window-reversed',valid:false,facts:{...facts,timeKind:'window',timeValue:'2',timeEnd:'1'}},
++  {name:'unsupported-secret-field',valid:false,facts:{...facts,[secret]:secret}}
++ ]
++ const call=(raw:unknown,input:ImportAiRequest=r)=>ai.runImportAi(input,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>structuredClone(raw)})
++ await t.test('complete artifacts have the original pure-helper acceptance set and preserve raw values',async()=>{
++  for(const item of cases){const a={...event,facts:item.facts},snapshot=structuredClone(a),raw={artifacts:[a]};let accepted=true;try{h.validateImportSemanticArtifact(a)}catch{accepted=false}assert.equal(accepted,item.valid,item.name+' independent literal expectation');const checked=factory(r).safeParse(raw);assert.equal(checked.success,item.valid,item.name+' schema reuses the strict helper');if(checked.success)assert.deepEqual(checked.data,raw,'native precheck must not trim, normalize or replace values');else {assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',0,'facts']]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}assert.deepEqual(a,snapshot);assert.deepEqual(r,before)}
++ })
++ await t.test('production bridge gives native failures exactly one safe bounded correction',async()=>{
++  assert.ok(guidance.length<=250,'the fixed native contract fits the existing feedback message limit')
++  for(const item of cases.filter(item=>!item.valid)){
++   const raw={artifacts:[{...event,facts:item.facts}]},snapshot=structuredClone(raw),prompts:string[]=[],controller=new AbortController()
++   const output=await bridge(r,context,controller.signal,prompt,{generateText:async opts=>{assert.equal(Object.hasOwn(opts,'schema'),false);assert.equal(Object.hasOwn(opts,'response_format'),false);assert.equal(opts.abortSignal,controller.signal);assert.equal(opts.role,'text');assert.equal(opts.action,'novel.import.analyze');assert.equal(opts.resolvedModel,context.resolvedModel);assert.equal(opts.userId,context.userId);prompts.push('prompt'in opts?opts.prompt:'');return {text:JSON.stringify(prompts.length===1?raw:good),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}}})
++   assert.deepEqual(output,good,item.name);assert.equal(prompts.length,2);assert.ok(prompts[1].startsWith(prompts[0]));const feedback=prompts[1].slice(prompts[0].length);assert.ok(feedback.includes('artifacts.0.facts'));assert.ok(feedback.includes(guidance));for(const value of [secret,currentId,foreignId,event.id,event.name,event.text,sourceText,model.endpoint,'世界事件角色引用结构无效','未知事件时间不得制造数值'])assert.ok(!feedback.includes(value),item.name+' fixed feedback does not echo input or caught errors');assert.ok(Buffer.byteLength(prompts[1])-Buffer.byteLength(prompt)<=IMPORT_JSON_WRAPPER_RESERVE_BYTES);assertImportFixedPromptReserve(prompt,serializeImportAiPayload(r))
++   let failed=0;await assert.rejects(bridge(r,context,controller.signal,prompt,{generateText:async()=>{failed++;return {text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}}}),error=>error instanceof StructuredGenerationError&&error.kind==='invalid_schema'&&error.invalidFields.includes('artifacts.0.facts'));assert.equal(failed,2,item.name+' has no third generation');assert.deepEqual(raw,snapshot);assert.deepEqual(r,before)
++  }
++  let firstGood=0;assert.deepEqual(await bridge(r,context,new AbortController().signal,prompt,{generateText:async()=>{firstGood++;return {text:JSON.stringify(good),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}}}),good);assert.equal(firstGood,1);assert.deepEqual(await call(good),good)
++ })
++ await t.test('formatted unknown references stay schema-valid and fail only at the existing graph gate',async()=>{
++  for(const patch of [{people:'["unknown-character"]'},{parentId:'unknown-parent'}]){const raw={artifacts:[{...event,facts:{...facts,...patch}}]};h.validateImportSemanticArtifact(raw.artifacts[0]);assert.equal(factory(r).safeParse(raw).success,true);await assert.rejects(call(raw),/引用|角色/)}
++  const invalid={artifacts:[{...event,facts:cases.find(item=>item.name==='missing-line-id')!.facts}]},legacy={...r,semanticVersion:undefined,selectedTargets:undefined};assert.equal(factory(legacy).safeParse(invalid).success,true)
++  const stageInputs=[{...r,phase:'classify' as const},{...r,phase:'review' as const},{...r,phase:'patch' as const},{...r,intent:'reconcile' as const}];for(const input of stageInputs){assert.equal(factory(input),factory(stageInputs[1]));assert.equal(factory(input).safeParse(invalid).success,true)}
++  const narrative=knowledgeRequest('narrative'),badNarrative={artifacts:[{...event,kind:'narrative' as const,facts:{reliability:'客观事实'}}]};assert.equal(factory(narrative).safeParse(badNarrative).success,true,'narrative native validation is not moved in this change');await assert.rejects(call(badNarrative,narrative),/叙事/)
++  const other={artifacts:[{...scene,facts:{entityType:'EVENT'}}]};assert.equal(factory(request()).safeParse(other).success,true);await assert.rejects(call(other,request()),/地点/);assert.deepEqual(r,before)
++ })
++ const isolated=Object.create(NovelImportController.prototype) as {safeError(error:unknown):string},generic='导入处理失败，请核对来源、模型配置后重试',mappings=[
++  ['世界事件缺少类型、时间或角色结构','世界线结果缺少事件线、时间类型或角色结构，请核对后重试'],
++  ['世界事件角色引用结构无效','世界线结果的角色引用结构无效，请核对后重试'],
++  ['世界事件角色引用结构、字符或字段类型无效','世界线结果的角色引用结构无效，请核对后重试'],
++  ['世界事件ID引用不一致','世界线结果的事件标识不一致，请核对后重试'],
++  ['事件时间类型无效','世界线结果的时间类型无效，请核对后重试'],
++  ['未知事件时间不得制造数值','世界线结果将未知时间填写为数值，请核对后重试'],
++  ['事件时间数值无效','世界线结果的时间数值无效，请核对后重试'],
++  ['事件时间范围无效','世界线结果的时间范围无效，请核对后重试'],
++  ['确定事件时间不能混入候选窗口','世界线结果混用了确定时间与候选窗口，请核对后重试']
++ ] as const
++ await t.test('actual prototype maps only fixed worldline literals and retains old safe behavior',()=>{
++  assert.deepEqual(Object.getOwnPropertyNames(isolated),[])
++  for(const [message,expected] of mappings){assert.equal(isolated.safeError(new Error(message)),expected);for(const variant of [message+' '+secret,message+'\n',message.slice(0,-1),' '+message])assert.equal(isolated.safeError(new Error(variant)),generic);assert.equal(isolated.safeError({message}),generic);assert.equal(isolated.safeError(message),generic)}
++  for(const [message,expected] of [['事实可靠性类型无效','推断结果的可靠性类型无效，请核对后重试'],['非客观事实缺少知识归属说明','推断结果缺少非客观信息的归属说明，请核对后重试'],['事件或叙事必须明确可靠性','事件或叙事结果缺少明确可靠性，请核对后重试']])assert.equal(isolated.safeError(new Error(message)),expected)
++  for(const message of ['受控合成失败','模型证据无法定位（unknown-unit）','未知来源 '+secret,'未明事件时间 '+secret])assert.equal(isolated.safeError(new Error(message)),message,'unrelated old short fallback behavior is unchanged')
++  for(const value of [new Error('UNKNOWN-'+secret),new Error('toString'),null,{message:secret},secret])assert.equal(isolated.safeError(value),generic);assert.deepEqual(Object.getOwnPropertyNames(isolated),[])
++ })
++ await t.test('unknown-event-time suffix and newline are redacted within the explicitly approved family',()=>{
++  const message='未知事件时间不得制造数值',variants=[message+' '+secret,message+'\n'+secret,message+'\n',message.slice(0,-1),'未知事件时间'+secret]
++  // The original main echoes these strings via its short /^未/ fallback.
++  // Keep the actual baseline RED; do not claim they were already generic.
++  const observed=variants.map(value=>isolated.safeError(new Error(value)));assert.deepEqual(observed,variants.map(()=>generic))
++ })
++ await t.test('long schema lists use a fixed structural message at the exact length boundary',()=>{
++  const prefix='模型返回结构不完整（',suffix='）',make=(length:number)=>prefix+secret+'x'.repeat(length-prefix.length-secret.length-suffix.length)+suffix
++  const short=make(179);assert.equal(short.length,179);assert.equal(isolated.safeError(new Error(short)),short,'short lists retain the original behavior')
++  for(const length of [180,181,320]){const message=make(length);assert.equal(message.length,length);const output=isolated.safeError(new Error(message));assert.equal(output,'模型返回结构不完整，请核对后重试');assert.ok(!output.includes(secret));for(const near of [message+'\n',message+' '+secret,message.replace('完整（','完整('),' '+message])assert.equal(isolated.safeError(new Error(near)),generic);assert.equal(isolated.safeError({message}),generic)}
++ })
++})

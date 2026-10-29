@@ -1,0 +1,108 @@
+✖ NI-L01: one macOS native picker accepts files and folders; Windows legacy choices stay reachable (7.626ms)
+✖ UP-01: unified choose has no mode, supports append and preserves strict legacy compatibility (1.624667ms)
+▶ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state
+  ✖ multiple files (2.846ms)
+  ✖ folder only (4.248333ms)
+  ✖ mixed overlapping paths (3.335208ms)
+✖ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state (28.248458ms)
+✖ UP-05: one full sidebar button and default native command; mac menu deduplicates with legacy command retained (42.083417ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 0
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 622.428208
+
+✖ failing tests:
+
+test at tests/unit/novel-import-integration.test.ts:2:12186
+✖ NI-L01: one macOS native picker accepts files and folders; Windows legacy choices stay reachable (7.626ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'openFile',
+  -   'openDirectory',
+      'multiSelections'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:68:106)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'openFile', 'multiSelections' ],
+    expected: [ 'openFile', 'openDirectory', 'multiSelections' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-picker.test.ts:2:1359
+✖ UP-01: unified choose has no mode, supports append and preserves strict legacy compatibility (1.624667ms)
+  ZodError: [
+    {
+      "code": "invalid_value",
+      "values": [
+        "files",
+        "folder"
+      ],
+      "path": [
+        "mode"
+      ],
+      "message": "Invalid option: expected one of \"files\"|\"folder\""
+    }
+  ]
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:12:163)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+
+test at tests/unit/novel-import-picker.test.ts:2:3171
+✖ multiple files (2.846ms)
+  Error: 导入操作参数无效
+      at NovelImportController.act (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:85:77)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:27:65)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:22:162)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-picker.test.ts:2:3171
+✖ folder only (4.248333ms)
+  Error: 导入操作参数无效
+      at NovelImportController.act (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:85:77)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:27:65)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:22:162)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-picker.test.ts:2:3171
+✖ mixed overlapping paths (3.335208ms)
+  Error: 导入操作参数无效
+      at NovelImportController.act (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:85:77)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:27:65)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:22:162)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-picker.test.ts:2:5703
+✖ UP-05: one full sidebar button and default native command; mac menu deduplicates with legacy command retained (42.083417ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(!source.includes('更多导入方式'))
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:43:9)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

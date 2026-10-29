@@ -1,0 +1,4 @@
+Service reverse-delta byte identity: PASS (worldline-only response graph refinement; all original helpers and late calls byte exact).
+Old tests reverse-delta byte identity: PASS (only preapproved J04 refs/local exact-name catalog, J05 early-worldline plus narrative late fixtures; NI-J06 appended).
+Main fee/payload 239/AI test 663 control SHA: unchanged.
+No transform, catalog replacement, invented aliases/entities, empty-result bypass, budget/retry/permission or workflow change.

@@ -1,0 +1,25 @@
+✔ CP-P01: source picker protocol only accepts opaque commands and cancellation has no revision (3.963167ms)
+✔ CP-F01: actual metadata list combines naturally ordered directories and seven file formats, disabling unsafe entries (31.869667ms)
+✔ CP-F01: directory list limit is explicit and never presented as complete truncated content (4.904583ms)
+✔ CP-F02: cross-directory selections, current folder and opaque confirmation produce trusted grants for the actual scanner (17.329833ms)
+✔ CP-F02: removing/clearing selections and canceling do not read bodies or mutate sources (9.97975ms)
+✔ CP-F03: identity changes after selection are rejected by confirmation and can be reselected explicitly (8.729417ms)
+✔ CP-F03: scan boundary rejects swapped file, directory and ancestor after the trusted grant was issued (4.223083ms)
+✔ CP-F03: grant capture fixes the original path chain before realpath and refuses late links or directory replacement (4.682709ms)
+✔ CP-F03: custom picker grants reject an existing ancestor link instead of canonicalizing its target (0.955583ms)
+✔ CP-L01: cancel bypasses pending navigation/revision and late directory handles close without reopening (8.999375ms)
+✔ CP-L01: cancel releases a confirmation waiting for identity checks and revoked owner cannot act (12.120584ms)
+✔ CP-L02: actual unsettled IO retains the cross-session budget after timeout/cancel; late handles close (27.223ms)
+✔ CP-L02: production default reserves thread-pool capacity across repeatedly canceled stuck sessions (45.184917ms)
+✔ CP-L02: Windows root candidates are probed serially within the same budget and stop at first timeout (28.256917ms)
+✔ CP-F01/CP-L02: one stalled common place preserves other usable places and a directory can recover after IO failure (36.722792ms)
+✔ CP-F01/CP-L01: failed navigation revokes unselected entries from the old directory (7.868875ms)
+✔ CP-F02/CP-L01: controller receives grants at scan boundary and pure cancel after owner revocation is harmless (27.625959ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 487.284042

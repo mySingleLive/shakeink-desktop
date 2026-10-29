@@ -1,0 +1,18 @@
+✔ NI-L01: unified source selection uses macOS native panel or Windows picker service without mode choice (9.871084ms)
+✔ CP-L01: main lifecycle cancels source choice before pause, gate drain and owner revocation (6.307917ms)
+✔ CP-L01: actual pending picker choice releases controller and BusinessGate before owner teardown (11.034625ms)
+✔ UP-01: unified choose has no mode, supports append and preserves strict legacy compatibility (1.681875ms)
+▶ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state
+  ✔ multiple files (129.989917ms)
+  ✔ folder only (20.984958ms)
+  ✔ mixed overlapping paths (21.594541ms)
+✔ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state (181.696917ms)
+✔ UP-05: one full sidebar button and default native command; mac menu deduplicates with legacy command retained (33.206584ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 633.343084

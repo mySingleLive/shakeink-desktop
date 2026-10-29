@@ -1,0 +1,37 @@
+✖ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (107.543458ms)
+✖ NI-S06: prose patches preserve original and invalidate analysis authorization (64.598667ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 369.528375
+
+✖ failing tests:
+
+test at tests/unit/novel-import-session.test.ts:2:4449
+✖ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (107.543458ms)
+  Error: 原文分页位置无效
+      at NovelImportController.readSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:112:189)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:86:319)
+
+test at tests/unit/novel-import-session.test.ts:2:11698
+✖ NI-S06: prose patches preserve original and invalidate analysis authorization (64.598667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'running'
+  - 'conflicts'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:50:261)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'running',
+    expected: 'conflicts',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

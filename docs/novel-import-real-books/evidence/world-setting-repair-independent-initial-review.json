@@ -1,0 +1,63 @@
+{
+  "recordedAt": "2026-10-26T16:42:06.145652+00:00",
+  "reviewer": "remaining_books_oracle",
+  "scope": "96 first whole freeze review",
+  "conclusion": "NOT PASS",
+  "findings": [
+    {
+      "id": "WG-CR01",
+      "static": "closed",
+      "execution": "closed by approved WR02 startup faults"
+    },
+    {
+      "id": "WG-CR02",
+      "priority": "P1",
+      "status": "open accepted by root",
+      "description": "restored replay exports apply receipt hashes/snapshot/operation rather than actual rollback receipt"
+    }
+  ],
+  "sourceHashesAtStart": {
+    "desktop/service/novel-import-world-repair.ts": "8015c04938d27802b2691a5ff2050fe4f2f7a572c58cf15ffefa2d4c2fa658bb",
+    "tests/integration/novel-import-world-repair.test.ts": "0deedd3507e7eef5c49e97b11b504e66d88ded4b2879486082200c969c880dd2",
+    "scripts/repair-real-novel-world-structure.ts": "15971f7374aa2cf45426d5795cf61fedaf2e2dae93c2c75831618dd80b7e2a27",
+    "desktop/service/workspaces.ts": "0ccaf52eef376457a207340783a050167bfe7e051a9c26bba5b3ebfd236da4b6",
+    "desktop/core/novel-import-ai-payload.ts": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+    "tests/unit/novel-import-ai.test.ts": "401630f0fbef55ad0c4d7fed37d491c66e2d69050786a9ea94d2e14b898d2d28"
+  },
+  "sourceHashesWhenRecording": {
+    "desktop/service/novel-import-world-repair.ts": "c3b560ead06b156875e464230c3eadad82f9ce16d1096664f9ee233ec75bd5f9",
+    "tests/integration/novel-import-world-repair.test.ts": "076b5400db9dfcaf9dbedd6915e7dafb79e3c831fca31f8b6978469382f6dee1",
+    "scripts/repair-real-novel-world-structure.ts": "15971f7374aa2cf45426d5795cf61fedaf2e2dae93c2c75831618dd80b7e2a27",
+    "desktop/service/workspaces.ts": "0ccaf52eef376457a207340783a050167bfe7e051a9c26bba5b3ebfd236da4b6",
+    "desktop/core/novel-import-ai-payload.ts": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+    "tests/unit/novel-import-ai.test.ts": "401630f0fbef55ad0c4d7fed37d491c66e2d69050786a9ea94d2e14b898d2d28"
+  },
+  "sourceDriftExplanation": "After WG-CR02 was reported, root authorized author to add original-WR assertions for true RED. First independent logs belong to originally authorized frozen assertions; no drifting WR run was executed.",
+  "tests": [
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-WR0[12]:' tests/integration/novel-import-world-repair.test.ts",
+      "exitCode": 0,
+      "tests": 23,
+      "pass": 23,
+      "fail": 0,
+      "skipped": 0,
+      "path": "docs/novel-import-real-books/evidence/world-setting-repair-independent-wr01-wr02.txt",
+      "sha256": "6e710d1d7b14a65abc5aabf2b2128066d7fdfc21b709b10395944cc7d1262cbd"
+    },
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-SEM-P01:' tests/integration/novel-import-semantic-publish.test.ts",
+      "exitCode": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0,
+      "path": "docs/novel-import-real-books/evidence/world-setting-repair-independent-sem-p01.txt",
+      "sha256": "fd9d5645b9052adb341fdd1da793e2b281b7ede94b085ffcb58fc032312a28fd"
+    }
+  ],
+  "a10": "Reuse same-SHA independent 16/16, no repeat",
+  "actualDatabaseApplicationModelCorpusPlanJournalAccess": false,
+  "productionOrTestWritesByReviewer": false,
+  "reportBeforeAppendSha256": "4d458d8b08af9808de17d023c0e9216f241b0c589ba5f09272fb9c9159974076",
+  "reportAfterAppendSha256": "e01e60c273607ad315f923a977bd6163d50a25c0f059097e0e8d2b16dd2ec31f"
+}

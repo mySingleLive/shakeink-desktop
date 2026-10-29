@@ -1,0 +1,38 @@
+{
+  "desktop/service/novel-import-ai.ts": {
+    "bytes": 31685,
+    "sha256": "c1bc6dc62d7b40180287c98f5ebb940e7499d1812cc59277b286a59a6f109c4d"
+  },
+  "tests/unit/novel-import-request-schema.test.ts": {
+    "bytes": 95061,
+    "sha256": "2dc40c44b7b539286f8a4cff348aba653928b2f6a39abab94a2382bacfaa32fa"
+  },
+  "desktop/core/novel-import-ai-payload.ts": {
+    "bytes": 22213,
+    "sha256": "4cdd2e4e1461c209b7ef60d491584910393c5e11870a92ae685ac1347bf38c59"
+  },
+  "src/lib/ai/generate.ts": {
+    "bytes": 10996,
+    "sha256": "51612305662fdbc383f01516c2fa5baf83c37e97123391752bdbdf3c9631fe22"
+  },
+  "desktop/main/novel-import.ts": {
+    "bytes": 110494,
+    "sha256": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c"
+  },
+  "desktop/core/novel-import.ts": {
+    "bytes": 28590,
+    "sha256": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef"
+  },
+  "desktop/core/novel-import-semantics.ts": {
+    "bytes": 37128,
+    "sha256": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874"
+  },
+  "desktop/shared/novel-import.ts": {
+    "bytes": 14682,
+    "sha256": "4b13236a2e14a0c55454fce4115784f8cb3145e6acd7a8b8fc193515b7754ef1"
+  },
+  "src/components/desktop/NovelImportDialog.tsx": {
+    "bytes": 37462,
+    "sha256": "f3459f47b2b59ccd3ba10d2e703e888700e2175d89e80737b6ccb6066a6ea046"
+  }
+}

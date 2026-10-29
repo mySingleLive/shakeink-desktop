@@ -1,0 +1,32 @@
+▶ LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely
+  ✔ unknown-unit (182.474167ms)
+  ✔ too-short (2.008042ms)
+  ✔ ambiguous (0.963834ms)
+  ✔ no-match (0.730917ms)
+  ✔ seventh-type-abort (1.556ms)
+  ✔ extra-root-key (1.209875ms)
+  ✔ other-custom (1.303ms)
+  ✔ new-round-invalid-json-clears-prior-classification (1.135208ms)
+  ✔ success-after-pure-evidence-failure (0.919667ms)
+  ✔ ordinary-error-has-no-schema-provenance (0.411958ms)
+  ✔ incomplete-new-round-cannot-use-old-evidence-reason (0.923792ms)
+  ✔ cancelled-schema-error-does-not-become-evidence-retry (1.257958ms)
+✔ LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely (205.457042ms)
+▶ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split
+  ✔ synthetic HTTP_429 (108.192333ms)
+  ✔ 模型证据无法定位（invented） (70.394917ms)
+  ✔ 模型证据无法定位（no-match）  (60.040209ms)
+  ✔ 模型返回结构不完整 (60.531958ms)
+  ✔ finite-one-unit-stop (73.360208ms)
+  ✔ actual-service-rejects-cross-phase-conflict (64.390542ms)
+  ✔ legitimate-merge-conflict-stops-unprocessed-siblings (107.844375ms)
+  ✔ authorization-change-after-failed-parent-prevents-child-send (59.41425ms)
+✔ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split (605.169292ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1256.501917

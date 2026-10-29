@@ -1,0 +1,65 @@
+{
+ "session": {
+  "chapterVersion": 2,
+  "semanticVersion": 1,
+  "version": 1,
+  "id": "00000000-0000-4000-8000-000000000001",
+  "revision": 3,
+  "phase": "select",
+  "title": "合成",
+  "files": [
+   {
+    "id": "f",
+    "name": "正文.txt",
+    "path": "/x",
+    "format": "txt",
+    "bytes": 10,
+    "hash": "d24bdb94dcde4fa30a578735ed711a5d81ecfa41b825ccaa994aa4e9b67d7638",
+    "text": "第一章 起\n沈砚推开门。",
+    "included": true
+   }
+  ],
+  "units": [
+   {
+    "id": "f:0:12",
+    "fileId": "f",
+    "start": 0,
+    "end": 12,
+    "text": "第一章 起\n沈砚推开门。",
+    "kind": "body"
+   }
+  ],
+  "selected": [
+   "body"
+  ],
+  "targets": [
+   "character"
+  ],
+  "infer": true,
+  "artifacts": [],
+  "conflicts": [],
+  "patches": [],
+  "originalProse": "第一章 起\n沈砚推开门。",
+  "workingProse": "第一章 起\n沈砚推开门。",
+  "workingRevision": 0,
+  "chapters": [
+   {
+    "id": "chapter-1",
+    "title": "第一章 起",
+    "start": 0,
+    "end": 12,
+    "content": "第一章 起\n沈砚推开门。"
+   }
+  ],
+  "steps": [],
+  "coverage": {},
+  "notFound": [],
+  "epoch": 0,
+  "createdAt": "2026-10-29T00:00:00.000Z",
+  "updatedAt": "2026-10-29T00:00:00.000Z",
+  "decisions": []
+ },
+ "classify": "89da538b4f207f7138dc1da2243c32fcf3f3ae8dc4be084cecf4ce88f7c51a06",
+ "analyze": "6f815056c2c94cc20b84ad7115bda42775747f3baf2bf33b3469934b3eb8a399",
+ "plan": "78e7e82aae5f57ce51961377a436e49fd6f8222dcd07a2a7c8d21ac7a2976e1d"
+}

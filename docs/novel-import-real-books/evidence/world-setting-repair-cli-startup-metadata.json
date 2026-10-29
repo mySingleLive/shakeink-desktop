@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-10-26T16:22:51.831081+00:00",
+  "finding": "WG-CR01",
+  "baselineSha256": "916f63f7fbf176f5b70c4ded77ce135cea723f17d244c12aa29d89cd080d9378",
+  "fixedCliSha256": "cb15724745989cd70f0a74b7a425826c53e2a05385bcc293c5cef28a1c167005",
+  "deltaSha256": "178020ceee5ed030ae352af9fe91cccad39ac36473fd6a371ded925ec001aa9f",
+  "scope": "constructor handle before waitReady; startupAttempted gate; confirmed close before lease release; approved synchronous testOnly factory",
+  "actualRunOrDatabaseAccess": false,
+  "faultTests": "approved WR02 author integration pending"
+}

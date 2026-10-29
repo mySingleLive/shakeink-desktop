@@ -1,0 +1,19 @@
+✖ NI-A02: role and immutable model authorization are checked before and after generation (2.456708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 241.680125
+
+✖ failing tests:
+
+test at tests/unit/novel-import-ai.test.ts:2:2309
+✖ NI-A02: role and immutable model authorization are checked before and after generation (2.456708ms)
+  Error: 导入请求超过模型预算，请继续分批
+      at runImportAi (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:41:90)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:21:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

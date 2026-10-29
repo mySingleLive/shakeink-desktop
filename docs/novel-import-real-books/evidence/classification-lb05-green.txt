@@ -1,0 +1,14 @@
+▶ NI-LB05: frozen role profiles survive restart and reject incompatible model changes without losing progress
+  ✔ classification-checkpoint-invalidates-range (455.6175ms)
+  ✔ classification-checkpoint-invalidates-file (330.300875ms)
+  ✔ classification-checkpoint-invalidates-source-fingerprint (250.329292ms)
+  ✔ classification-checkpoint-invalidates-result-fingerprint (256.018542ms)
+✔ NI-LB05: frozen role profiles survive restart and reject incompatible model changes without losing progress (1491.075875ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1979.258542

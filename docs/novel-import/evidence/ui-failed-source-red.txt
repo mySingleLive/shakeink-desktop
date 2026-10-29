@@ -1,0 +1,24 @@
+✖ NI-U03: classification consent precedes pending recognition, background result does not reopen, no-model local path (8750.813833ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9411.855875
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:7059
+✖ NI-U03: classification consent precedes pending recognition, background result does not reopen, no-model local path (8750.813833ms)
+  locator.click: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByRole('button', { name: '返回核对来源', exact: true })[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:50:155)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:18:401)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:45:134) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByRole('button', { name: '返回核对来源', exact: true })" ]
+  }

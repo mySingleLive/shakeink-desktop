@@ -1,0 +1,16 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {"name":"explicit-excluded-source-badReliability-retains-only-complete-raw-material","checks":[{"name":"semantic-version-one-native-audit-required","passed":true},{"name":"semantic-artifact-and-source-copy-identities-unique","passed":true},{"name":"semantic-projectable-selection-cannot-exempt-derived-artifacts","passed":true},{"name":"semantic-unmapped-source-exclusions-have-explicit-mapping-warnings","passed":true},{"name":"semantic-unconfirmed-unmapped-source-material-id:raw-world","passed":true},{"name":"semantic-unconfirmed-unmapped-source-material-id:raw-invalid-badReliability","passed":true},{"name":"semantic-native-rows-only-own-novel","passed":true},{"name":"semantic-artifacts-decode-native-contracts","passed":false}]}
+    at positive (/private/tmp/real-novel-semantic-assertions-check.mts:33:121)
+    at <anonymous> (/private/tmp/real-novel-semantic-assertions-check.mts:81:435) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

@@ -1,0 +1,45 @@
+✖ NI-D04: source setting artifacts retain exact text and real category distinctions (5.390083ms)
+✖ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (139.943042ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 338.243833
+
+✖ failing tests:
+
+test at tests/unit/novel-import-domain.test.ts:2:3507
+✖ NI-D04: source setting artifacts retain exact text and real category distinctions (5.390083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  4 !== 1
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-domain.test.ts:34:194)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-session.test.ts:2:4449
+✖ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (139.943042ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:25:256)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /限制|总量/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

@@ -34,8 +34,12 @@ import {TemplateManagementDialog} from "./TemplateManagementDialog"
 import {WorkLeasePendingDialog} from "./WorkLeasePendingDialog"
 import {OnboardingController} from "./OnboardingController"
 import {modelOnboardingNeeded,onboardingCanShow} from "@/lib/desktop/onboarding-flow"
+import {NovelImportDialog} from './NovelImportDialog'
+import {NovelImportSourcePickerDialog} from './NovelImportSourcePickerDialog'
+import {useNovelImportSourcePickerStore} from '@/lib/desktop/novel-import-source-picker'
 export default function DesktopApp() {
   const bootstrap = useDesktopStore(state => state.bootstrap)
+  const importSourcePickerOpen = useNovelImportSourcePickerStore(state => !!state.view)
   const [error, setError] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [templatesOpen,setTemplatesOpen]=useState(false)
@@ -144,9 +148,10 @@ export default function DesktopApp() {
     const recovery=()=>{if(!closingRef.current){recoveryRef.current=true;setSettingsOpen(false);setTemplatesOpen(false);setModelRequired(null);setRecoveryOpen(true)}}
     const onboarding=(event:Event)=>startGuide((event as CustomEvent<'full'|'models'>).detail==='models'?'models':'full')
     window.addEventListener("desktop:settings",settings)
+    window.addEventListener("desktop:settings-section",settings)
     window.addEventListener("desktop:recovery",recovery)
     window.addEventListener("desktop:onboarding",onboarding)
-    return () => { alive = false; session?.dispose();if(drafts.current===session)drafts.current=null;unsubscribe(); window.removeEventListener("desktop:settings",settings);window.removeEventListener("desktop:recovery",recovery);window.removeEventListener("desktop:onboarding",onboarding) }
+    return () => { alive = false; session?.dispose();if(drafts.current===session)drafts.current=null;unsubscribe(); window.removeEventListener("desktop:settings",settings);window.removeEventListener("desktop:settings-section",settings);window.removeEventListener("desktop:recovery",recovery);window.removeEventListener("desktop:onboarding",onboarding) }
   }, [queryClient])
   // State may arrive through an IPC event or the return value of our own save.
   // Watch committed content, including changed default IDs, for both paths.
@@ -180,6 +185,8 @@ export default function DesktopApp() {
   return <>{leaseDialog}<DesktopCommandController /><DesktopNavigation />
    <div inert={leasePending} className="contents"><DashboardShell user={{ id: "local-author", name: profile.penName, email: profile.email, avatarUrl: profile.avatarAssetId ? `shakeink://asset/global/${profile.avatarAssetId}` : undefined }} /></div>
    <WindowsMenuControl /><TemplateManagementDialog open={normalDialogs&&templatesOpen} onOpenChange={setTemplatesOpen}/><SettingsDialog open={normalDialogs&&settingsOpen} onOpenChange={setSettingsOpen} initialSection={settingsSection} />
+   <NovelImportDialog suspended={!normalDialogs||settingsOpen||closing||importSourcePickerOpen}/>
+   <NovelImportSourcePickerDialog suspended={!normalDialogs||settingsOpen||closing}/>
    {guideRequest&&<OnboardingController key={guideRequest.id} request={guideRequest.mode} suspended={!onboardingVisible} finalFocus={guideFinalFocus} onExit={exitGuide}/>}
    <ModelRequiredDialog notice={normalDialogs?modelRequired:null} onClose={() => setModelRequired(null)} onConfigure={() => {if(modelRequired&&modelOnboardingNeeded(bootstrap,modelRequired)){startGuide('models');return}setModelRequired(null);setSettingsSection(modelRequired?.code === "MODEL_NOT_SELECTED" ? "agent" : "models");setSettingsOpen(true)}} /><RecoveryDialog open={recoveryOpen&&!closing&&!migrationPending&&!leasePending} onOpenChange={value=>{recoveryRef.current=value;setRecoveryOpen(value)}}/>
    <Dialog open={!leasePending&&(closing||migrationPending)} onOpenChange={()=>{}}><DialogContent showCloseButton={false}>

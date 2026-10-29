@@ -1,0 +1,32 @@
+✔ LOTM-AUD01: full 1394-chapter eight-volume audit reads only the closed own-work copy (15258.357292ms)
+✔ LOTM-AUD02: frozen source and exact inserted headers reject byte/newline/chapter tampering (11.329708ms)
+✔ LOTM-AUD03: one missing/duplicate/reordered/wrong-volume chapter or word count fails (109.529834ms)
+✔ LOTM-AUD04: actual native fields, multisets, hierarchy and narrative fragments/references are exact (106.629042ms)
+✔ LOTM-AUD05: completion, identity, schema, receipt and shutdown freshness fail closed (77.774833ms)
+✔ LOTM-AUD06: links, wrong storage candidate, required-without-pointer and existing labels are blocked (9.781792ms)
+✖ LOTM-AUD07: original global/model/other-session paths are never traversed and originals stay stable (0.674333ms)
+✔ LOTM-AUD08: a real synthetic same-request publication retry has one entity set; absent real-book retry evidence stays unexercised (12.384625ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16392.39125
+
+✖ failing tests:
+
+test at tests/unit/lotm-import-audit.test.ts:3:15177
+✖ LOTM-AUD07: original global/model/other-session paths are never traversed and originals stay stable (0.674333ms)
+  Error: EEXIST: file already exists, symlink '/nonexistent-global-read-trap' -> '/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/lotm-auditor-synthetic-0dgNzZ/app/inbox'
+      at async symlink (node:internal/fs/promises:1002:10)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:58:159)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    errno: -17,
+    code: 'EEXIST',
+    syscall: 'symlink',
+    path: '/nonexistent-global-read-trap',
+    dest: '/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/lotm-auditor-synthetic-0dgNzZ/app/inbox'
+  }

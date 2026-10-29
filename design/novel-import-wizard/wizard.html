@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN" class="ink">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>导入作品</title>
+<link rel="stylesheet" href="../assets/web-tokens.css"><link rel="stylesheet" href="wizard.css">
+<script src="../assets/lucide.js" defer></script><script src="wizard.js" defer></script>
+</head>
+<body>
+<div class="caption" aria-hidden="true"><div class="lights"><b></b><b></b><b></b></div><span>玄印写作</span><span></span></div>
+<div class="workspace" aria-hidden="true"><aside><div class="brand">玄印写作</div><div class="nav">新建作品</div><div class="nav nav-on">导入作品</div><div class="nav">新对话</div><div id="task" class="task" hidden></div></aside><section class="desk"></section></div>
+<div class="overlay" id="overlay">
+ <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="title">
+  <header class="dh"><div><div class="eb">导入作品</div><h2 id="title"></h2><p id="desc"></p></div><button class="icon" id="close" aria-label="收起导入窗口"><i data-lucide="x"></i></button></header>
+  <nav class="stages" aria-label="导入阶段"><ol id="stages"></ol><div class="stage-now" id="stage-now"></div></nav>
+    <main class="db" id="body"></main>
+  <div class="after" id="after" hidden></div>
+  <footer class="df" id="foot"></footer>
+ </div>
+</div>
+</body></html>

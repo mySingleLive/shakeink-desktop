@@ -1,0 +1,147 @@
+▶ NI-SR01: fresh same-file grants retain complete preanalysis drafts and exact decoding
+  ✖ TXT (70.612125ms)
+  ✖ MD with another source (41.992ms)
+  ✖ HTML (36.964333ms)
+  ✖ HTM (37.005333ms)
+  ✖ DOCX (50.505167ms)
+  ✖ permitted DOC (37.542708ms)
+  ✖ confirmed GB18030 (45.757291ms)
+  ✖ confirmed BOMless UTF16 (48.877708ms)
+  ✖ fresh ancestor, excluded source and classification credit survive without authorization reuse (68.568083ms)
+✖ NI-SR01: fresh same-file grants retain complete preanalysis drafts and exact decoding (447.102042ms)
+▶ NI-SR02: rejection preserves owners and drafts and gates the picker before analysis
+  ✖ cancel preserves all business fields (47.562792ms)
+  ✔ multiple (48.169959ms)
+  ✔ directory (40.261833ms)
+  ✔ other-path (37.856209ms)
+  ✔ changed-bytes (35.887ms)
+  ✔ symlink (40.921917ms)
+  ✔ stale-grant (34.114958ms)
+  ✔ ancestor-drift (34.695458ms)
+  ✔ protected (32.064959ms)
+  ✔ scan-read-race (39.176375ms)
+  ✔ format-mismatch (40.129583ms)
+  ✔ decoded-text-mismatch (40.001416ms)
+  ✔ encoding-mismatch (42.039125ms)
+  ✔ decode-fails (27.587667ms)
+  ✔ docx-scan-error (39.386084ms)
+  ✔ fresh source changes after successful redecode still reject (39.00375ms)
+  ✔ before picker: running (39.321416ms)
+  ✔ before picker: recognizing (59.838792ms)
+  ✔ before picker: conflicts (45.03925ms)
+  ✔ before picker: publication (33.94875ms)
+  ✔ before picker: steps (39.895042ms)
+  ✔ before picker: artifacts (35.088041ms)
+  ✔ before picker: decisions (41.25575ms)
+  ✔ before picker: semanticState (36.393583ms)
+  ✔ before picker: workingRevision (39.688625ms)
+  ✔ before picker: coverage (34.428375ms)
+  ✔ before picker: analysisCheckpoint (40.581458ms)
+  ✔ before picker: jobs (34.166333ms)
+  ✔ before picker: pdf-request (39.215375ms)
+  ✔ before picker: pdf-active (35.296166ms)
+  ✔ before picker: old-error (32.979084ms)
+  ✔ before picker: unconfirmed (31.618209ms)
+✖ NI-SR02: rejection preserves owners and drafts and gates the picker before analysis (1241.238ms)
+▶ NI-SR03: real candidate writes preserve precommit state and park post-rename commits as source
+  ✖ actual temporary write failure does not adopt or alter old journal (35.786916ms)
+  ✖ post-rename owner failure adopts identical paused source candidate and blocks until reopen (40.477458ms)
+✖ NI-SR03: real candidate writes preserve precommit state and park post-rename commits as source (76.843083ms)
+ℹ tests 46
+ℹ suites 0
+ℹ pass 31
+ℹ fail 15
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2148.303583
+
+✖ failing tests:
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ TXT (70.612125ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ MD with another source (41.992ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ HTML (36.964333ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ HTM (37.005333ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ DOCX (50.505167ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ permitted DOC (37.542708ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ confirmed GB18030 (45.757291ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10010
+✖ confirmed BOMless UTF16 (48.877708ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:10743
+✖ fresh ancestor, excluded source and classification credit survive without authorization reuse (68.568083ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:12766
+✖ cancel preserves all business fields (47.562792ms)
+  Error: 此来源不是PDF
+      at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39)
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:17857
+✖ actual temporary write failure does not adopt or alter old journal (35.786916ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /受控候选写失败/. Input:
+  
+  'Error: 此来源不是PDF'
+  
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-reselection.test.ts:59:685)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-reselection.test.ts:59:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: 此来源不是PDF
+        at NovelImportController.reselectPdfSource (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:272:84)
+        at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:153:39),
+    expected: /受控候选写失败/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-source-reselection.test.ts:2:18923
+✖ post-rename owner failure adopts identical paused source candidate and blocks until reopen (40.477458ms)
+  Error: 受控提交后归属失败
+      at NovelImportController.c.owner (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-reselection.test.ts:60:400)
+      at async NovelImportController.save (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:102:80)
+      at async <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:686:341)

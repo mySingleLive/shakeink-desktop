@@ -1,0 +1,89 @@
+{
+  "review": "101-source-reselection-code-review",
+  "conclusion": "PASS",
+  "p1": [],
+  "p2": [],
+  "recordedAt": "2026-10-26T18:34:46.215823+00:00",
+  "sourceHashes": {
+    "desktop/main/novel-import.ts": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c",
+    "tests/unit/novel-import-source-reselection.test.ts": "2cbb122b5732e7b06b189b3150cbe62ddceeb5653bd69ca012e549b426ede009",
+    "src/components/desktop/NovelImportDialog.tsx": "f3459f47b2b59ccd3ba10d2e703e888700e2175d89e80737b6ccb6066a6ea046",
+    "tests/browser/novel-import.test.ts": "c1a664b9555721cf88f049db1100fd05e9bc1e578e0a7d17a966b2f235f5325c",
+    "tests/helpers/novel-import-ui-fixture.tsx": "2143e959cdf4f73f699568a945678440d6a4f38c65896410b736deeb90b2e72d"
+  },
+  "unchangedDependencyHashes": {
+    "desktop/main/novel-import-files.ts": "76d3ae60ef2308a53cb27553be0ce305a1f88517f1fc316ff776c3177412965c",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "desktop/shared/novel-import.ts": "4b13236a2e14a0c55454fce4115784f8cb3145e6acd7a8b8fc193515b7754ef1",
+    "desktop/service/novel-import-ai.ts": "20b80cc24c14bde0d50e93d2521c129524aa82730805c665695aed10e7edc1ea",
+    "desktop/core/novel-import-ai-payload.ts": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+    "src/lib/desktop/novel-import.ts": "b54b6e295a860136b3824ac120cc867a0d9370cb4111b594acb72df7e1ac5ef9"
+  },
+  "independentBackendResults": [
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-concurrency=1 --test-name-pattern='^NI-SR0[123]:' tests/unit/novel-import-source-reselection.test.ts",
+      "exitCode": 0,
+      "stats": {
+        "tests": 46,
+        "pass": 46,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "log": "docs/novel-import-real-books/evidence/source-reselection-independent-sr01-sr03.txt",
+      "logSha256": "91d2fb22b9a75872b1bd81aa3e09cd4d76ee2da63a5b23c16219d06f597918bf",
+      "independentlyExecuted": true
+    },
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-PDF(?:04:|08: inspection and preview cancellation drain real jobs before controller serial waits$)' tests/unit/novel-import-pdf.test.ts",
+      "exitCode": 0,
+      "stats": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "log": "docs/novel-import-real-books/evidence/source-reselection-independent-pdf04-pdf08.txt",
+      "logSha256": "9e3149a513f03fffe1c31557388434506ef44605acb51c3108600fc5f261b860",
+      "independentlyExecuted": true
+    },
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-concurrency=1 --test-name-pattern='^NI-R02:' tests/unit/novel-import-semantic-session.test.ts",
+      "exitCode": 0,
+      "stats": {
+        "tests": 8,
+        "pass": 8,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "log": "docs/novel-import-real-books/evidence/source-reselection-independent-r02.txt",
+      "logSha256": "be6860b0dfe7055daaadba4dafeb55a8717c36f83e6cd5c7e82356c29f254038",
+      "independentlyExecuted": true
+    }
+  ],
+  "uiReusedCredit": {
+    "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-U12:' tests/browser/novel-import.test.ts",
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "skip": 0,
+    "exitCode": 0,
+    "reexecutedThisBackendReview": false,
+    "sameFrozenUiSources": true,
+    "log": "docs/novel-import-real-books/evidence/source-reselection-ui-independent-u12.txt",
+    "logSha256": "daed6a666345fbe0fd87a71066482e9307033c2112a45eebc2175010bae49ee5"
+  },
+  "staticDeltaEvidence": {
+    "baselineMainSha256": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d",
+    "independentFullReverseEqualsRealBaseline": true,
+    "originalPdfMethodByteIdenticalSha256": "e48c0334928e400b55afe861578021eb6aed442546583f458f2a4c85c8b6094b",
+    "authorDeltaSha256": "94ea152f3278d3ba907640fdd296400e9afd2cd6fbe408b9d4b5b78f11af8a4c"
+  },
+  "limits": [
+    "No real app/source/journal/DB/model access in code review.",
+    "Synthetic isolated tests do not prove actual retained M01 native reselection.",
+    "No full suite or independent build. Prior S02 literary FAIL unchanged."
+  ]
+}

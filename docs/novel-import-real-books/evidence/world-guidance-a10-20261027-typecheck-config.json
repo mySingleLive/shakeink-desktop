@@ -1,0 +1,15 @@
+{
+  "extends": "/Users/dt_flys/Projects/shakeink-desktop/tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "plugins": [],
+    "typeRoots": ["/Users/dt_flys/Projects/shakeink-desktop/node_modules/@types"],
+    "types": ["node"]
+  },
+  "files": [
+    "/Users/dt_flys/Projects/shakeink-desktop/desktop/core/novel-import-ai-payload.ts",
+    "/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts"
+  ],
+  "include": [],
+  "exclude": []
+}

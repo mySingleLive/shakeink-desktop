@@ -1,0 +1,106 @@
+{
+  "recordedAt": "2026-10-26T16:36:37.734Z",
+  "status": "author-frozen-awaiting-independent-96-review",
+  "plan": {
+    "path": "docs/novel-import-real-books/94-world-setting-grouping-plan.md",
+    "sha256": "b675a51d769ef0f29e07c16131698f7caeef5567493dabb37bd838ab65f55597"
+  },
+  "files": [
+    {
+      "path": "desktop/service/novel-import-world-repair.ts",
+      "sha256": "8015c04938d27802b2691a5ff2050fe4f2f7a572c58cf15ffefa2d4c2fa658bb"
+    },
+    {
+      "path": "tests/integration/novel-import-world-repair.test.ts",
+      "sha256": "0deedd3507e7eef5c49e97b11b504e66d88ded4b2879486082200c969c880dd2"
+    },
+    {
+      "path": "scripts/repair-real-novel-world-structure.ts",
+      "sha256": "15971f7374aa2cf45426d5795cf61fedaf2e2dae93c2c75831618dd80b7e2a27"
+    },
+    {
+      "path": "desktop/service/workspaces.ts",
+      "sha256": "0ccaf52eef376457a207340783a050167bfe7e051a9c26bba5b3ebfd236da4b6"
+    },
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "sha256": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6"
+    },
+    {
+      "path": "tests/unit/novel-import-ai.test.ts",
+      "sha256": "401630f0fbef55ad0c4d7fed37d491c66e2d69050786a9ea94d2e14b898d2d28"
+    }
+  ],
+  "unchangedControls": [
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "sha256": "20b80cc24c14bde0d50e93d2521c129524aa82730805c665695aed10e7edc1ea"
+    },
+    {
+      "path": "desktop/main/novel-import.ts",
+      "sha256": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d"
+    },
+    {
+      "path": "tests/unit/novel-import-request-schema.test.ts",
+      "sha256": "4485611f4f5262fabf8f8bc142aa822e5fff8a32f6d8a1d5353e645b50fbbfa6"
+    }
+  ],
+  "ownedDelta": {
+    "path": "docs/novel-import-real-books/evidence/world-setting-repair-owned-final-delta.diff",
+    "sha256": "3425890feaf38136cb1523c9699434b2b06a7fb2778e19641d73b48b7e018e3d",
+    "baseline": "Both owned files did not exist; full new-file diff against /dev/null."
+  },
+  "tests": [
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-A(07|08|09|10):' tests/unit/novel-import-ai.test.ts",
+      "log": "docs/novel-import-real-books/evidence/world-setting-repair-a07-a10-final-green.txt",
+      "pass": 16,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "logSha256": "d0bf4591fc323576cd7de1731d4362373b838bc603463a653ed7fdf8c34ef1f0"
+    },
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-WR0[12]:' tests/integration/novel-import-world-repair.test.ts",
+      "log": "docs/novel-import-real-books/evidence/world-setting-repair-matrix-startup-green.txt",
+      "pass": 23,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "logSha256": "a85d3a1d99319dcbe5e558e6a456087cbec088d808611436f39aa3c484f6efe4"
+    },
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-SEM-P01:' tests/integration/novel-import-semantic-publish.test.ts",
+      "log": "docs/novel-import-real-books/evidence/world-setting-repair-sem-p01-final-green.txt",
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "logSha256": "ffda11ce5e84a421b36bdb7dda607208ca2a3f161640e3e676d359b55fa5ea36"
+    }
+  ],
+  "typecheck": {
+    "scope": [
+      "desktop/service/novel-import-world-repair.ts",
+      "tests/integration/novel-import-world-repair.test.ts"
+    ],
+    "log": "docs/novel-import-real-books/evidence/world-setting-repair-owned-typecheck.txt",
+    "sha256": "b59b969f477084d1857c52e8b258cf747f82b9fea4eeb25c7fee7dde47136db0",
+    "diagnostics": 0,
+    "exitCode": 0
+  },
+  "limits": {
+    "actualApplication": false,
+    "actualModel": false,
+    "userDatabase": false,
+    "actualCorpus": false,
+    "actualRepairPassed": false
+  },
+  "history": {
+    "initialRed": "docs/novel-import-real-books/evidence/world-setting-repair-initial-red.txt",
+    "initialRedMeaning": "Genuine pre-implementation missing service/CLI module failure, not a behavioral PGlite result.",
+    "firstMatrix": "docs/novel-import-real-books/evidence/world-setting-repair-matrix-first.txt",
+    "firstMatrixMeaning": "Synthetic fixture schema errors retained; not product regressions.",
+    "startupAndCommitFaults": "Post-implementation controlled fault injection under original WR02; separate from actual default CLI PGlite success."
+  }
+}

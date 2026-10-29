@@ -1,0 +1,65 @@
+[
+  {
+    "name": "runtime-proof-controller-uninstrumented-red",
+    "command": [
+      "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^NI-RT0[12]:",
+      "tests/unit/novel-import-runtime-proof.test.ts"
+    ],
+    "exitCode": 1,
+    "beforeSha256": "6cc71e987b2f9b4cd35570668c83bca5d80074c1ef4872cdb0b198798fa3ac83",
+    "afterSha256": "6cc71e987b2f9b4cd35570668c83bca5d80074c1ef4872cdb0b198798fa3ac83",
+    "evidenceKind": "post-implementation fault injection / mutation verification; not original pre-implementation TDD RED"
+  },
+  {
+    "name": "runtime-proof-single-microtask-red",
+    "command": [
+      "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^NI-RT0[12]:",
+      "tests/unit/novel-import-runtime-proof.test.ts"
+    ],
+    "exitCode": 1,
+    "beforeSha256": "ed77bbf8fe0f1c572e49e4d8178bbc27d712f56799616cc27ab4a6acf78bf5d7",
+    "afterSha256": "ed77bbf8fe0f1c572e49e4d8178bbc27d712f56799616cc27ab4a6acf78bf5d7",
+    "evidenceKind": "post-implementation fault injection / mutation verification; not original pre-implementation TDD RED"
+  },
+  {
+    "name": "runtime-proof-sync-cancel-red",
+    "command": [
+      "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^NI-RT0[12]:",
+      "tests/unit/novel-import-runtime-proof.test.ts"
+    ],
+    "exitCode": 1,
+    "beforeSha256": "6cc71e987b2f9b4cd35570668c83bca5d80074c1ef4872cdb0b198798fa3ac83",
+    "afterSha256": "6cc71e987b2f9b4cd35570668c83bca5d80074c1ef4872cdb0b198798fa3ac83",
+    "evidenceKind": "post-implementation fault injection / mutation verification; not original pre-implementation TDD RED"
+  },
+  {
+    "name": "runtime-proof-s10-old-fixture-red",
+    "command": [
+      "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+      "--import",
+      "tsx",
+      "--test",
+      "--test-name-pattern=^NI-S10:",
+      "tests/unit/novel-import-session.test.ts"
+    ],
+    "exitCode": 1,
+    "beforeSha256": "617127bff8096f82b8d5300f72b092f8b2a7f76c9ef2db1d8fa4897a645c07c4",
+    "afterSha256": "617127bff8096f82b8d5300f72b092f8b2a7f76c9ef2db1d8fa4897a645c07c4",
+    "evidenceKind": "post-implementation fault injection / mutation verification; not original pre-implementation TDD RED"
+  }
+]

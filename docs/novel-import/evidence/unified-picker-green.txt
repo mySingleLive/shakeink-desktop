@@ -1,0 +1,16 @@
+✔ NI-L01: one macOS native picker accepts files and folders; Windows legacy choices stay reachable (8.235791ms)
+✔ UP-01: unified choose has no mode, supports append and preserves strict legacy compatibility (1.786292ms)
+▶ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state
+  ✔ multiple files (136.132709ms)
+  ✔ folder only (22.39475ms)
+  ✔ mixed overlapping paths (18.915833ms)
+✔ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state (184.548458ms)
+✔ UP-05: one full sidebar button and default native command; mac menu deduplicates with legacy command retained (33.025791ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 655.1

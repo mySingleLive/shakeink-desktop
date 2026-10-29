@@ -1,0 +1,30 @@
+✔ NI-PDF16: source-proven GBK glyph decoding preserves explicit Unicode and every other character (10.872417ms)
+✖ NI-PDF17: decoded PDF ledgers bind the policy without rewriting legacy checkpoints (1011.178875ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1398.644
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf-source-text.test.ts:2:4708
+✖ NI-PDF17: decoded PDF ledgers bind the policy without rewriting legacy checkpoints (1011.178875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  '' !== '…… '
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf-source-text.test.ts:23:177)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: '…… ',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

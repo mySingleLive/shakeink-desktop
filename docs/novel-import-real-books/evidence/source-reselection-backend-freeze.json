@@ -1,0 +1,80 @@
+{
+  "recordedAt": "2026-10-26T18:25:19.425Z",
+  "status": "source-and-tests-frozen-awaiting-independent-101-review",
+  "plan": {
+    "path": "docs/novel-import-real-books/99-source-reselection-plan.md",
+    "sha256": "47bba0daa6602b9fbd565ece608ede8f312162fedf6573e430a67c8af9481942"
+  },
+  "baseline": "/private/tmp/source-reselection-backend-99-baseline/novel-import.ts",
+  "baselineSha256": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d",
+  "files": [
+    {
+      "path": "desktop/main/novel-import.ts",
+      "sha256": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c"
+    },
+    {
+      "path": "tests/unit/novel-import-source-reselection.test.ts",
+      "sha256": "2cbb122b5732e7b06b189b3150cbe62ddceeb5653bd69ca012e549b426ede009"
+    }
+  ],
+  "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-concurrency=1 --test-name-pattern='^NI-SR0[123]:' tests/unit/novel-import-source-reselection.test.ts",
+  "results": {
+    "baselineRed": {
+      "tests": 46,
+      "pass": 31,
+      "fail": 15,
+      "skip": 0,
+      "exitCode": 1
+    },
+    "finalGreen": {
+      "tests": 46,
+      "pass": 46,
+      "fail": 0,
+      "skip": 0,
+      "exitCode": 0,
+      "durationMs": 2371.176209
+    },
+    "ownedTypeDiagnostics": 0
+  },
+  "history": {
+    "firstRed": "Preserved; post-rename fault cleanup initially did not restore its owner hook and could mask the expected error. Fixed only the new fixture cleanup before production edits.",
+    "cleanRed": "Actual unchanged fee1997 production rejects ordinary reselection as non-PDF. All real temporary format and encoding setup succeeded.",
+    "firstImplementation": "44/46; test incorrectly expected a targeted reopened draft to bypass the existing target reauthorization gate. Added the actual choose-target step and asserted the original gate; production resume logic unchanged."
+  },
+  "logs": [
+    {
+      "path": "docs/novel-import-real-books/evidence/source-reselection-backend-red.txt",
+      "sha256": "6dd9d94aab893867bd33f46d0883db6d0544b639d931dfc627b43e97324bdaa2"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/source-reselection-backend-baseline-red.txt",
+      "sha256": "4aa17085e6689248d078e233a1749844d9795f63771ae3e73811c1aaca1f0d05"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/source-reselection-backend-green-first.txt",
+      "sha256": "d8e3aaf4f0f0ee1586c911f1b330f9974d4d5a78e497106243bff39b8a4b6af5"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/source-reselection-backend-green.txt",
+      "sha256": "8195c8b8d526b724224cb4861dfc4cbcd8ccc763c5ab7c97eb5d2b5622cbe947"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/source-reselection-backend-owned-types.txt",
+      "sha256": "b59b969f477084d1857c52e8b258cf747f82b9fea4eeb25c7fee7dde47136db0"
+    }
+  ],
+  "delta": {
+    "path": "docs/novel-import-real-books/evidence/source-reselection-backend-delta.diff",
+    "sha256": "94ea152f3278d3ba907640fdd296400e9afd2cd6fbe408b9d4b5b78f11af8a4c",
+    "validation": "docs/novel-import-real-books/evidence/source-reselection-backend-delta-validation.json",
+    "validationSha256": "ace486e0744183b50f3982c25754543e2c642d7948c39ad8dfc85c186f0083ce"
+  },
+  "limits": {
+    "actualUserDraftReadOrWritten": false,
+    "actualApplicationOrUi": false,
+    "actualModel": false,
+    "userBusinessDatabase": false,
+    "relatedPdfOrReviewTestsRunByAuthor": false,
+    "claimsNativePickerValidation": false
+  }
+}

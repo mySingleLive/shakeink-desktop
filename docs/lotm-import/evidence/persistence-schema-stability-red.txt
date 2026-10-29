@@ -1,0 +1,37 @@
+✖ LOTM-AUD05: completion, identity, schema, receipt and shutdown freshness fail closed (4992.437667ms)
+✖ LOTM-AUD06: links, wrong storage candidate, required-without-pointer and existing labels are blocked (8304.826416ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14077.289
+
+✖ failing tests:
+
+test at tests/unit/lotm-import-audit.test.ts:3:12438
+✖ LOTM-AUD05: completion, identity, schema, receipt and shutdown freshness fail closed (4992.437667ms)
+  Error: MIGRATION_NEGATIVES_NOT_IMPLEMENTED
+      at verifyMigrationRows (/Users/dt_flys/Projects/shakeink-desktop/scripts/audit-lotm-import.ts:220:80)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:54:751)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    code: 'MIGRATION_NEGATIVES_NOT_IMPLEMENTED'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:14254
+✖ LOTM-AUD06: links, wrong storage candidate, required-without-pointer and existing labels are blocked (8304.826416ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:57:1014)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }

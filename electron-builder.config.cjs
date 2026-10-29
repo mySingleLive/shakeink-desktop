@@ -11,6 +11,7 @@ module.exports = {
   publish: null,
   files: [
     'dist/main/index.cjs',
+    'dist/main/novel-import-pdf-worker.cjs',
     'dist/service/index.cjs',
     'dist/runtime-dependencies.json',
     'dist/preload/index.cjs',

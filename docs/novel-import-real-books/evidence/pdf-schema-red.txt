@@ -1,0 +1,54 @@
+✖ NI-PDF03: page preview actions reject unsafe schemas, foreign files and stale revisions before IO (1.434875ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 247.974167
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:1001
+✖ NI-PDF03: page preview actions reject unsafe schemas, foreign files and stale revisions before IO (1.434875ms)
+  ZodError: [
+    {
+      "code": "invalid_union",
+      "errors": [],
+      "note": "No matching discriminator",
+      "discriminator": "type",
+      "options": [
+        "current",
+        "choose",
+        "read-source",
+        "include",
+        "move",
+        "set-range",
+        "set-encoding",
+        "set-chapters",
+        "select",
+        "set-title",
+        "classify",
+        "choose-target",
+        "start",
+        "pause",
+        "resume",
+        "retry",
+        "cancel",
+        "discard",
+        "resolve",
+        "apply-patches",
+        "repair-target"
+      ],
+      "path": [
+        "type"
+      ],
+      "message": "Invalid discriminator value. Expected 'current' | 'choose' | 'read-source' | 'include' | 'move' | 'set-range' | 'set-encoding' | 'set-chapters' | 'select' | 'set-title' | 'classify' | 'choose-target' | 'start' | 'pause' | 'resume' | 'retry' | 'cancel' | 'discard' | 'resolve' | 'apply-patches' | 'repair-target'"
+    }
+  ]
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:8:34)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)

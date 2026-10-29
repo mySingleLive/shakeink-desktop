@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely
+    # Subtest: unknown-unit
+    ok 1 - unknown-unit
+      ---
+      duration_ms: 150.411625
+      ...
+    # Subtest: too-short
+    ok 2 - too-short
+      ---
+      duration_ms: 4.814709
+      ...
+    # Subtest: ambiguous
+    ok 3 - ambiguous
+      ---
+      duration_ms: 1.808
+      ...
+    # Subtest: no-match
+    ok 4 - no-match
+      ---
+      duration_ms: 1.461417
+      ...
+    # Subtest: seventh-type-abort
+    ok 5 - seventh-type-abort
+      ---
+      duration_ms: 2.18225
+      ...
+    # Subtest: extra-root-key
+    ok 6 - extra-root-key
+      ---
+      duration_ms: 2.191916
+      ...
+    # Subtest: other-custom
+    ok 7 - other-custom
+      ---
+      duration_ms: 2.397584
+      ...
+    # Subtest: new-round-invalid-json-clears-prior-classification
+    ok 8 - new-round-invalid-json-clears-prior-classification
+      ---
+      duration_ms: 1.613209
+      ...
+    # Subtest: success-after-pure-evidence-failure
+    ok 9 - success-after-pure-evidence-failure
+      ---
+      duration_ms: 1.362875
+      ...
+    # Subtest: ordinary-error-has-no-schema-provenance
+    ok 10 - ordinary-error-has-no-schema-provenance
+      ---
+      duration_ms: 0.647167
+      ...
+    # Subtest: incomplete-new-round-cannot-use-old-evidence-reason
+    ok 11 - incomplete-new-round-cannot-use-old-evidence-reason
+      ---
+      duration_ms: 1.018625
+      ...
+    # Subtest: cancelled-schema-error-does-not-become-evidence-retry
+    ok 12 - cancelled-schema-error-does-not-become-evidence-retry
+      ---
+      duration_ms: 1.443083
+      ...
+    1..12
+ok 1 - LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely
+  ---
+  duration_ms: 176.099583
+  ...
+# Subtest: LOTM-E02: exact failed units halve through RPC with fresh context and frozen budget, then do not re-expand
+ok 2 - LOTM-E02: exact failed units halve through RPC with fresh context and frozen budget, then do not re-expand # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.090958
+  ...
+# Subtest: LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay
+ok 3 - LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.087542
+  ...
+# Subtest: LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split
+    # Subtest: synthetic HTTP_429
+    ok 1 - synthetic HTTP_429
+      ---
+      duration_ms: 92.975834
+      ...
+    # Subtest: 模型证据无法定位（invented）
+    ok 2 - 模型证据无法定位（invented）
+      ---
+      duration_ms: 59.435584
+      ...
+    # Subtest: 模型证据无法定位（no-match） 
+    ok 3 - 模型证据无法定位（no-match） 
+      ---
+      duration_ms: 66.662
+      ...
+    # Subtest: 模型返回结构不完整
+    ok 4 - 模型返回结构不完整
+      ---
+      duration_ms: 62.408166
+      ...
+    # Subtest: finite-one-unit-stop
+    ok 5 - finite-one-unit-stop
+      ---
+      duration_ms: 75.723167
+      ...
+    # Subtest: actual-service-rejects-cross-phase-conflict
+    ok 6 - actual-service-rejects-cross-phase-conflict
+      ---
+      duration_ms: 61.717208
+      ...
+    # Subtest: legitimate-merge-conflict-stops-unprocessed-siblings
+    ok 7 - legitimate-merge-conflict-stops-unprocessed-siblings
+      ---
+      duration_ms: 104.477542
+      ...
+    # Subtest: authorization-change-after-failed-parent-prevents-child-send
+    ok 8 - authorization-change-after-failed-parent-prevents-child-send
+      ---
+      duration_ms: 68.566458
+      ...
+    1..8
+ok 4 - LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split
+  ---
+  duration_ms: 593.284
+  ...
+# Subtest: LOTM-E05: pause drains a late right result without covering or publishing it
+ok 5 - LOTM-E05: pause drains a late right result without covering or publishing it # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.057583
+  ...
+# Subtest: LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback
+ok 6 - LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.036875
+  ...
+1..6
+# tests 26
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 4
+# todo 0
+# duration_ms 1065.916833

@@ -1,0 +1,25 @@
+{
+  "capturedAt": "2026-10-27T14:21:01.967397+00:00",
+  "buildUiExitCode": 0,
+  "buildDesktopExitCode": 0,
+  "volumeCodeReview": "docs/lotm-import/13-volume-code-review.md",
+  "sha256": {
+    "desktop/core/novel-import-chapters.ts": "346a2de939e2e91230f46b03858ce0def546ba9deee4ecb226fc13f38770aad8",
+    "desktop/core/novel-import.ts": "21b6461fa4c03fd80e97c80e3e631f1931240310ec481488a100309870e15546",
+    "desktop/shared/novel-import.ts": "a2a09a88950bdc7ed953517895f073e0bab79a1213c97e83df2989015df04675",
+    "desktop/main/novel-import.ts": "026dbb5f9aea6c59eb9defba03c5f68a215f82cba8aec01c7453fdfdc68787f1",
+    "desktop/main/novel-import-files.ts": "76d3ae60ef2308a53cb27553be0ce305a1f88517f1fc316ff776c3177412965c",
+    "desktop/service/novel-import-publish.ts": "15a7a4e63adeba5b6ca2b204586501761700174c537f66585765ce17e45b5326",
+    "src/components/desktop/NovelImportDialog.tsx": "56fa54c7245fe47a68ae4a990d25951d42f2db7503945b969b2cbf513021f69d",
+    "desktop/service/novel-import-ai.ts": "10c0f32e4107c338a0d132ab2692711a2c97f7f2e721e24e813f3f404f97ee13",
+    "desktop/core/novel-import-ai-payload.ts": "4cdd2e4e1461c209b7ef60d491584910393c5e11870a92ae685ac1347bf38c59",
+    "desktop/core/novel-import-review-tasks.ts": "89e9c39e8a0c362d34baa5b393f44ca3dbfda1a52022ebc4ce66c9e6da566a82",
+    "desktop/core/novel-import-budget-policy.ts": "d4c211b16dfbebc68f292ec10c7ab1f2d895b5b5156f7205908f6ff0c5c3c31d",
+    "prisma/schema.prisma": "1d37ab42d0cad944a3d2bde376e36eda872d99ec9ae83880e16479a677dde056",
+    "dist/main/index.cjs": "a6bc49062d391986bc33d1303ca1cf1eb2066e3bae78d173ce1bcc5eeb29165f",
+    "dist/service/index.cjs": "58b0bffaaf0fb243f1bc9ce79e5095a165accc7c80ed9f0aa8a835a7ad5e3c9a",
+    "dist/preload/index.cjs": "b1aa9792e02bed32da858ce66d645e4aaedadab67b534c87f16b2ab997bccba4",
+    ".next/BUILD_ID": "8916cf352761529b02c9dc73b2038203def5d06e19396010cfbffd01628980f7"
+  },
+  "fullRepositoryTestsRun": false
+}

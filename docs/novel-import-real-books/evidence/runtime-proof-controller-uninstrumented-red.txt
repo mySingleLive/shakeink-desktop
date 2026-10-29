@@ -1,0 +1,100 @@
+▶ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier
+  ✖ pending-real-promise-and-delayed-resources (2380.615292ms)
+  ✔ pre-invoke-source-work-and-synchronous-throw (65.554916ms)
+  ✔ fresh-task-flushes-resolver-before-observer-race (2.21025ms)
+  ✖ settled-raw-promise-with-stale-disk-and-live-operation-is-missed (41.047375ms)
+  ✔ lineage-change-does-not-sign-or-stop-new-owner (119.622333ms)
+  ✔ hard-token-and-byte-capacity-before-invoke (5.260875ms)
+  ✖ synchronous-cancel-failure-still-waits-raw-job (45.951792ms)
+  ✖ proof-write-failure-still-drains (2345.415167ms)
+✖ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier (5008.211541ms)
+✖ NI-RT02: private runtime diagnostics survive restart without changing content identities (2417.340291ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 4
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8462.471333
+
+✖ failing tests:
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:5339
+✖ pending-real-promise-and-delayed-resources (2380.615292ms)
+  AssertionError [ERR_ASSERTION]: controlled window reached
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:17:131)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:22:367)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:22:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:10001
+✖ settled-raw-promise-with-stale-disk-and-live-operation-is-missed (41.047375ms)
+  TypeError: Cannot read properties of undefined (reading 'state')
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:26:455)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:26:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:15406
+✖ synchronous-cancel-failure-still-waits-raw-job (45.951792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'missed'
+  - 'drained'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:29:531)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:29:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'missed',
+    expected: 'drained',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:16057
+✖ proof-write-failure-still-drains (2345.415167ms)
+  AssertionError [ERR_ASSERTION]: controlled window reached
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:17:131)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:30:284)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:30:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:17198
+✖ NI-RT02: private runtime diagnostics survive restart without changing content identities (2417.340291ms)
+  AssertionError [ERR_ASSERTION]: controlled window reached
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:17:131)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:34:215)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

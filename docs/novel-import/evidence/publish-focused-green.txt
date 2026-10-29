@@ -1,0 +1,21 @@
+✔ NI-W01: real PGlite publication preserves prose and exposes native outline/planning rows (2525.787291ms)
+✔ NI-W02: imported source outline and original prose remain fully readable independently of projections (2199.68425ms)
+▶ NI-W03: every unpublished or acknowledged-unknown fault window retries the exact request without duplicate entities
+  ✔ before-initialize (1467.11475ms)
+  ✔ domain-writing (1166.751ms)
+  ✔ database-committed (1288.004542ms)
+  ✔ manifest-ready (1272.4285ms)
+  ✔ catalog-committed (1107.059041ms)
+✔ NI-W03: every unpublished or acknowledged-unknown fault window retries the exact request without duplicate entities (6302.254ms)
+✔ NI-W04: creating and catalog-previous branches reject a changed import payload with the same title/request (1863.935875ms)
+✔ NI-W04: a catalog retry verifies the original-material snapshot as well as the mutation receipt (1048.486ms)
+✔ NI-W05: import-only lease target requires the pre-existing reservation and exact original physical directory (4578.978416ms)
+✔ NI-W06: source overlap, occupied target, changed directory identity and unresolved plans never publish (1055.782292ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21051.441709

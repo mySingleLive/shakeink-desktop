@@ -1,0 +1,13 @@
+▶ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits
+  ✔ initial choose keeps one admitted real FS chain and an empty session until canceled resources settle (89.087125ms)
+  ✔ renderer cancel enters before a reselect inspection queued inside the real controller tail (798.238416ms)
+  ✔ real worker exit remains charged after pending preview is canceled (664.214417ms)
+✔ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits (1552.430791ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2090.985541

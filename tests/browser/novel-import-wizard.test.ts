@@ -1,0 +1,140 @@
+import assert from 'node:assert/strict'
+import {test} from 'node:test'
+import {readFile} from 'node:fs/promises'
+import {execFileSync} from 'node:child_process'
+import {build} from 'esbuild'
+import {chromium,type Browser,type Page} from 'playwright-core'
+import type {} from '../helpers/novel-import-wizard-ui-fixture'
+
+let browser:Browser,bundle:string,css:string
+test.before(async()=>{
+ const result=await build({entryPoints:['tests/helpers/novel-import-wizard-ui-fixture.tsx'],bundle:true,platform:'browser',format:'iife',write:false,tsconfig:'tsconfig.json',loader:{'.css':'empty'},logLevel:'silent'});bundle=result.outputFiles[0].text
+ css=await readFile('design/assets/web-tokens.css','utf8')+'\n.desktop-dialog-surface{translate:-50% -50%}\n'+await readFile('src/components/desktop/novel-import.css','utf8')
+ browser=await chromium.launch({headless:true,executablePath:process.env.SHAKEINK_TEST_CHROMIUM??'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'})
+})
+test.after(async()=>{await browser?.close()})
+async function mount(options:Record<string,unknown>,run:(page:Page)=>Promise<void>,view={width:1280,height:800},motion:'reduce'|'no-preference'='reduce'){
+ const page=await browser.newPage({viewport:view,reducedMotion:motion}),errors:string[]=[]
+ page.setDefaultTimeout(6000);page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',route=>route.abort())
+ try{await page.setContent('<div id="app"></div>');await page.evaluate('globalThis.__name=t=>t');await page.addStyleTag({content:css});await page.addScriptTag({content:bundle});await page.evaluate(o=>window.mountWizard(o as never),options);await page.getByRole('dialog').waitFor();await run(page);assert.deepEqual(errors,[])}finally{await page.close()}
+}
+const calls=(page:Page)=>page.evaluate(()=>window.wizardFixture.calls) as Promise<{type:string;[k:string]:unknown}[]>
+const dialog=(page:Page)=>page.getByRole('dialog')
+
+test('NIW-B01/B03: step titles; files show automatic encoding without a confirm button',()=>mount({step:'files'},async page=>{
+ const d=dialog(page);await d.getByRole('heading',{name:'确认文件'}).waitFor()
+ assert.match(await d.innerText(),/GB18030（自动识别）/);assert.equal(await d.getByRole('button',{name:'确认编码'}).count(),0)
+ await d.getByRole('button',{name:'编码不对？'}).click();const select=d.getByRole('combobox',{name:'正文.txt 编码'});assert.deepEqual(await select.locator('option').allInnerTexts(),['UTF-8','UTF-16LE','UTF-16BE','GB18030'])
+}))
+test('NIW-B01: step 3 needs a folder before continuing',()=>mount({step:'work'},async page=>{
+ const d=dialog(page);await d.getByRole('heading',{name:'作品与目录'}).waitFor();assert.equal(await d.getByRole('button',{name:'继续'}).isDisabled(),true)
+}))
+test('NIW-B02: step rail and stage bar',()=>mount({step:'import-char',phase:'running'},async page=>{
+ const d=dialog(page);await d.getByRole('button',{name:/第 10 \/ 22 步 · 导入角色/}).click()
+ const items=d.locator('.ni-w-steps li');assert.equal(await items.count(),22);assert.match(await items.nth(0).innerText(),/已完成/)
+ assert.equal(await d.locator('.ni-w-stages li').count(),6);assert.equal(await d.locator('.ni-w-stages li[aria-current=step]').innerText().then(t=>t.includes('角色')),true)
+}))
+test('NIW-B02: narrow window shows a one-line stage summary',()=>mount({step:'import-char',phase:'running'},async page=>{
+ const d=dialog(page);assert.equal(await d.locator('.ni-w-stages').isVisible(),false);assert.match(await d.locator('.ni-w-stage-now').innerText(),/阶段 3 \/ 6 · 角色 · 场景 · 物品 · 第 10 \/ 22 步/)
+},{width:390,height:700}))
+test('NIW-B04: chapter tree tri-state, counts, search scope and consent button',()=>mount({step:'tree'},async page=>{
+ const d=dialog(page);assert.ok((await d.getByRole('checkbox',{name:/^选择 第/}).evaluateAll(e=>e.every(x=>(x as HTMLInputElement).checked))))
+ await d.getByRole('checkbox',{name:'选择 第一章 再起'}).click();const last=(await calls(page)).at(-1)!;assert.equal(last.type,'wizard-select-chapters');assert.equal((last.indices as number[]).length,10)
+ await page.evaluate(()=>window.wizardFixture.set(v=>{v.wizard!.chapterSelection=v.wizard!.chapterSelection!.filter(i=>i!==3)}))
+ assert.equal(await d.getByRole('checkbox',{name:'选择 乙卷'}).evaluate(e=>(e as HTMLInputElement).indeterminate),true)
+ assert.match(await d.innerText(),/2 \/ 3 章/);assert.match(await d.innerText(),/已选 10 \/ 11 章 · 4 卷/)
+ await d.getByRole('textbox',{name:'搜索章名'}).fill('再');await d.getByRole('checkbox',{name:'选择匹配的章节：乙卷'}).click()
+ const scoped=(await calls(page)).at(-1)!;assert.ok([3,4,5].every(i=>(scoped.indices as number[]).includes(i)))
+ assert.match(await d.innerText(),/发送范围/);assert.match(await d.innerText(),/受控文本模型/);await d.getByRole('button',{name:'允许分析并导入'}).waitFor()
+ await page.evaluate(()=>window.wizardFixture.set(v=>{v.wizard!.chapterSelection=[]}));assert.equal(await d.getByRole('button',{name:'允许分析并导入'}).isDisabled(),true);assert.match(await d.innerText(),/请至少选择一章/)
+}))
+test('NIW-B05: character rows show only name and type; details and role editing',()=>mount({step:'detect-char'},async page=>{
+ const d=dialog(page),row=d.locator('.ni-w-list .ni-w-node').first()
+ assert.ok(!/章|资料/u.test(await row.innerText()));assert.match(await d.innerText(),/已选 3 \/ 3/)
+ await d.getByRole('button',{name:'详情'}).first().click();assert.match(await d.innerText(),/别名：砚哥 · 出场 3 章 · 来源：资料 \+ 正文/)
+ await d.getByRole('button',{name:'林舟：配角，点击修改类型'}).click();await d.getByRole('combobox',{name:'林舟 类型'}).selectOption('ANTAGONIST')
+ const set=(await calls(page)).at(-1)!;assert.equal(set.type,'wizard-set-role');assert.equal(set.roleType,'ANTAGONIST')
+ assert.equal(await d.getByRole('button',{name:'合并为同一角色'}).isDisabled(),true)
+}))
+test('NIW-B06: image options default unchecked, change the button and need an image model',()=>mount({step:'detect-char'},async page=>{
+ const d=dialog(page),avatar=d.getByRole('checkbox',{name:'生成头像'}),portrait=d.getByRole('checkbox',{name:'生成立绘'})
+ assert.equal(await avatar.isChecked(),false);assert.equal(await portrait.isChecked(),false);assert.match(await d.innerText(),/受控图像模型/)
+ await avatar.click();await portrait.click();assert.equal((await calls(page)).filter(c=>c.type==='wizard-set-images').length,2)
+ await page.evaluate(()=>window.wizardFixture.set(v=>{v.wizard!.images.avatar=true;v.wizard!.images.portrait=true}))
+ await d.getByRole('button',{name:'导入 3 个角色并生成头像与立绘'}).click();const next=(await calls(page)).at(-1)!;assert.equal(next.type,'wizard-next');assert.equal(next.imageConsent,true)
+}))
+test('NIW-B06: without an image model the options are disabled',()=>mount({step:'detect-scene',noImageModel:true},async page=>{
+ const d=dialog(page);assert.equal(await d.getByRole('checkbox',{name:'生成外景图'}).isDisabled(),true);assert.equal(await d.getByRole('checkbox',{name:'生成内景图'}).isDisabled(),true);await d.getByRole('button',{name:'配置模型'}).waitFor()
+}))
+test('NIW-B07: task cards with checkmarks, failures, image chips and progress',()=>mount({step:'import-char',phase:'running',failing:true},async page=>{
+ const d=dialog(page),done=d.locator('.ni-w-ent[data-s=done]').first()
+ assert.equal(await done.locator('.ni-w-ok').count()>0,true);assert.match(await done.innerText(),/已完成/)
+ await d.locator('.ni-w-ent[data-s=failed]').getByRole('button',{name:'重试'}).waitFor();await d.locator('.ni-w-ent[data-s=failed]').getByRole('button',{name:'跳过'}).waitFor()
+ assert.match(await d.locator('#ni-w-live').innerText(),/已完成 1 \/ 3 · 头像 1 \/ 3 · 1 项失败/)
+ await d.getByRole('button',{name:'跳过失败项并继续（1）'}).click();assert.equal((await calls(page)).at(-1)!.op,'skip-failed')
+ assert.equal(await d.getByRole('progressbar').getAttribute('aria-valuenow'),'2')
+ await page.waitForFunction(()=>!!document.querySelector('.ni-w-chip[data-s=done] img'))
+}))
+test('NIW-B08: the world tree nests child worlds and cascades selection',()=>mount({step:'detect-world'},async page=>{
+ const d=dialog(page),parent=d.locator('li',{has:page.getByRole('checkbox',{name:'选择 北城世界 及其下全部设定'})}).first()
+ assert.equal(await parent.getByRole('checkbox',{name:'选择 南巷梦境 及其下全部设定'}).count(),1)
+ await d.getByRole('checkbox',{name:'选择 北城世界 及其下全部设定'}).click();const sent=(await calls(page)).at(-1)!;assert.equal(sent.type,'wizard-select-candidates');assert.equal(sent.selected,false)
+ await page.evaluate(()=>window.wizardFixture.set(v=>{const c=v.wizard!.candidates.world!.find(c=>c.name==='梦俗')!;c.selected=false}))
+ assert.equal(await d.getByRole('checkbox',{name:'选择 北城世界 及其下全部设定'}).evaluate(e=>(e as HTMLInputElement).indeterminate),true)
+}))
+test('NIW-B10: verify lists checks, blocks saving on problems and shows skipped items',()=>mount({step:'verify',checksBad:true},async page=>{
+ const d=dialog(page);assert.equal(await d.locator('.ni-w-checks li').count(),8);await d.getByRole('button',{name:'重试导入角色'}).waitFor()
+ assert.equal(await d.getByRole('button',{name:'保存作品'}).isDisabled(),true);assert.match(await d.innerText(),/已跳过 2 项/);assert.match(await d.innerText(),/林舟的头像/)
+}))
+test('NIW-B12/B13/IA-B03: pause text, the revise list, and stopping deletes without a second prompt',()=>mount({step:'import-char',phase:'paused'},async page=>{
+ const d=dialog(page);assert.match(await d.locator('#ni-w-live').innerText(),/^已暂停 · /);await d.getByRole('button',{name:'继续导入'}).waitFor()
+ await d.getByRole('button',{name:'返回修改选择'}).click();assert.match(await d.innerText(),/第 9 步 · 识别角色/);assert.match(await d.innerText(),/将丢弃第 10 步的结果/)
+ await d.getByRole('button',{name:'取消'}).click();assert.equal(await d.getByRole('button',{name:'收起'}).count(),0);assert.doesNotMatch(await d.innerText(),/后台继续/)
+ await d.getByRole('button',{name:'停止导入'}).click();await d.waitFor({state:'hidden'})
+ const after=await calls(page);assert.equal(after.at(-1)!.type,'cancel');assert.equal(after.some(c=>c.type==='discard'),false);assert.equal(await page.locator('.ni-task-button').count(),0)
+}))
+test('NIW-B14: recognition failure and empty roster screens',async()=>{
+ await mount({step:'detect-char',recognitionFailed:true},async page=>{const d=dialog(page);assert.match(await d.getByRole('alert').innerText(),/识别失败/);await d.getByRole('button',{name:'重新识别'}).waitFor();await d.getByRole('button',{name:'跳过此步骤'}).waitFor()})
+ await mount({step:'detect-char',empty:true},async page=>{const d=dialog(page);assert.match(await d.innerText(),/未识别到角色/);await d.getByRole('button',{name:'跳过'}).waitFor()})
+})
+test('NIW-B15/IA-B01: Esc deletes the unfinished wizard import and leaves no task bar entry',()=>mount({step:'detect-char'},async page=>{
+ const before=(await calls(page)).length;await page.keyboard.press('Escape');await dialog(page).waitFor({state:'hidden'})
+ assert.deepEqual((await calls(page)).slice(before).map(c=>c.type),['cancel'])
+ assert.equal(await page.locator('.ni-task-button').count(),0)
+}))
+test('NIW-B16: focus stays on a toggled chapter checkbox',()=>mount({step:'tree'},async page=>{
+ const box=dialog(page).getByRole('checkbox',{name:'选择 第三章 转'});await box.focus();await page.keyboard.press('Space')
+ await page.evaluate(()=>window.wizardFixture.set(v=>{v.wizard!.chapterSelection=v.wizard!.chapterSelection!.filter(i=>i!==2)}))
+ assert.equal(await page.evaluate(()=>(document.activeElement as HTMLElement).getAttribute('aria-label')),'选择 第三章 转')
+}))
+test('NIW-B17: search waits for IME composition to end',()=>mount({step:'detect-char'},async page=>{
+ const box=dialog(page).getByRole('textbox',{name:'搜索名称或别名'})
+ await box.dispatchEvent('compositionstart');await box.fill('林');assert.equal(await dialog(page).locator('.ni-w-list .ni-w-node').count(),3)
+ await box.dispatchEvent('compositionend');assert.equal(await dialog(page).locator('.ni-w-list .ni-w-node').count(),1)
+}))
+test('NIW-B18: reduced motion shows text instead of spinners',()=>mount({step:'import-char',phase:'running'},async page=>{
+ const running=dialog(page).locator('.ni-w-ent[data-s=running]').first()
+ assert.equal(await running.locator('.ni-w-rm').evaluate(e=>getComputedStyle(e).display!=='none'),true)
+ assert.equal(await dialog(page).locator('.ni-spinner').first().evaluate(e=>getComputedStyle(e).animationName),'none')
+}))
+for(const theme of ['paper','ink'])for(const width of [1280,390])test(`NIW-B19: ${theme} ${width} has no horizontal overflow and the first task card is visible`,()=>mount({step:'import-char',phase:'running',theme},async page=>{
+ assert.ok(await page.evaluate(()=>document.scrollingElement!.scrollWidth<=document.scrollingElement!.clientWidth))
+ const top=await dialog(page).locator('.ni-w-ent').first().evaluate(e=>e.getBoundingClientRect().top);assert.ok(top<(width===390?700:800))
+},{width,height:width===390?700:800}))
+test('NIW-B20: without a model inference is disabled and the tree offers copy-only',async()=>{
+ await mount({step:'kinds',noModel:true},async page=>{const cards=dialog(page).locator('.ni-target-card input');assert.ok(await cards.evaluateAll(e=>e.every(x=>(x as HTMLInputElement).disabled)))})
+ await mount({step:'tree',noModel:true},async page=>{assert.match(await dialog(page).innerText(),/仅拷贝/);await dialog(page).getByRole('button',{name:'开始导入'}).waitFor()})
+})
+test('NIW-B21: prototype sample values do not appear in product code',()=>{
+ const samples=['雾港夜行','林默','艾琳','老约翰','白鸦','薇拉','卡尔文','灰袍主教','雾港城','灯塔区','钟楼街','星图残页','黑羽怀表','雾海世界','梦境层','示例文本模型','示例审核模型']
+ const paths=['src/components/desktop/NovelImportWizard.tsx','src/components/desktop/NovelImportDialog.tsx','src/lib/desktop/novel-import-wizard.ts','desktop']
+ let found=''
+ try{found=execFileSync('grep',['-rlE',samples.join('|'),...paths],{encoding:'utf8'})}catch(error){if((error as {status?:number}).status!==1)throw error}
+ assert.equal(found.trim(),'',found)
+})
+
+test('RB-01/RB-02/RB-03: recognition shows a live found count',async()=>{
+ await mount({step:'detect-char',phase:'running',rosterFound:12},async page=>{const d=dialog(page);await d.getByRole('heading',{name:'正在识别角色'}).waitFor();const line=d.getByText('已识别 12 个角色',{exact:true});await line.waitFor();assert.equal(await line.getAttribute('aria-live'),'polite')})
+ await mount({step:'detect-char',phase:'running'},async page=>{await dialog(page).getByText('已识别 0 个角色',{exact:true}).waitFor()})
+ await mount({step:'detect-scene',phase:'running',rosterFound:3},async page=>{await dialog(page).getByText('已识别 3 个场景',{exact:true}).waitFor()})
+})

@@ -1,0 +1,21 @@
+✖ NI-U04: title, isolated target and pinned model/range consent gate the real start action (10001.048166ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10579.845458
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:10207
+✖ NI-U04: title, isolated target and pinned model/range consent gate the real start action (10001.048166ms)
+  page.waitForFunction: Timeout 6000ms exceeded.
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:66:1025)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:401)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:66:458) {
+    name: 'TimeoutError',
+    log: []
+  }

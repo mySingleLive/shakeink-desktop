@@ -1,0 +1,1107 @@
+{
+  "review": "M01-D1-partial-characters-scenes",
+  "provenance": "post-AI partial literary audit, not a new pre-AI oracle or production prompt",
+  "recordedAt": "2026-10-26T20:00:34.024659+00:00",
+  "snapshot": "characters-scenes-checkpoint-rev62.json",
+  "snapshotSha256": "345201a0feb9bc2bd9a4af0c119232429efb78db0b9d693a3fdc7587cc98daa9",
+  "sessionId": "439f1633-9d21-40f5-9d8b-7f165cc66265",
+  "revision": 62,
+  "scope": [
+    "character",
+    "scene"
+  ],
+  "verdict": "NOT PASS for current semantic completeness; partial and awaiting final QA",
+  "originalAndWorkingBodyEqualFrozen": true,
+  "bodyCharacters": 23257,
+  "bodySha256": "b06de8a2b8ac2e8e2561f6b4fb39d6f15e866001f4af6d3c24e929cb7f87c397",
+  "oracleFrozenSha256": "f47d6ed4a3af53181be2746a53eb8073c3e5034234a1151e8246118fa2807a90",
+  "readCoverage": {
+    "allNineChaptersFullTextRead": true,
+    "bodyReadRanges": [
+      [
+        0,
+        6564
+      ],
+      [
+        6564,
+        14700
+      ],
+      [
+        14700,
+        23257
+      ]
+    ],
+    "all27ArtifactsAllTextFactsEvidenceRead": true
+  },
+  "coordinateSystem": "zero-based Unicode codepoint half-open offsets in expected-body.txt; add13 for original independent/full-source offsets; this body has no non-BMP scalars",
+  "mechanicalChecks": {
+    "characters": 18,
+    "scenes": 9,
+    "exactEvidenceEntries": 55,
+    "allSourceIdsKnownAndContained": true,
+    "validCharacterReferences": 31,
+    "validAcyclicSceneParentEdges": 6,
+    "workingUnitCount": 25,
+    "bothCoverageListsExactly25WorkingIds": true,
+    "nonUniqueExactQuoteEntries": [
+      {
+        "artifactId": "char-shenpan-lao-tou",
+        "unitId": "working-0:19795:20772",
+        "matchCount": 2
+      }
+    ],
+    "notProofOfSemanticCompleteness": true
+  },
+  "artifacts": [
+    {
+      "id": "char-narrator",
+      "name": "叙述者（“我”）",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:0:919",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              11,
+              19
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "框架作传者与阿Q分离；没有冒认鲁迅本人。姓名籍贯难考概括有全章依据。"
+    },
+    {
+      "id": "char-a-q",
+      "name": "阿Ｑ",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:0:919",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              11,
+              19
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:1850:2839",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              1979,
+              1993
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:0:919",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              880,
+              894
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              8112,
+              8124
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:3836:4832",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              4689,
+              4697
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:9719:10685",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              10053,
+              10067
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:18881:19795",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              19123,
+              19133
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:5799:6791",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              6348,
+              6358
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-zhao-taiye",
+        "char-wu-ma",
+        "char-wang-hu",
+        "char-xiao-d",
+        "char-jia-yang-guizi",
+        "char-xiao-nigu"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "基本身份和精神胜利心理概括有据，无确定赵姓/原籍或超自然能力；终局、城中接赃经历和整体人物变化未入当前profile。"
+    },
+    {
+      "id": "char-zhao-taiye",
+      "name": "赵太爷",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:0:919",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              880,
+              894
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:15164:16028",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              15707,
+              15719
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q",
+        "char-zhao-xiucai"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "富户父辈与儿子独立；父子及掌掴有据；赵家女性与家庭关系缺项。"
+    },
+    {
+      "id": "char-zhao-xiucai",
+      "name": "赵秀才",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              8288,
+              8304
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:17006:17939",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              17074,
+              17080
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-zhao-taiye",
+        "char-a-q",
+        "char-jia-yang-guizi"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "与父亲独立，茂才称谓可核；办党措辞宜明确为托介绍入自由党，非创办政党。"
+    },
+    {
+      "id": "char-di-bao",
+      "name": "地保",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:0:919",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              756,
+              768
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:8756:9719",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              9043,
+              9055
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "训斥索酒钱与五条件有据；后段门幕和每月孝敬钱未保留。"
+    },
+    {
+      "id": "char-wang-hu",
+      "name": "王胡",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:3836:4832",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              4689,
+              4697
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:4832:5799",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              5066,
+              5074
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "与王癞胡同人，冲突有据；粗豪属合理文学概括，后受阿Q劈颈惊吓的变化未留。"
+    },
+    {
+      "id": "char-xiao-d",
+      "name": "小Ｄ",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:9719:10685",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              10053,
+              10067
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:17939:18881",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              18075,
+              18087
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "人物与短工竞争有据；谋饭碗宜归于阿Q视角；瘦弱穷困不等于性格，末段报抢未留。"
+    },
+    {
+      "id": "char-jia-yang-guizi",
+      "name": "假洋鬼子",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:4832:5799",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              5541,
+              5551
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:4832:5799",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              5679,
+              5688
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:18881:19795",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              19123,
+              19133
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q",
+        "char-zhao-xiucai"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "钱太爷大儿子/洋先生同人有据，未当真外国人；缺钱太爷节点/父子边，替其办党措辞含混。"
+    },
+    {
+      "id": "char-wu-ma",
+      "name": "吴妈",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              7940,
+              7954
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              8112,
+              8124
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:8756:9719",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              8758,
+              8763
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q",
+        "char-zhao-taiye"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "女仆/被冒犯而哭有据，无互允恋爱；末章已在城做工并围观未留。"
+    },
+    {
+      "id": "char-xiao-nigu",
+      "name": "小尼姑",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:5799:6791",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              6088,
+              6102
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:5799:6791",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              6348,
+              6358
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "与老尼姑分离，调戏/拧脸有据，未把和尚污名当事实关系。"
+    },
+    {
+      "id": "char-lao-nigu",
+      "name": "老尼姑",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:10685:11574",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              11437,
+              11445
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:11574:12420",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              11705,
+              11711
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "偷萝卜阻止有据；遭秀才/假洋鬼子殴打及其关系未留。"
+    },
+    {
+      "id": "char-zou-qisao",
+      "name": "邹七嫂",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              8650,
+              8658
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:12420:13341",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              13151,
+              13166
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:14292:15164",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              14935,
+              14944
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "邻居/买裙/传话有据；性格为合理概括，传播疑点可补直接证据。"
+    },
+    {
+      "id": "char-zhao-baiyan",
+      "name": "赵白眼",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              8659,
+              8667
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:15164:16028",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              15923,
+              15930
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q",
+        "char-zhao-taiye"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "与赵司晨分离，本家身份和探口风有据。"
+    },
+    {
+      "id": "char-zhao-sichen",
+      "name": "赵司晨",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              8664,
+              8671
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:12420:13341",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              12868,
+              12883
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:17006:17939",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              17803,
+              17814
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "与赵白眼分离，唾沫/盘辫有据，未将待考母亲归属坐实。"
+    },
+    {
+      "id": "char-tugu-ci-lao-tou",
+      "name": "管土谷祠的老头子",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:9719:10685",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              9758,
+              9770
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "管理者身份有据；似乎叫他走被确定化为曾催走，原不确定性应保留。"
+    },
+    {
+      "id": "char-ju-ren-lao-ye",
+      "name": "举人老爷",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:12420:13341",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              12422,
+              12438
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:14292:15164",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              14843,
+              14854
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:21694:22654",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              21721,
+              21733
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q",
+        "char-ba-zong"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "自称帮忙归属正确，追赃争执有据；本姓白、帮办民政身份未留。"
+    },
+    {
+      "id": "char-ba-zong",
+      "name": "把总",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:17006:17939",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              17491,
+              17503
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:19795:20772",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              20288,
+              20295
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:21694:22654",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              21734,
+              21743
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q",
+        "char-ju-ren-lao-ye"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "带兵与示众主张有据，与审案光头老头未擅合并。"
+    },
+    {
+      "id": "char-shenpan-lao-tou",
+      "name": "审判阿Ｑ的光头老头子",
+      "kind": "character",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:19795:20772",
+          "exactMatchCount": 2,
+          "bodyRanges": [
+            [
+              20614,
+              20620
+            ],
+            [
+              20662,
+              20668
+            ]
+          ]
+        },
+        {
+          "unitId": "working-0:21694:22654",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              21982,
+              21991
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [
+        "char-a-q"
+      ],
+      "parentId": null,
+      "sourceAccuracyNote": "审问有据；直接教画押者是长衫人物，令其画押需区分执行者；首quote同unit两处匹配。"
+    },
+    {
+      "id": "scene-wei-zhuang",
+      "name": "未庄",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:1850:2839",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              2202,
+              2217
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": null,
+      "sourceAccuracyNote": "村庄及宅祠酒店概括可核；根节点无假坐标。"
+    },
+    {
+      "id": "scene-tu-gu-ci",
+      "name": "土谷祠",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:1850:2839",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              1979,
+              1993
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": "scene-wei-zhuang",
+      "sourceAccuracyNote": "位置/住所正确；居所及被捕的空间作用可补。"
+    },
+    {
+      "id": "scene-zhao-fu",
+      "name": "赵府",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:7770:8756",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              7778,
+              7789
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": "scene-wei-zhuang",
+      "sourceAccuracyNote": "赵家宅院及舂米惩处正确；厨房/内院/舂米场可并入父场景描述。"
+    },
+    {
+      "id": "scene-jing-xiu-an",
+      "name": "静修庵",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:10685:11574",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              11101,
+              11111
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": null,
+      "sourceAccuracyNote": "墙外表述本身真实且未误挂村内；遗漏实际进入的后园及革命殴打空间作用。"
+    },
+    {
+      "id": "scene-jiu-dian",
+      "name": "酒店",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:2839:3836",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              3399,
+              3408
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": "scene-wei-zhuang",
+      "sourceAccuracyNote": "酒店喝酒/调笑及村内父级正确。"
+    },
+    {
+      "id": "scene-qian-fu",
+      "name": "钱府",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:9719:10685",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              10167,
+              10179
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": "scene-wei-zhuang",
+      "sourceAccuracyNote": "照壁相遇与父级正确；院内不准革命场面未留。"
+    },
+    {
+      "id": "scene-xian-cheng",
+      "name": "县城",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:19795:20772",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              20202,
+              20217
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": null,
+      "sourceAccuracyNote": "被押入县城有据；不应补造未实际到达地点。"
+    },
+    {
+      "id": "scene-xian-ya",
+      "name": "县衙",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:19795:20772",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              20374,
+              20387
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": "scene-xian-cheng",
+      "sourceAccuracyNote": "破衙门/大堂概括合理；牢房与栅栏空间缺项。"
+    },
+    {
+      "id": "scene-xian-ya-da-tang",
+      "name": "县衙大堂",
+      "kind": "scene",
+      "allFieldsRead": true,
+      "evidence": [
+        {
+          "unitId": "working-0:19795:20772",
+          "exactMatchCount": 1,
+          "bodyRanges": [
+            [
+              20603,
+              20614
+            ]
+          ]
+        }
+      ],
+      "characterReferences": [],
+      "parentId": "scene-xian-ya",
+      "sourceAccuracyNote": "县衙内大堂树合法；未把审问当独立事件型实体。"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CS01",
+      "status": "material-gap",
+      "scope": "character",
+      "artifacts": [
+        "char-jia-yang-guizi",
+        "char-zhao-taiye",
+        "char-zhao-xiucai"
+      ],
+      "summary": "钱太爷、赵太太、秀才娘子/少奶奶未建角色/关系；不把所有历史姓名或偶发称谓机械建卡。",
+      "bodyRanges": [
+        [
+          2260,
+          2266
+        ],
+        [
+          8677,
+          8690
+        ],
+        [
+          9366,
+          9376
+        ],
+        [
+          13383,
+          13393
+        ],
+        [
+          14029,
+          14036
+        ]
+      ]
+    },
+    {
+      "id": "CS02",
+      "status": "material-gap",
+      "scope": "character",
+      "artifacts": [
+        "char-a-q",
+        "char-wu-ma",
+        "char-lao-nigu",
+        "char-ju-ren-lao-ye"
+      ],
+      "summary": "当前profile缺重要后期经历/身份：阿Q末路，吴妈城中工作与围观，老尼姑被殴，举人姓白。",
+      "bodyRanges": [
+        [
+          12451,
+          12458
+        ],
+        [
+          17241,
+          17264
+        ],
+        [
+          22453,
+          22462
+        ],
+        [
+          22694,
+          22708
+        ],
+        [
+          23160,
+          23171
+        ]
+      ]
+    },
+    {
+      "id": "CS03",
+      "status": "attribution-needs-qualification",
+      "scope": "character",
+      "artifacts": [
+        "char-tugu-ci-lao-tou",
+        "char-xiao-d",
+        "char-shenpan-lao-tou"
+      ],
+      "summary": "保留似乎/阿Q视角；把审案者和实际取纸教画押的长衫人物区分。",
+      "bodyRanges": [
+        [
+          9771,
+          9776
+        ],
+        [
+          10086,
+          10100
+        ],
+        [
+          21273,
+          21282
+        ],
+        [
+          21348,
+          21363
+        ]
+      ]
+    },
+    {
+      "id": "CS04",
+      "status": "wording-and-field-quality",
+      "scope": "character",
+      "artifacts": [
+        "char-zhao-xiucai",
+        "char-jia-yang-guizi",
+        "char-xiao-d"
+      ],
+      "summary": "办党宜还原为托介绍加入自由党；瘦弱穷困属于身体/处境，不能替代性格。",
+      "bodyRanges": [
+        [
+          18309,
+          18324
+        ],
+        [
+          10053,
+          10067
+        ]
+      ]
+    },
+    {
+      "id": "CS05",
+      "status": "material-gap",
+      "scope": "scene",
+      "artifacts": [
+        "scene-jing-xiu-an",
+        "scene-xian-ya",
+        "scene-xian-cheng"
+      ],
+      "summary": "庵后菜园实际进入、牢房/栅栏、游街路线与看客空间没有保留；可补父场景内容或有据子场景，无固定节点数。",
+      "bodyRanges": [
+        [
+          11135,
+          11145
+        ],
+        [
+          20422,
+          20435
+        ],
+        [
+          22321,
+          22330
+        ]
+      ]
+    }
+  ],
+  "limits": [
+    "No final QA/final checkpoint or publication acceptance.",
+    "No app/model/DB/private-journal/code/source/oracle edits or access outside authorized frozen evidence.",
+    "No source diagnostic cause inferred from later generation success.",
+    "Notes not delivered to production AI."
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "scope": "Read-only in-memory reverse-delta hashing; no production execution or source writes",
+  "serviceRestoredPrechangeSha256": "803de671b3a9ec5e764d8b9bcabe081835750984acd862597fb5d87718e02599",
+  "servicePrechangeSource": "S01-C1 frozen build and 47 baseline",
+  "semanticTestRestoredPrechangeSha256": "d822a3eed0f3ca1698d7326ffd70370269786fab0a95412a32e3efd3eee2787c",
+  "semanticTestPrechangeSource": "37 independent final frozen hash",
+  "semanticTestDelta": "Only the authorized classify branch; existing other-stage assertions restored verbatim and all other file bytes equal"
+}

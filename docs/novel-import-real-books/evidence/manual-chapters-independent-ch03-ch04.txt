@@ -1,0 +1,10 @@
+✔ NI-CH03: ambiguous prose and title sequences never create guessed chapter cuts (2.492625ms)
+✔ NI-CH04: unchanged manual session chapters survive implicit calculation with validation (0.838375ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 157.348834

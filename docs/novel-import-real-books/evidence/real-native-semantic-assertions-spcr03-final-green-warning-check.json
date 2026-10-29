@@ -1,0 +1,16 @@
+{
+  "scope": "RB-P01 source-copy warning loss regression only",
+  "helperSha256": "64575a6c6c042979ba44d10021f2f2e2d8012f3000f2d27e1e29797c1ba1f943",
+  "checks": [
+    {
+      "name": "source-role-mapping-warning-must-persist",
+      "passed": true,
+      "allOldAssertionsPassed": false
+    },
+    {
+      "name": "source-level-structure-warning-must-persist",
+      "passed": true,
+      "allOldAssertionsPassed": false
+    }
+  ]
+}

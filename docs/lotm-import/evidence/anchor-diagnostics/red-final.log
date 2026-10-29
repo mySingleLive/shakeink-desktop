@@ -1,0 +1,763 @@
+TAP version 13
+# Subtest: LOTM-DIAG01: explicit gates, successful generations and excluded stages stay silent
+    # Subtest: ["",""]
+    ok 1 - ["",""]
+      ---
+      duration_ms: 8.955542
+      ...
+    # Subtest: ["1",""]
+    ok 2 - ["1",""]
+      ---
+      duration_ms: 2.780167
+      ...
+    # Subtest: ["","/private/tmp/synthetic"]
+    ok 3 - ["","/private/tmp/synthetic"]
+      ---
+      duration_ms: 1.603083
+      ...
+    # Subtest: ["true","/private/tmp/synthetic"]
+    ok 4 - ["true","/private/tmp/synthetic"]
+      ---
+      duration_ms: 1.653792
+      ...
+    # Subtest: ["1","relative"]
+    ok 5 - ["1","relative"]
+      ---
+      duration_ms: 1.987083
+      ...
+    # Subtest: ["1","   "]
+    ok 6 - ["1","   "]
+      ---
+      duration_ms: 1.774709
+      ...
+    # Subtest: enabled final rejection once despite multiple JSON candidates
+    not ok 7 - enabled final rejection once despite multiple JSON candidates
+      ---
+      duration_ms: 4.207792
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:5117'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:44:185)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:44:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: final success is silent
+    ok 8 - final success is silent
+      ---
+      duration_ms: 2.93
+      ...
+    # Subtest: final success is silent
+    ok 9 - final success is silent
+      ---
+      duration_ms: 1.44275
+      ...
+    # Subtest: success from second candidate after failed fenced candidate
+    ok 10 - success from second candidate after failed fenced candidate
+      ---
+      duration_ms: 1.686125
+      ...
+    # Subtest: excluded {"phase":"review"}
+    ok 11 - excluded {"phase":"review"}
+      ---
+      duration_ms: 1.085875
+      ...
+    # Subtest: excluded {"phase":"classify"}
+    ok 12 - excluded {"phase":"classify"}
+      ---
+      duration_ms: 0.550084
+      ...
+    # Subtest: excluded {"intent":"reconcile"}
+    ok 13 - excluded {"intent":"reconcile"}
+      ---
+      duration_ms: 0.562709
+      ...
+    # Subtest: excluded {}
+    ok 14 - excluded {}
+      ---
+      duration_ms: 1.0805
+      ...
+    1..14
+not ok 1 - LOTM-DIAG01: explicit gates, successful generations and excluded stages stay silent
+  ---
+  duration_ms: 34.389083
+  location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:4710'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: LOTM-DIAG02: literal positions, strict geometry, UTF16 and four primary reasons
+    # Subtest: four primary reasons and mutually exclusive secondary counts
+    not ok 1 - four primary reasons and mutually exclusive secondary counts
+      ---
+      duration_ms: 6.120333
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:6300'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:54:20)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:51:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: one-position
+    not ok 2 - one-position
+      ---
+      duration_ms: 1.4695
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:7887'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:367)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:246)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: same-unit-two-positions
+    not ok 3 - same-unit-two-positions
+      ---
+      duration_ms: 1.531541
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:7887'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:367)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:246)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: two-units
+    not ok 4 - two-units
+      ---
+      duration_ms: 1.254042
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:7887'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:367)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:246)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: literal-only
+    not ok 5 - literal-only
+      ---
+      duration_ms: 1.107
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:7887'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:367)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:57:246)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: valid
+    not ok 6 - valid
+      ---
+      duration_ms: 0.968
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: different-file
+    not ok 7 - different-file
+      ---
+      duration_ms: 1.166
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: gap
+    not ok 8 - gap
+      ---
+      duration_ms: 1.057708
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: overlap
+    not ok 9 - overlap
+      ---
+      duration_ms: 1.414333
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: reverse
+    not ok 10 - reverse
+      ---
+      duration_ms: 1.052167
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: bad-length
+    not ok 11 - bad-length
+      ---
+      duration_ms: 1.057917
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: negative
+    not ok 12 - negative
+      ---
+      duration_ms: 1.03225
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: unsafe
+    not ok 13 - unsafe
+      ---
+      duration_ms: 0.977083
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: fractional
+    not ok 14 - fractional
+      ---
+      duration_ms: 1.061958
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:8756'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:178)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:60:43)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: one-sided matches are never straddles
+    not ok 15 - one-sided matches are never straddles
+      ---
+      duration_ms: 0.986416
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:9021'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:61:159)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:61:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: multiple cross positions are not unique
+    not ok 16 - multiple cross positions are not unique
+      ---
+      duration_ms: 1.035041
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:9237'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:62:218)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:62:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: other unit wins over a simultaneous unique cross
+    not ok 17 - other unit wins over a simultaneous unique cross
+      ---
+      duration_ms: 2.126625
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:9512'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:63:191)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:63:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    1..17
+not ok 2 - LOTM-DIAG02: literal positions, strict geometry, UTF16 and four primary reasons
+  ---
+  duration_ms: 26.72
+  location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:6199'
+  failureType: 'subtestsFailed'
+  error: '17 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: LOTM-DIAG03: fixed data-only log cannot disclose synthetic secrets or dynamic paths
+not ok 3 - LOTM-DIAG03: fixed data-only log cannot disclose synthetic secrets or dynamic paths
+  ---
+  duration_ms: 1.595917
+  location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:9843'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+    TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:68:144)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: LOTM-DIAG04: no stale provenance, bounded work, saturation and diagnostics failures
+    # Subtest: invalid-json
+    ok 1 - invalid-json
+      ---
+      duration_ms: 1.133167
+      ...
+    # Subtest: incomplete
+    ok 2 - incomplete
+      ---
+      duration_ms: 0.938
+      ...
+    # Subtest: network
+    ok 3 - network
+      ---
+      duration_ms: 0.836083
+      ...
+    # Subtest: cancellation suppresses diagnostics
+    ok 4 - cancellation suppresses diagnostics
+      ---
+      duration_ms: 1.009667
+      ...
+    # Subtest: seventh mixed issue false
+    ok 5 - seventh mixed issue false
+      ---
+      duration_ms: 2.110333
+      ...
+    # Subtest: seventh mixed issue true
+    ok 6 - seventh mixed issue true
+      ---
+      duration_ms: 3.523167
+      ...
+    # Subtest: issue count and truncated count saturate with only first hundred inspected
+    not ok 7 - issue count and truncated count saturate with only first hundred inspected
+      ---
+      duration_ms: 204.548708
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:11695'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:76:249)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:76:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: quote UTF16 cap 2000
+    not ok 8 - quote UTF16 cap 2000
+      ---
+      duration_ms: 3.182375
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:12247'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:77:202)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:77:34)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: quote UTF16 cap 2001
+    not ok 9 - quote UTF16 cap 2001
+      ---
+      duration_ms: 2.020042
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:12247'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:77:202)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:77:34)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: unfinished two-million budget cannot claim a unique position
+    not ok 10 - unfinished two-million budget cannot claim a unique position
+      ---
+      duration_ms: 2.076542
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:12560'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:78:224)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:78:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: budget is shared across issues
+    not ok 11 - budget is shared across issues
+      ---
+      duration_ms: 0.978959
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:12977'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:79:245)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:79:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: logger failure retains bridge error
+    not ok 12 - logger failure retains bridge error
+      ---
+      duration_ms: 1.081125
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:13416'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:80:179)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:80:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: literal search failure retains bridge error
+    ok 13 - literal search failure retains bridge error
+      ---
+      duration_ms: 1.187709
+      ...
+    # Subtest: same injected ordinary error instance is rethrown without diagnostics
+    ok 14 - same injected ordinary error instance is rethrown without diagnostics
+      ---
+      duration_ms: 1.405667
+      ...
+    1..14
+not ok 4 - LOTM-DIAG04: no stale provenance, bounded work, saturation and diagnostics failures
+  ---
+  duration_ms: 227.073584
+  location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:10565'
+  failureType: 'subtestsFailed'
+  error: '6 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: LOTM-DIAG05: real service boundary rejects bad evidence and returns no accepted data
+not ok 5 - LOTM-DIAG05: real service boundary rejects bad evidence and returns no accepted data
+  ---
+  duration_ms: 4.7075
+  location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:14465'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:88:605)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+1..5
+# tests 50
+# suites 0
+# pass 21
+# fail 29
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2277.908333

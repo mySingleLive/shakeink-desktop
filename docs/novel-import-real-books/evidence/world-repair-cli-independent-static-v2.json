@@ -1,0 +1,21 @@
+{
+  "recordedAt": "2026-10-26T16:24:42.931135+00:00",
+  "reviewer": "remaining_books_oracle",
+  "scope": "WG-CR01 frozen CLI startup delta static only",
+  "sourceSha256": "cb15724745989cd70f0a74b7a425826c53e2a05385bcc293c5cef28a1c167005",
+  "baselineSha256": "916f63f7fbf176f5b70c4ded77ce135cea723f17d244c12aa29d89cd080d9378",
+  "diffSha256": "178020ceee5ed030ae352af9fe91cccad39ac36473fd6a371ded925ec001aa9f",
+  "workspaceSha256": "0ccaf52eef376457a207340783a050167bfe7e051a9c26bba5b3ebfd236da4b6",
+  "exactWholeDiffMatchesAuthor": true,
+  "formalMainWholeByteUnchanged": true,
+  "staticConclusion": "PASS",
+  "finding": {
+    "id": "WG-CR01",
+    "staticCodeStatus": "closed",
+    "executionStatus": "pending final WR02 freeze and independent execution"
+  },
+  "whole96Conclusion": "PENDING service/CLI/WR final code and approved tests",
+  "testsOrCliOrTypechecksExecuted": false,
+  "actualDataPlanJournalDatabaseApplicationModelAccess": false,
+  "reportSha256": "4d458d8b08af9808de17d023c0e9216f241b0c589ba5f09272fb9c9159974076"
+}

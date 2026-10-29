@@ -1,0 +1,25 @@
+▶ NI-R01: bounded review projections and targeted omissions preserve full artifacts
+  ✔ position-bound-projections-and-partial-transport (222.168125ms)
+  ✔ two-fields-extra-units-use-reconcile-with-exact-context (217.172875ms)
+  ✔ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (410.206542ms)
+  ✔ same-base-pending-and-committed-repairs-append-context-without-erasing-credit (363.845125ms)
+  ✔ oversized-omission-context-fails-before-new-work-or-done-credit (132.457458ms)
+  ✔ invalid-triples-and-unseen-text-have-no-review-credit (1200.153042ms)
+✔ NI-R01: bounded review projections and targeted omissions preserve full artifacts (2547.673542ms)
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✔ migration-post-rename-rejection-adopts-and-blocks-the-committed-candidate (321.213542ms)
+  ✔ omission-post-rename-rejection-adopts-and-blocks-the-committed-candidate (361.507625ms)
+  ✔ same-draft-migrates-old-pending-after-authorization (290.372792ms)
+  ✔ all-preflight-refusals-keep-credit-and-policy (539.263208ms)
+  ✔ same-policy-reopen-keeps-successful-credit (272.12375ms)
+  ✔ publication-resumes-before-policy-and-legacy-zero-ai-remain-unversioned (244.689917ms)
+  ✔ first-omission-conflict-stops-before-later-work (96.551125ms)
+✔ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (2126.999167ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5161.788209

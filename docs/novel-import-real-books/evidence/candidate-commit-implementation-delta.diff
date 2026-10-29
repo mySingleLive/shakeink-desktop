@@ -1,0 +1,162 @@
+--- 57-baseline/desktop/main/novel-import.ts
++++ desktop/main/novel-import.ts
+@@ -46,6 +46,8 @@
+ const classificationResultHash=(s:ImportSession)=>importHash({kinds:s.units.map(({id,kind})=>({id,kind})),coverage:s.coverage.classify??[]})
+ const sameTarget=(a:ImportSession['target'],b:ImportSession['target'])=>!!a&&!!b&&a.path===b.path&&a.device===b.device&&a.inode===b.inode
+ class ImportRuntimePersistenceError extends Error {constructor(){super('导入运行时证据无法保存，请核对保存目录后重试')}}
++const candidateBlockedMessage='导入检查点已保存为暂停状态，请重新打开核对目录并重新授权后继续'
++class CandidateCommittedBlocked extends Error {constructor(){super(candidateBlockedMessage)}}
+ class PdfFileChanged extends Error {constructor(readonly sessionId:string,readonly fileId:string){super('来源PDF已发生变化，请重新选择')}}
+ function readable(session:ImportSession){validatePdfPageReviews(session.files);const included=session.files.filter(f=>f.included);if(!included.length||included.some(f=>f.error||f.requiresEncodingConfirmation||!f.text))throw Error('请先处理来源错误并确认文本编码')}
+ function available(session:ImportSession){const included=new Set(session.files.filter(f=>f.included&&!f.error).map(f=>f.id));return IMPORT_KINDS.filter(kind=>session.units.some(u=>included.has(u.fileId)&&u.kind===kind))}
+@@ -61,6 +63,7 @@
+  private operations=new Set<string>()
+  private actions=0
+  private stopping=false
++ private candidateBlocked=false
+  private initialized=false
+  private anchors=new Map<string,{device:string;inode:string}>()
+  private rootPath:string
+@@ -86,15 +89,24 @@
+  private async checkDirectory(path:string){const expected=this.anchors.get(path);const current=await this.identity(path);if(!expected||expected.device!==current.device||expected.inode!==current.inode)throw Error('导入草稿目录身份变化')}
+  private async regular(path:string){const s=await lstat(path);if(!s.isFile()||s.isSymbolicLink()||s.nlink!==1)throw Error('导入草稿中存在未知链接，已保留');return s}
+  private async owner(id:string){await this.checkDirectory(this.rootPath);const path=this.directory(id);await this.checkDirectory(path);await this.regular(join(path,'.owner'));if(await readFile(join(path,'.owner'),'utf8')!==marker+id+'\n')throw Error('导入草稿归属无效')}
+- private async save(s=this.session,notify=true){
++ private assertCandidateOpen(){if(this.candidateBlocked)throw new CandidateCommittedBlocked()}
++ private async save(s=this.session,notify=true,onCommit?:()=>void){
++  this.assertCandidateOpen()
+   if(!s)return;this.assert();this.syncRuntime(s);await this.owner(s.id);s.updatedAt=new Date().toISOString();s.revision++
+   let encoded:string;try{encoded=encodeImportJournal(s)}catch(error){await this.rollback(s);throw error}
+   const dir=this.directory(s.id),file=join(dir,'session.json'),temp=join(dir,'.session-'+randomUUID()+'.tmp')
+   try{await this.regular(file)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
+   const handle=await open(temp,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600)
+   try{await handle.writeFile(encoded);await handle.sync()}finally{await handle.close()}
+-  try{await this.owner(s.id);await rename(temp,file);await this.owner(s.id)}catch(error){await unlink(temp).catch(()=>undefined);throw error}
++  let renamed=false
++  try{await this.owner(s.id);await rename(temp,file);renamed=true;onCommit?.();await this.owner(s.id)}catch(error){if(!onCommit||!renamed)await unlink(temp).catch(()=>undefined);throw error}
+   if(notify)this.options.changed?.(toImportView(s))
++ }
++ private async commitCandidate(owner:ImportSession,candidate:ImportSession){
++  this.assertCandidateOpen();const desired={phase:candidate.phase,resumePhase:candidate.resumePhase,error:candidate.error,targetNeedsAuthorization:candidate.targetNeedsAuthorization};let committed=false
++  candidate.phase='paused';candidate.resumePhase='running';candidate.error=candidateBlockedMessage;candidate.targetNeedsAuthorization=true
++  try{await this.save(candidate,false,()=>{committed=true;for(const key of Object.keys(owner))delete (owner as unknown as Record<string,unknown>)[key];Object.assign(owner,candidate)})}catch(error){if(!committed)throw error;this.candidateBlocked=true;throw new CandidateCommittedBlocked()}
++  Object.assign(owner,desired)
+  }
+  private async rollback(s:ImportSession){try{const path=join(this.directory(s.id),'session.json');await this.owner(s.id);const info=await this.regular(path);if(info.size>IMPORT_JOURNAL_MAX_BYTES)return;const previous=JSON.parse(await readFile(path,'utf8'));if(!this.validJournal(previous,s.id))return;for(const key of Object.keys(s))delete (s as unknown as Record<string,unknown>)[key];Object.assign(s,previous)}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT'){this.session=null;this.options.changed?.(null)}}}
+  private response():ImportResponse{return {view:this.session?toImportView(this.session):null}}
+@@ -125,13 +137,14 @@
+  async act(input:unknown):Promise<ImportResponse>{
+   const parsed=importActionSchema.safeParse(input);if(!parsed.success)throw Error('导入操作参数无效')
+   const action=parsed.data
++  if(this.candidateBlocked){if(action.type==='current')return this.response();if(!['pause','cancel','cancel-pdf-preview','read-source'].includes(action.type))throw new CandidateCommittedBlocked()}
+   if(action.type==='cancel-pdf-preview')return this.cancelPdfPreview(action.id,action.requestId)
+   if(!this.initialized)await this.initialize()
+   if(action.type==='read-pdf-page')return this.readPdfPage(action)
+   if(action.type==='report-pdf-preview-failure')return this.reportPdfFailure(action)
+   if(['pause','cancel'].includes(action.type)){this.cancelPdfWork();const generation=this.pdfGeneration;await this.drainPdfWork();try{return await this.stopAction(action as Extract<ImportAction,{type:'pause'|'cancel'}>)}finally{if(this.pdfGeneration===generation&&!this.pdf.active){try{this.options.assertPdfOwner?.();this.pdf.reopen()}catch{/* lifecycle close retains closed admission */}}}}
+   this.actions++
+-  try{return await this.serial(async()=>{this.assert();if(action.type==='current'){if(this.session){captureImportLegacyBudget(this.session);this.session.models=await this.options.models();await this.ensurePdfInspections(this.session)}return this.response()};if(action.type==='choose')return this.choose(action.mode,!!action.append);const s=this.require(action);if(action.type==='read-source')return this.readSource(s,action.fileId,action.offset??0,action.limit??32768);if(this.jobs.size)throw Error('导入正在处理，请先暂停');if(this.pdfRequests.size)throw Error('PDF预览正在处理，请先完成或取消');if(['completed','discarded','publishing'].includes(s.phase)&&action.type!=='repair-target')throw Error('当前导入已结束或正在保存')
++  try{return await this.serial(async()=>{this.assert();if(this.candidateBlocked){if(action.type==='current')return this.response();if(action.type==='read-source')return this.readSource(this.require(action),action.fileId,action.offset??0,action.limit??32768);throw new CandidateCommittedBlocked()}if(action.type==='current'){if(this.session){captureImportLegacyBudget(this.session);this.session.models=await this.options.models();await this.ensurePdfInspections(this.session)}return this.response()};if(action.type==='choose')return this.choose(action.mode,!!action.append);const s=this.require(action);if(action.type==='read-source')return this.readSource(s,action.fileId,action.offset??0,action.limit??32768);if(this.jobs.size)throw Error('导入正在处理，请先暂停');if(this.pdfRequests.size)throw Error('PDF预览正在处理，请先完成或取消');if(['completed','discarded','publishing'].includes(s.phase)&&action.type!=='repair-target')throw Error('当前导入已结束或正在保存')
+    if(this.stopping)throw Error('导入正在暂停，请等待在途请求结束')
+    if(s.publication&&!['choose-target','start','resume','retry','repair-target','discard'].includes(action.type))throw Error('保存已开始，请保留原导入计划并重试')
+    if(['start','resume','retry','resolve','apply-patches','repair-target'].includes(action.type))validatePdfPageReviews(s.files)
+@@ -199,7 +212,7 @@
+   this.actions++
+   let prepared:{session:ImportSession;file:ImportFile;sourceKey:string;epoch:number;generation:number}|undefined
+   try{
+-   prepared=await this.serial(async()=>{const s=this.require(action);this.assertPdfPhase(s);const file=this.file(s,action.fileId),inspection=file.pdfInspection
++   prepared=await this.serial(async()=>{this.assertCandidateOpen();const s=this.require(action);this.assertPdfPhase(s);const file=this.file(s,action.fileId),inspection=file.pdfInspection
+     if(file.format!=='pdf'||!file.included||!inspection||!file.proof||file.pdfSourceInvalidated||!inspection.pages.some(page=>page.page===action.page))throw Error('PDF页号或授权来源无效，请重新核对来源')
+     validatePdfStoredFields([file]);if(this.pdfRequests.has(action.requestId)||this.pdfCanceled.has(action.requestId)||this.pdfIssued.has(action.requestId))throw Error('PDF预览请求已存在或已取消')
+     this.pdfRequests.set(action.requestId,{sessionId:s.id,fileId:file.id,page:action.page,operationId:action.requestId})
+@@ -219,9 +232,9 @@
+     return {...this.response(),pdfPage}
+    })
+   }catch(error){
+-   if(error instanceof DOMException&&error.name==='AbortError'||!prepared)throw error
++   if(error instanceof CandidateCommittedBlocked||error instanceof DOMException&&error.name==='AbortError'||!prepared)throw error
+    const {session:s,file,generation}=prepared
+-   return this.serial(async()=>{if(this.session!==s||this.pdfGeneration!==generation)throw stopped();const sourceChanged=!(error instanceof PdfJobError)||error.code==='source-changed',code=sourceChanged?'source-changed':error.code==='busy'?'budget':error.code
++   return this.serial(async()=>{this.assertCandidateOpen();if(this.session!==s||this.pdfGeneration!==generation)throw stopped();const sourceChanged=!(error instanceof PdfJobError)||error.code==='source-changed',code=sourceChanged?'source-changed':error.code==='busy'?'budget':error.code
+     let failureChanged=sourceChanged
+     if(sourceChanged)this.markPdfSourceChanged(s,file)
+     else if(!file.pdfPreviewFailures?.some(failure=>failure.page===action.page&&failure.code===code)){file.pdfPreviewFailures=[...(file.pdfPreviewFailures??[]).filter(failure=>failure.page!==action.page),{page:action.page,code,at:new Date().toISOString()}];failureChanged=true}
+@@ -232,7 +245,7 @@
+   }finally{this.pdfRequests.delete(action.requestId);this.actions--}
+  }
+  private async reportPdfFailure(action:Extract<ImportAction,{type:'report-pdf-preview-failure'}>){
+-  return this.serial(async()=>{const s=this.require({id:action.id});this.prunePdfAbilities();const issued=this.pdfIssued.get(action.requestId),file=this.file(s,action.fileId)
++  return this.serial(async()=>{this.assertCandidateOpen();const s=this.require({id:action.id});this.prunePdfAbilities();const issued=this.pdfIssued.get(action.requestId),file=this.file(s,action.fileId)
+    const latest=[...this.pdfIssued].findLast(([,value])=>value.sessionId===s.id&&value.fileId===file.id&&value.page===action.page&&value.sourceKey===pdfSourceKey(file))
+    if(latest?.[0]!==action.requestId)throw Error('PDF预览报告已失效，请重新核对')
+    if(!issued||issued.sessionId!==s.id||issued.fileId!==file.id||issued.page!==action.page||![issued.requestRevision,issued.revision].includes(action.revision)||issued.sourceKey!==pdfSourceKey(file)||s.publication||['completed','discarded'].includes(s.phase))throw Error('PDF预览报告已失效，请重新核对')
+@@ -266,10 +279,10 @@
+  }
+  private canRestoreAnalysis(s:ImportSession){const checkpoint=(s as CheckpointSession).analysisCheckpoint;return !!checkpoint&&checkpoint.hash===importScopeHash(s,'analyze')&&sameTarget(checkpoint.target,s.target)}
+  private async chooseTarget(s:ImportSession){const target=await this.options.chooseTarget(s.title);this.assert();if(!target)return;const actual=await this.identity(target.path);if(actual.device!==target.device||actual.inode!==target.inode)throw Error('保存目录身份已变化，请重新选择');const path=resolve(target.path);const restoring=!!s.publication&&sameTarget(s.target,{...target,path});const protectedRoots=[this.options.root,...await this.options.protectedDirectories()];if(protectedRoots.some(root=>!(restoring&&resolve(root)===path)&&(within(path,resolve(root))||within(resolve(root),path)))||s.files.some(file=>within(file.path,path)||within(path,file.sourceRoot??file.path)))throw Error('保存目录不能与来源或应用目录重叠');if(s.publication&&s.target&&!restoring)throw Error('恢复保存必须重新授权原来的目录');if(this.canRestoreAnalysis(s)&&!sameTarget(s.target,{...target,path}))throw Error('恢复分析必须重新授权原来的目录');s.target={...target,path};s.targetNeedsAuthorization=false}
+- private launch(s:ImportSession,work:(epoch:number)=>Promise<void>){const epoch=s.epoch;let done:Promise<void>;done=Promise.resolve().then(()=>work(epoch)).catch(async error=>{if(error instanceof DOMException&&error.name==='AbortError')return;await this.serial(async()=>{if(this.session!==s||s.epoch!==epoch)return;if(error instanceof PdfFileChanged){this.markPdfSourceChanged(s,this.file(s,error.fileId));await this.save();return}s.resumePhase=s.phase;s.phase='failed';s.error=this.safeError(error);for(const step of s.steps)if(step.state==='running')step.state='failed';try{await this.save()}catch(saveError){if(!(error instanceof ImportRuntimePersistenceError))throw saveError;delete s.runtimePauseProof;s.runtimeDiagnosticsStatus='unavailable';s.resumePhase??=s.phase==='failed'?'running':s.phase;s.phase='failed';s.error=this.safeError(error);for(const step of s.steps)if(step.state==='running')step.state='failed'}})}).finally(()=>this.jobs.delete(done));this.jobs.add(done)}
++ private launch(s:ImportSession,work:(epoch:number)=>Promise<void>){const epoch=s.epoch;let done:Promise<void>;done=Promise.resolve().then(()=>work(epoch)).catch(async error=>{if(error instanceof CandidateCommittedBlocked||error instanceof DOMException&&error.name==='AbortError')return;await this.serial(async()=>{if(this.session!==s||s.epoch!==epoch)return;if(error instanceof PdfFileChanged){this.markPdfSourceChanged(s,this.file(s,error.fileId));await this.save();return}s.resumePhase=s.phase;s.phase='failed';s.error=this.safeError(error);for(const step of s.steps)if(step.state==='running')step.state='failed';try{await this.save()}catch(saveError){if(!(error instanceof ImportRuntimePersistenceError))throw saveError;delete s.runtimePauseProof;s.runtimeDiagnosticsStatus='unavailable';s.resumePhase??=s.phase==='failed'?'running':s.phase;s.phase='failed';s.error=this.safeError(error);for(const step of s.steps)if(step.state==='running')step.state='failed'}})}).finally(()=>this.jobs.delete(done));this.jobs.add(done)}
+  private safeError(error:unknown){const message=error instanceof Error?error.message:'';if(message==='事实可靠性类型无效')return '推断结果的可靠性类型无效，请核对后重试';if(message==='非客观事实缺少知识归属说明')return '推断结果缺少非客观信息的归属说明，请核对后重试';if(message==='事件或叙事必须明确可靠性')return '事件或叙事结果缺少明确可靠性，请核对后重试';return /^(?:请|来源|保存|模型|导入|正文|分类|推断|当前|未|受控|冲突|单个|爽点)/u.test(message)&&message.length<180?message:'导入处理失败，请核对来源、模型配置后重试'}
+- private current(s:ImportSession,epoch:number){this.assert();if(this.session!==s||s.epoch!==epoch)throw stopped()}
+- private async checkpoint(s:ImportSession,epoch:number,fn:()=>void){await this.serial(async()=>{this.current(s,epoch);fn();await this.save()})}
++ private current(s:ImportSession,epoch:number){this.assertCandidateOpen();this.assert();if(this.session!==s||s.epoch!==epoch)throw stopped()}
++ private async checkpoint(s:ImportSession,epoch:number,fn:()=>void){await this.serial(async()=>{this.assertCandidateOpen();this.current(s,epoch);fn();await this.save()})}
+  private async verify(s:ImportSession){
+   validatePdfPageReviews(s.files)
+   const generation=this.pdfGeneration
+@@ -307,6 +320,7 @@
+  private syncRuntime(s:ImportSession){if(s.semanticVersion===1&&this.runtime.last?.sessionId===s.id)s.runtimeAiCall={...this.runtime.last}}
+  private recordRuntime(s:ImportSession,epoch:number){return this.serial(async()=>{if(this.session!==s||s.epoch!==epoch)return;await this.save()}).catch(()=>{if(this.session===s){delete s.runtimePauseProof;s.runtimeDiagnosticsStatus='unavailable'}throw new ImportRuntimePersistenceError()})}
+  private async ai(s:ImportSession,epoch:number,request:Omit<ImportAiRequest,'operationId'|'models'>){
++  this.assertCandidateOpen()
+   this.current(s,epoch);await this.verify(s);this.current(s,epoch)
+   const grant=request.phase==='classify'?s.classificationGrant:s.analysisGrant;if(!grant)throw Error('请重新允许发送本次导入范围')
+   const models=await this.options.models();if(!same(grant.textModel,models.text)||request.phase==='review'&&!same(grant.reviewModel,models.review))throw Error('模型配置或授权已变化，请重新允许')
+@@ -350,7 +364,7 @@
+   validateImportCoverage(s);encodeImportJournal(s)
+   // Persist the complete candidate before changing the live object or launching
+   // any work. A failed first save leaves all old credit and policy untouched.
+-  await this.save(s,false);for(const key of Object.keys(owner))delete (owner as unknown as Record<string,unknown>)[key];Object.assign(owner,s)
++  await this.commitCandidate(owner,s)
+   if(owner.phase==='running')this.launch(owner,epoch=>this.workflow(owner,epoch))
+   this.options.changed?.(toImportView(owner));return true
+  }
+@@ -477,7 +491,7 @@
+   const keys=new Set(groups.flatMap(group=>group.keys))
+   for(const repair of state.repairs)for(const task of repair.tasks.filter(t=>!t.done&&t.omissionKeys?.some(key=>keys.has(key)))){const request=this.requestSnapshot(candidate,{...this.semanticRepairRequest(candidate,repair,task),executionBudget:profile}),payload=serializeImportAiPayload(request);assertImportPayloadBudget(request,payload,profile.characters,profile.maxUnits);assertImportReconcileContextBudget(request,profile.characters);assertImportFixedPromptReserve(importAiPrompt(request,payload),payload)}
+   for(const omission of state.omissions.filter(o=>keys.has(o.key))){if(omission.unitIds.some(id=>!state.repairs.some(r=>r.tasks.some(t=>t.omissionKeys?.includes(omission.key)&&t.unitIds.includes(id)))))throw Error('遗漏新增证据没有完整修订任务');omission.done=true;omission.completedUnitIds=[...omission.unitIds]}
+-  await this.serial(async()=>{this.current(s,epoch);await this.save(candidate,false);for(const key of Object.keys(s))delete (s as unknown as Record<string,unknown>)[key];Object.assign(s,candidate);this.options.changed?.(toImportView(s))})
++  await this.serial(async()=>{this.assertCandidateOpen();this.current(s,epoch);await this.commitCandidate(s,candidate);this.options.changed?.(toImportView(s))})
+  }
+  private async semanticPending(s:ImportSession,epoch:number){
+   let state=this.semanticCheckpoint(s);const all=this.semanticSources(s),lookup=new Map(all.map(u=>[u.id,u])),profile=this.executionBudget(s,'analyze'),known=new Map<string,{keys:string[];targetIds:string[];unitIds:string[]}>()
+@@ -628,7 +642,7 @@
+  private async stopAction(action:Extract<ImportAction,{type:'pause'|'cancel'}>){
+   this.actions++;let paused:ImportSession|undefined,publishing=false,capture:{oldEpoch:number;newEpoch:number;capturedAt:string;calls:{metadata:ImportRuntimeAiCall;token:ImportRuntimeAiCall}[]}|undefined
+   try{
+-   await this.serial(async()=>{this.assert();const s=this.require(action);publishing=s.phase==='publishing';if(publishing)return;const epoch=s.epoch,generation=this.pdfGeneration,process=this.runtime.processRunId;await freshImportRuntimeTask(()=>{if(this.session!==s||s.epoch!==epoch||this.pdfGeneration!==generation||this.runtime.processRunId!==process)throw stopped();const calls=this.runtime.pending(s.id,epoch).map(token=>({metadata:{...token},token})),capturedAt=new Date().toISOString();capture=s.semanticVersion===1&&(this.jobs.size>0||!!s.runtimeAiCall||!!s.analysisGrant||!!s.classificationGrant)?{oldEpoch:epoch,newEpoch:epoch+1,capturedAt,calls}:undefined;this.stopping=true;s.epoch++;s.resumePhase=s.phase==='recognizing'?'recognizing':s.resumePhase??s.phase;paused=s})})
++   await this.serial(async()=>{if(this.candidateBlocked)return;this.assert();const s=this.require(action);publishing=s.phase==='publishing';if(publishing)return;const epoch=s.epoch,generation=this.pdfGeneration,process=this.runtime.processRunId;await freshImportRuntimeTask(()=>{if(this.session!==s||s.epoch!==epoch||this.pdfGeneration!==generation||this.runtime.processRunId!==process)throw stopped();const calls=this.runtime.pending(s.id,epoch).map(token=>({metadata:{...token},token})),capturedAt=new Date().toISOString();capture=s.semanticVersion===1&&(this.jobs.size>0||!!s.runtimeAiCall||!!s.analysisGrant||!!s.classificationGrant)?{oldEpoch:epoch,newEpoch:epoch+1,capturedAt,calls}:undefined;this.stopping=true;s.epoch++;s.resumePhase=s.phase==='recognizing'?'recognizing':s.resumePhase??s.phase;paused=s})})
+    const jobs=[...this.jobs];if(!publishing)await Promise.allSettled([...this.operations].map(async id=>this.options.cancelAi(id)));await Promise.allSettled(jobs);await this.drainPdfWork();await freshImportRuntimeTask(()=>undefined)
+    if(paused)await this.serial(async()=>{if(this.session!==paused||capture&&paused.epoch!==capture.newEpoch)return;paused.phase='paused';paused.error=undefined
+     if(capture){const remaining={pendingCalls:this.runtime.pending().length,operations:this.operations.size,workflowJobs:this.jobs.size,pdfActive:this.pdf.active,pdfRequests:this.pdfRequests.size},calls=capture.calls.map(({metadata,token}):ImportRuntimeAiCall=>token.state==='settled'?{...metadata,state:'settled',outcome:token.outcome,settledObservedAt:token.settledObservedAt}:{...metadata,state:token.state}),state=Object.values(remaining).every(n=>n===0)&&calls.every(c=>c.state==='settled')?(calls.length?'drained':'missed'):'unavailable',proof:ImportRuntimePauseProof={version:1,processRunId:this.runtime.processRunId,sessionId:paused.id,oldEpoch:capture.oldEpoch,newEpoch:capture.newEpoch,capturedAt:capture.capturedAt,barrierAt:new Date().toISOString(),state,calls,remaining};this.syncRuntime(paused);const parsed=parseImportRuntimeDiagnostics(paused.id,{...(paused.runtimeAiCall?{runtimeAiCall:paused.runtimeAiCall}:{}),runtimePauseProof:proof});if(parsed){delete paused.runtimeDiagnosticsStatus;Object.assign(paused,parsed)}else{delete paused.runtimePauseProof;paused.runtimeDiagnosticsStatus='unavailable'}}
+--- 57-baseline/tests/unit/novel-import-semantic-session.test.ts
++++ tests/unit/novel-import-semantic-session.test.ts
+@@ -79,6 +79,18 @@
+ test('NI-R02: policy migration commits before AI and omission conflicts stop the workflow',async t=>{
+  const credit=(s:Session&{analysisCheckpoint?:any},policy?:number)=>{s.originalProse=s.workingProse=s.units.filter(u=>u.kind==='body').map(u=>u.text).join('');const u=workingImportUnits(s)[0];s.artifacts=[person(u)];s.steps=importSteps(s);s.coverage={character:workingImportUnits(s).map(u=>u.id),review:[u.id],reviewFacts:['old-review-key']};s.conflicts=[castConflict(s.artifacts[0],u)];s.analysisCheckpoint={hash:importScopeHash(s,'analyze'),target:s.target,...(policy!==undefined?{reviewPolicy:policy}:{})};s.phase='conflicts';s.resumePhase='running'}
+  const identity=(s:Session)=>({id:s.id,files:s.files,units:s.units,workingProse:s.workingProse,originalProse:s.originalProse,workingRevision:s.workingRevision,workingUnits:s.workingUnits,chapters:s.chapters,title:s.title,target:s.target,budgetPolicy:s.budgetPolicy,legacyBudget:s.legacyBudget})
++ for(const route of ['migration','omission'] as const)await t.test(route+'-post-rename-rejection-adopts-and-blocks-the-committed-candidate',async()=>{
++  const blockedMessage='导入检查点已保存为暂停状态，请重新打开核对目录并重新授权后继续';let issued=false,committed:any,committedBytes='',callsAtCommit=-1,ownerCalls=0,activeController:any,prePlanArtifacts:ImportArtifact[]=[]
++  const f=await fixture(async r=>{if(r.intent==='reconcile')return {artifactEdits:[{artifactId:r.artifacts[0].id,baseHash:r.reconcile!.fragments![0].baseHash,setFacts:{age:'合成有据年龄'},reason:'只补合成缺字段',evidence:evidence(r.units[0])}],conflicts:[]};if(r.phase==='analyze')return {artifacts:[person(r.units[0])]};if(route==='omission'&&!issued){issued=true;prePlanArtifacts=structuredClone(activeController.session.artifacts);const p=r.reviewProjection![0];return {conflicts:[],missingTargets:[{kind:'character',artifactId:p.artifactId,field:'age',baseHash:p.semanticHash,unitIds:[r.units[0].id],evidence:evidence(r.units[0]),reason:'合成有据字段缺口'}]}}return {conflicts:[]}});f.useAdapter()
++  try{await f.ready();if(route==='migration')await f.rewrite(s=>credit(s));const before=await f.saved(),c=f.controller as any,path=join(f.options.root,'novel-imports',before.id,'session.json'),realOwner=c.owner.bind(c);activeController=c
++   c.owner=async(id:string)=>{await realOwner(id);ownerCalls++;const raw=await readFile(path,'utf8'),disk=JSON.parse(raw);if(!committed&&disk.revision>before.revision&&(route==='migration'?disk.analysisCheckpoint?.reviewPolicy===2:disk.semanticState?.omissions.some((o:any)=>o.done))){committed=disk;committedBytes=raw;callsAtCommit=f.requests.length;throw Error('受控提交后目录拒绝 SYNTHETIC-POST-COMMIT-SECRET')}}
++   let failure:unknown;try{await f.act('start',{consent:true})}catch(error){failure=error}await f.settle();assert.ok(committed,'real owner postcheck observed the replaced disk revision')
++   assert.deepEqual(JSON.parse(JSON.stringify(c.session)),committed,'live must adopt exactly the renamed candidate');assert.equal(await readFile(path,'utf8'),committedBytes,'no ordinary launch failure may overwrite the committed candidate');assert.equal(committed.phase,'paused');assert.equal(committed.resumePhase,'running');assert.equal(committed.error,blockedMessage);assert.equal(committed.targetNeedsAuthorization,true);assert.equal(committed.analysisCheckpoint.reviewPolicy,2);assert.equal(f.requests.length,callsAtCommit);assert.equal(f.published.length,0);if(route==='migration'){assert.equal(callsAtCommit,0);assert.ok(failure instanceof Error);assert.equal(failure.message,blockedMessage);assert.deepEqual(committed.coverage,{})}else{assert.equal(committed.semanticState.omissions[0].done,true);assert.ok(committed.semanticState.repairs[0].tasks.every((task:any)=>!task.done));assert.deepEqual(committed.artifacts,prePlanArtifacts)}
++   const models=f.options.models;f.options.models=async()=>{throw Error('blocked current must not refresh models')};const ownersBefore=ownerCalls;assert.equal((await c.act({type:'current'})).view.phase,'paused');for(const type of ['start','resume','retry','choose-target','set-title'])await assert.rejects(f.act(type,type==='choose-target'?{}:type==='set-title'?{title:'不能写入'}:{consent:true}),error=>error instanceof Error&&error.message===blockedMessage);let touched=false;await assert.rejects(c.checkpoint(c.session,c.session.epoch,()=>{touched=true;c.session.title='不能先改内存'}),error=>error instanceof Error&&error.message===blockedMessage);assert.equal(touched,false);assert.throws(()=>c.current(c.session,c.session.epoch),error=>error instanceof Error&&error.message===blockedMessage);await assert.rejects(c.save(),error=>error instanceof Error&&error.message===blockedMessage);await assert.rejects(c.ai(c.session,c.session.epoch,{phase:'review',units:[],artifacts:[]}),error=>error instanceof Error&&error.message===blockedMessage);assert.equal(ownerCalls,ownersBefore);assert.equal(f.requests.length,callsAtCommit)
++   let drains=0;const drain=c.drainPdfWork.bind(c);c.drainPdfWork=async()=>{drains++;await drain()};await c.close();assert.ok(drains>0);assert.equal(c.active,0);assert.equal(await readFile(path,'utf8'),committedBytes);assert.deepEqual(JSON.parse(JSON.stringify(c.session)),committed);f.options.models=models
++   await f.reopen();const reopened=await f.saved();for(const key of ['coverage','artifacts','conflicts','decisions','semanticState','analysisCheckpoint','workingProse','originalProse','workingRevision','workingUnits','chapters','files','units','target','budgetPolicy','legacyBudget','phase','resumePhase'] as const)assert.deepEqual((reopened as any)[key],committed[key],route+' reopens the committed '+key);assert.equal(reopened.analysisGrant,undefined);assert.equal(f.requests.length,callsAtCommit);await f.act('start',{consent:true});assert.equal((await f.settle()).phase,'completed');assert.equal((await f.saved()).workingProse,body);if(route==='omission')assert.equal((await f.saved()).artifacts.find(a=>a.id==='person-a')!.facts.age,'合成有据年龄')
++  }finally{await f.dispose()}
++ })
+  await t.test('same-draft-migrates-old-pending-after-authorization',async()=>{for(const action of ['start','resume']){const f=await fixture(async r=>r.phase==='analyze'?{artifacts:[person(r.units[0])]}:{conflicts:[]});try{await f.ready();await f.rewrite(s=>credit(s));const before=await f.saved();await f.act(action,{consent:true});assert.equal((await f.settle()).phase,'completed');const after=await f.saved() as any;assert.equal(after.analysisCheckpoint.reviewPolicy,2);assert.deepEqual(identity(after),identity(before));assert.ok(!after.coverage.reviewFacts.includes('old-review-key'));assert.ok(f.requests.some(r=>r.phase==='analyze'));assert.equal(f.published.length,1)}finally{await f.dispose()}}})
+  await t.test('all-preflight-refusals-keep-credit-and-policy',async()=>{for(const mode of ['consent','model','source','target','budget','decision','lock','unknown','candidate-save']){const f=await fixture(async r=>r.phase==='analyze'?{artifacts:[person(r.units[0])]}:{conflicts:[]});try{await f.ready();await f.rewrite(s=>{credit(s,mode==='unknown'?3:undefined);if(mode==='decision')s.decisions=[{conflictId:s.conflicts[0].id,hash:s.conflicts[0].hash,choice:'source',explanation:'必须保留作者决定'}];if(mode==='lock')s.semanticState={version:1,inputHash:'old',decisionHash:'old',workingRevision:s.workingRevision,round:0,stage:'blocked',locks:[{artifactId:'person-a',field:'occupation',value:s.artifacts[0].facts.occupation}],repairs:[],omissions:[],seenOmissions:[],persistentConflicts:[]}});const before=await f.saved();if(mode==='model')f.options.models=async()=>({text:undefined as any,review});if(mode==='budget')f.options.models=async()=>({text:{...model,contextWindow:1},review});if(mode==='source')f.options.verifySources=async()=>{throw Error('来源合成失败')};if(mode==='target')(f.controller as any).checkTarget=async()=>{throw Error('保存目录合成身份已变化')};let candidateSaves=0;if(mode==='candidate-save'){const c=f.controller as any,save=c.save.bind(c);c.save=async(candidate?:ImportSession,...rest:unknown[])=>{if(candidate){candidateSaves++;throw Error('受控候选保存失败')}return save(candidate,...rest)}}
+     await assert.rejects(f.act(mode==='consent'?'resume':'start',{consent:mode!=='consent'}),/允许|配置|来源|预算|决定|锁|策略|版本|保存/)

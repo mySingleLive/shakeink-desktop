@@ -1,0 +1,52 @@
+{
+  "scope": "69 independent review; no actual user data/app/model access",
+  "sources": [
+    {
+      "path": "desktop/main/novel-import.ts",
+      "baselineHash": "a0acd1a282eea4dc874ff45fa4b4b143cc2c2fe688880a235399bcff1d49bcd7",
+      "finalHash": "e5e6b028ccdad762366aa70cab06b3ee6d56836a1e23b1b0461dda2660145bf8"
+    },
+    {
+      "path": "tests/unit/novel-import-session.test.ts",
+      "baselineHash": "68c79febb1c96ba8cf9593ac6070c5927dfa753e75eb6c365f84b2751017c814",
+      "finalHash": "7ef8449b639f2102515aead9d08a06f994215cd938670a93498e0babe479a4c0"
+    }
+  ],
+  "coreHash": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+  "diffHash": "cd8b3745707ba86e708856da1d472247501270496aa99d417d3ed47f2f21b5ba",
+  "diffMatchesAuthor": true,
+  "mainOnlyApprovedCondition": true,
+  "oldSessionTestsByteExactAfterRemovingS13": true,
+  "commands": [
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-S1[23]:",
+        "tests/unit/novel-import-session.test.ts"
+      ],
+      "exit": 0,
+      "passed": 6,
+      "skipped": 0,
+      "log": "preanalysis-resume-independent-s12-s13.txt",
+      "logHash": "23afeb7275bc9601ccd81cd56d146052a86ef318ed710d82be36669a431e8478"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-R02:",
+        "tests/unit/novel-import-semantic-session.test.ts"
+      ],
+      "exit": 0,
+      "passed": 8,
+      "skipped": 0,
+      "log": "preanalysis-resume-independent-r02.txt",
+      "logHash": "3481ac708e0c92ae9ef05ead9efc35e377d0cfa94420ce16572020389af85d42"
+    }
+  ]
+}

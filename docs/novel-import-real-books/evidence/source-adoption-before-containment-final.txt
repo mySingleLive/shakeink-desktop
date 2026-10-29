@@ -1,0 +1,2 @@
+{"sample": "S02", "run": "exact-boundary", "frozenAt": "2026-10-26T10:53:23.011343+00:00", "expectedBodyCharacters": 11, "expectedBodySha256": "031aa08bfc398112fd2fd8a56076359fb931d2b7d3bceb1ceacb5a3ed4f9f872"}
+{"passed": 128, "failed": 0, "output": "/private/tmp/novel-import-adoption-author-final-1.json"}

@@ -1,0 +1,164 @@
+✖ LOTM-V01: explicit eight-volume headings preserve sixteen source chapters, repeated numbers and exact prose (3.549ms)
+✖ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (0.447541ms)
+▶ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership
+  ✖ metadata binds analysis and plan; legacy goldens remain byte-identical (0.951417ms)
+  ✖ manual re-confirmation derives labels and rejects moved/deleted boundaries (1.417417ms)
+  ✖ normal controller choose/set-chapters/save/reopen and old journal recovery (57.203833ms)
+✖ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership (60.11325ms)
+✖ LOTM-V05: optional volume fields and unknown chapter versions reject invalid data (0.651125ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 0
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 488.717459
+
+✖ failing tests:
+
+test at tests/unit/novel-import-volumes.test.ts:7:1363
+✖ LOTM-V01: explicit eight-volume headings preserve sixteen source chapters, repeated numbers and exact prose (3.549ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  17 !== 16
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:21:74)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 17,
+    expected: 16,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-volumes.test.ts:7:2042
+✖ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (0.447541ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '合成前言😀。\n第一部 初卷\n'
+  - '合成前言😀。\n'
+              ^
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:27:238)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '合成前言😀。\n第一部 初卷\n',
+    expected: '合成前言😀。\n',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-volumes.test.ts:7:3908
+✖ metadata binds analysis and plan; legacy goldens remain byte-identical (0.951417ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+  
+  'b541a4efaae1c5fa396a9eba37e056ea56d0acd43805b7d7766e05bb1ea412f5'
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:35:132)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:34:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'b541a4efaae1c5fa396a9eba37e056ea56d0acd43805b7d7766e05bb1ea412f5',
+    expected: 'b541a4efaae1c5fa396a9eba37e056ea56d0acd43805b7d7766e05bb1ea412f5',
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-volumes.test.ts:7:5728
+✖ manual re-confirmation derives labels and rejects moved/deleted boundaries (1.417417ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   undefined,
+  +   undefined,
+  +   undefined,
+  +   undefined
+  -   '初卷',
+  -   '初卷',
+  -   '末卷'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:41:122)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:40:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ undefined, undefined, undefined, undefined ],
+    expected: [ '初卷', '初卷', '末卷' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-volumes.test.ts:7:7231
+✖ normal controller choose/set-chapters/save/reopen and old journal recovery (57.203833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   undefined,
+  +   undefined,
+  +   undefined,
+  +   undefined
+  -   '初卷',
+  -   '初卷',
+  -   '末卷'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:50:298)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:46:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ undefined, undefined, undefined, undefined ],
+    expected: [ '初卷', '初卷', '末卷' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-volumes.test.ts:7:11371
+✖ LOTM-V05: optional volume fields and unknown chapter versions reject invalid data (0.651125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:61:137)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

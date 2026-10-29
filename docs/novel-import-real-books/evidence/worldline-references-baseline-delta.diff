@@ -1,0 +1,100 @@
+--- /private/tmp/worldline-references-88-baseline/novel-import-ai.ts
++++ desktop/service/novel-import-ai.ts
+@@ -41,7 +41,14 @@
+   // Reuse the final native validator without transforming provider values.
+   try{validateImportSemanticArtifact(item)}catch{ctx.addIssue({code:'custom',path:['facts'],message:'worldline必须提供非空lineId、lineName、timeKind(unknown/exact/window)及people(JSON字符串数组)；eventId若提供须等于artifact.id；unknown不带timeValue/timeEnd，exact需有限timeValue且无timeEnd，window需有限timeValue/timeEnd且timeEnd不小于timeValue'})}
+  }):requestedArtifact
+- return base.extend({artifacts:z.array(checkedArtifact).optional()}).strict()
++ const response=base.extend({artifacts:z.array(checkedArtifact).optional()}).strict()
++ if(kind!=='worldline')return response
++ return response.superRefine((result,ctx)=>{
++  if(ctx.issues.length||!result.artifacts?.length)return
++  // The provider sees a filtered catalog; validate against the original full
++  // request and complete batch without changing references or creating data.
++  try{validateSemanticLinks(request,result.artifacts)}catch{ctx.addIssue({code:'custom',path:['artifacts'],message:'people只能引用已提供角色id或唯一name；父级只能为同类既有或本批真实节点，ID身份不可混用。缺可引用角色时保留有据事件及人物原称谓、认知归属在text/attribution，people只填已存在可引用部分；不造外键、不删改正文、不丢有据事件；空people不证明角色或两线完整，仍须完整性审核补齐'})}
++ })
+ }
+ /** Internal service generation bridge. Production resolves its own model/user;
+  * tests may inject only generateJSON's existing generateText dependency. */
+--- /private/tmp/worldline-references-88-baseline/novel-import-request-schema.test.ts
++++ tests/unit/novel-import-request-schema.test.ts
+@@ -185,7 +185,7 @@
+  ]
+  const call=(raw:unknown,input:ImportAiRequest=r)=>ai.runImportAi(input,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>structuredClone(raw)})
+  await t.test('complete artifacts have the original pure-helper acceptance set and preserve raw values',async()=>{
+-  for(const item of cases){const a={...event,facts:item.facts},snapshot=structuredClone(a),raw={artifacts:[a]};let accepted=true;try{h.validateImportSemanticArtifact(a)}catch{accepted=false}assert.equal(accepted,item.valid,item.name+' independent literal expectation');const checked=factory(r).safeParse(raw);assert.equal(checked.success,item.valid,item.name+' schema reuses the strict helper');if(checked.success)assert.deepEqual(checked.data,raw,'native precheck must not trim, normalize or replace values');else {assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',0,'facts']]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}assert.deepEqual(a,snapshot);assert.deepEqual(r,before)}
++  for(const item of cases){const a={...event,facts:item.facts},snapshot=structuredClone(a),raw={artifacts:[a]},input:ImportAiRequest=item.name==='people-raw-strings'?{...r,entities:[...(r.entities??r.artifacts.map(a=>({id:a.id,kind:a.kind,name:a.name}))),{id:'j04-space-name-character',kind:'character',name:' '+existing.name+' '}]}:r;let accepted=true;try{h.validateImportSemanticArtifact(a)}catch{accepted=false}assert.equal(accepted,item.valid,item.name+' independent literal expectation');const checked=factory(input).safeParse(raw);assert.equal(checked.success,item.valid,item.name+' schema reuses the strict helper');if(checked.success)assert.deepEqual(checked.data,raw,'native precheck must not trim, normalize or replace values');else {assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',0,'facts']]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}assert.deepEqual(a,snapshot);assert.deepEqual(r,before)}
+  })
+  await t.test('production bridge gives native failures exactly one safe bounded correction',async()=>{
+   assert.ok(guidance.length<=250,'the fixed native contract fits the existing feedback message limit')
+@@ -197,9 +197,9 @@
+   }
+   let firstGood=0;assert.deepEqual(await bridge(r,context,new AbortController().signal,prompt,{generateText:async()=>{firstGood++;return {text:JSON.stringify(good),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}}}),good);assert.equal(firstGood,1);assert.deepEqual(await call(good),good)
+  })
+- await t.test('formatted unknown references stay schema-valid and fail only at the existing graph gate',async()=>{
++ await t.test('formatted unknown worldline references fail early while native and other-phase gates remain',async()=>{
+   const unknownReferences:Record<string,string>[]=[{people:'["unknown-character"]'},{parentId:'unknown-parent'}]
+-  for(const patch of unknownReferences){const raw={artifacts:[{...event,facts:{...facts,...patch}}]};h.validateImportSemanticArtifact(raw.artifacts[0]);assert.equal(factory(r).safeParse(raw).success,true);await assert.rejects(call(raw),/引用|角色/)}
++  for(const patch of unknownReferences){const raw={artifacts:[{...event,facts:{...facts,...patch}}]};h.validateImportSemanticArtifact(raw.artifacts[0]);assert.equal(factory(r).safeParse(raw).success,false);await assert.rejects(call(raw),/结构|类别/)}
+   const invalid={artifacts:[{...event,facts:cases.find(item=>item.name==='missing-line-id')!.facts}]},legacy={...r,semanticVersion:undefined,selectedTargets:undefined};assert.equal(factory(legacy).safeParse(invalid).success,true)
+   const stageInputs=[{...r,phase:'classify' as const},{...r,phase:'review' as const},{...r,phase:'patch' as const},{...r,intent:'reconcile' as const}];for(const input of stageInputs){assert.equal(factory(input),factory(stageInputs[1]));assert.equal(factory(input).safeParse(invalid).success,true)}
+   const narrative=knowledgeRequest('narrative'),badNarrative={artifacts:[{...event,kind:'narrative' as const,facts:{reliability:'客观事实'}}]};assert.equal(factory(narrative).safeParse(badNarrative).success,true,'narrative native validation is not moved in this change');await assert.rejects(call(badNarrative,narrative),/叙事/)
+@@ -256,10 +256,16 @@
+   ['Server Error','模型服务返回服务器错误提示，请稍后重试'],
+   ['Server Overloaded','模型服务返回服务过载提示，请稍后重试']
+  ] as const
+- await t.test('actual valid worldline requests reach both distinct character-reference late failures',async()=>{
++ await t.test('the original worldline fixtures now reject early after native format validation',async()=>{
++  for(const item of [{people:foreignId,context:[]},{people:scene.id,context:[scene]}]){
++   const input={...knowledgeRequest('worldline'),artifacts:[structuredClone(existing),...structuredClone(item.context)]},before=structuredClone(input),a={...knowledgeArtifact('worldline',{reliability:'客观事实',people:JSON.stringify([item.people])}),id:'j05-worldline-event'},raw={artifacts:[a]},snapshot=structuredClone(raw);let generated=0
++   h.validateImportSemanticArtifact(a);assert.equal(factory(input).safeParse(raw).success,false);await assert.rejects(ai.runImportAi(input,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>{generated++;return raw}}),error=>error instanceof Error&&error.message==='模型返回结构或类别无效，请重试');assert.equal(generated,1);assert.deepEqual(input,before);assert.deepEqual(raw,snapshot)
++  }
++ })
++ await t.test('actual valid narrative requests reach both distinct character-reference late failures',async()=>{
+   const observations:{message:string;safe:string}[]=[]
+   for(const item of [{people:foreignId,expected:'角色引用不存在或同名不明确',context:[]},{people:scene.id,expected:'角色引用类型无效',context:[scene]}]){
+-   const input={...knowledgeRequest('worldline'),artifacts:[structuredClone(existing),...structuredClone(item.context)]},before=structuredClone(input),a={...knowledgeArtifact('worldline',{reliability:'客观事实',people:JSON.stringify([item.people])}),id:'j05-worldline-event'},raw={artifacts:[a]},rawBefore=structuredClone(raw),controller=new AbortController(),roles:string[]=[];let generated=0,asserted=0,output:unknown,error:unknown
++   const input={...knowledgeRequest('narrative'),artifacts:[structuredClone(existing),...structuredClone(item.context)]},before=structuredClone(input),a={...knowledgeArtifact('narrative',{reliability:'客观事实',narrator:item.people}),id:'j05-narrative-point'},raw={artifacts:[a]},rawBefore=structuredClone(raw),controller=new AbortController(),roles:string[]=[];let generated=0,asserted=0,output:unknown,error:unknown
+    h.validateImportSemanticArtifact(a);assert.deepEqual(factory(input).parse(raw),raw,'complete native format must pass before the graph gate')
+    try{output=await ai.runImportAi(input,controller.signal,{resolve:async(role,id)=>{roles.push(role);assert.equal(id,model.id);return model},assert:async()=>{asserted++},generate:async(actual,pinned,signal)=>{generated++;assert.equal(actual,input);assert.equal(pinned,model);assert.equal(signal,controller.signal);return raw}})}catch(caught){error=caught}
+    assert.ok(error instanceof Error,'the actual graph gate rejects instead of producing an accepted result');assert.equal(error.message,item.expected,'no earlier schema/native/authorization failure may stand in for the graph error');assert.equal(output,undefined);assert.equal(generated,1);assert.equal(asserted,1);assert.deepEqual(roles,['text']);assert.deepEqual(input,before);assert.deepEqual(raw,rawBefore)
+@@ -283,3 +289,39 @@
+   const lookalike=Object.create(null,{message:{get(){throw Error('non-Error message must not be read')}}});assert.equal(isolated.safeError(lookalike),generic);assert.equal(isolated.safeError(null),generic);assert.deepEqual(Object.getOwnPropertyNames(isolated),[])
+  })
+ })
++
++test('NI-J06: worldline reference checks use the trusted full catalog within bounded correction',async t=>{
++ const h=await import('../../desktop/core/novel-import-semantics'),factory=api.importAiResponseSchema,bridge=api.generateImportAiJson;assert.ok(factory);assert.ok(bridge)
++ const secret='REFERENCE-NAME-SYNTHETIC-SECRET',distant='local-only-character',base=knowledgeRequest('worldline'),r:ImportAiRequest={...base,entities:[{id:existing.id,kind:'character',name:existing.name},{id:'ambiguous-a',kind:'character',name:secret},{id:'ambiguous-b',kind:'character',name:secret},{id:'catalog-place',kind:'scene',name:'合成目录地点',entityType:'PLACE'},{id:'catalog-item',kind:'item',name:'合成目录物品'},{id:'catalog-event',kind:'worldline',name:'合成目录父事件'},{id:distant,kind:'character',name:'目录外合成人物',unitIds:['outside-synthetic-unit']}]},before=structuredClone(r)
++ const event:ImportArtifact={...knowledgeArtifact('worldline',{reliability:'客观事实',people:JSON.stringify([existing.id])}),id:'j06-event',text:'合成全文中有据的事件与原称谓保留'},good={artifacts:[event]},context={userId:'synthetic-reference-user',resolvedModel:{} as ResolvedModel},prompt=importAiPrompt(r),guidance='people只能引用已提供角色id或唯一name；父级只能为同类既有或本批真实节点，ID身份不可混用。缺可引用角色时保留有据事件及人物原称谓、认知归属在text/attribution，people只填已存在可引用部分；不造外键、不删改正文、不丢有据事件；空people不证明角色或两线完整，仍须完整性审核补齐'
++ const candidate=(facts:Record<string,string>,id=event.id):ImportArtifact=>({...event,id,facts:{...event.facts,...facts}}),badCases=[
++  {name:'unknown-character',artifacts:[candidate({people:JSON.stringify([foreignId])})]},
++  {name:'ambiguous-name',artifacts:[candidate({people:JSON.stringify([secret])})]},
++  {name:'non-character-id',artifacts:[candidate({people:'["catalog-place"]'})]},
++  {name:'wrong-parent-type',artifacts:[candidate({parentId:existing.id})]},
++  {name:'unknown-parent',artifacts:[candidate({parentId:'unknown-parent'})]},
++  {name:'batch-cycle',artifacts:[candidate({parentId:'cycle-b'},'cycle-a'),candidate({parentId:'cycle-a'},'cycle-b')]},
++  {name:'identity-kind-collision',artifacts:[candidate({},'catalog-item')]},
++  {name:'identity-name-collision',artifacts:[candidate({},'catalog-event')]}
++ ]
++ const generated=(raw:unknown)=>({text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}),call=(input:ImportAiRequest,raw:unknown)=>ai.runImportAi(input,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>structuredClone(raw)})
++ await t.test('real bridge corrects graph-invalid complete responses only once with fixed safe feedback',async()=>{
++  assert.ok(guidance.length<=250)
++  for(const item of badCases){
++   const raw={artifacts:item.artifacts},snapshot=structuredClone(raw),prompts:string[]=[],controller=new AbortController();for(const a of item.artifacts)h.validateImportSemanticArtifact(a)
++   const output=await bridge(r,context,controller.signal,prompt,{generateText:async opts=>{assert.equal(Object.hasOwn(opts,'schema'),false);assert.equal(Object.hasOwn(opts,'response_format'),false);assert.equal(opts.abortSignal,controller.signal);assert.equal(opts.role,'text');assert.equal(opts.action,'novel.import.analyze');assert.equal(opts.userId,context.userId);assert.equal(opts.resolvedModel,context.resolvedModel);prompts.push('prompt'in opts?opts.prompt:'');return generated(prompts.length===1?raw:good)}})
++   assert.deepEqual(output,good,item.name);assert.equal(prompts.length,2,item.name+' has one existing correction');assert.ok(prompts[1].startsWith(prompts[0]));const feedback=prompts[1].slice(prompts[0].length);assert.ok(feedback.includes('artifacts'));assert.ok(feedback.includes(guidance));for(const value of [secret,currentId,foreignId,existing.id,existing.name,distant,event.id,event.name,event.text,sourceText,model.endpoint,'角色引用不存在或同名不明确','模型实体标识与原类型或父级身份冲突'])assert.ok(!feedback.includes(value),item.name+' does not echo any raw identifier, name, source or caught error');assert.ok(Buffer.byteLength(prompts[1])-Buffer.byteLength(prompt)<=IMPORT_JSON_WRAPPER_RESERVE_BYTES);assertImportFixedPromptReserve(prompt,serializeImportAiPayload(r))
++   const checked=factory(r).safeParse(raw);assert.equal(checked.success,false);if(!checked.success){assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts']]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}await assert.rejects(call(r,raw),/结构|类别/)
++   let failed=0;await assert.rejects(bridge(r,context,controller.signal,prompt,{generateText:async()=>{failed++;return generated(raw)}}),error=>error instanceof StructuredGenerationError&&error.kind==='invalid_schema'&&error.invalidFields.includes('artifacts'));assert.equal(failed,2,item.name+' has no third attempt');assert.deepEqual(raw,snapshot);assert.deepEqual(r,before)
++  }
++ })
++ await t.test('valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries',async()=>{
++  const variants=[good,{artifacts:[candidate({people:' [ "'+existing.name+'" ] '})]},{artifacts:[candidate({people:JSON.stringify([distant])})]},{artifacts:[candidate({parentId:'batch-parent'}),candidate({people:'[]'},'batch-parent')]},{artifacts:[candidate({parentId:'catalog-event'})]},{artifacts:[candidate({people:'[]',attribution:'合成原称谓与认知归属保留'})]}]
++  const provider=JSON.parse(serializeImportAiPayload(r));assert.ok(!provider.entities.some((e:{id:string})=>e.id===distant),'provider receives a filtered catalog, not the full private validation catalog');assert.ok(r.entities!.some(e=>e.id===distant))
++  for(const raw of variants){const snapshot=structuredClone(raw);assert.deepEqual(factory(r).parse(raw),raw);let calls=0;const output=await bridge(r,context,new AbortController().signal,prompt,{generateText:async()=>{calls++;return generated(raw)}});assert.equal(calls,1);assert.deepEqual(output,raw);assert.deepEqual(await call(r,output),raw);assert.ok(output.artifacts!.every(a=>a.kind==='worldline'),'catalog-only characters never become invented output artifacts');assert.deepEqual(raw,snapshot);assert.deepEqual(r,before)}
++ })
++ await t.test('empty results keep the original late gate and narrative references stay at the original late helper',async()=>{
++  const malformed={...r,entities:[{id:'bad-catalog',kind:'invalid-kind',name:'合成错误目录'}]} as unknown as ImportAiRequest,empty={artifacts:[],notFound:true};assert.deepEqual(factory(malformed).parse(empty),empty,'empty responses must not invoke or swallow the graph precheck');await assert.rejects(call(malformed,empty),error=>error instanceof Error&&error.message==='语义实体目录类型无效')
++  const narrative=knowledgeRequest('narrative'),raw={artifacts:[{...knowledgeArtifact('narrative',{reliability:'客观事实',narrator:foreignId}),id:'j06-narrative'}]};h.validateImportSemanticArtifact(raw.artifacts[0]);assert.deepEqual(factory(narrative).parse(raw),raw);await assert.rejects(call(narrative,raw),error=>error instanceof Error&&error.message==='角色引用不存在或同名不明确');assert.deepEqual(r,before)
++ })
++})

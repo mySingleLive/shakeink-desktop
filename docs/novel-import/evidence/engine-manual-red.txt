@@ -1,0 +1,32 @@
+✖ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (73.880375ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 280.080375
+
+✖ failing tests:
+
+test at tests/unit/novel-import-session.test.ts:2:4449
+✖ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (73.880375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'body'
+  - ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:23:267)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'body' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,5 @@
+
+> shakeink@0.1.0 generate:commands
+> node scripts/generate-command-catalogs.mjs
+
+{"monacoVersion":"0.56.0","commands":{"darwin":422,"win32":406}}

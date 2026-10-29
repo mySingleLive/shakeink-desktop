@@ -1,0 +1,41 @@
+--- 67-baseline/desktop/main/novel-import.ts
++++ desktop/main/novel-import.ts
+@@ -391,7 +391,7 @@
+   if(!['paused','failed','conflicts','confirm'].includes(s.phase))throw Error('当前没有可继续的导入任务')
+   if(s.targetNeedsAuthorization){s.phase='confirm';s.error='请重新选择并授权原保存目录，再继续导入';return}
+   if(s.publication){return this.start(s,false,true)}
+-  if(s.semanticVersion===1&&this.needsAi(s)&&s.resumePhase!=='recognizing'&&(s as CheckpointSession).analysisCheckpoint?.reviewPolicy!==2)return this.start(s,!!consent,true)
++  if(s.semanticVersion===1&&this.needsAi(s)&&!['recognizing','source','select','confirm'].includes(s.resumePhase??'')&&(s as CheckpointSession).analysisCheckpoint?.reviewPolicy!==2)return this.start(s,!!consent,true)
+   if(s.conflicts.some(c=>c.status==='pending')){s.phase='conflicts';return}
+   if(s.resumePhase&&['source','select','confirm'].includes(s.resumePhase)){s.phase=s.resumePhase;s.resumePhase=undefined;return}
+   if(s.resumePhase==='recognizing'){
+--- 67-baseline/tests/unit/novel-import-session.test.ts
++++ tests/unit/novel-import-session.test.ts
+@@ -87,6 +87,27 @@
+   await control(restored,'classify',{mode:'local',consent:false});assertRetained(JSON.parse(await readFile(path,'utf8')) as ImportSession);assert.equal(requests.length,callCount);assert.equal(f.published,0)
+  }finally{await restored?.close();await f.dispose()}
+ })
++
++test('NI-S13: preanalysis drafts resume their exact review stage without consent or AI',async t=>{
++ const text='合成来源前言😀。\r\n\r\n合成正文甲。\r\n合成正文末句。',targets=['outline','theme','style','world','character','scene','item','foreshadow','goldenFinger','trope','worldline','narrative']
++ const fields=['id','title','files','units','originalProse','workingProse','workingRevision','workingUnits','chapters','chapterDetection','selected','targets','infer','coverage','artifacts','decisions','conflicts','patches','notFound','steps','budgetPolicy','legacyBudget','semanticState','publication','analysisCheckpoint','classificationGrant','analysisGrant','target','runtimeAiCall','runtimePauseProof','runtimeDiagnosticsStatus']
++ const stable=(s:ImportSession)=>Object.fromEntries(fields.map(key=>[key,(s as unknown as Record<string,unknown>)[key]]))
++ for(const stage of ['source','select','confirm'] as const)await t.test(stage,async()=>{
++  let calls=0;const f=await fixture([source(text)],async()=>{calls++;throw Error('分析前恢复不应发模型请求')});let restored:NovelImportController|undefined
++  try{await f.act('choose',{mode:'files'});if(stage!=='source'){await f.act('classify',{mode:'local',consent:false});await f.act('select',{selected:['body'],targets,infer:true})}if(stage==='confirm')await f.act('set-title',{title:'合成分析前草稿'})
++   const before=await saved(f),path=join(f.root,'novel-imports',before.id,'session.json');assert.equal(before.phase,stage);assert.equal(before.target,undefined);assert.equal(before.infer,true);assert.equal(before.targets.length,12);assert.deepEqual([...before.targets].sort(),[...targets].sort());assert.equal(selectedImportUnits(before).filter(unit=>unit.kind==='body').map(unit=>unit.text).join(''),text);assert.equal((before as ImportSession&{analysisCheckpoint?:unknown}).analysisCheckpoint,undefined)
++   await f.controller.close();const paused=JSON.parse(await readFile(path,'utf8')) as ImportSession;assert.equal(paused.phase,'paused');assert.equal(paused.resumePhase,stage);assert.deepEqual(stable(paused),stable(before))
++   restored=new NovelImportController(f.options);await restored.initialize();assert.equal((await restored.act({type:'current'})).view?.phase,'paused');const response=await control(restored,'resume');assert.equal(response.view?.phase,stage);assert.equal(restored.active,0);const after=JSON.parse(await readFile(path,'utf8')) as ImportSession;assert.equal(after.phase,stage);assert.equal(after.resumePhase,undefined);assert.deepEqual(stable(after),stable(before));assert.equal(calls,0);assert.equal(f.published,0)
++  }finally{await restored?.close();await f.dispose()}
++ })
++ await t.test('existing-target-still-requires-explicit-reauthorization-first',async()=>{
++  let calls=0;const f=await fixture([source(text)],async()=>{calls++;throw Error('重授权目录不能自动开始分析')});let restored:NovelImportController|undefined
++  try{await f.act('choose',{mode:'files'});await f.act('classify',{mode:'local',consent:false});await f.act('select',{selected:['body'],targets,infer:true});await f.act('choose-target');const before=await saved(f),path=join(f.root,'novel-imports',before.id,'session.json');assert.ok(before.target);await f.controller.close();restored=new NovelImportController(f.options);await restored.initialize()
++   for(let i=0;i<2;i++){const response=await control(restored,'resume');assert.equal(response.view?.phase,'confirm');assert.equal(response.view?.targetReady,false);assert.match(response.view?.error??'',/原保存目录|授权/);const paused=JSON.parse(await readFile(path,'utf8')) as ImportSession;assert.equal(paused.targetNeedsAuthorization,true);assert.equal(paused.resumePhase,'select');assert.deepEqual(stable(paused),stable(before));assert.equal(calls,0);assert.equal(f.published,0)}
++   assert.equal((await control(restored,'choose-target')).view?.targetReady,true);const resumed=await control(restored,'resume');assert.equal(resumed.view?.phase,'select');const after=JSON.parse(await readFile(path,'utf8')) as ImportSession;assert.deepEqual(stable(after),stable(before));assert.equal(after.resumePhase,undefined);assert.equal(calls,0);assert.equal(f.published,0)
++  }finally{await restored?.close();await f.dispose()}
++ })
++})
+ const factReview=(r:ImportAiRequest)=>r.phase==='review'&&r.instruction?.startsWith('这是设定完整文本')
+ function expectedReviewTasks(s:ImportSession,budget:number){
+  const units=[...workingImportUnits(s),...selectedImportUnits(s).filter(u=>u.kind!=='body')],lookup=new Map(units.map(u=>[u.id,u])),tasks:{key:string;units:ImportUnit[];artifact:ImportArtifact}[]=[]

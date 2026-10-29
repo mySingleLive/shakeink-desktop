@@ -1,0 +1,19 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(checks.length>15)
+
+    at positive (/private/tmp/real-novel-semantic-assertions-check.mts:33:121)
+    at <anonymous> (/private/tmp/real-novel-semantic-assertions-check.mts:81:435) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

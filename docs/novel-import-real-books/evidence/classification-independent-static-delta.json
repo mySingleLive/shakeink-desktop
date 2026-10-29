@@ -1,0 +1,7 @@
+{
+  "scope": "Static in-memory reverse-delta SHA verification only; no production code execution or source writes",
+  "mainRestoredPrechangeSha256": "04ef2051cc12c6b53b92b2b6787c166ed7f317bb89417115b89b732ed6585147",
+  "mainKnownDeltaCount": 3,
+  "payloadRestoredPrechangeSha256": "9e26d2c5751550b6410b3b6d00a3e220e4b917ac7b5124fad493e25b75e76051",
+  "literalConstantMatchesPreimplementationMetadata": true
+}

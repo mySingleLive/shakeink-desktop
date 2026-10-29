@@ -1,0 +1,41 @@
+✔ NI-A01: context-aware batching preserves every unit and rejects unsafe unit sizes (2.031541ms)
+✔ NI-A02: role and immutable model authorization are checked before and after generation (2.769417ms)
+✔ NI-A03: missing ids, unknown categories and fabricated evidence are rejected (1.955541ms)
+✔ NI-A04: operation cancellation aborts only its worker-local signal and drains registry (0.279791ms)
+✔ NI-D01: every source character and chapter boundary survives safe splitting (6.783042ms)
+✔ NI-D02: classification coverage rejects gaps, overlaps and unclassified ranges (0.529833ms)
+✔ NI-D03: source selection and allowed inference are independent (0.460666ms)
+✔ NI-D04: source setting artifacts retain exact text and real category distinctions (1.883333ms)
+✔ NI-D05: contradictory source/body facts create evidence-bound conflicts (1.121625ms)
+✔ NI-D06: fabricated evidence, foreign ids and incomplete batches fail closed (0.239958ms)
+✔ NI-D07: conflict options match the actual presence of prose and source settings (0.079083ms)
+✔ NI-D08: patches protect immutable original prose, bind revisions and invalidate later grants (0.386875ms)
+✔ NI-F01: TXT/MD decoding preserves CRLF, spaces and Unicode; legacy encoding needs explicit confirmation (36.286833ms)
+✔ NI-F02: actual licensed OLE DOC extracts Unicode and separate notes/headers without Office or silent attachment loss (7.834875ms)
+✔ NI-F03: real DOCX container retains body/table/textbox and all local note/comment/header parts (18.094875ms)
+✔ NI-F04: actual PDF text page extraction preserves page order and rejects any image-only/missing-text page (1179.103875ms)
+✔ NI-F05: HTML/HTM extraction is inert, keeps entities/block/table text and never follows external resources (1.036083ms)
+✔ NI-F06: folder recursion is naturally ordered, duplicates and skipped files remain visible without overwriting sources (15.216417ms)
+✔ NI-F07: protected roots, symlinks and source inode/content replacement fail closed (23.199042ms)
+✔ NI-F08: oversized files/ZIP expansion and partial parse failure are explicit and never truncated successes (1404.648291ms)
+✔ NI-L01: actual native source pickers keep file/folder modes separate and preload only forwards semantic actions (82.622709ms)
+✔ NI-L02: actual import IPC enforces trusted frame, ready owner, strict action and business admission before any file/model work (25.951833ms)
+✔ NI-L03: actual worker counts import AI jobs, cancels only matching operation, and awaits done before closing DB (8.59175ms)
+✔ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (20.236292ms)
+✔ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (234.108542ms)
+✔ NI-S02: full-book batches checkpoint successful work and retry the failed batch (291.89925ms)
+✔ NI-S03: requested stages run in reverse-creation order and disabled stages skip (349.348583ms)
+✔ NI-S04: no prose and inference-disabled pure-copy have zero AI calls including review (107.018834ms)
+✔ NI-S05: source/body contradictions block publication and retaining a setting needs reviewed explanation (203.654625ms)
+✔ NI-S06: prose patches preserve original and invalidate analysis authorization (129.805833ms)
+✔ NI-S07: pause drains an operation and a late success never advances stale epoch (26.893792ms)
+✔ NI-S08: journal restores checkpoints but target authorization must be renewed (176.100333ms)
+✔ NI-S09: discard preserves unknown draft files and complete does not block new import (85.127375ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3430.847333

@@ -1,0 +1,99 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (48.8455ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (18.265833ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.055208ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.819917ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (7.693166ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.661583ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (11.805292ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✖ complete artifacts have the original pure-helper acceptance set and preserve raw values (4.294542ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (21.385125ms)
+  ✖ formatted unknown references stay schema-valid and fail only at the existing graph gate (0.55225ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.286791ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.148709ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.178166ms)
+✖ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (28.906708ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✖ actual valid worldline requests reach both distinct character-reference late failures (0.545625ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.083792ms)
+✖ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (1.917042ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (20.012417ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (4.8295ms)
+  ✔ empty results keep the original late gate and narrative references stay at the original late helper (0.963375ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (26.31725ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 16
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 974.890125
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:41796
+✖ complete artifacts have the original pure-helper acceptance set and preserve raw values (4.294542ms)
+  AssertionError [ERR_ASSERTION]: people-raw-strings schema reuses the strict helper
+  
+  false !== true
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:188:317)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:187:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:45771
+✖ formatted unknown references stay schema-valid and fail only at the existing graph gate (0.55225ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:202:160)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:200:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:56333
+✖ actual valid worldline requests reach both distinct character-reference late failures (0.545625ms)
+  ZodError: [
+    {
+      "code": "custom",
+      "path": [
+        "artifacts"
+      ],
+      "message": "people只能引用已提供角色id或唯一name；父级只能为同类既有或本批真实节点，ID身份不可混用。缺可引用角色时保留有据事件及人物原称谓、认知归属在text/attribution，people只填已存在可引用部分；不造外键、不删改正文、不丢有据事件；空people不证明角色或两线完整，仍须完整性审核补齐"
+    }
+  ]
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:263:72)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:259:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)

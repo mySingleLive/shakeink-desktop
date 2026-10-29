@@ -1,0 +1,92 @@
+--- before/tests/unit/novel-import-request-schema.test.ts
++++ after/tests/unit/novel-import-request-schema.test.ts
+@@ -87,6 +87,12 @@
+ test('NI-J03: evidence location uses the existing bounded correction without transforming quotes',async t=>{
+  const bridge=api.generateImportAiJson,factory=api.importAiResponseSchema;assert.ok(bridge);assert.ok(factory)
+  const context={userId:'synthetic-evidence-user',resolvedModel:{} as ResolvedModel},quoteSecret='EVIDENCE-QUOTE-SYNTHETIC-SECRET',guidance='证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
++ const messages:Record<string,string>={
++  'unknown-unit':guidance+'；unitId必须逐字取自本次输入单元；quote只能复制该单元text，不得借其它单元',
++  'too-short':guidance+'；此非精确引文非空白字符不足8，不能恢复排版；从声明单元text复制原文，保留空白与标点；精确短引文仍允许',
++  ambiguous:guidance+'；排版恢复出现多个命中；从声明单元text复制含必要上下文的连续原文并保留原排版，不得任选位置',
++  'no-match':guidance+'；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点'
++ }
+  const r=request(),before=structuredClone(r),prompt=importAiPrompt(r),bad={artifacts:[{...scene,evidence:[{unitId:currentId,quote:quoteSecret}]}]},badBefore=structuredClone(bad),good=structuredClone(result)
+  const generated=(raw:unknown)=>({text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'})
+  const late=(input:ImportAiRequest,raw:unknown)=>ai.runImportAi(input,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>structuredClone(raw)})
+@@ -126,7 +132,7 @@
+    const units=[{...r.units[0],text:item.text,end:item.text.length},...(item.second?[{...r.units[0],id:'second-synthetic-unit',text:item.second,start:item.text.length,end:item.text.length+item.second.length}]:[])],input={...request(),units},snapshot=structuredClone(input),raw={artifacts:[{...scene,evidence:[{unitId:item.unitId??currentId,quote:item.quote}]}]},rawBefore=structuredClone(raw),legacy={...input,semanticVersion:undefined,selectedTargets:undefined},checked=factory(input).safeParse(raw)
+    assert.equal(checked.success,!item.error,item.name+' early schema has the original acceptance set');assert.equal(factory(legacy).safeParse(raw).success,true,item.name+' does not alter the legacy schema')
+    if(item.error){
+-    assert.equal(checked.success,false);if(!checked.success){assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',0,'evidence',0]]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}
++    assert.equal(checked.success,false);if(!checked.success){assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',0,'evidence',0]]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[messages[item.error]])}
+     await assert.rejects(late(input,raw),/结构|类别/,item.name);await assert.rejects(late(legacy,raw),error=>error instanceof Error&&error.message==='模型证据无法定位（'+item.error+'）',item.name+' original late matcher still rejects')
+    }else{
+     assert.ok(checked.success);assert.deepEqual(checked.data,raw,item.name+' schema only checks; no quote transformation')
+@@ -139,7 +145,7 @@
+  })
+  await t.test('each entry has its own safe path and other stages keep their original schema',async()=>{
+   const raw={artifacts:[structuredClone(scene),{...scene,id:'second-synthetic-artifact',evidence:[...scene.evidence,{unitId:foreignId,quote:quoteSecret}]}]},rawBefore=structuredClone(raw),checked=factory(r).safeParse(raw)
+-  assert.equal(checked.success,false);if(!checked.success){assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',1,'evidence',1]]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}
++  assert.equal(checked.success,false);if(!checked.success){assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',1,'evidence',1]]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[messages['unknown-unit']])}
+   const simultaneous={artifacts:[{...bad.artifacts[0],kind:'MODEL-KIND-SYNTHETIC-SECRET',sourceUnitIds:[currentId,foreignId]}]},multiple=factory(r).safeParse(simultaneous);assert.equal(multiple.success,false);if(!multiple.success){assert.deepEqual(multiple.error.issues.map(issue=>issue.path.join('.')).sort(),['artifacts.0.evidence.0','artifacts.0.kind','artifacts.0.sourceUnitIds']);for(const issue of multiple.error.issues)for(const secret of [quoteSecret,currentId,foreignId,'MODEL-KIND-SYNTHETIC-SECRET'])assert.ok(!issue.message.includes(secret))}
+   const stages=[{...r,phase:'classify' as const},{...r,phase:'review' as const},{...r,phase:'patch' as const},{...r,intent:'reconcile' as const}]
+   for(const input of stages){assert.equal(factory(input),factory(stages[1]));assert.deepEqual(factory(input).parse(bad),bad,'evidence schema is not widened to other phases or reconcile')}
+@@ -455,3 +461,58 @@
+   for(const raw of [{artifacts:[{...a,evidence:[{unitId:currentId,quote:'无此原文-'+secret}]}]},{artifacts:[{...a,facts:{...a.facts,reliability:secret}}]}]){const checked=factory(r).safeParse(raw);assert.equal(checked.success,false);if(!checked.success)assert.ok(checked.error.issues.every(issue=>issue.message!==guidance));const result=await invoke(r,[raw]);assert.equal(result.calls,2);assert.equal(result.output,undefined);assert.ok(result.error instanceof Error);assert.ok(!result.prompts[1].slice(result.prompts[0].length).includes(guidance))}assert.deepEqual(r,before)
+  })
+ })
++
++test('NI-J10: evidence correction identifies fixed anchor reasons without changing source authority',async t=>{
++ const bridge=api.generateImportAiJson,factory=api.importAiResponseSchema;assert.ok(bridge);assert.ok(factory)
++ const prefix='证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
++ const messages:Record<string,string>={
++  'unknown-unit':prefix+'；unitId必须逐字取自本次输入单元；quote只能复制该单元text，不得借其它单元',
++  'too-short':prefix+'；此非精确引文非空白字符不足8，不能恢复排版；从声明单元text复制原文，保留空白与标点；精确短引文仍允许',
++  ambiguous:prefix+'；排版恢复出现多个命中；从声明单元text复制含必要上下文的连续原文并保留原排版，不得任选位置',
++  'no-match':prefix+'；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点'
++ }
++ const cases=[
++  {reason:'unknown-unit',text:'甲乙丙丁戊己庚辛。',quote:'甲乙丙丁戊己庚辛',id:foreignId},
++  {reason:'too-short',text:'甲乙\r\n丙丁。',quote:'甲乙丙丁',id:currentId},
++  {reason:'ambiguous',text:'甲乙\r\n丙丁戊己庚辛。甲乙\t丙丁戊己庚辛',quote:'甲乙丙丁戊己庚辛',id:currentId},
++  {reason:'no-match',text:sourceText,quote:'UNKNOWN-QUOTE-SECRET\n"https://private.invalid"',id:currentId}
++ ]
++ const context={userId:'evidence-feedback-synthetic',resolvedModel:{} as ResolvedModel}
++ const generated=(raw:unknown)=>({text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'})
++ for(const item of cases)await t.test(item.reason+' uses the production bridge and preserves exact late-gate evidence',async()=>{
++  const r={...request(),units:[{...request().units[0],text:item.text,end:item.text.length}]},before=structuredClone(r),prompt=importAiPrompt(r)
++  const bad={artifacts:[{...scene,evidence:[{unitId:item.id,quote:item.quote}]}]},badBefore=structuredClone(bad)
++  const good={artifacts:[{...scene,evidence:[{unitId:currentId,quote:item.text.slice(0,1)}]}]},goodBefore=structuredClone(good),prompts:string[]=[],controller=new AbortController()
++  const invoke=(persistBad=false)=>ai.runImportAi(r,controller.signal,{resolve:async()=>model,assert:async()=>{},generate:async(input,_model,signal,fixed)=>bridge(input,context,signal,fixed,{generateText:async opts=>{
++   assert.equal(opts.abortSignal,controller.signal);assert.equal(opts.resolvedModel,context.resolvedModel);assert.equal(opts.role,'text');assert.equal(opts.action,'novel.import.analyze');assert.equal(Object.hasOwn(opts,'schema'),false)
++   prompts.push('prompt'in opts?opts.prompt:'');return generated(persistBad||prompts.length===1?bad:good)
++  }})})
++  const output=await invoke();assert.deepEqual(output,good);assert.equal(prompts.length,2);assert.ok(prompts[1].startsWith(prompts[0]));assert.equal(prompts[0].startsWith(prompt),true)
++  const feedback=prompts[1].slice(prompts[0].length);assert.ok(feedback.includes('artifacts.0.evidence.0'));assert.ok(feedback.includes(messages[item.reason]));assert.ok(messages[item.reason].length<=160)
++  for(const secret of [item.quote,item.text,currentId,foreignId,scene.id,scene.name,scene.text,model.endpoint,'https://private.invalid',item.reason])assert.ok(!feedback.includes(secret),'fixed feedback does not echo data or internal reason')
++  assert.ok(Buffer.byteLength(prompts[1])-Buffer.byteLength(prompt)<=IMPORT_JSON_WRAPPER_RESERVE_BYTES);assertImportFixedPromptReserve(prompt,serializeImportAiPayload(r))
++  assert.equal(output.artifacts![0].evidence[0].unitId,currentId);assert.ok(item.text.includes(output.artifacts![0].evidence[0].quote))
++  prompts.length=0;await assert.rejects(invoke(true),error=>error instanceof StructuredGenerationError&&error.kind==='invalid_schema'&&error.invalidFields.includes('artifacts.0.evidence.0'));assert.equal(prompts.length,2,'no third generation')
++  assert.deepEqual(r,before);assert.deepEqual(bad,badBefore);assert.deepEqual(good,goodBefore)
++ })
++ await t.test('all twelve ordinary target schemas reject the same four reasons without transforming input',async()=>{
++  const {IMPORT_TARGETS}=await import('../../desktop/shared/novel-import')
++  for(const kind of IMPORT_TARGETS)for(const item of cases){
++   const r={...request(),kind,selectedTargets:[kind],units:[{...request().units[0],text:item.text,end:item.text.length}]},before=structuredClone(r),raw={artifacts:[{...knowledgeArtifact(kind,{}),evidence:[{unitId:item.id,quote:item.quote}]}]},snapshot=structuredClone(raw),parsed=factory(r).safeParse(raw)
++   assert.equal(parsed.success,false);if(!parsed.success){const issues=parsed.error.issues.filter(issue=>issue.path.join('.')==='artifacts.0.evidence.0');assert.equal(issues.length,1);assert.equal(issues[0].message,messages[item.reason])}
++   for(const other of [{...r,semanticVersion:undefined,selectedTargets:undefined},{...r,phase:'classify' as const},{...r,phase:'review' as const},{...r,phase:'patch' as const},{...r,intent:'reconcile' as const}])assert.deepEqual(factory(other).parse(raw),raw,'other schemas retain the previous acceptance and raw values')
++   assert.deepEqual(r,before);assert.deepEqual(raw,snapshot)
++  }
++ })
++ await t.test('matching text in another supplied unit never repairs a wrong declared unit',async()=>{
++  const r=request(),raw={artifacts:[{...scene,evidence:[{unitId:currentId,quote:'这条合成引文仅存在于另一个单元'}]}]}
++  r.units.push({...r.units[0],id:'other-input-unit',text:raw.artifacts[0].evidence[0].quote,end:raw.artifacts[0].evidence[0].quote.length})
++  const before=structuredClone(r),snapshot=structuredClone(raw),parsed=factory(r).safeParse(raw);assert.equal(parsed.success,false);if(!parsed.success)assert.deepEqual(parsed.error.issues.map(issue=>issue.message),[messages['no-match']])
++  await assert.rejects(ai.runImportAi(r,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>raw}),/结构|类别/)
++  assert.deepEqual(r,before);assert.deepEqual(raw,snapshot)
++ })
++ await t.test('Abort identity remains unchanged through the real correction bridge',async()=>{
++  const r=request(),controller=new AbortController(),abort=Object.assign(new Error('SYNTHETIC-ABORT'),{name:'AbortError'});let calls=0
++  await assert.rejects(bridge(r,context,controller.signal,importAiPrompt(r),{generateText:async()=>{calls++;controller.abort(abort);throw abort}}),error=>error===abort);assert.equal(calls,1)
++ })
++})

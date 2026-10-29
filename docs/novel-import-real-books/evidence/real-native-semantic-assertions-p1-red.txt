@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {"case":"objective-persisted-telling-missing-reliability","allOldAssertionsPassed":true,"checks":[{"name":"semantic-version-one-native-audit-required","passed":true},{"name":"semantic-artifact-and-source-copy-identities-unique","passed":true},{"name":"semantic-projectable-selection-cannot-exempt-derived-artifacts","passed":true},{"name":"semantic-unmapped-source-exclusions-have-explicit-mapping-warnings","passed":true},{"name":"semantic-unconfirmed-unmapped-source-material-id:raw-world","passed":true},{"name":"semantic-native-rows-only-own-novel","passed":true},{"name":"semantic-artifacts-decode-native-contracts","passed":true},{"name":"semantic-full-selected-targets-not-satisfied-by-unmapped-source-materials","passed":true},{"name":"semantic-projectable-native-materials-have-decodable-shapes","passed":true},{"name":"semantic-unmapped-source-native-materials-have-explicit-warnings","passed":true},{"name":"semantic-characters-exact-population-and-artifact-ids","passed":true},{"name":"semantic-character-all-supported-profile-fields-exact","passed":true},{"name":"semantic-character-two-pass-relationships-own-actual-ids","passed":true},{"name":"semantic-scenes-only-place-exact-parent-tree-coordinates-text","passed":true},{"name":"semantic-worlds-only-world-exact-parent-tree-text","passed":true},{"name":"semantic-nine-world-setting-content-world-and-map-parent-exact","passed":true},{"name":"semantic-map-parent-only-map-in-same-world","passed":true},{"name":"semantic-setting-table-population-has-only-declared-native-settings","passed":true},{"name":"semantic-unmapped-source-materials-create-no-fake-native-entities","passed":true},{"name":"semantic-planning-native-document-valid","passed":true},{"name":"semantic-narrative-chapter-id-mapping-uses-exact-ordered-session","passed":true},{"name":"semantic-source-copy-unmapped-timelines-explicitly-warn-reliability","passed":true},{"name":"semantic-world-event-facts-retain-full-knowledge-qualified-text","passed":true},{"name":"semantic-world-event-parent-people-time-own-actual-ids","passed":true},{"name":"semantic-world-event-population-exact-no-fork-facts","passed":true},{"name":"semantic-worldline-identities-and-population-exact","passed":true},{"name":"semantic-narrative-intents-retain-full-knowledge-qualified-text","passed":true},{"name":"semantic-narrative-character-reliability-chapter-order-exact","passed":true},{"name":"semantic-narrative-ref-event-character-reliability-kind-qualified-source","passed":true},{"name":"semantic-narrative-population-exact-with-only-known-outline-cards","passed":true}]}
+    at <anonymous> (/private/tmp/real-novel-semantic-assertions-check.mts:59:262)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

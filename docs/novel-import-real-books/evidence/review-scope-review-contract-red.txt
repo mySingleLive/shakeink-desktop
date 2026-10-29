@@ -1,0 +1,46 @@
+▶ NI-R01: bounded review projections and targeted omissions preserve full artifacts
+  ✖ position-bound-projections-and-partial-transport (110.818667ms)
+  ✔ two-fields-extra-units-use-reconcile-with-exact-context (171.891125ms)
+  ✔ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (329.956416ms)
+  ✔ same-base-pending-and-committed-repairs-append-context-without-erasing-credit (272.3925ms)
+  ✔ oversized-omission-context-fails-before-new-work-or-done-credit (110.281334ms)
+  ✔ invalid-triples-and-unseen-text-have-no-review-credit (1015.524292ms)
+✖ NI-R01: bounded review projections and targeted omissions preserve full artifacts (2012.403083ms)
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✔ same-draft-migrates-old-pending-after-authorization (275.451541ms)
+  ✔ all-preflight-refusals-keep-credit-and-policy (471.197833ms)
+  ✔ same-policy-reopen-keeps-successful-credit (174.764292ms)
+  ✔ publication-resumes-before-policy-and-legacy-zero-ai-remain-unversioned (316.2245ms)
+  ✔ first-omission-conflict-stops-before-later-work (122.429791ms)
+✔ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (1361.404833ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 11
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3743.297833
+
+✖ failing tests:
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:11428
+✖ position-bound-projections-and-partial-transport (110.818667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:54:84)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:49:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

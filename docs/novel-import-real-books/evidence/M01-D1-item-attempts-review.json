@@ -1,0 +1,123 @@
+{
+  "review": "M01-D1-item-attempts",
+  "recordedAt": "2026-10-26T20:19:21.646188+00:00",
+  "scope": "post-AI frozen public snapshots only; no latest/private journal/live system",
+  "inputSha256": {
+    "characters-scenes-checkpoint-rev62.json": "345201a0feb9bc2bd9a4af0c119232429efb78db0b9d693a3fdc7587cc98daa9",
+    "item-evidence-failure-rev63.json": "afd45c3de96b8afbec865429a157fa84df41d1e769463c3d2027fd8ff6a36374",
+    "item-evidence-feedback-failure-rev81.json": "aebd3b024863b42830dda1b3b0daab6606d9e9c33fa9382d4c8c020ccec21d9f",
+    "item-evidence-failure-rev63-assertions.json": "0c83e0161595518668a23f0eef29b7f321b6ea76e087ed34bf7cd61dac5fba37",
+    "item-evidence-failure-rev63-material-preservation.json": "5bdc5f735869c001473b1fc20a8a325bade8aa16e197be7c3272f6e8489ea7c9",
+    "item-evidence-feedback-failure-rev81-assertions.json": "4b1f1fa8ac07c773872a9d016a8f36d9228911b429db757970e5ee11c6f7e57d",
+    "evidence-feedback-first-item-retest-rev80.json": "7cbb2a0dd1583fd84c1aeb5c961f9070d973541d03f2a274128ce022d2fd55ae"
+  },
+  "sessionId": "439f1633-9d21-40f5-9d8b-7f165cc66265",
+  "mechanicalPreservation": "PASS across rev62,rev63,rev81",
+  "preservedActualKeys": [
+    "id",
+    "createdAt",
+    "title",
+    "selected",
+    "targets",
+    "infer",
+    "files",
+    "units",
+    "originalProse",
+    "workingProse",
+    "workingRevision",
+    "workingUnits",
+    "chapters",
+    "chapterDetection",
+    "artifacts",
+    "coverage",
+    "budgetPolicy",
+    "analysisCheckpointHash",
+    "decisions",
+    "conflicts",
+    "patches",
+    "models"
+  ],
+  "preservedKeyCount": 22,
+  "preservedCanonicalSha256": "4ff5ef1bebd073f83d3399f9a95d41c152d1d006e68483470f623e642bd32034",
+  "sourceUnitCount": 375,
+  "workingUnits": 25,
+  "bodyCharacters": 23257,
+  "bodySha256": "b06de8a2b8ac2e8e2561f6b4fb39d6f15e866001f4af6d3c24e929cb7f87c397",
+  "sourceConcatSha256": "03d44b6d8e94b4e1beed1c77113664f7d2469c612546644114f2783dc1c09267",
+  "manualChapters": 9,
+  "chapterContentEqualsBody": true,
+  "artifactsByKind": {
+    "character": 18,
+    "outline": 1,
+    "scene": 9
+  },
+  "coverageCounts": {
+    "outline": 25,
+    "character": 25,
+    "scene": 25
+  },
+  "semanticStateUnchanged": true,
+  "noNewNotFoundCredit": true,
+  "runtimePairs": [
+    {
+      "pendingRevision": 62,
+      "failedRevision": 63,
+      "version": 1,
+      "processRunId": "b4f8b600-f327-47d4-9d42-c8f80bc76c2e",
+      "sessionId": "439f1633-9d21-40f5-9d8b-7f165cc66265",
+      "operationId": "073296d6-0d3a-4e9a-9bbd-7d0af525a24a",
+      "epoch": 15,
+      "phase": "analyze",
+      "kind": "item",
+      "workingRevision": 0,
+      "scopeHash": "a28db76bea59b44e15f90612c457ade085339fc8ca5183e8fddb385edb6e13bc",
+      "payloadHash": "74b9fd1c92134d0cbadd28fe422c17555711ac5bff463ba2fc3a55a9a3f9f34d",
+      "startedAt": "2026-10-26T19:49:51.272Z",
+      "state": "settled",
+      "outcome": "rejected",
+      "settledObservedAt": "2026-10-26T19:52:30.787Z",
+      "applicationPromiseObservedSeconds": 159.515
+    },
+    {
+      "pendingRevision": 80,
+      "failedRevision": 81,
+      "version": 1,
+      "processRunId": "3c58660e-8c82-453e-867a-7231287ae5ea",
+      "sessionId": "439f1633-9d21-40f5-9d8b-7f165cc66265",
+      "operationId": "4c7c35bc-bfaa-4bcc-9bb9-cdd8809ffe19",
+      "epoch": 18,
+      "phase": "analyze",
+      "kind": "item",
+      "workingRevision": 0,
+      "scopeHash": "a28db76bea59b44e15f90612c457ade085339fc8ca5183e8fddb385edb6e13bc",
+      "payloadHash": "74b9fd1c92134d0cbadd28fe422c17555711ac5bff463ba2fc3a55a9a3f9f34d",
+      "startedAt": "2026-10-26T20:09:55.640Z",
+      "state": "settled",
+      "outcome": "rejected",
+      "settledObservedAt": "2026-10-26T20:12:07.445Z",
+      "applicationPromiseObservedSeconds": 131.805
+    }
+  ],
+  "actualStageVerdict": "FAIL for each of the two frozen item attempts; no item artifacts or coverage committed",
+  "safeErrors": {
+    "revision63": "模型返回结构不完整（artifacts.6.evidence.0、artifacts.16.evidence.1、artifacts.17.evidence.0、artifacts.25.evidence.0）",
+    "revision81": "模型返回结构不完整（artifacts.8.evidence.0）"
+  },
+  "laterStepStates": {
+    "world": "pending",
+    "settings": "pending",
+    "worldline": "pending",
+    "narrative": "pending",
+    "review": "pending",
+    "publish": "pending"
+  },
+  "attributionLimits": [
+    "Runtime proof observes the application options.ai Promise, not provider request count, internal retry, token usage or billing.",
+    "Native UI and retryClicked=false are root contemporaneous observations; independent reviewer did not operate UI.",
+    "The raw failed provider responses and specific bad quote/reason are unavailable. Four paths versus one path cannot establish quality improvement or a resolved root cause.",
+    "Same payloadHash binds JSON data, not code/prompt/correction text identity.",
+    "Model snapshot unchanged; no global model-setting query or alteration.",
+    "51+2 isolated code tests and18/9 artifacts do not establish real stage or literary PASS.",
+    "No new tests, app/model/DB/privatejournal/original-novel access."
+  ]
+}

@@ -1,0 +1,10 @@
+✔ NI-A03: missing ids, unknown categories and fabricated evidence are rejected (22.8405ms)
+✔ NI-A05: phase output contracts allow empty no-op arrays while rejecting actual cross-phase mutations (38.170708ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 320.307458

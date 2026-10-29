@@ -41,6 +41,26 @@
       "platform": null
     },
     {
+      "id": "file.import",
+      "label": "导入作品",
+      "group": "应用菜单",
+      "scope": "global",
+      "mac": "",
+      "win": "",
+      "locked": false,
+      "platform": null
+    },
+    {
+      "id": "file.import-folder",
+      "label": "导入作品",
+      "group": "应用菜单",
+      "scope": "global",
+      "mac": "",
+      "win": "",
+      "locked": false,
+      "platform": null
+    },
+    {
       "id": "file.templates",
       "label": "模板与提示词",
       "group": "应用菜单",
@@ -1384,6 +1404,8 @@
     "file": [
       "file.new",
       "file.open",
+      "file.import",
+      "file.import-folder",
       "file.templates",
       "file.chat",
       "file.save",

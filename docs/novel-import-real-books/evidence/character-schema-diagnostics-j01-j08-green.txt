@@ -1,0 +1,67 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (99.600208ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (20.520708ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (4.3855ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (1.373333ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (13.934583ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (10.36725ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (31.116125ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (12.257958ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (34.380625ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (4.259584ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.32375ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.077959ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.145417ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (54.96825ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (2.007416ms)
+  ✔ ordinary narrative fixtures now reject early after native format validation (2.401125ms)
+  ✔ actual reconcile field edits reach both distinct character-reference late failures (2.310459ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.098708ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (8.422542ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (21.55825ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (6.692666ms)
+  ✔ empty results retain the late gate while narrative references reject early and reconcile still rejects late (2.073334ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (30.924333ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✔ original native constraints enter the real bridge correction without transforming values (46.998208ms)
+  ✔ strict catalog and global chapter constraints enter the same bounded correction (14.857084ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (8.498041ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (0.95325ms)
+✔ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (73.004666ms)
+▶ NI-J08: final character schema errors expose only bounded static business labels
+  ✔ actual bridge generateJSON Zod runImportAi and main safeError preserve final bounded diagnostics (1.578625ms)
+  ✔ first bad then good and first good remain exact successes with two or one calls (1.297708ms)
+  ✖ actual Zod unknown and truncated paths cannot echo or falsely identify known fields (6.2255ms)
+  ✔ synthetic typed metadata covers full-path allowlist and first-six bounds only (2.636125ms)
+  ✔ all unrelated phases kinds legacy and original error identities pass through (3.088667ms)
+✖ NI-J08: final character schema errors expose only bounded static business labels (15.303125ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 32
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1388.531417
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:92068
+✖ actual Zod unknown and truncated paths cannot echo or falsely identify known fields (6.2255ms)
+  AssertionError [ERR_ASSERTION]: expected generation rejection
+      at capture (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:378:248)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:395:155)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:393:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }

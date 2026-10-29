@@ -1,0 +1,47 @@
+[
+  {
+    "name": "outline-with-character-context",
+    "prompt": "940b8d05f3125b4ba9c8f96ea10728381e651caf59ce9b79266d9a0f5e71a7d9",
+    "payload": "cc31815b04b675c281496708fef57449d02e9e8be34dd2e5f8a9c9251b64b0df"
+  },
+  {
+    "name": "theme-with-character-context",
+    "prompt": "be3cf820eb099f8f54c491d8673c91cac4094c48b0bd83b4705cffeecc406bf7",
+    "payload": "ed5a287ad8a9f06eeaf6bb43696a80af0995fb2425764b60f08d8bcedb8c0049"
+  },
+  {
+    "name": "world-with-character-context",
+    "prompt": "77a9b6e6df2768b4180df56fba0f51280ce5b64d3da4f6b0637ea66a5a13848e",
+    "payload": "f191d808466790458409a6c1e729100109fa86fe5ee2a45c39d40d40bf764ca6"
+  },
+  {
+    "name": "selected-character-review",
+    "prompt": "c84ddbf50bd70fed4b3778ea89aa7a15a34677336128888234e8198f15a03407",
+    "payload": "4f43e1efb886388b8057177b179edd34e933346dafc50eaff8a1ff5fac21fcc5"
+  },
+  {
+    "name": "classify",
+    "prompt": "8394534a03b4536a9cc17bb31fab28df8419795f2a612f958aec9b4519ca85e9",
+    "payload": "c9e83f6d0158f02649e67ac229d86142ed1f457249bbf9afb157b3e6ba89a5fc"
+  },
+  {
+    "name": "patch",
+    "prompt": "101b186b7010a0a1ec436973ef7b2b4e2de0d6ba2bd1a20c94f1a30839d1ebce",
+    "payload": "7d5eabd04878363a531404237bea75740e43d8409b39482ff635895c75b63efa"
+  },
+  {
+    "name": "character-reconcile",
+    "prompt": "8dbb39718ceafc88dfd03801f5176ee21cdf8d73976d1396aa5f119995579f86",
+    "payload": "3e2f7c0871e74127902d480b4d289f8986540b641ec958ccb6497306819e0c2f"
+  },
+  {
+    "name": "legacy-character",
+    "prompt": "c0f9f2874edb511aed5f36a72b66755d1a37b101b4afa16511b9b15ef5266c7c",
+    "payload": "a19c4894abf75785ce55aaf9c57c6d0e389505599a0d820b84aebc26c66ab511"
+  },
+  {
+    "name": "legacy-review",
+    "prompt": "bef9c26d99b84b0d5e39d4e91369d5a3fcfbb8c1eab44bc7e9778020524f7c8d",
+    "payload": "77cab024942212f63e1496328a2b5558bc2dd6bff0c3711817445938e2349aa3"
+  }
+]

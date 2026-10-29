@@ -27,6 +27,7 @@ const identitySchema = z.object({ device: z.string(), inode: z.string() }).stric
 const recordSchema = z.object({ id: z.uuid(), path: z.string(), identity: identitySchema, novelId: z.string(), title: z.string(), requestId: z.string(), requestHash: z.string(), createdAt: z.string() }).strict()
 export const catalogSchema = z.array(recordSchema)
 export type WorkRecord = z.infer<typeof recordSchema>
+export interface WorkImportInitializer { importHash:string; initialize(novelId:string):Promise<void>; verify(novelId:string):Promise<void>; phase?(phase:'before-initialize'|'domain-writing'|'database-committed'|'manifest-ready'|'catalog-committed'):void|Promise<void> }
 interface Connection { engine: PGlite; db: PrismaClient; assets:WorkspaceAssets; unlock: () => Promise<void>; assertCurrent():void; assertLease():Promise<void>; storagePath:string }
 interface Slot { connection: Promise<Connection>; active: number; lastUsed: number }
 async function identity(path: string) { const info = await stat(path, { bigint: true }); return { device: String(info.dev), inode: String(info.ino) } }
@@ -44,7 +45,7 @@ async function canonicalDirectory(path:string){
 }
 
 /** Per-directory writer lease; never steal a live or foreign-host lease. */
-async function lockDirectory(path: string,names:Readonly<BrandNames>,assertRegistration?:()=>void): Promise<(()=>Promise<void>)&{assertHeld():Promise<void>}> {
+export async function lockDirectory(path: string,names:Readonly<BrandNames>,assertRegistration?:()=>void): Promise<(()=>Promise<void>)&{assertHeld():Promise<void>}> {
   assertRegistration?.()
   const leaseRoot=brandRootIdentity(path);assertBrandControls(leaseRoot,names)
   const lock = join(path, names.lock); const token = randomUUID()
@@ -148,11 +149,21 @@ export class Workspaces {
   async list(): Promise<WorkRecord[]> { return (await this.catalog.read()).value }
   async protectedDirectories(): Promise<string[]> { return [...new Set([...(await this.list()).map(record=>record.path),...await this.creationReservations.directories()])] }
   assertNoPendingCreation(requestId:string):Promise<void>{return this.creationReservations.assertNoPendingCreation(requestId)}
-  async create(selection: DirectoryProof, input: unknown,assertCreation?:()=>void): Promise<WorkRecord> {
+  async importLeaseTarget(selection:DirectoryProof,input:{requestId:string;title:string;importHash:string},assertCurrent:()=>void):Promise<RootIdentity>{
+    assertCurrent();const canonical=await this.verifySelection(selection),assertBoundary=await this.assertWorkDataBoundary(canonical)
+    const assertSelection=()=>{assertCurrent();assertBoundary();assertAliasDirectory(selection.path,selection)};assertSelection()
+    const fingerprint=requestHash({title:input.title,importHash:input.importHash})
+    await this.creationReservations.requireExisting({requestId:input.requestId,requestHash:fingerprint,selection})
+    assertSelection();const target={path:canonical,device:selection.device,inode:selection.inode},brand=await readWorkBrand(target);assertSelection()
+    if(brand.value.requestId!==input.requestId||brand.value.requestHash!==fingerprint)throw Error('原导入目录请求不匹配')
+    brand.assertCurrent();assertSelection();return target
+  }
+  async create(selection: DirectoryProof, input: unknown,assertCreation?:()=>void,initializer?:WorkImportInitializer): Promise<WorkRecord> {
     assertCreation?.()
     const path = selection.path
     const parsed = novelCreationSchema.parse(input)
-    const fingerprint = requestHash({ title: parsed.title, ...(parsed.position ? { position: parsed.position } : {}) })
+    if(initializer&&!/^[a-f0-9]{64}$/.test(initializer.importHash))throw Error('导入指纹无效')
+    const fingerprint = requestHash({ title: parsed.title, ...(parsed.position ? { position: parsed.position } : {}),...(initializer?{importHash:initializer.importHash}:{}) })
     return this.serialize(async () => {
       assertCreation?.()
       const canonical = await this.verifySelection(selection)
@@ -171,6 +182,7 @@ export class Workspaces {
         manifestObservation=await readWorkBrand(await directoryIdentity(canonical));const manifest=manifestObservation.value
         if (manifest.id !== previous.id || manifest.novelId !== previous.novelId || manifest.phase !== "ready") throw new Error("作品目录身份不匹配")
         await this.validateWorkDatabase(canonical)
+        if(initializer)await this.run(previous.id,()=>initializer.verify(previous.novelId))
         assertRegistration()
         await this.creationReservations.reserve(reservation,assertRegistration)
         assertRegistration()
@@ -211,14 +223,17 @@ export class Workspaces {
       try {
         assertRegistration()
         const result = await runInDatabaseContext({ workspaceId: manifest.id, database: connection.db, allowNovelCreation: true }, () => createNovelOnce(LOCAL_AUTHOR_ID, parsed,assertRegistration))
+        if(initializer)await runInDatabaseContext({workspaceId:manifest.id,database:connection.db,assets:connection.assets},async()=>{await initializer.phase?.('before-initialize');assertRegistration();await initializer.initialize(result.id);assertRegistration();await initializer.verify(result.id);await initializer.phase?.('database-committed');assertRegistration()})
         manifest.novelId = result.id; manifest.phase = "ready"
         assertRegistration()
         await atomicWrite(join(canonical, names.workManifest), JSON.stringify(manifest),{beforeRename:async()=>assertRegistration()})
         manifestObservation=await readWorkBrand(await directoryIdentity(canonical))
+        await initializer?.phase?.('manifest-ready')
         if(manifestObservation.names.family!==names.family||manifestObservation.value.id!==manifest.id||manifestObservation.value.novelId!==manifest.novelId||manifestObservation.value.phase!=="ready")throw Error("作品目录身份不匹配")
         const record: WorkRecord = { id: manifest.id, path: canonical, identity: await identity(canonical), novelId: result.id, title: result.title, requestId: parsed.requestId, requestHash: fingerprint, createdAt: manifest.createdAt }
         assertRegistration()
         await this.catalog.update(before.revision, [...before.value, record],assertRegistration)
+        await initializer?.phase?.('catalog-committed')
         assertRegistration()
         await this.creationReservations.complete(reservation,assertRegistration)
         assertRegistration()

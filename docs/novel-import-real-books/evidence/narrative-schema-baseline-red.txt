@@ -1,0 +1,111 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (54.149666ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (15.811709ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (0.983625ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.861542ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (7.933041ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.28425ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (11.615125ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (7.414041ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (23.140584ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (2.584833ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.295709ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.068666ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.137792ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (35.595084ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.272708ms)
+  ✔ actual valid narrative requests reach both distinct character-reference late failures (1.136625ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.056666ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (3.77125ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (12.014167ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (4.953542ms)
+  ✔ empty results keep the original late gate and narrative references stay at the original late helper (1.015959ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (18.495209ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✖ original native constraints enter the real bridge correction without transforming values (4.418625ms)
+  ✖ strict catalog and global chapter constraints enter the same bounded correction (0.7295ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (7.892875ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (1.63575ms)
+✖ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (15.368167ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 24
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1059.313042
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:78912
+✖ original native constraints enter the real bridge correction without transforming values (4.418625ms)
+  AssertionError [ERR_ASSERTION]: missing-chapter
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      artifacts: [
+        {
+          evidence: [
+            {
+  ...
+            attribution: ' 合成叙述归属 ',
+  -         chapterIndex: '09',
+            narrator: 'existing-character',
+            order: '00',
+            refs: ' [{"eventId":"j07-known-event","kind":"mention","reliability":"角色有限事实","character":"existing-character","attribution":" 合成转述归属 ","temporalScope":" 仅该段 "}] ',
+            reliability: '人物推测',
+            temporalScope: ' 合成披露阶段 '
+  
+      at exercise (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:345:11)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:350:211)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:350:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { artifacts: [ [Object] ] },
+    expected: { artifacts: [ [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:79203
+✖ strict catalog and global chapter constraints enter the same bounded correction (0.7295ms)
+  AssertionError [ERR_ASSERTION]: unknown-narrator
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      artifacts: [
+        {
+          evidence: [
+            {
+  ...
+            chapterIndex: '09',
+  +         narrator: 'MODEL-FOREIGN-SYNTHETIC-SECRET',
+  -         narrator: 'existing-character',
+            order: '00',
+            refs: ' [{"eventId":"j07-known-event","kind":"mention","reliability":"角色有限事实","character":"existing-character","attribution":" 合成转述归属 ","temporalScope":" 仅该段 "}] ',
+            reliability: '人物推测',
+            temporalScope: ' 合成披露阶段 '
+          },
+  
+      at exercise (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:345:11)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:351:182)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:351:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { artifacts: [ [Object] ] },
+    expected: { artifacts: [ [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

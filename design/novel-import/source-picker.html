@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN" class="ink">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>玄印写作 · 统一来源选择审核稿</title>
+  <link rel="stylesheet" href="../assets/web-tokens.css"><link rel="stylesheet" href="source-picker.css">
+  <script src="source-picker.js" defer></script>
+</head>
+<body>
+  <header class="review-bar">
+    <div><span class="review-kicker">玄印写作 / 交互审核稿</span><h1>统一选择导入来源</h1><p>Windows 应用内选择框 · 合成文件树，不访问本机文件</p></div>
+    <div class="review-controls">
+      <label>主题<select id="theme"><option value="ink">玄墨</option><option value="paper">宣纸</option></select></label>
+      <label>审核场景<select id="scenario"><option value="normal">正常浏览</option><option value="mixed">跨目录已选</option><option value="loading">载入中</option><option value="permission">无权限</option><option value="missing">目录消失</option><option value="empty">空目录</option><option value="changed">确认时来源变化</option><option value="append">添加来源</option></select></label>
+      <button id="reset" type="button">重置预览</button>
+    </div>
+  </header>
+  <main class="app-frame" aria-label="产品窗口预览">
+    <div class="window-bar"><span>玄印写作</span><span aria-hidden="true">—　□　×</span></div>
+    <div id="workspace" class="workspace">
+      <aside class="app-sidebar"><div class="brand"><img src="../../public/brand/seal-mark-ink.svg" class="logo-ink" alt=""><img src="../../public/brand/seal-mark-paper.svg" class="logo-paper" alt="">玄印写作</div><button class="app-action muted" disabled>创建作品</button><button id="import-entry" class="app-action">导入作品</button><button class="app-action muted" disabled>新对话</button></aside>
+      <section class="app-canvas"><div id="workspace-message"><span class="canvas-seal">印</span><h2>把故事带到这里</h2><p>保留写下的每一段，再梳理故事里的世界。</p><button id="canvas-import" class="primary">导入作品</button></div></section>
+    </div>
+    <div id="scrim" class="scrim"></div>
+    <section id="picker" class="picker" role="dialog" aria-modal="true" aria-labelledby="picker-title" aria-describedby="picker-description">
+      <header class="picker-header"><div><span class="eyebrow">导入作品</span><h2 id="picker-title">选择导入来源</h2><p id="picker-description">可多选文件或文件夹，应用会自动识别。</p></div><button id="close-picker" class="icon-button" aria-label="关闭来源选择框"></button></header>
+      <div class="location-tools"><button id="up" class="icon-button" aria-label="上一级"></button><nav id="breadcrumbs" aria-label="当前位置"></nav><label class="search"><span id="search-icon" aria-hidden="true"></span><input id="search" type="search" aria-label="筛选当前文件夹" placeholder="筛选当前文件夹"></label></div>
+      <div class="picker-browser">
+        <nav id="places" class="places" aria-label="常用位置"></nav>
+        <section class="directory" aria-label="当前文件夹内容"><div class="directory-summary"><label class="current-folder"><input id="current-folder" type="checkbox"><span>选中当前文件夹</span></label><span id="entry-count"></span></div><div class="list-columns" aria-hidden="true"><span>名称</span><span>类型</span><span>大小</span><span></span></div><div id="directory-content" class="directory-content" tabindex="-1" role="region" aria-label="当前目录项目区域"></div><p class="browse-help">单击勾选；双击文件夹或点击箭头进入</p></section>
+      </div>
+      <section class="selection" aria-label="已选来源"><div class="selection-head"><h3 id="selection-summary" aria-live="polite">尚未选择来源</h3><button id="clear-selection" class="text-button" disabled>清空</button></div><div id="selection-content"></div></section>
+      <footer class="picker-footer"><p>支持 TXT、MD、DOC、DOCX、PDF、HTML、HTM<br><span>文件夹中的文本将在确认后读取，来源保持只读。</span></p><div class="footer-actions"><button id="cancel-picker">取消</button><button id="confirm-picker" class="primary" disabled>选择</button></div></footer>
+    </section>
+    <section id="result" class="result" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden></section>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </main>
+</body>
+</html>

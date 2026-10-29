@@ -1,0 +1,58 @@
+{
+  "scope": "84 independent bounded code review; no actual app/model/data access",
+  "sources": [
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "baselineHash": "953d4a39701748dead1ee1e52e4a37306bc87f3d77fd012a0e0b58c499335298",
+      "finalHash": "239cac9bf2f40c7e1004ffb28cfc36ff834f98b549f6ae7326cfafb42187ab55"
+    },
+    {
+      "path": "tests/unit/novel-import-ai.test.ts",
+      "baselineHash": "800a96245c22473cc83699711cbac74f173656308ab28eae903a28fce0e8eff8",
+      "finalHash": "663097fb08265b6467aafc43223724b88287cfcc6c27342c84716206cf9c9903"
+    }
+  ],
+  "diffHash": "83a341798a332c38f97c490152c646dc4cc99246b72b829218d8e33060f5e7a8",
+  "diffMatchesAuthor": true,
+  "payloadOnlyApprovedEmotionalPredicatesContractAndConcatenation": true,
+  "oldAiTestsIncludingA07A08ByteExact": true,
+  "eightUnrelatedGoldenLiteralsMatchBaselineMetadata": true,
+  "baselineGoldenMetadataHash": "7af98b8782baeb9ed470ce6256434b06f03ba0e3eee78421a0698030279d1744",
+  "preserved79Files": {
+    "desktop/service/novel-import-ai.ts": "d86eb08bcb6c909a5338c76efab787ccb8a1cbf9ef9c2d40a4b90c46679d98ad",
+    "desktop/main/novel-import.ts": "b042aac2bb99e0993ee5629432070424bd7ab0da16a36177ba01e724877076a6",
+    "tests/unit/novel-import-request-schema.test.ts": "4844d54205c6f887b2c7ec9ca58e8471edc8661ae572403953d4cf047e00670b"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-A0[789]:",
+        "tests/unit/novel-import-ai.test.ts"
+      ],
+      "pass": 12,
+      "skip": 0,
+      "exit": 0,
+      "log": "trope-business-independent-a07-a09.txt",
+      "logHash": "f3029b0a4926d68d9e9a9d0c6ef8ab3728faf73e0c227329652b1a7f319075eb"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-J0[1234]:",
+        "tests/unit/novel-import-request-schema.test.ts"
+      ],
+      "pass": 14,
+      "skip": 0,
+      "exit": 0,
+      "log": "trope-business-independent-j01-j04.txt",
+      "logHash": "9e7aa9c690829c4484d26cda843cae4eee1a6ca321996aac7d69ab5e4c8fe8fd"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-10-26T19:12:43.995577+00:00",
+  "scope": "103 diagnostic-only ordinary character schema failures; actual M01 failure cause still unknown",
+  "commands": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "execSession": 92284,
+      "exitCode": 0
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false -p /tmp/shakeink-real-audit-tsconfig.json",
+      "execSession": 89275,
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/build-desktop.mjs",
+      "execSession": 58569,
+      "exitCode": 0
+    }
+  ],
+  "files": {
+    "desktop/service/novel-import-ai.ts": "3dba02c56f7572c49366bc7a6be9fd09a07bdf6fdc60235cdd997da76cdf7a94",
+    "tests/unit/novel-import-request-schema.test.ts": "e0ce2d2f3a6eb2bcfaea17b5c369a3c39aa5df68ffdb8b7b88bb5190b6c39404",
+    "desktop/main/novel-import.ts": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c",
+    "src/lib/ai/generate.ts": "51612305662fdbc383f01516c2fa5baf83c37e97123391752bdbdf3c9631fe22",
+    "desktop/core/novel-import-ai-payload.ts": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+    "desktop/core/novel-import-semantics.ts": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "dist/main/index.cjs": "b0b0bd52776cc7ddcc09d67c9ed767b68ed0c117578050de022cc4e12701d5f8",
+    "dist/service/index.cjs": "20d7e580c35ec7e3de824ebcaf27649646f6620503d00e096b197ff079df42c0",
+    "dist/main/novel-import-pdf-worker.cjs": "52645a7d85a982d1b4135fb09109061162d596f450c37abbc07be2e32e6e810a",
+    "src/components/desktop/NovelImportDialog.tsx": "f3459f47b2b59ccd3ba10d2e703e888700e2175d89e80737b6ccb6066a6ea046",
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92"
+  },
+  "unchangedControls": [
+    "desktop/main/novel-import.ts",
+    "src/lib/ai/generate.ts",
+    "desktop/core/novel-import-ai-payload.ts",
+    "desktop/core/novel-import-semantics.ts",
+    "desktop/core/novel-import.ts"
+  ],
+  "monacoWorkers": {
+    "out/_next/static/media/css.worker.2r476vc_4i3t-.js": "10b5bc24aca1ea80bcc42fc27d8ef0515a527e1f0a53a0c1b0dd24f3ccf9ef15",
+    "out/_next/static/media/editor.worker.1duyl2hr9iop5.js": "6fbf56462b7fce38d9fb42ae660679d29b686d0b5b096622c5fdbf8eb5ab02bc",
+    "out/_next/static/media/html.worker.37dgn6mporn0e.js": "5908b63207902f7dcac93a7ffe04ad472e0399ecdf90776ad9a99dd113213fba",
+    "out/_next/static/media/json.worker.14wrjaz43tsbz.js": "99701906248637e92da3cf3c5ebec2f9e7bb4d0e7f7c19dfd995e07e81bf447b",
+    "out/_next/static/media/ts.worker.30escle32bmbw.js": "18bdd5fd4a362f071a27f56ffe6d3ece52786cbc61b676d49b7d128d4258cfe4"
+  },
+  "uiRebuilt": false,
+  "uiReason": "UI/source unchanged; retained prior successful Turbopack output",
+  "fullSuiteExecuted": false
+}

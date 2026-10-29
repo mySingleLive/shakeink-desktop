@@ -1,0 +1,10 @@
+✔ NI-A03: missing ids, unknown categories and fabricated evidence are rejected (5.718459ms)
+✔ NI-A06: evidence layout anchoring restores unique exact source spans without changing text or word boundaries (3.488917ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 192.744208

@@ -1,0 +1,80 @@
+{
+  "review": "M01-D1-source-reselection-actual",
+  "recordedAt": "2026-10-26T18:37:05.251804+00:00",
+  "conclusion": "PASS for retained-source reselection only; not whole-novel acceptance",
+  "sessionId": "439f1633-9d21-40f5-9d8b-7f165cc66265",
+  "inputEvidenceSha256": {
+    "run.json": "8a03232bed0e7577a19805c7e7a05239ec8e480889b1653d5ac14a4e966e3cc4",
+    "source-reselect-before-native-rev4.json": "ecbba35a5ed1d8900fc88e905203b49d133bfabe3db3ef449f973177a7f6355f",
+    "source-reselect-native-cancel-rev5.json": "cde08cdf099bf75fb6a1a6c19608256d8d022e23cf04739be4277e7672a1257f",
+    "source-reselect-native-cancel-assertions.json": "a91845eaf8a44df8a6aa1368fb4cb6ec14ad520c23c56a84f3ff8f5a2aa4120e",
+    "source-reselect-native-success-rev7.json": "bc28bb6f250de9b475e1aad24c97b733dfe8c60badc177aa97f184b41c597ee8",
+    "source-reselect-native-success-assertions.json": "942e6ab17592f50f045294f6126c6f6ef1e48d6ae627b3b18ed4ee78fb2fe797",
+    "source-reselect-verifier-premise-correction.json": "ee59ada15db358d8b824ab96e775e1946a9e6f1c24171c693b31cf3dd09c9baf",
+    "normal-shutdown-before-reselection-rev2.json": "db1bbd74dee5a29f3c34ffe932d30b175f4a2b55e0368eb24dc1524cb8bb1c2e",
+    "normal-shutdown-before-reselection-assertions.json": "17c89e49ff688bf8b56e6082bd466778f3564663bfa4abd3529b6365606ae154"
+  },
+  "recursiveChangedPaths": {
+    "rev4_to_rev5": [
+      "/revision",
+      "/updatedAt"
+    ],
+    "rev4_to_rev7": [
+      "/epoch",
+      "/files/0/proof/ctime",
+      "/revision",
+      "/updatedAt"
+    ]
+  },
+  "rootAssertionCounts": {
+    "cancelPreserved": 27,
+    "successPreserved": 27,
+    "allTrue": true
+  },
+  "independentlyVerified": {
+    "shutdownPreservedFieldsEqual": [
+      "id",
+      "title",
+      "files",
+      "units",
+      "chapters",
+      "chapterDetection",
+      "selected",
+      "targets",
+      "infer",
+      "budgetPolicy",
+      "legacyBudget",
+      "originalProse",
+      "workingProse",
+      "workingRevision",
+      "artifacts",
+      "coverage"
+    ],
+    "cancelOtherFieldsEqual": true,
+    "successOtherFieldsEqual": true,
+    "sourceUnits": 373,
+    "chapters": 9,
+    "fullDecodedCharacters": 27279,
+    "sourceUtf8Bytes": 79156,
+    "sourceSha256": "03d44b6d8e94b4e1beed1c77113664f7d2469c612546644114f2783dc1c09267",
+    "frozenBodyRange": {
+      "start": 13,
+      "end": 23270
+    },
+    "frozenBodyCharacters": 23257,
+    "frozenBodySha256": "b06de8a2b8ac2e8e2561f6b4fb39d6f15e866001f4af6d3c24e929cb7f87c397",
+    "epochBefore": 3,
+    "epochAfter": 4,
+    "proofChangedOnly": [
+      "ctime"
+    ],
+    "oldCtime": "1792956433090205354",
+    "newCtime": "1793036774035998784",
+    "snapshotHasNoArtifactsOrCoverageOrSteps": true
+  },
+  "attributionLimits": [
+    "Native chooser cancel and success, process20934, current-file stat, no discarded draft, grants/checkpoint revocation and zero AI are root contemporaneous observations/assertions.",
+    "Safe projection lacks private grants/checkpoint objects and runtime call history; independent review did not open private journal or live FS/DB/app/model.",
+    "No assertion of precise literary body/chapter acceptance, analysis, publication or LIFE."
+  ]
+}
