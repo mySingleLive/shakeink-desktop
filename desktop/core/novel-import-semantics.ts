@@ -38,7 +38,7 @@ export interface ImportRosterEntry {name:string;aliases:string[];roleType?:'PROT
 export interface ImportTouchEntry {foreshadowKey:string;title:string;content:string;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string};evidence:ImportEvidence}
 export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];touches?:ImportTouchEntry[]}
 export interface ImportSemanticEntity {id:string;kind:ImportTarget;name:string;unitIds?:string[];parentId?:string;entityType?:'PLACE'|'WORLD'|'SETTING';worldId?:string;settingType?:ImportWorldSettingType}
-export interface ImportSemanticRequestFields {semanticVersion?:1;intent?:'reconcile'|'structure'|'roster'|'entity'|'touches';reconcile?:ImportReconcileContext;selectedTargets?:ImportTarget[];semanticLocks?:ImportSemanticLock[];entities?:ImportSemanticEntity[];reviewProjection?:ImportReviewProjection[]}
+export interface ImportSemanticRequestFields {semanticVersion?:1;intent?:'reconcile'|'structure'|'roster'|'entity'|'touches';entityTarget?:{id:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';evidenceOptions?:ImportEvidence[]};reconcile?:ImportReconcileContext;selectedTargets?:ImportTarget[];semanticLocks?:ImportSemanticLock[];entities?:ImportSemanticEntity[];reviewProjection?:ImportReviewProjection[]}
 export type ImportSemanticAiRequest=ImportAiRequest&ImportSemanticRequestFields
 export type ImportSemanticAiResult=ImportAiResult&ImportSemanticResult
 

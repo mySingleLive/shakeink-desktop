@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto'
 import {join} from 'node:path'
 import {NovelImportController} from '../../desktop/main/novel-import'
 import type {ImportAiRequest,ImportFile,ImportSession,ImportView} from '../../desktop/shared/novel-import'
-import {WIZARD_ROSTER_CONCURRENCY} from '../../desktop/main/novel-import'
+import {WIZARD_ROSTER_CONCURRENCY,WIZARD_CHARACTER_CONCURRENCY} from '../../desktop/main/novel-import'
 import {allCuts,bodyF,cast,classifyF,entityName,entityResult,entityTarget,filesF,fixture,fullAi,indexOfTitle,linesAi,model,passCharacters,relatingAi,injectJournalEdit,review,rosterAi,settingsF,sleep,source,toImportChar,toRoster,toStep,toTree,toVerify,toWorldImport,touchesAi,verifyAgain,volumesF,worldsAi} from '../helpers/novel-import-wizard-fixture'
 
 test('NIW-C01: wizard sessions order files, work and kinds; step 3 requires a title and folder',async()=>{
@@ -146,7 +146,7 @@ test('NIW-C24: an empty roster waits for the author and the next import step is 
   await f.act('wizard-next');const w=(await f.view()).wizard!;assert.equal(w.stepState['import-char'],'skipped');assert.notEqual(w.step,'import-char')
  }finally{await f.dispose()}
 })
-test('NIW-C29: at most four entity imports run at once and each completion is visible',async()=>{
+test('NIW-C29: character imports use the bounded character pool and completion progress is visible',async()=>{
  let running=0,max=0
  const cast10=Array.from({length:10},(_,i)=>'角色'+String.fromCharCode(0x7532+i))
  const body=cast10.map((n,i)=>`第${i+1}章 篇${i}\n\n${n}出场。\n\n`).join('')
@@ -154,14 +154,18 @@ test('NIW-C29: at most four entity imports run at once and each completion is vi
   'roster:character':r=>({roster:r.units.flatMap(u=>cast10.filter(n=>u.text.includes(n)).map(n=>({name:n,aliases:[],roleType:'SUPPORTING' as const,evidence:{unitId:u.id,quote:n}})))}),
   'entity:character':()=>undefined,
  }));
- const base=f.handler();f.setAi(async r=>{if(r.intent!=='entity')return base(r);running++;max=Math.max(max,running);await sleep(20+Math.floor(Math.random()*40));running--;return entityResult(r)})
+ const gates=new Map<string,{wait:Promise<void>;release:()=>void}>();for(const name of cast10){let release!:()=>void;const wait=new Promise<void>(r=>release=r);gates.set(name,{wait,release})}
+ const base=f.handler();f.setAi(async r=>{if(r.intent!=='entity')return base(r);running++;max=Math.max(max,running);try{await gates.get(entityName(r))!.wait;return entityResult(r)}finally{running--}})
  try{
-  await toImportChar(f);const seen=new Set<number>()
-  for(let i=0;i<400&&f.controller.active;i++){await sleep(5);seen.add((await f.view()).wizard!.tasks.filter(t=>t.kind==='entity'&&t.state==='done').length)}
-  const v=await f.settle();assert.equal(max,4);assert.ok(seen.size>2,'progress observed in steps')
+  await toImportChar(f);const seen=new Set<number>(),done=async()=>(await f.view()).wizard!.tasks.filter(t=>t.kind==='entity'&&t.state==='done').length
+  for(let i=0;i<1000&&running<Math.min(10,WIZARD_CHARACTER_CONCURRENCY);i++)await sleep(5);assert.equal(running,Math.min(10,WIZARD_CHARACTER_CONCURRENCY));seen.add(await done())
+  for(const name of cast10.slice(0,8))gates.get(name)!.release()
+  for(let i=0;i<1000&&await done()!==8;i++)await sleep(5);assert.equal(await done(),8);seen.add(await done())
+  for(const gate of gates.values())gate.release()
+  const v=await f.settle();seen.add(await done());assert.equal(max,Math.min(10,WIZARD_CHARACTER_CONCURRENCY));assert.ok(seen.size>2,'progress observed in steps')
   assert.equal(v.wizard!.tasks.filter(t=>t.kind==='entity').length,10);assert.ok(v.wizard!.tasks.every(t=>t.state==='done'))
   assert.equal((await f.journal()).artifacts.filter(a=>a.kind==='character'&&a.schema===2).length,10)
- }finally{await f.dispose()}
+ }finally{for(const gate of gates.values())gate.release();await f.dispose()}
 })
 test('NIW-C30/C31: a failure leaves the others running; the scheduler exits and retry restarts it',async()=>{
  let first=true
@@ -692,7 +696,7 @@ test('NIW-C49/C48: concurrent calls are all recorded in runtime.json while the j
   await toImportChar(f);const v0=await f.view(),path=join(f.root,'novel-imports',v0.id,'session.json')
   const t0=Date.now();let t1=0
   for(let i=0;i<400&&f.controller.active;i++){const r=await runtimeOf(f);if(r)peak=Math.max(peak,r.calls.filter(c=>c.state==='pending'&&c.intent==='entity').length);const j=JSON.parse(await readFile(path,'utf8')) as ImportSession;if(j.wizard!.step==='import-char'){saves=j.revision;t1=Date.now()}await sleep(5)}
-  const done=await f.settle();assert.equal(done.wizard!.step,'detect-scene');assert.ok(peak>=2&&peak<=6,`peak ${peak}`)
+  const done=await f.settle();assert.equal(done.wizard!.step,'detect-scene');assert.ok(peak>=2&&peak<=WIZARD_CHARACTER_CONCURRENCY,`peak ${peak}`)
   const r=(await runtimeOf(f))!;assert.ok(r.calls.filter(c=>c.intent==='entity').every(c=>c.state==='settled'),JSON.stringify(r.calls.map(c=>c.state)))
   const j=await f.journal();assert.equal(j.runtimeAiCall,undefined)
   // 07 NIW-C48 bound for the import step: ⌈n/8⌉ + ⌈seconds/2⌉ + 5.

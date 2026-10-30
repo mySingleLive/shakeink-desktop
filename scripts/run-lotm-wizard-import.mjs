@@ -13,6 +13,10 @@ const appRoot=process.env.LOTM_APP_ROOT??'/private/tmp/shakeink-lotm-runtime-202
 const source='/Users/dt_flys/Documents/拆书/诡秘之主-原始文本.txt',target=join(root,'works',process.env.LOTM_WIZARD_WORK??'LOTM-WIZARD-20261029')
 // LOTM_ROSTER_ONLY=1 measures step 9 (docs/239 RR): time, live count samples and screenshots, then stops.
 const rosterOnly=process.env.LOTM_ROSTER_ONLY==='1'
+// Scoped acceptance for docs/243: stop as soon as the full character import has passed.
+const charactersOnly=process.env.LOTM_CHARACTERS_ONLY==='1'
+assert.ok(!rosterOnly||!charactersOnly,'choose only one scoped acceptance mode')
+assert.ok(appRoot.startsWith('/private/tmp/'),'this driver requires an isolated test root')
 const label=process.env.LOTM_EVIDENCE_LABEL;assert.ok(label,'LOTM_EVIDENCE_LABEL is required');const evidence=join(root,'evidence',label);await mkdir(join(root,'evidence'),{recursive:true});await mkdir(evidence,{recursive:false})
 const run=JSON.parse(await readFile(join(baseline,'run.json'),'utf8')),expected=JSON.parse(await readFile(join(baseline,'expected-chapters.json'),'utf8'))
 const TARGETS=['outline','theme','style','character','item','scene','world','foreshadow','trope','worldline','narrative'],LABELS={goldenFinger:'金手指'}
@@ -24,33 +28,63 @@ await mkdir(target,{recursive:true})
 
 const app=await electron.launch({executablePath:process.env.LOTM_ELECTRON_RUNTIME,args:[repo],env:{...process.env,SHAKEINK_TEST_ROOT:appRoot,SHAKEINK_IMPORT_DEBUG:'1'},timeout:60000})
 app.process().stderr.on('data',bytes=>void appendFile(join(evidence,'app-stderr.log'),bytes.toString().split(/\r?\n/u).filter(l=>l&&!/sandbox_extension|disk_cache|Shared Dictionary|Unable to create cache/u.test(l)).map(l=>l.slice(0,600)+'\n').join('')))
-let page,exitCode=1,acted=0,rosterStart,lastShot=0,lastStash=[]
+let page,exitCode=1,acted=0,rosterStart,lastShot=0,lastStash=[],isolatedConfirmed=false,roleStartedAt,roleStartedTick,entityStartedAt,entityStartedTick
 const samples=[]
 const current=async()=>(await page.evaluate(()=>window.desktop.novelImport({type:'current'}))).view
 const shot=async name=>page.screenshot({path:join(evidence,`${String(++acted).padStart(3,'0')}-${name}.png`)})
 const journal=async id=>JSON.parse(await readFile(join(appRoot,'novel-imports',id,'session.json'),'utf8'))
 const brief=v=>({revision:v.revision,phase:v.phase,step:v.wizard?.step,state:v.wizard?.stepState?.[v.wizard?.step],error:v.error,stepError:v.wizard?.stepError,lineProgress:v.wizard?.lineProgress})
 const button=name=>page.getByRole('button',{name,exact:true})
-const click=async(name,why)=>{await log('click',{button:name,why});await button(name).click()}
+const click=async(name,why)=>{if(charactersOnly&&name==='允许分析并导入'&&roleStartedTick===undefined){roleStartedAt=new Date().toISOString();roleStartedTick=performance.now()}await log('click',{button:name,why});await button(name).click()}
 const until=async(test,timeout=120000)=>{const end=Date.now()+timeout;for(;;){const v=await current();if(await test(v))return v;if(Date.now()>end)throw Error('timed out waiting for wizard state');await page.waitForTimeout(1000)}}
-async function close(){const exited=new Promise(r=>app.process().once('exit',(code,signal)=>r({code,signal})));await app.evaluate(({app})=>app.quit());return exited}
+async function close(){
+ if(charactersOnly&&isolatedConfirmed)await app.evaluate(({dialog})=>{const original=dialog.showMessageBox.bind(dialog);dialog.showMessageBox=async(...args)=>{const options=args.at(-1);if(options?.message==='停止正在执行的任务后关闭？'&&options.buttons?.includes('停止任务并继续'))return {response:options.buttons.indexOf('停止任务并继续'),checkboxChecked:false};return original(...args)}})
+ const exited=new Promise(r=>app.process().once('exit',(code,signal)=>r({code,signal})));await app.evaluate(({app})=>app.quit());return exited
+}
 // Retry a failed entity task once through the wizard's own 重试 button; never skip.
-const retried=new Set()
+const retried=new Set(),characterRetries=new Map(),observedCharacterCalls=new Map()
+const transientCharacterError=error=>/^模型服务返回(?:请求频率限制|服务器错误|服务过载)提示，请稍后重试$/u.test(error??'')
 
 try{
  page=await app.firstWindow({timeout:60000});page.setDefaultTimeout(60000)
  const errors=[];page.on('pageerror',e=>errors.push(e.message))
  await button('导入作品').waitFor({timeout:60000})
- const boot=await page.evaluate(()=>window.desktop.bootstrap());assert.equal(boot.dataRoot,appRoot)
+ const boot=await page.evaluate(()=>window.desktop.bootstrap());assert.equal(boot.dataRoot,appRoot);isolatedConfirmed=true
  await app.evaluate(({dialog},paths)=>{dialog.showOpenDialog=async(...args)=>{const options=args.at(-1);return {canceled:false,filePaths:[options?.properties?.includes('openFile')?paths.source:paths.target]}}},{source,target})
- await save('launch.json',{launchedAt:new Date().toISOString(),pid:app.process().pid,picker:'controlled (dialog.showOpenDialog replaced), not the native dialog',models:boot.models.map(m=>({name:m.name,modelId:m.modelId,provider:m.provider}))})
+ await save('launch.json',{launchedAt:new Date().toISOString(),pid:app.process().pid,picker:'controlled (dialog.showOpenDialog replaced), not the native dialog',shutdownConfirmation:charactersOnly?'controlled stop prompt after evidence is preserved':'native',models:boot.models.map(m=>({name:m.name,modelId:m.modelId,provider:m.provider}))})
  let v=await current()
  if(!v){await log('new-session');await click('导入作品','start a new import');v=await until(v=>v?.wizard?.step==='files',180000);await save('session.json',{id:v.id,createdAt:(await journal(v.id)).createdAt,wizardVersion:(await journal(v.id)).wizardVersion})}
  else{assert.ok(v.wizard,'existing session is not a wizard session');await log('resume-session',{id:v.id,...brief(v)});if(!await page.locator('.ni-dialog').isVisible())await page.locator('.ni-task-button').click()}
  const id=v.id;let lastSignature='',lastChange=Date.now()
  for(;;){
   v=await current();const w=v.wizard,step=w.step,state=w.stepState[step]
+  if(charactersOnly){const runtime=await readFile(join(appRoot,'novel-imports',id,'runtime.json'),'utf8').then(JSON.parse).catch(()=>null);for(const call of runtime?.calls??[])if(call.intent==='entity'&&call.kind==='character')observedCharacterCalls.set(call.operationId,{operationId:call.operationId,state:call.state,outcome:call.outcome,startedAt:call.startedAt,settledObservedAt:call.settledObservedAt})}
   const signature=JSON.stringify([v.revision,v.phase,step,state]);if(signature!==lastSignature){lastSignature=signature;lastChange=Date.now();await log('state',brief(v))}
+  if(charactersOnly&&step==='detect-scene'){
+   const completedAt=new Date().toISOString(),completedTick=performance.now(),roleDurationMs=roleStartedTick===undefined?null:Math.round(completedTick-roleStartedTick),entityDurationMs=entityStartedTick===undefined?null:Math.round(completedTick-entityStartedTick),performancePassed=roleDurationMs!==null&&roleDurationMs<=300000
+   const s=await journal(id),list=s.wizard.candidates.character,tasks=s.wizard.tasks.filter(t=>t.kind==='entity'&&list.some(c=>c.id===t.candidateId)),artifacts=s.artifacts.filter(a=>a.kind==='character')
+   assert.ok(list.length>0&&list.every(c=>c.selected));assert.equal(tasks.length,list.length);assert.deepEqual(sorted(tasks.map(t=>t.candidateId)),sorted(list.map(c=>c.id)));assert.ok(tasks.every(t=>t.state==='done'));assert.deepEqual(s.wizard.skipped,[]);assert.deepEqual(s.wizard.dropped,[])
+   assert.deepEqual(sorted(artifacts.map(a=>a.id)),sorted(list.map(c=>c.id)))
+   const {importNativeMappings}=await import('../desktop/core/novel-import-semantic-state.ts'),mapping=importNativeMappings(artifacts),ids=new Set(artifacts.map(a=>a.id))
+   assert.equal(mapping.projectableIds.length,list.length);assert.equal(mapping.mappingWarnings.length,0)
+   let relationships=0,linkedRelationships=0
+   for(const a of artifacts)for(const relation of JSON.parse(a.facts.relationships??'[]')){relationships++;if(relation.characterId){linkedRelationships++;assert.ok(ids.has(relation.characterId))}}
+   assert.equal(sha(await readFile(source)),sourceHash);assert.equal(s.chapters.length,expected.length);assert.equal(sha(s.workingProse),run.expectedBodySha256);assert.equal(s.workingRevision,0);assert.deepEqual(errors,[])
+   await save('characters-completed.json',{sessionId:id,sourceSha256:sourceHash,chapters:s.chapters.length,characters:list.length,done:tasks.length,failed:0,skipped:0,dropped:0,relationships,linkedRelationships,mappingWarnings:mapping.mappingWarnings.length,bodyUnchanged:true,pageErrors:errors,nextStep:step,retries:Object.fromEntries(characterRetries),observedEntityCalls:[...observedCharacterCalls.values()],roleStartedAt,entityStartedAt,completedAt,roleDurationMs,entityDurationMs,deadlineMs:300000,performancePassed})
+   // Raw material stays only in the isolated /private/tmp run, never in repository evidence.
+   await save('characters-session-private.json',s);exitCode=performancePassed?0:4
+   // All character assertions and the fixed timing are already preserved. The
+   // next recognition may finish before its pause button renders; closing the
+   // isolated app below also drains it through the declared stop confirmation.
+   try{const latest=await current();if(latest.phase==='running'&&await button('暂停').isVisible()){await log('click',{button:'暂停',why:'character evidence saved; stop the next recognition'});await button('暂停').click({timeout:5000})}await shot('characters-completed')}catch(error){await log('post-character-cleanup',{message:String(error?.message??error).slice(0,300)})}
+   break
+  }
+  if(charactersOnly&&step==='import-char'&&(v.error&&!/重新允许/u.test(v.error)||w.tasks.some(t=>t.state==='failed'&&!transientCharacterError(t.error)))){
+   await save(`characters-failed-r${v.revision}.json`,{...brief(v),roleDurationMs:roleStartedTick===undefined?null:Math.round(performance.now()-roleStartedTick),entityDurationMs:entityStartedTick===undefined?null:Math.round(performance.now()-entityStartedTick),observedEntityCalls:[...observedCharacterCalls.values()],failed:w.tasks.filter(t=>t.state==='failed').map(t=>({id:t.id,error:t.error,attempts:t.attempts}))});await shot('characters-failed');await save('characters-failed-session-private.json',await journal(id))
+   if(v.phase==='running')await click('暂停','preserve a non-transient failure for repair and stop new requests')
+   exitCode=2;break
+  }
+  if(charactersOnly&&step==='import-char')await log('character-progress',{tasks:w.tasks.length,done:w.tasks.filter(t=>t.state==='done').length,failed:w.tasks.filter(t=>t.state==='failed').length,running:w.tasks.filter(t=>t.state==='running').length})
   if(v.phase==='completed'){const s=await journal(id);await save('completed.json',{publication:v.publication,summary:v.summary,notFound:v.notFound,checks:w.checks});await shot('completed');exitCode=0;break}
   if(v.phase==='conflicts'){await save(`conflicts-r${v.revision}.json`,{conflicts:v.conflicts.filter(c=>c.status==='pending').map(c=>({id:c.id,kind:c.kind,field:c.field,artifactName:c.artifactName}))});await shot('conflicts');exitCode=2;break}
   if(state==='failed'){
@@ -76,7 +110,7 @@ try{
   }
   if(v.phase==='running'||v.phase==='recognizing'||v.phase==='publishing'||state==='running'){
    if(Date.now()-lastChange>2*60*60*1000){await save(`stalled-r${v.revision}.json`,brief(v));exitCode=3;break}
-   await page.waitForTimeout(15000);continue
+   await page.waitForTimeout(charactersOnly?500:15000);continue
   }
   if(state!=='waiting'){await page.waitForTimeout(3000);continue}
   switch(step){
@@ -116,13 +150,13 @@ try{
     await save(`step-${step}-r${v.revision}.json`,{count:list.length,selected:list.filter(c=>c.selected).length,candidates:list.map(c=>({id:c.id,kind:c.kind,name:c.name,aliases:c.aliases,roleType:c.roleType,settingType:c.settingType,parentId:c.parentId,chapterCount:c.chapterCount,selected:c.selected}))});await shot(step)
     if(!list.length){await log('empty-roster',{step});exitCode=2;break}
     assert.ok(list.every(c=>c.selected),'roster defaults must stay all selected');assert.ok(Object.values(w.images).every(x=>!x),'image generation is not part of this task')
-    const go=page.locator('.ni-footer button').filter({hasText:/^导入 \d+ /u});await log('click',{button:await go.innerText(),why:'keep the default full roster'});await go.click();break}
+    const go=page.locator('.ni-footer button').filter({hasText:/^导入 \d+ /u});if(charactersOnly&&kind==='character'&&entityStartedTick===undefined){entityStartedAt=new Date().toISOString();entityStartedTick=performance.now()}await log('click',{button:await go.innerText(),why:'keep the default full roster'});await go.click();break}
    case 'import-char':case 'import-scene':case 'import-item':case 'import-world':{
-    const failed=w.tasks.filter(t=>t.state==='failed'),fresh=failed.filter(t=>!retried.has(t.id))
+    const failed=w.tasks.filter(t=>t.state==='failed'),fresh=failed.filter(t=>charactersOnly?transientCharacterError(t.error)&&(characterRetries.get(t.id)??0)<3:!retried.has(t.id))
     await save(`step-${step}-wait-r${v.revision}.json`,{tasks:w.tasks.length,done:w.tasks.filter(t=>t.state==='done').length,skipped:w.tasks.filter(t=>t.state==='skipped').length,failed:failed.map(t=>({id:t.id,candidateId:t.candidateId,settingsKind:t.settingsKind,error:t.error,attempts:t.attempts}))})
     if(!fresh.length){await shot(`${step}-failed`);exitCode=2;break}
     // Task cards carry no id; click 重试 on failed cards one at a time through the real UI.
-    for(const t of fresh){retried.add(t.id);await log('retry-task',{id:t.id,error:t.error});const before=(await current()).revision;await page.locator('.ni-w-ent[data-s="failed"]').first().getByRole('button',{name:'重试',exact:true}).click();await until(v=>v.revision>before,60000)}
+    for(const t of fresh){retried.add(t.id);if(charactersOnly)characterRetries.set(t.id,(characterRetries.get(t.id)??0)+1);await log('retry-task',{id:t.id,error:t.error});const before=(await current()).revision;const cards=page.locator('.ni-w-ent[data-s="failed"]'),candidate=w.candidates.character?.find(c=>c.id===t.candidateId);await (charactersOnly&&candidate?cards.filter({has:page.getByText(candidate.name,{exact:true})}):cards).first().getByRole('button',{name:'重试',exact:true}).click();await until(v=>v.revision>before,60000)}
     break}
    case 'verify':{
     await save(`step21-verify-r${v.revision}.json`,{checks:w.checks,notFound:v.notFound,pendingConflicts:v.conflicts.filter(c=>c.status==='pending').length,dropped:w.dropped,skipped:w.skipped});await shot('verify')
@@ -131,8 +165,8 @@ try{
    default:await save(`unexpected-${step}-r${v.revision}.json`,brief(v));exitCode=2
   }
   if(exitCode===2||rosterOnly&&exitCode!==1)break
-  await page.waitForTimeout(rosterOnly?250:3000)
+  await page.waitForTimeout(rosterOnly||charactersOnly?250:3000)
  }
  await save('page-errors.json',errors)
-}catch(error){await log('driver-error',{message:String(error?.message??error).slice(0,800)});await shot('driver-error').catch(()=>undefined);exitCode=1}
+}catch(error){if(charactersOnly&&isolatedConfirmed)try{const v=await current();if(v)await save('driver-error-session-private.json',await journal(v.id));await save('driver-error-calls.json',{roleDurationMs:roleStartedTick===undefined?null:Math.round(performance.now()-roleStartedTick),observedEntityCalls:[...observedCharacterCalls.values()]})}catch{}await log('driver-error',{message:String(error?.message??error).slice(0,800)});await shot('driver-error').catch(()=>undefined);exitCode=1}
 finally{const exit=await close().catch(()=>null);await log('shutdown',{exit,exitCode});process.exitCode=exitCode}

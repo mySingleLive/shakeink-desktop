@@ -7,7 +7,7 @@ import {buildThinkingProviderOptions} from '../../src/lib/ai/thinking-effort'
 import {providerFamily} from '../../src/lib/ai/provider-family'
 import {importRequestBudget,type ImportExecutionBudget} from '../core/novel-import-budget-policy'
 import {serializeImportAiPayload,assertImportPayloadBudget,importAiPrompt,assertImportFixedPromptReserve,assertImportReconcileContextBudget} from '../core/novel-import-ai-payload'
-import {IMPORT_KINDS,IMPORT_TARGETS,type ImportAiRequest,type ImportAiResult,type ImportEvidence,type ImportModel,type ImportUnit} from '../shared/novel-import'
+import {IMPORT_KINDS,IMPORT_TARGETS,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportModel,type ImportUnit} from '../shared/novel-import'
 import {importHash,validateImportEvidence,validateImportReferences} from '../core/novel-import'
 import {importStructureCandidateMetadata,importStructureResult} from '../core/novel-import-structure'
 import {IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,IMPORT_SEMANTIC_FACT_FIELDS,importArtifactEditSchema,importArtifactSemanticHash,validateImportSemanticArtifact,applyImportArtifactFieldEdits,importReviewProjectionSchema,assertImportReviewProjection,assertImportMissingProjection,type ImportSemanticAiRequest,type ImportSemanticAiResult,type ImportSemanticEntity,type ImportSemanticLock} from '../core/novel-import-semantics'
@@ -34,8 +34,13 @@ const rosterEntrySchemas={
 }
 const touchSchema=z.object({foreshadowKey:rosterName,title:rosterName,content:z.string().max(4000).default(''),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:z.number().int().nonnegative(),summary:z.string().max(200),quote:z.string().min(1).max(200),eventId:z.string().min(1).optional(),narrativeId:z.string().min(1).optional()}).strict(),evidence:rosterEvidence}).strict()
 const structureSchema=z.object({chapterCuts:z.array(z.object({start:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),title:structureTitle,volume:structureTitle.optional(),candidateId:z.string().min(1).max(512).optional()}).strict()).max(5000),ignoredStarts:z.array(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)).max(20000)}).strict()
+function characterEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&request.kind==='character'}
+/** The wizard owns the panel version; provider values remain unmodified. */
+function semanticResultArtifact(request:ImportSemanticAiRequest,item:ImportArtifact):ImportArtifact{return characterEntityRequest(request)&&item.kind==='character'?{...item,schema:2}:item}
+const characterProfileFeedback:Record<string,string>={personalityTags:'personalityTags必须为JSON字符串，解码后是最多20项的字符串数组，每项1–30字符',motivations:'motivations必须为JSON字符串，解码后为[{items:[{text,importance}]}]，最多6组，每组1–8项，text非空且最多200字符，importance为1–5整数；不能使用扁平字符串数组，未知省略',beliefs:'beliefs必须为JSON字符串，解码后是对象，仅允许worldview/values/outlook/other可选字符串，每项最多1000字符',bigFive:'bigFive必须为JSON字符串，解码后为null或对象，仅允许openness/conscientiousness/extraversion/agreeableness/neuroticism可选的0–100整数；未知省略，不造默认分数',arcStages:'arcStages必须为JSON字符串，解码后为最多50项对象数组，每项id/name必填，chapterIndex为非负整数或null；可选description/tags/markers/changes/isDebut按角色面板契约，未知省略'}
 /** Final parse uses this base schema; generation adds only local early checks. */
 export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodType<ImportSemanticAiResult>{
+ const selected=selectedEntityTarget(request),anchorFeedback=importEvidenceFeedback(request)
  if(request.intent==='structure')return structureSchema
  if(request.intent==='roster'){const entry=rosterEntrySchemas[request.kind as keyof typeof rosterEntrySchemas];if(!entry)throw Error('当前识别类别无效');return z.object({roster:z.array(entry).max(2000)}).strict() as unknown as z.ZodType<ImportSemanticAiResult>}
  if(request.intent==='touches')return z.object({touches:z.array(touchSchema).max(2000)}).strict() as unknown as z.ZodType<ImportSemanticAiResult>
@@ -61,18 +66,38 @@ export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodTyp
  const requestedEvidence=evidence.superRefine((entry,ctx)=>{
   // Check with the exact late matcher, without replacing the raw quote. The
   // late gate still restores source layout after the final schema parse.
-  try{rebindEvidence(entry,request.units)}catch(error){ctx.addIssue({code:'custom',message:error instanceof ImportEvidenceAnchorError?IMPORT_EVIDENCE_FEEDBACK[error.reason]:IMPORT_EVIDENCE_GUIDANCE})}
+  try{rebindEvidence(entry,request.units)}catch(error){ctx.addIssue({code:'custom',message:error instanceof ImportEvidenceAnchorError?anchorFeedback[error.reason]:IMPORT_EVIDENCE_GUIDANCE})}
  })
+ const options=characterEntityRequest(request)?request.entityTarget?.evidenceOptions:undefined
+ const reference=options?.length?z.object({optionIndex:z.number().int().min(0).max(options.length-1)}).strict():undefined
+ // Resolve only the strict reference form. Mixed or malformed forms still go
+ // through the original strict schema, preserving its anchor diagnostics.
+ const wireEvidence=reference?z.preprocess(value=>{const parsed=reference.safeParse(value);return parsed.success?{...options![parsed.data.optionIndex]}:value},requestedEvidence):requestedEvidence
  const requestedArtifact=artifact.extend({text:z.string(),kind:z.literal(kind,{error:'kind必须为本次唯一目标 '+kind+'，子类型不能放到kind'}),origin:z.literal('inferred',{error:'origin必须为 inferred'}),sourceUnitIds:z.array(z.string()).min(1,{error:'必须提供本次来源单元'}).refine(ids=>ids.every(id=>unitIds.has(id)),{error:'来源单元必须全部属于本次输入'}),facts,evidence:z.array(requestedEvidence).min(1)}).strict()
+ // Only the character wire protocol delegates this mechanical index to the application.
+ // Evidence has already passed the same strict matcher; semantic values stay untouched.
+ const indexedArtifact=characterEntityRequest(request)?requestedArtifact.extend({sourceUnitIds:z.array(z.string().max(512)).max(600).optional(),evidence:z.array(wireEvidence).min(1)}).transform(item=>{
+  const verifiedIds=item.evidence.map(entry=>rebindEvidence(entry,request.units).unitId)
+  return {...item,sourceUnitIds:[...new Set([...(item.sourceUnitIds??[]).filter(id=>unitIds.has(id)),...verifiedIds])]}
+ }):requestedArtifact
+ const profileArtifact=characterEntityRequest(request)?indexedArtifact.superRefine((item,ctx)=>{
+  if(ctx.issues.length)return
+  try{validateImportSemanticArtifact(semanticResultArtifact(request,item))}catch(error){const message=error instanceof Error?error.message:'',field=Object.keys(characterProfileFeedback).find(key=>message===key+'结构无效'||message===key+'结构、字符或字段类型无效');ctx.addIssue({code:'custom',path:field?['facts',field]:['facts'],message:field?characterProfileFeedback[field]:'角色原生字段必须符合本阶段字段与结构契约，不得自增字段或更改角色类型；未知省略，保留有据内容'})}
+ }):indexedArtifact
  const checkedArtifact=kind==='worldline'?requestedArtifact.superRefine((item,ctx)=>{
   // Reuse the final native validator without transforming provider values.
   try{validateImportSemanticArtifact(item)}catch{ctx.addIssue({code:'custom',path:['facts'],message:'worldline必须提供非空lineId、lineName、timeKind(unknown/exact/window)及people(JSON字符串数组)；eventId若提供须等于artifact.id；unknown不带timeValue/timeEnd，exact需有限timeValue且无timeEnd，window需有限timeValue/timeEnd且timeEnd不小于timeValue'})}
- }):requestedArtifact
+ }):profileArtifact
  const narrativeArtifact=kind==='narrative'?requestedArtifact.superRefine((item,ctx)=>{
   if(ctx.issues.length)return
   try{validateImportSemanticArtifact(item)}catch{ctx.addIssue({code:'custom',path:['facts'],message:'narrative的chapterIndex/order须为非负安全整数字符串；refs须为严格JSON数组，eventId非空，kind只用happen/mention/recall或省略；每项ref须明确reliability(客观事实/角色有限事实/人物推测/可能不可靠)，非客观ref须非空attribution；保留原文、归属和时间范围，不制造字段或默认值'})}
  }):checkedArtifact
  const response=base.extend({artifacts:z.array(narrativeArtifact).optional()}).strict()
+ if(selected)return response.superRefine((result,ctx)=>{
+  if(result.notFound===true||result.artifacts?.length!==1){ctx.addIssue({code:'custom',path:['artifacts'],message:'entityTarget导入必须返回恰好一个已选目标artifact，不能返回空、多项或notFound:true；未知可选字段省略，保留原文证据'});return}
+  for(const field of ['id','name'] as const)if(result.artifacts[0][field]!==selected[field])ctx.addIssue({code:'custom',path:['artifacts',0,field],message:'单实体artifact的id/name必须逐字等于entityTarget.id对应的目录项，不能换成别名或其它实体'})
+  if(kind==='character'&&result.artifacts[0].facts.roleType!==request.entityTarget!.roleType)ctx.addIssue({code:'custom',path:['artifacts',0,'facts','roleType'],message:'角色roleType必须逐字等于entityTarget.roleType中作者确认的类型，不能缺失或重新分类'})
+ })
  if(kind==='narrative')return response.superRefine((result,ctx)=>{
   if(ctx.issues.length||!result.artifacts?.length)return
   try{validateSemanticLinks(request,result.artifacts)}catch{ctx.addIssue({code:'custom',path:['artifacts'],message:'narrator只用已提供角色id或唯一name；refs.eventId只引用可信worldline事件，refs.character只用角色id，chapterIndex沿用全书索引；ID身份不可混用。无法链接框架叙述者时保留原称谓及讲述/转述归属在text/attribution，不冒用角色、不造外键、不丢叙事点、不改正文；空refs不证明叙事或角色完整，仍须完整性审核'})}
@@ -137,7 +162,7 @@ function reportAnchorDiagnostics(request:ImportSemanticAiRequest,candidate:Ancho
  * tests may inject only generateJSON's existing generateText dependency. */
 export async function generateImportAiJson(request:ImportSemanticAiRequest,context:{userId:string;resolvedModel:ResolvedModel}&ImportAiGenerationOptions,signal:AbortSignal,prompt:string,deps?:Parameters<typeof GenerateImportJSON>[1]):Promise<ImportSemanticAiResult>{
  const {generateJSON,generateText,StructuredGenerationError}=await import('../../src/lib/ai/generate')
- const ordinary=request.semanticVersion===1&&request.phase==='analyze'&&request.intent!=='reconcile'
+ const ordinary=request.semanticVersion===1&&request.phase==='analyze'&&request.intent!=='reconcile',anchorFeedback=importEvidenceFeedback(request)
  let evidenceReason:ImportEvidenceAnchorReason|undefined,diagnosticCandidate:AnchorDiagnosticCandidate|undefined
  // Observe all local issues, not generateJSON's first six display diagnostics.
  // Each parse and generation clears provenance; an aborting structural issue
@@ -151,7 +176,7 @@ export async function generateImportAiJson(request:ImportSemanticAiRequest,conte
   for(const issue of ctx.issues){
    const path=issue.path??[],index=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0
    if(issue.code!=='custom'||path.length!==4||path[0]!=='artifacts'||!index(path[1])||path[2]!=='evidence'||!index(path[3]))return
-   const matched=(Object.keys(IMPORT_EVIDENCE_FEEDBACK) as ImportEvidenceAnchorReason[]).find(key=>IMPORT_EVIDENCE_FEEDBACK[key]===issue.message)
+   const matched=(Object.keys(IMPORT_EVIDENCE_FEEDBACK) as ImportEvidenceAnchorReason[]).find(key=>anchorFeedback[key]===issue.message)
    if(!matched)return
    reason??=matched
   }
@@ -162,7 +187,7 @@ export async function generateImportAiJson(request:ImportSemanticAiRequest,conte
    const entries:AnchorDiagnosticEntry[]=[],result=ctx.value as ImportSemanticAiResult
    for(const issue of ctx.issues.slice(0,100)){
     const entry=result.artifacts![issue.path![1] as number].evidence[issue.path![3] as number]
-    const matched=(Object.keys(IMPORT_EVIDENCE_FEEDBACK) as ImportEvidenceAnchorReason[]).find(key=>IMPORT_EVIDENCE_FEEDBACK[key]===issue.message)!
+    const matched=(Object.keys(IMPORT_EVIDENCE_FEEDBACK) as ImportEvidenceAnchorReason[]).find(key=>anchorFeedback[key]===issue.message)!
     entries.push({reason:matched,unitId:entry.unitId,quote:entry.quote})
    }
    diagnosticCandidate={issues:ctx.issues.length,entries}
@@ -200,12 +225,22 @@ export async function generateImportAiJson(request:ImportSemanticAiRequest,conte
 }
 const lockSchema=z.object({artifactId:nonempty,field:nonempty,value:z.string()}).strict()
 const reconcileSchema=z.object({targetIds:uniqueIds.refine(ids=>ids.length>0),locks:z.array(lockSchema),decisionHash:nonempty,workingRevision:z.number().int().nonnegative(),decisions:z.array(z.object({conflictId:nonempty,choice:nonempty,explanation:z.string().optional(),hash:nonempty}).strict()).optional(),fragments:z.array(z.object({artifactId:nonempty,baseHash:nonempty,start:z.number().int().nonnegative(),end:z.number().int().nonnegative(),fields:uniqueIds}).strict()).optional()}).strict()
-const semanticContextSchema=z.object({semanticVersion:z.literal(1),intent:z.enum(['reconcile','structure','roster','entity','touches']).optional(),reconcile:reconcileSchema.optional(),semanticLocks:z.array(lockSchema).optional(),selectedTargets:z.array(target).refine(values=>new Set(values).size===values.length).optional(),reviewProjection:importReviewProjectionSchema.optional()}).strict()
+const entityTargetSchema=z.object({id:nonempty,aliases:z.array(nonempty).max(50),roleType:z.enum(['PROTAGONIST','SUPPORTING','ANTAGONIST']).optional(),evidenceOptions:z.array(evidence.extend({quote:z.string().min(1).max(512).refine(value=>!!value.trim()&&value.isWellFormed())}).strict()).min(1).max(8).optional()}).strict()
+const semanticContextSchema=z.object({semanticVersion:z.literal(1),intent:z.enum(['reconcile','structure','roster','entity','touches']).optional(),entityTarget:entityTargetSchema.optional(),reconcile:reconcileSchema.optional(),semanticLocks:z.array(lockSchema).optional(),selectedTargets:z.array(target).refine(values=>new Set(values).size===values.length).optional(),reviewProjection:importReviewProjectionSchema.optional()}).strict()
 const entitySchema=z.object({id:nonempty,kind:target,name:nonempty,unitIds:z.array(nonempty).optional(),parentId:nonempty.optional(),entityType:z.enum(['PLACE','WORLD','SETTING']).optional(),worldId:nonempty.optional(),settingType:z.enum(IMPORT_WORLD_SETTING_TYPES).optional()}).strict()
+function selectedEntityTarget(request:ImportSemanticAiRequest){
+ if(request.intent!=='entity'){if(request.entityTarget!==undefined)throw Error('单实体目标只能用于entity阶段');return undefined}
+ if(request.semanticVersion!==1||request.phase!=='analyze'||!entityTargetSchema.safeParse(request.entityTarget).success)throw Error('单实体目标或阶段无效')
+ const matches=request.entities?.filter(e=>e.id===request.entityTarget!.id)??[],own=matches[0]
+ if(matches.length!==1||!entitySchema.safeParse(own).success||own.kind!==request.kind||own.kind==='character'&&!request.entityTarget!.roleType||own.kind!=='character'&&request.entityTarget!.roleType!==undefined)throw Error('单实体目标不在唯一已选类型目录中')
+ for(const entry of request.entityTarget!.evidenceOptions??[]){const unit=request.units.find(u=>u.id===entry.unitId);if(!unit||!unit.text.includes(entry.quote))throw Error('单实体引用选项不在本次原文中')}
+ return own
+}
 function semanticLocks(request:ImportSemanticAiRequest):ImportSemanticLock[]{return [...(request.semanticLocks??[]),...(request.reconcile?.locks??[])]}
 function validateSemanticRequest(request:ImportSemanticAiRequest){
  if(request.semanticVersion===undefined){if(request.intent!==undefined||request.reconcile!==undefined||request.semanticLocks!==undefined||request.selectedTargets!==undefined||request.reviewProjection!==undefined)throw Error('缺少语义版本，不能使用语义阶段上下文');return}
- if(!semanticContextSchema.safeParse({semanticVersion:request.semanticVersion,intent:request.intent,reconcile:request.reconcile,semanticLocks:request.semanticLocks,selectedTargets:request.selectedTargets,reviewProjection:request.reviewProjection}).success)throw Error('导入语义版本或上下文结构无效')
+ if(!semanticContextSchema.safeParse({semanticVersion:request.semanticVersion,intent:request.intent,entityTarget:request.entityTarget,reconcile:request.reconcile,semanticLocks:request.semanticLocks,selectedTargets:request.selectedTargets,reviewProjection:request.reviewProjection}).success)throw Error('导入语义版本或上下文结构无效')
+ selectedEntityTarget(request)
  if(request.reviewProjection!==undefined){if(request.phase!=='review')throw Error('审核投影不能用于其它阶段');assertImportReviewProjection(request.artifacts,request.reviewProjection)}
  if(request.intent==='reconcile'&&(request.phase!=='analyze'||!request.reconcile)||request.reconcile&&request.intent!=='reconcile')throw Error('设定修订阶段或上下文无效')
  if(['roster','entity','touches'].includes(request.intent??'')&&(request.phase!=='analyze'||!request.units.length||request.reviewProjection||request.conflict))throw Error('导入向导阶段或上下文无效')
@@ -227,7 +262,7 @@ function validateSemanticStage(request:ImportSemanticAiRequest,result:ImportSema
 }
 function validateIdentityLinks(request:ImportSemanticAiRequest,items:NonNullable<ImportAiResult['artifacts']>){
  const valid:typeof items=[],deferred:typeof items=[]
- for(const item of items)try{validateImportSemanticArtifact(item);valid.push(item)}catch{deferred.push(item)}
+ for(const item of items)try{validateImportSemanticArtifact(semanticResultArtifact(request,item));valid.push(item)}catch{deferred.push(item)}
  const catalogOnly=deferred.map(item=>({...item,origin:'source' as const,facts:{}}))
  validateSemanticLinks({...request,artifacts:[...request.artifacts,...catalogOnly]},valid)
 }
@@ -240,7 +275,7 @@ function validateSemanticLinks(request:ImportSemanticAiRequest,items:NonNullable
  const add=(entry:ImportSemanticEntity,replacing=false)=>{if(!entitySchema.safeParse(entry).success)throw Error('语义实体目录类型无效');const old=catalog.get(entry.id);if(old&&(old.kind!==entry.kind||old.name!==entry.name||replacing&&['entityType','worldId','settingType','parentId'].some(key=>(old as unknown as Record<string,unknown>)[key]!== (entry as unknown as Record<string,unknown>)[key])))throw Error('模型实体标识与原类型或父级身份冲突');catalog.set(entry.id,{...old,...entry})}
  for(const entry of request.entities??[])add(entry)
  for(const a of request.artifacts)add(fromArtifact(a))
- for(const a of items){validateImportSemanticArtifact(a);add(fromArtifact(a),request.intent!=='reconcile')}
+ for(const a of items){validateImportSemanticArtifact(semanticResultArtifact(request,a));add(fromArtifact(a),request.intent!=='reconcile')}
  const typed=(id:string,kind:ImportSemanticEntity['kind'])=>{const found=catalog.get(id);if(!found||found.kind!==kind)throw Error('模型结果含无效实体引用');return found},character=(value:string)=>{const direct=catalog.get(value);if(direct){if(direct.kind!=='character')throw Error('角色引用类型无效');return}if([...catalog.values()].filter(e=>e.kind==='character'&&e.name===value).length!==1)throw Error('角色引用不存在或同名不明确')}
  const parents=new Map<string,string>()
  for(const e of catalog.values()){
@@ -299,6 +334,10 @@ const IMPORT_EVIDENCE_FEEDBACK:Record<ImportEvidenceAnchorReason,string>={
  ambiguous:IMPORT_EVIDENCE_GUIDANCE+'；排版恢复出现多个命中；从声明单元text复制含必要上下文的连续原文并保留原排版，不得任选位置',
  'no-match':IMPORT_EVIDENCE_GUIDANCE+'；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点'
 }
+function importEvidenceFeedback(request:ImportSemanticAiRequest):Record<ImportEvidenceAnchorReason,string>{
+ if(!characterEntityRequest(request)||!request.entityTarget?.evidenceOptions?.length)return IMPORT_EVIDENCE_FEEDBACK
+ return Object.fromEntries(Object.entries(IMPORT_EVIDENCE_FEEDBACK).map(([key,message])=>[key,message+'；本角色已有核验引用选项，请只输出{optionIndex:0-based整数编号}，不要抄写unitId或quote，完整保留有据facts和关系'])) as Record<ImportEvidenceAnchorReason,string>
+}
 function anchorEvidence(entries:ImportEvidence[],units:ImportUnit[]):ImportEvidence[]{
  const lookup=new Map(units.map(unit=>[unit.id,unit.text]))
  return entries.map(entry=>{
@@ -347,19 +386,26 @@ const defaults:ImportAiDependencies={
  async resolve(role,id){const {resolveLocalModel}=await import('./models');const {LOCAL_AUTHOR_ID}=await import('./context');return resolveLocalModel(LOCAL_AUTHOR_ID,role,id)},
  async assert(model){const {assertModelAuthorization}=await import('./models');await assertModelAuthorization(model as unknown as Parameters<typeof assertModelAuthorization>[0])},
  async generate(request,model,signal,prompt,options){
-  const [{localModelRecord},{LOCAL_AUTHOR_ID},{instantiateModel},{runInsideLongTask}]=await Promise.all([import('./models'),import('./context'),import('../../src/lib/ai/provider'),import('../../src/lib/long-task')])
-  const instantiated=instantiateModel(localModelRecord(model as unknown as Parameters<typeof localModelRecord>[0])),roster=request.intent==='roster'
-  const resolved=roster?importRosterModel(instantiated,model as Resolved):instantiated
-  // Roster batches are bounded by the import scheduler, not the shared chat slots (docs/238 C).
-  if(roster)return runInsideLongTask(()=>generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options},signal,prompt))
+  const [{localModelRecord},{LOCAL_AUTHOR_ID},{instantiateModel}]=await Promise.all([import('./models'),import('./context'),import('../../src/lib/ai/provider')])
+  const instantiated=instantiateModel(localModelRecord(model as unknown as Parameters<typeof localModelRecord>[0])),resolved=importGenerationModel(request,instantiated,model as Resolved)
+  // The import scheduler bounds catalogue and character extraction independently of chat slots.
+  if(lightImportGeneration(request))return runImportGenerationLane(request,()=>generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options},signal,prompt))
   return generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options},signal,prompt)
  }
+}
+type ImportGenerationScope=Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>
+const lightImportGeneration=(request:ImportGenerationScope)=>request.semanticVersion===1&&request.phase==='analyze'&&(request.intent==='roster'||request.intent==='entity'&&request.kind==='character')
+export function importGenerationModel(request:ImportGenerationScope,resolved:ResolvedModel,model:Parameters<typeof importRosterModel>[1]){return lightImportGeneration(request)?importRosterModel(resolved,model):resolved}
+export async function runImportGenerationLane<T>(request:ImportGenerationScope,work:()=>Promise<T>):Promise<T>{
+ if(!lightImportGeneration(request))return work()
+ const {runInsideLongTask}=await import('../../src/lib/long-task');return runInsideLongTask(work)
 }
 /** Name lists are extraction, not reasoning. On the DeepSeek SDK (OpenAI protocol) DeepSeek runs
  * without thinking; other models whose default uses thinking drop to their lightest published level;
  * models without levels or with a thinking-off default keep their options. Thinking keys are merged per provider, so settings such as OpenAI store:false stay. */
 export function importRosterModel(resolved:ResolvedModel,model:{provider?:unknown;protocol?:unknown;modelId?:unknown;thinkingLevels?:unknown;defaultThinking?:unknown}):ResolvedModel{
  const provider=typeof model.provider==='string'?model.provider:'',modelId=typeof model.modelId==='string'?model.modelId:undefined
+ if(providerFamily(provider)==='deepseek'&&model.protocol==='anthropic')return resolved
  const thinking=providerFamily(provider)==='deepseek'&&model.protocol!=='anthropic'?{deepseek:{thinking:{type:'disabled'}}}:(()=>{
   // A model whose default runs without thinking stays that way; only a thinking default is lowered.
   if(model.defaultThinking===undefined||model.defaultThinking==='default')return undefined
