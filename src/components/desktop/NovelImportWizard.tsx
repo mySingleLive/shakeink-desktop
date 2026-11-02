@@ -8,6 +8,7 @@ import {IMPORT_KINDS,IMPORT_LABELS,IMPORT_TARGETS,type ImportKind,type ImportTar
 import {WIZARD_STEPS,WIZARD_STEP_TITLES,WIZARD_IMAGE_KINDS,WIZARD_IMAGE_OWNER,type WizardCandidate,type WizardImageKind,type WizardStep} from '@desktop/shared/novel-import-wizard'
 import {mutateNovelImport,readNovelImportWizardImage} from '@/lib/desktop/novel-import'
 import {WIZARD_ENTITY_LABELS,WIZARD_IMAGE_LABELS,wizardAnalyzeButton,wizardCandidateMatches,wizardImportButton,wizardProgressText,wizardStageText,wizardStepNumber,wizardVolumeToggle,type WizardEntityKind} from '@/lib/desktop/novel-import-wizard'
+import {SceneIdentityDetails} from './SceneIdentityDetails'
 
 /** The approved step-by-step import wizard (design/novel-import-wizard). Every value comes from view.wizard. */
 const STAGES=['准备','结构与正文','角色 · 场景 · 物品','世界观','线索','校验与完成']
@@ -60,10 +61,10 @@ function WorkStep({view,busy}:Props){
  const [title,setTitle]=useState(view.title)
  useEffect(()=>setTitle(view.title),[view.id,view.title])
  const save=async()=>title===view.title||!!await act('set-title',{title})
- return <><div className="ni-body"><label className="ni-field">作品名称<input aria-label="作品名称" value={title} maxLength={100} disabled={busy} onChange={event=>setTitle(event.target.value)} onBlur={()=>void save()}/></label><p>默认取第一个文件名，可修改。</p>
+ return <><div className="ni-body"><label className="ni-field">作品名称<input aria-label="作品名称" value={title} maxLength={100} disabled={busy} onChange={event=>setTitle(event.target.value)}/></label><p>默认取第一个文件名，可修改。</p>
   <div className="ni-row ni-target-directory"><div><h3>保存到新的空目录</h3><p>{view.targetLabel??'请选择用来保存新作品的空目录。目录不能与来源文件重叠。'}</p></div><Button variant="outline" disabled={busy} onClick={async()=>{if(await save())await act('choose-target')}}><FolderOpen/>选择目录</Button></div>
   <p>作品在全部导入并校验通过后才写入此目录；中途停止会删除这次导入，原始文件不会更改。</p></div>
-  <Footer><Button variant="ghost" disabled={busy} onClick={()=>void act('wizard-back')}>上一步</Button><Button disabled={busy||!title.trim()||!view.targetLabel} onClick={async()=>{if(await save())await act('wizard-next')}}>继续</Button></Footer></>
+  <Footer><Button variant="ghost" disabled={busy} onClick={async()=>{if(await save())await act('wizard-back')}}>上一步</Button><Button disabled={busy||!title.trim()||!view.targetLabel} onClick={async()=>{if(await save())await act('wizard-next')}}>继续</Button></Footer></>
 }
 function KindsStep({view,busy}:Props){
  const body=view.selected.includes('body'),model=!!view.models.text,can=body&&model
@@ -109,11 +110,13 @@ function RosterStep(props:Props&{kind:WizardEntityKind}){
  const state=w.stepState[w.step]
  if(state==='running')return <><div className="ni-body"><div className="ni-progress-hero"><LoaderCircle className="ni-spinner"/><h3>正在识别{WIZARD_ENTITY_LABELS[kind]}</h3><p>只返回名称清单，不在此步骤导入。</p><p className="ni-w-found" aria-live="polite">已识别 {w.rosterFound??0} 个{WIZARD_ENTITY_LABELS[kind]}</p></div></div><Footer><Button variant="ghost" onClick={props.onStop}>停止导入</Button><Button variant="ghost" onClick={onRevise}>返回修改选择</Button></Footer></>
  if(state==='failed')return <><div className="ni-body"><StepRail w={w}/><Notice alert title={<><CircleAlert/>{WIZARD_ENTITY_LABELS[kind]}识别失败</>}>{w.stepError}</Notice></div><Footer><Button variant="ghost" onClick={onRevise}>返回修改选择</Button><Button variant="outline" disabled={busy} onClick={()=>void act('wizard-next',{skip:true})}>跳过此步骤</Button><Button disabled={busy} onClick={()=>void act('wizard-redetect')}>重新识别</Button></Footer></>
- const images=WIZARD_IMAGE_KINDS.filter(k=>WIZARD_IMAGE_OWNER[k]===kind),wanted=images.filter(k=>w.images[k]),imageModel=view.models.image
+ const images=WIZARD_IMAGE_KINDS.filter(k=>WIZARD_IMAGE_OWNER[k]===kind),wanted=images.filter(k=>w.images[k]),imageModel=view.models.image,sceneSummary=kind==='scene'?w.sceneIdentitySummary:undefined,unresolved=sceneSummary?list.filter(candidate=>candidate.selected&&candidate.sceneIdentityState==='unresolved').length:0
  const visible=kind==='world'?list:list.filter(c=>wizardCandidateMatches(c,query)),n=list.filter(c=>c.selected&&(kind!=='world'||c.kind==='world-setting'||!list.some(x=>x.parentId===c.id))).length
+ const ready=kind==='scene'&&sceneSummary?n-unresolved:n
  const select=(ids:string[],selected:boolean)=>void act('wizard-select-candidates',{kind,ids,selected})
  if(!list.length)return <><div className="ni-body"><Notice title={`未识别到${WIZARD_ENTITY_LABELS[kind]}`}>所选章节和资料中没有找到可导入的{WIZARD_ENTITY_LABELS[kind]}。</Notice></div><Footer><Button variant="ghost" onClick={onRevise}>返回修改选择</Button><Button variant="outline" disabled={busy} onClick={()=>void act('wizard-redetect')}>重新识别</Button><Button disabled={busy} onClick={()=>void act('wizard-next')}>跳过</Button></Footer></>
  return <><div className="ni-body">
+  {sceneSummary&&<Notice title={`具体地点 ${sceneSummary.concreteCount} · 来源限定地点 ${sceneSummary.sourceScopedCount} · 待确认 ${sceneSummary.unresolvedCount}`}>同名地点按各自原文提及区分。请在详情核对待确认归属；未确定上级的来源限定地点可以正常导入。</Notice>}
   {images.length>0&&<fieldset className="ni-w-genopts"><legend>导入后自动生成</legend>{images.map(k=>{const Icon=IMAGE_ICON[k];return <label key={k} className={imageModel?'':'ni-muted'}><input type="checkbox" checked={w.images[k]} disabled={busy||!imageModel} onChange={event=>void act('wizard-set-images',{[k]:event.target.checked})}/><Icon/>生成{WIZARD_IMAGE_LABELS[k]}</label>})}
    <small>{imageModel?`为每个导入成功的${WIZARD_ENTITY_LABELS[kind]}各生成一张。勾选并开始导入即允许把外观描述发送给图像模型 ${imageModel.name}；之后可在面板重新生成。`:'尚未配置图像模型。'}</small>{!imageModel&&<Button size="sm" variant="ghost" onClick={()=>window.dispatchEvent(new CustomEvent('desktop:settings-section',{detail:'models'}))}>配置模型</Button>}</fieldset>}
   <div className="ni-w-toolbar">{kind!=='world'&&<SearchBox value={query} onChange={setQuery} label="搜索名称或别名"/>}<Button size="sm" variant="outline" disabled={busy} onClick={()=>select(list.map(c=>c.id),true)}>全选</Button><Button size="sm" variant="outline" disabled={busy} onClick={()=>select(list.map(c=>c.id),false)}>全不选</Button>
@@ -124,9 +127,10 @@ function RosterStep(props:Props&{kind:WizardEntityKind}){
    <span>{c.name}</span>
    {kind==='character'&&c.roleType&&(editing===c.id?<select aria-label={`${c.name} 类型`} autoFocus defaultValue={c.roleType} onChange={event=>{setEditing(null);void act('wizard-set-role',{candidateId:c.id,roleType:event.target.value})}} onBlur={()=>setEditing(null)}>{Object.entries(ROLE_LABELS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:<button type="button" className="ni-w-tag" aria-label={`${c.name}：${ROLE_LABELS[c.roleType]}，点击修改类型`} onClick={()=>setEditing(c.id)}>{ROLE_LABELS[c.roleType]}</button>)}
    {kind==='item'&&c.itemType&&<span className="ni-w-tag">{c.itemType}</span>}
+   {sceneSummary&&c.sceneIdentityState&&<span className="ni-w-tag">{c.sceneIdentityState==='unresolved'?'待确认':c.sceneIdentityState==='source-scoped'?'来源限定':'具体地点'}</span>}
    <button type="button" className="ni-source-link ni-w-ml" aria-expanded={details.has(c.id)} onClick={()=>setDetails(s=>{const x=new Set(s);if(x.has(c.id))x.delete(c.id);else x.add(c.id);return x})}>{details.has(c.id)?'收起':'详情'}</button></div>
-   {details.has(c.id)&&<div className="ni-w-detail">{[c.aliases.length?'别名：'+c.aliases.join('、'):'',`出场 ${c.chapterCount} 章`,'来源：'+c.sources.map(s=>s==='source'?'资料':'正文').join(' + ')].filter(Boolean).join(' · ')}</div>}</div>)}</div>}
- </div><Footer note={n?undefined:`未选择任何${WIZARD_ENTITY_LABELS[kind]}，将跳过导入`}><Button variant="ghost" onClick={onRevise}>返回修改选择</Button><Button disabled={busy} onClick={()=>void act('wizard-next',wanted.length&&n?{imageConsent:true}:{})}>{wizardImportButton(kind,n,wanted)}</Button></Footer></>
+   {details.has(c.id)&&(sceneSummary?<SceneIdentityDetails view={view} identityId={c.id} busy={busy}/>:<div className="ni-w-detail">{[c.aliases.length?'别名：'+c.aliases.join('、'):'',`出场 ${c.chapterCount} 章`,'来源：'+c.sources.map(s=>s==='source'?'资料':'正文').join(' + ')].filter(Boolean).join(' · ')}</div>)}</div>)}</div>}
+ </div><Footer note={unresolved?ready?`${unresolved} 项仍需在详情确认，未跳过；先导入 ${ready} 个已明确场景`:'请在详情确认所选场景的提及归属':n?undefined:`未选择任何${WIZARD_ENTITY_LABELS[kind]}，将跳过导入`}><Button variant="ghost" onClick={onRevise}>返回修改选择</Button><Button disabled={busy||!!unresolved&&!ready} onClick={()=>void act('wizard-next',wanted.length&&ready?{imageConsent:true}:{})}>{wizardImportButton(kind,ready||n,wanted)}</Button></Footer></>
 }
 function WorldTree({list,busy,select}:{list:WizardCandidate[];busy:boolean;select(ids:string[],selected:boolean):void}){
  const leaves=(id:string):WizardCandidate[]=>{const kids=list.filter(c=>c.parentId===id);return kids.length?kids.flatMap(k=>leaves(k.id)):list.filter(c=>c.id===id)}

@@ -1,0 +1,19 @@
+{
+  "readOnly": true,
+  "acceptance": false,
+  "strictFinalValidationPassed": true,
+  "units": 26,
+  "entities": 1164,
+  "artifacts": 1,
+  "generations": 1,
+  "finishReason": "stop",
+  "outputTokens": 16870,
+  "responseCharacters": 26178,
+  "maxOutputTokens": 32768,
+  "modelConfigurationUnchanged": true,
+  "databaseWrites": 0,
+  "exit": {
+    "code": 0,
+    "signal": null
+  }
+}

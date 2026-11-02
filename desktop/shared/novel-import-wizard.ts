@@ -14,6 +14,8 @@ export interface WizardCandidate {
  chapterCount:number;sources:('source'|'body')[];sourceArtifactIds:string[];selected:boolean
  /** Body units where recognition found this entry; used as import context when names are paraphrased. */
  evidenceUnitIds?:string[]
+ /** A scene's source-bound identity status; absent on legacy and non-scene entries. */
+ sceneIdentityState?:'concrete'|'source-scoped'|'unresolved'
 }
 
 export const WIZARD_IMAGE_KINDS=['avatar','portrait','exterior','interior','icon'] as const

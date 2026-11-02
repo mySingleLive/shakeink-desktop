@@ -1,0 +1,29 @@
+# 场景复核准备阶段让出用例
+
+2026-10-31，依据304，先方案独审再用例独审，随后才写独立新测试及取得RED。R23进行时仅允许测试/文档，不编辑产品源码、构建或启动另一个实际App/模型。全部夹具为合成资料，无真实小说、配置、Key或私有journal。
+
+## PY01：在31包填满前服务事件循环与真实current
+
+使用现有controller合成向导scene-only复核夹具，确保原planner有超过31个合法正文包。包装原stageRequests迭代器仅计数和转交原值，不替换其包内容/next算法；首个完整packet发出时安排外部setImmediate回调。回调通过原controller current动作读取状态，记录其Promise实际完成时的准备包数及出站AI计数，不能只记回调开始。
+
+断言current确实返回，且在波次填满31包之前被服务、此时尚无AI出站；不要求恰好在第1或第2包、不按毫秒阈值判定。后续解除合成响应屏障，仍按原顺序取得31并发、尾波与facts屏障，并使用原RW01包比较/完整coverage断言证明几何与模型设置不变。可以复用既有RW01回归，不复制一整套等价大夹具。
+
+RED须记录真正到达事件循环/准备包计数断言：旧实现会先同步消耗整波，不能把setup失败或等待超时冒称目标RED。测试不得按prompt关键词返回成功，也不得只检查freshImportRuntimeTask调用次数或源码字符串。Promise微任务让出不足以运行外部setImmediate，因此应被该断言识别。
+
+## PY02：准备期间真实暂停，未发整波不再出站
+
+在同一首包外部事件循环回调中，通过原controller pause动作发出暂停；观察原epoch捕获/停止流程，而不是直接改epoch来替代暂停。让原workflow及pause正常排空，避免在准备逻辑中await整个pause导致互等。断言暂停于全部31包准备完之前被处理；原epoch变化后不再准备/发送后续包，第一波未发出的AI调用数为0，无新coverage/conflicts/missing或成功候选credit。原已有资料、正文与作者决定保留，允许原暂停流程正常更新phase/epoch/诊断字段。
+
+出站以实际options.ai入口计数；若还有已发请求的补充场景，应单独记录暂停前/后边界，不能把已发请求的取消算作新出站。测试收尾须解除所有deferred并等待workflow/pause，不遗留挂起任务。既有RW03在途取消、迟到结果、授权/来源失效及持久化门继续回归，不在本次更改这些规则。
+
+## PY03：末包准备后的控制机会及范围保持
+
+给真实reviewWaves一个恰31个有效packet的合成迭代器；只在第31个packet产出时安排外部setImmediate调用原`act(pause)`，不能仅直接改epoch；不足31包的短尾亦独立覆盖同样真实暂停。包内容仍为合法原请求，不注入成功结果。至少一项通过原launch/jobs生命周期运行reviewWaves，证明捕获gate只等待epoch捕获，不与pause等待jobs排空互等。
+
+断言真实epoch捕获先于wave dispatch，原current抛stopped；透明计数包装原controller ai入口证明0次dispatch，options.ai实际出站也为0，零coverage/冲突credit。此项应同时抓住“只在前30包间让出”和“末包yield看到旧epoch便立即dispatch”的错误实现。等待真实pause与workflow排空，不用Promise.race成功掩盖遗留job；已有runtime proof若没有调用可为missed，不伪造drained。
+
+捕获前错误/候选阻断/原发布不暂停分支须幂等释放gate且保持原错误/返回，不将捕获失败认定为成功暂停；至少一个短合成用例验证无gate/job泄漏、后续正常请求不永久挂起。不新增超时或修改原PDF清理行为。
+
+正常无失效时仍完整准备并发送原31包，不能以每包提前网络发送或降低并发通过响应性测试。非wizard、混合目标、作者解释及无标记service范围继续由RW04和UR/RA原组核验；模型thinking、预算、payload、有限生成、body/facts全覆盖与publish门保持。
+
+本组只证明packet之间的事件循环活性和失效请求抑制，不证明单个next可抢占、实际UI固定时延或全文语义正确。记录实际RED/GREEN到达的断言，不回填后置未执行项。当前R23结果仍归原冻结构建；后续实际验证与新源码/产物身份单独记录。

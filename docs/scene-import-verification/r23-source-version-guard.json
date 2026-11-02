@@ -1,0 +1,11 @@
+{
+  "scope": "original first 36 pending conflicts from R23 body review",
+  "mismatchedSourceFields": 16,
+  "legalDecisionBranchesChecked": 32,
+  "allRejectedByOriginalSourceVersionGate": true,
+  "modelCalls": 0,
+  "writeAttempts": 0,
+  "networkCalls": 0,
+  "sourceAndOwnerSnapshotsUnchanged": true,
+  "fullBookAcceptance": false
+}

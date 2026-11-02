@@ -2,6 +2,9 @@ import {z} from 'zod'
 import {normalizeContent,type SettingContent,type LevelNode,type LevelPathway} from '../../src/components/content/setting-content'
 import {importHash,safeImportBoundary,validateImportEvidence} from './novel-import'
 import {IMPORT_TARGETS,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportTarget,type ImportUnit} from '../shared/novel-import'
+import {IMPORT_SCENE_PROFILE_TEXT_FIELDS} from '../shared/novel-import-scene-links'
+import type {SceneMentionRecord,SceneIdentityDecision,SceneIdentityRequestContext} from '../shared/novel-import-scene-identity'
+export type {SceneMentionRecord,SceneIdentityDecision,SceneIdentityRequestContext,SceneIdentityMembership} from '../shared/novel-import-scene-identity'
 
 /** Pure contracts only. They validate structure and provenance links, not whether
  * a literary interpretation is supported; that still needs source review. */
@@ -36,9 +39,9 @@ export interface ImportMissingTarget {kind:ImportTarget;unitIds:string[];evidenc
 export interface ImportReviewProjection {artifactId:string;semanticHash:string;fullTextLength:number;fullFactKeys:string[];fields:string[];textRange?:{start:number;end:number}}
 export interface ImportRosterEntry {name:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';parent?:string;itemType?:string;important?:boolean;settings?:{settingType:ImportWorldSettingType;name:string}[];evidence:ImportEvidence}
 export interface ImportTouchEntry {foreshadowKey:string;title:string;content:string;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string};evidence:ImportEvidence}
-export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];touches?:ImportTouchEntry[]}
+export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];sceneRosterRecords?:SceneMentionRecord[];sceneIdentityDecisions?:SceneIdentityDecision[];touches?:ImportTouchEntry[];sceneParents?:{id:string;parentId?:string;evidence:ImportEvidence}[]}
 export interface ImportSemanticEntity {id:string;kind:ImportTarget;name:string;unitIds?:string[];parentId?:string;entityType?:'PLACE'|'WORLD'|'SETTING';worldId?:string;settingType?:ImportWorldSettingType}
-export interface ImportSemanticRequestFields {semanticVersion?:1;intent?:'reconcile'|'structure'|'roster'|'entity'|'touches';entityTarget?:{id:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';evidenceOptions?:ImportEvidence[]};reconcile?:ImportReconcileContext;selectedTargets?:ImportTarget[];semanticLocks?:ImportSemanticLock[];entities?:ImportSemanticEntity[];reviewProjection?:ImportReviewProjection[]}
+export interface ImportSemanticRequestFields {semanticVersion?:1;intent?:'reconcile'|'structure'|'roster'|'entity'|'touches';entityTarget?:{id:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';evidenceOptions?:ImportEvidence[]};sceneIdentity?:SceneIdentityRequestContext;sceneParentTargets?:string[];reconcile?:ImportReconcileContext;selectedTargets?:ImportTarget[];semanticLocks?:ImportSemanticLock[];entities?:ImportSemanticEntity[];reviewProjection?:ImportReviewProjection[]}
 export type ImportSemanticAiRequest=ImportAiRequest&ImportSemanticRequestFields
 export type ImportSemanticAiResult=ImportAiResult&ImportSemanticResult
 
@@ -56,7 +59,7 @@ export const IMPORT_SEMANTIC_FACT_FIELDS:Record<ImportTarget,readonly string[]>=
 /** Wizard entity results (artifact.schema===2) may fill every native panel field. */
 export const IMPORT_SEMANTIC_V2_FIELDS:Partial<Record<ImportTarget,readonly string[]>>={
  character:['height','weight','build','faceShape','tastes','habits','dialogueStyle','sampleDialogue','personalityTags','motivations','desires','fears','beliefs','bigFive','abilities','backstory','arcStages'],
- scene:['exteriorDescription','interiorDescription','backstory','entryMethod'],
+ scene:IMPORT_SCENE_PROFILE_TEXT_FIELDS,
  item:['appearance','acquisition','effects','aliases','tags'],
  foreshadow:['status','touches'],
 }
@@ -229,9 +232,10 @@ function validateImportSemanticArtifactV1(a:ImportArtifact,mode:ImportSemanticMo
 }
 /** Identity includes actual typed ancestry; names alone cannot merge different
  * spaces/worlds or turn a thematic setting into a World. */
-export function importSemanticIdentity(a:ImportArtifact,mode:ImportSemanticMode='strict'){
+export function importSemanticIdentity(a:ImportArtifact,mode:ImportSemanticMode='strict',sceneRegistry?:ReadonlyMap<string,string>){
  let native:ImportNativeProjection|null
  try{native=validateImportSemanticArtifact(a,mode).native}catch(error){if(mode!=='source-copy'||!isImportRawSourceArtifact(a))throw error;native=null}
+ if(a.kind==='scene'&&sceneRegistry){if(!sceneRegistry.has(a.id))throw Error('场景身份未注册，请先确认具体地点');return importHash({kind:a.kind,id:a.id,identity:sceneRegistry.get(a.id)})}
  if(a.kind==='scene')return importHash({kind:a.kind,name:a.name,entityType:native?.kind==='scene'?'PLACE':null,parentId:native?.kind==='scene'?native.parentId:null,...(!native?{unmappedId:a.id}:{})})
  if(a.kind==='world')return importHash({kind:a.kind,name:a.name,...(native?.kind==='world'?(native.entityType==='WORLD'?{entityType:'WORLD',parentId:native.parentId}:{entityType:'SETTING',worldId:native.worldId,settingType:native.settingType,parentId:native.parentId}):{unmappedId:a.id})})
  return importHash({kind:a.kind,name:a.name,...(['worldline','narrative'].includes(a.kind)?{id:a.id}:{})})

@@ -1,0 +1,46 @@
+{
+  "kind": "reconstructed-first-packet-readonly-diagnostic",
+  "historicalExactFailureReplay": false,
+  "fullBookAccepted": false,
+  "elapsedMs": 34274,
+  "stateUnchanged": true,
+  "normalAppExit": {
+    "code": 0,
+    "signal": null
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "finishReason": "stop",
+      "promptTokens": 60232,
+      "completionTokens": 4893,
+      "textCharacters": 15528,
+      "sha256": "e96fd92519eb9443fb4d2ca74db98076ef302cf4f7e19e68768402e25196c566",
+      "wireShape": "valid",
+      "records": 24,
+      "validation": "invalid",
+      "reason": "anchor",
+      "failures": {
+        "contextLabelNotInQuote": 32,
+        "unanchoredNameOrAlias": 12,
+        "unmatchedQuote": 10,
+        "unknownLiteral": 6,
+        "literalNotUniqueInQuote": 1
+      },
+      "badRecords": 24,
+      "firstBadRecordIndex": 0
+    },
+    {
+      "generation": 2,
+      "finishReason": "stop",
+      "promptTokens": 60359,
+      "completionTokens": 5434,
+      "textCharacters": 15722,
+      "sha256": "e0a930ef3f25ba2971cf784de89d9be2853c6d4cfd5e55ea2bd289a9ad519e0f",
+      "wireShape": "invalid",
+      "category": "invalid_schema",
+      "fieldCount": 1
+    }
+  ],
+  "scope": "strict provider wire shape then original full roster validator; diagnostic counts never used for acceptance"
+}

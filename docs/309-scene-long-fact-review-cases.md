@@ -1,0 +1,29 @@
+# 场景原生长文本事实复核用例
+
+2026-10-31，依据308；先方案及用例独审，且R23正常收尾后才实施测试/RED。只使用合成来源、模型结果和隔离临时目录，不读真实小说、私有journal、配置/Key，不调用模型。本组不实现304/305响应性或pause-barrier。
+
+## LF01：四字段完整原子任务与投影
+
+使用真实iterateImportReviewTasks/importReviewTaskKeys及原冻结v2审核profile（contextWindow1048576、characters81920、pieceCharacters16384）。scene/schema2的四个白名单字段分别包含超过27529 UTF-16 code units的合成字符串，具有不同首尾哨兵、前后空白、CRLF和非BMP字符；确保本项全部其它字段、原文证据与native语义合法。
+
+逐字段断言任务片只携带原来的完整字符串，不截断/分割/移到text；每个原evidence batch均携带完整值，key数量和index仍对应原单字段piece规则。对每个fragment调用原create/assertImportReviewProjection，fields与fullFactKeys/semanticHash来自完整原artifact，无虚构factRange/textRange；原artifact、facts、units及调用前对象逐值不变。
+
+另用现有合法的短字段scene/schema2夹具冻结改动前可成功计算的key列表/包几何黄金值，覆盖text连续分片与多个evidence batch；新实现必须逐值相同，不能只比较两个调用同一新函数。复用NI-LB09原legacy/v2几何回归，原合法任务keys不迁移或重算成功credit。
+
+## LF02：真实controller完整复核及正常wizard发布mock
+
+使用现有scene-only向导fixture，让原生成门取得合法schema2场景，四字段带不同完整长值（每个均超过27529，原单字段完整请求仍可fit）。通过原controller.review、reviewFactPackets、requestSnapshot与实际预算检查，预定合成review返回无冲突；不根据新prompt关键字切换成功，不直接设置reviewFacts或checks。
+
+检查每个原事实值确实完整进入实际options.ai记录的fact请求；与原evidence、projection和fullFactKeys逐项对应。实际review role的原81920字符预算、单位上限、JSON≤2×budget及payload≤3×budget均满足，未借用更大的text模型。最终coverage.reviewFacts严格等于importReviewTaskKeys，所有选中body/source单位仍有review coverage，原资料/正文/锁定值不变。
+
+通过原wizard检查及正常wizard-next到发布mock，断言检查真实通过、没有pending conflicts、published session仍含全部四个完整值和原schema/元数据。mock仅记录真实publish输入，不直接注入publication/完成状态。该正控必须在RED中实际到达原结构事实尺寸错误或等价失败断言；setup/无关超预算失败不算本需求RED。此项不声称实际安装包、真实模型或原生数据库保存/重开通过。
+
+## LF03：真正超预算仍拒绝，原范围不放宽
+
+将一个白名单长值增加到连单字段原子请求的完整units/metadata都不能通过现有controller fits门；保留body已成功的合法状态，只观察完整fact复核。断言原值与已有成功coverage保留，发生原真实预算拒绝，0次fact options.ai出站、无新fact credit、不publish；不能通过截断、丢键、改text、扩大profile或重分字符串成功。应确认拒绝来自controller完整请求容量，而不是已解除的pieceCharacters门。
+
+小型反例表覆盖scene/schema2非白名单coordinates及知识/身份字段、其它kind的结构fact、character/schema2同名backstory、旧scene缺省schema。对旧scene带新字段的纯iterator范围反例，仅证明尺寸例外没有扩散，不声称该字段原本通过旧native合同。所有超piece输入仍由原guard拒绝；有效边界field.length+value.length恰等于pieceCharacters通过、再多1字符拒绝。schema2四字段用相同长度则可枚举，仍必须经过LF02/03整包门。
+
+不新增模型重试、扩大字段表或放宽最终原生校验。既有reviewProjection完整字段/范围、遗漏投影/作者锁定、权限/来源、wave原子保存与pending冲突发布阻断组继续回归；合法长值不会赋予这些门任何例外。
+
+执行证据如实区分RED到达范围、GREEN和合成mock。R23仍是场景及正文复核成功、完整facts复核失败、未发布的旧构建轮；新构建实际全流程验收另行记录，不能用本组GREEN替代。

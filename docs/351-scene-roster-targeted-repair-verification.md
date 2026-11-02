@@ -1,0 +1,15 @@
+# 定点修正实现与当前接口诊断（351）
+
+2026-11-01。348/349按序独审，350最终代码独审通过。主代理限定16文件实际373/373、fail/cancel/skip均0；完整类型检查、diff及最终桌面构建exit0。91个helper源码输入、8个桌面bundle和复用的303个renderer文件已校验；未运行全仓测试。独立50/112/67/32四组及额外探针不与373重复相加。
+
+独审期间关闭两处真实保留缺口：outer row及嵌套mention只多未知键时，其正确原文窗口曾失去保护。新增真实生成桥反例后仅在proof层投影known字段；首答与最终完整draft继续严格拒绝未知键，完整来源、owner、context/link保留门不变。独审350有冻结哈希及复验细节。
+
+## R34：实际定点协议遵循，但引用仍失败
+
+新helper重新构建，原planner仍129包、首包40单元，payload SHA256为`401cd879de5cfd243c867117c5f5b38ba5fe80b269516028c573681180ddc3f8`。该重建包不是历史R28失败请求原始捕获。当前接口实际2gen均stop，诊断7448ms，正常app exit0、state hash未变。没有候选入库、发布或重开。
+
+第一代17条/21提及，应用定位2个坏slot；第二代正确返回两个已声明repairRef的typed replacement，没有重发整份roster。但是4个mention证据全部选择了旧`{ref}`编码，其中slot0的一条fragment虽能唯一匹配原文，却完全不包含对应literal，原完整来源门正确拒绝整份结果。其余3条引文各自可精确匹配并包含literal；这不等于整份保留门已经通过。
+
+原始第二回复带fence，按原parseJsonOutput可得到typed对象，不将简单JSON.parse失败误记成模型JSON无效。离线捕获两代实际回复重走当前桥，首/次prompt SHA分别精确吻合实际`e6cde4f479ed1189d9564cf4e82d52a046f65848c6b8d68bd91c1b209c7b2ff8`及`e14736a4af1ae259105b8d72fc3e5abc8309aa4951793864207cbbd06d978849`，固定反馈为literal覆盖错误。离线0provider/0owner，未修raw或选择引用。
+
+因此373个合成测试与typed协议的实际遵循都不能作为完整导入通过。下一步352/353限定修复轮只使用应用已核实的choiceRef，首轮及公共canonical不改。最新fresh全文仍为R28失败；所有场景、完整复核、七分钟、发布和重开验收均待实际执行。原文/实际回复仅留权限受限隔离目录，公开记录不含小说片段、Key或端点。

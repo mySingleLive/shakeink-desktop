@@ -1,6 +1,7 @@
 import type {ImportWizardView} from '../shared/novel-import'
 import {sourceTextSummary} from './novel-import-pdf-source-text'
 import {mergeWizardRoster} from './novel-import-wizard'
+import {expectedSceneOwnershipKeys} from './novel-import-scene-identity'
 import {createHash} from 'node:crypto'
 import {prepareImportWorkingUnits,validateImportBudgetPolicy,splitBudgetBatches} from './novel-import-budget-policy'
 import {validatePdfPageReviews,pdfReviewsReady,pdfPendingPages,pdfSourceKey,pdfReviewScope} from './novel-import-pdf'
@@ -40,6 +41,29 @@ export function splitImportUnits(files:ImportFile[],maxCharacters=1000):ImportUn
   if(expected!==file.text.length)throw Error('来源部件覆盖无效')
  }
  return result
+}
+/** Fresh v3 working-body geometry only; raw sources keep splitImportUnits. */
+export function splitSentenceWorkingUnits(file:Pick<ImportFile,'id'|'text'>):{units:ImportUnit[];hardFallbackCuts:number}{
+ const units:ImportUnit[]=[],text=file.text;let start=0,hardFallbackCuts=0
+ const closing=/["'”’」』）)\]】》〉]/u
+ while(start<text.length){
+  const limit=Math.min(text.length,start+1000);let end=limit,last=0
+  if(limit<text.length){
+   for(const match of text.slice(start,limit).matchAll(/[。！？!?；;.]|\r\n|\r|\n/gu)){
+    let boundary=start+match.index!+match[0].length
+    // A period inside a decimal or an unspaced name is not a sentence end.
+    if(match[0]==='.'&&boundary<text.length&&!/\s/u.test(text[boundary])&&!closing.test(text[boundary]))continue
+    if(text[boundary-1]==='\r'&&text[boundary]==='\n')continue
+    while(boundary<limit&&closing.test(text[boundary]))boundary++
+    if(boundary>start&&safeImportBoundary(text,boundary))last=boundary
+   }
+   if(last)end=last
+   else{end=cutAt(text,start,limit);if(text[end-1]==='\r'&&text[end]==='\n')end--;hardFallbackCuts++}
+  }
+  if(end<=start||end-start>1000||!safeImportBoundary(text,end))throw Error('正文单元范围、字符边界或预算无效')
+  units.push({id:`${file.id}:${start}:${end}`,fileId:file.id,start,end,text:text.slice(start,end),kind:'body',part:'正文'});start=end
+ }
+ return {units,hardFallbackCuts}
 }
 function labelKind(value:string):ImportKind|undefined{
  const text=value.replace(/^\s*(?:#{1,6}|[【\[（(])\s*/u,'').replace(/[】\]）)]\s*$/u,'').trim()
@@ -121,7 +145,10 @@ export function sourceBody(session:Pick<ImportSession,'files'|'units'|'selected'
 }
 export function selectedImportUnits(session:Pick<ImportSession,'files'|'units'|'selected'>):ImportUnit[]{const included=new Set(session.files.filter(f=>f.included&&!f.error).map(f=>f.id));return session.units.filter(u=>included.has(u.fileId)&&session.selected.includes(u.kind as ImportKind))}
 export function workingImportUnits(session:ImportSession):ImportUnit[]{
- return prepareImportWorkingUnits(session,()=>splitImportUnits([{id:`working-${session.workingRevision}`,name:'正文',format:'txt',path:'',bytes:Buffer.byteLength(session.workingProse),hash:importHash(session.workingProse),text:session.workingProse,included:true}]).map(u=>({...u,kind:'body'})))
+ return prepareImportWorkingUnits(session,()=>{
+  const file={id:`working-${session.workingRevision}`,name:'正文',format:'txt' as const,path:'',bytes:Buffer.byteLength(session.workingProse),hash:importHash(session.workingProse),text:session.workingProse,included:true}
+  return session.budgetPolicy?.workingUnits==='sentence-1000-v3'?splitSentenceWorkingUnits(file).units:splitImportUnits([file]).map(u=>({...u,kind:'body'}))
+ })
 }
 /** Only v2 contributes policy/working geometry; old fingerprints remain exact. */
 export function importBudgetAudit(session:ImportSession){
@@ -237,7 +264,7 @@ export function validateImportReferences(artifact:ImportArtifact,entities:{id:st
 function artifactKey(artifact:ImportArtifact){return artifact.kind+':'+artifact.name.normalize('NFKC').trim().toLocaleLowerCase()}
 function aliases(artifact:ImportArtifact):string[]{const value=artifact.facts.aliases;if(!value)return [];try{const parsed=JSON.parse(value);if(Array.isArray(parsed)&&parsed.every(x=>typeof x==='string'))return parsed}catch{}return value.split(/[,，、;；\n]/u).map(v=>v.trim()).filter(Boolean)}
 const normalizeName=(name:string)=>name.normalize('NFKC').trim().toLocaleLowerCase()
-function sameEntity(a:ImportArtifact,b:ImportArtifact,semanticVersion?:1){if(a.kind!==b.kind)return false;if(semanticVersion===1&&['scene','world'].includes(a.kind))return importSemanticIdentity(a,a.origin==='source'?'source-copy':'strict')===importSemanticIdentity(b,b.origin==='source'?'source-copy':'strict');return artifactKey(a)===artifactKey(b)||a.kind==='character'&&(aliases(a).some(name=>normalizeName(name)===normalizeName(b.name))||aliases(b).some(name=>normalizeName(name)===normalizeName(a.name)))}
+function sameEntity(a:ImportArtifact,b:ImportArtifact,semanticVersion?:1,sceneRegistry?:ReadonlyMap<string,string>){if(a.kind!==b.kind)return false;if(a.kind==='scene'&&sceneRegistry)return importSemanticIdentity(a,a.origin==='source'?'source-copy':'strict',sceneRegistry)===importSemanticIdentity(b,b.origin==='source'?'source-copy':'strict',sceneRegistry);if(semanticVersion===1&&['scene','world'].includes(a.kind))return importSemanticIdentity(a,a.origin==='source'?'source-copy':'strict',sceneRegistry)===importSemanticIdentity(b,b.origin==='source'?'source-copy':'strict',sceneRegistry);return artifactKey(a)===artifactKey(b)||a.kind==='character'&&(aliases(a).some(name=>normalizeName(name)===normalizeName(b.name))||aliases(b).some(name=>normalizeName(name)===normalizeName(a.name)))}
 /** Cross-batch reconciliation of one inferred field (plan 23). Returns the
  * merged value, or undefined when the difference must stay an author conflict. */
 const RECONCILED_TEXT_FIELDS=new Set(['occupation','personality','appearance','clothing','catchphrase','growthArc'])
@@ -287,10 +314,11 @@ function reconcileImportFact(kind:ImportTarget,field:string,previous:string,valu
  if(field==='attribution'||field==='temporalScope'||kind==='character'&&RECONCILED_TEXT_FIELDS.has(field)){const merged=unionFactText(previous,value);return merged!==previous&&merged.length>1500?undefined:merged}
  return undefined
 }
-export function mergeImportArtifacts(original:ImportArtifact[],incoming:ImportArtifact[],semanticVersion?:1,locks:{artifactId:string;field:string}[]=[]):{artifacts:ImportArtifact[];conflicts:ImportConflict[]}{
+export function mergeImportArtifacts(original:ImportArtifact[],incoming:ImportArtifact[],semanticVersion?:1,locks:{artifactId:string;field:string}[]=[],sceneRegistry?:ReadonlyMap<string,string>):{artifacts:ImportArtifact[];conflicts:ImportConflict[]}{
  const artifacts=structuredClone(original),conflicts:ImportConflict[]=[]
  for(const candidate of incoming){
-  const matches=artifacts.filter(a=>sameEntity(a,candidate,semanticVersion));if(matches.length>1)throw Error('角色别名身份不明确，请明确来源身份后重试')
+  if(sceneRegistry&&candidate.kind==='scene'&&!sceneRegistry.has(candidate.id))throw Error('场景身份未注册，请先确认具体地点')
+  const matches=artifacts.filter(a=>sameEntity(a,candidate,semanticVersion,sceneRegistry));if(matches.length>1)throw Error('角色别名身份不明确，请明确来源身份后重试')
   const current=matches[0],collision=artifacts.find(a=>a.id===candidate.id)
   if(collision&&collision!==current)throw Error('模型实体标识与不同身份重复，请重试')
   if(!current){artifacts.push(structuredClone(candidate));continue}
@@ -363,7 +391,7 @@ export function toImportView(session:ImportSession):ImportView{
  const included=new Set(session.files.filter(f=>f.included&&!f.error).map(f=>f.id));const found=Object.fromEntries(IMPORT_KINDS.map(kind=>[kind,new Set(session.units.filter(u=>u.kind===kind&&included.has(u.fileId)).map(u=>u.fileId)).size])) as Record<ImportKind,number>
  // Wizard: body chapter headings count as the file outline (volume and chapter names in order).
  if(!found.outline&&session.wizardVersion===1&&importStructureAvailable(session))found.outline=1
- return {id:session.id,revision:session.revision,phase:session.phase,title:session.title,files:session.files.map(f=>({id:f.id,name:f.name,format:f.format,bytes:f.bytes,hash:f.hash,included:f.included,error:f.error,encoding:f.encoding,requiresEncodingConfirmation:f.requiresEncodingConfirmation,characters:f.text.length,unitCount:session.units.filter(u=>u.fileId===f.id).length,unknownCount:session.units.filter(u=>u.fileId===f.id&&u.kind==='unknown').length,...(f.format==='pdf'?pdfFileView(f):{})})),...(session.files.some(f=>f.format==='pdf')?{pdfReady:pdfReviewsReady(session.files),pdfPendingPages:session.files.filter(f=>f.included&&f.format==='pdf').reduce((total,f)=>total+pdfPendingPages(f),0)}:{}),found,selected:[...session.selected],targets:[...session.targets],infer:session.infer,steps:structuredClone(session.steps),conflicts:structuredClone(session.conflicts),patches:structuredClone(session.patches),models:structuredClone(session.models??{}),targetLabel:session.target?.path,targetReady:!!session.target&&!session.targetNeedsAuthorization,sourceReady:importSourceReady(session),error:session.error??((session.chapterVersion===2||session.chapterDetection?.mode==='auto')&&['source','select','confirm'].includes(session.phase)?session.chapterDetection?.diagnostic:undefined),chapters:session.chapters.map(({id,title,start,end,volume})=>({id,title,start,end,...(volume!==undefined?{volume}:{})})),notFound:[...session.notFound],modified:session.workingRevision>0,publication:session.publication?{requestId:session.publication.requestId,workId:session.publication.workId,novelId:session.publication.novelId}:undefined,summary:session.phase==='completed'?{source:session.artifacts.filter(a=>a.origin==='source').length,inferred:session.artifacts.filter(a=>a.origin==='inferred').length,decisions:session.decisions.length,modified:session.workingRevision}:undefined,...(session.wizardVersion===1&&session.wizard?{wizard:{...wizardView(session.wizard),...wizardLineProgress(session),...wizardRosterFound(session.wizard)},targetLabel:session.target?.path.split(/[\\/]/u).filter(Boolean).at(-1)}:{})}
+ return {id:session.id,revision:session.revision,phase:session.phase,title:session.title,files:session.files.map(f=>({id:f.id,name:f.name,format:f.format,bytes:f.bytes,hash:f.hash,included:f.included,error:f.error,encoding:f.encoding,requiresEncodingConfirmation:f.requiresEncodingConfirmation,characters:f.text.length,unitCount:session.units.filter(u=>u.fileId===f.id).length,unknownCount:session.units.filter(u=>u.fileId===f.id&&u.kind==='unknown').length,...(f.format==='pdf'?pdfFileView(f):{})})),...(session.files.some(f=>f.format==='pdf')?{pdfReady:pdfReviewsReady(session.files),pdfPendingPages:session.files.filter(f=>f.included&&f.format==='pdf').reduce((total,f)=>total+pdfPendingPages(f),0)}:{}),found,selected:[...session.selected],targets:[...session.targets],infer:session.infer,steps:structuredClone(session.steps),conflicts:structuredClone(session.conflicts),patches:structuredClone(session.patches),models:structuredClone(session.models??{}),targetLabel:session.target?.path,targetReady:!!session.target&&!session.targetNeedsAuthorization,sourceReady:importSourceReady(session),error:session.error??((session.chapterVersion===2||session.chapterDetection?.mode==='auto')&&['source','select','confirm'].includes(session.phase)?session.chapterDetection?.diagnostic:undefined),chapters:session.chapters.map(({id,title,start,end,volume})=>({id,title,start,end,...(volume!==undefined?{volume}:{})})),notFound:[...session.notFound],modified:session.workingRevision>0,publication:session.publication?{requestId:session.publication.requestId,workId:session.publication.workId,novelId:session.publication.novelId}:undefined,summary:session.phase==='completed'?{source:session.artifacts.filter(a=>a.origin==='source').length,inferred:session.artifacts.filter(a=>a.origin==='inferred').length,decisions:session.decisions.length,modified:session.workingRevision}:undefined,...(session.wizardVersion===1&&session.wizard?{wizard:{...wizardView(session.wizard,session.artifacts),...wizardLineProgress(session),...wizardRosterFound(session.wizard)},targetLabel:session.target?.path.split(/[\\/]/u).filter(Boolean).at(-1)}:{})}
 }
 /** Renderer projection of the wizard: titles and states only, no text, paths or image bytes. */
 /** Steps 17–19 count chapters whose units are all covered (NIW-C11). */
@@ -376,11 +404,12 @@ const ROSTER_STEP_KINDS={'detect-char':'character','detect-scene':'scene','detec
 /** While a recognition step runs: distinct names merged so far from the returned batches. */
 function wizardRosterFound(w:NonNullable<ImportSession['wizard']>):{rosterFound?:number}{
  const kind=ROSTER_STEP_KINDS[w.step as keyof typeof ROSTER_STEP_KINDS];if(!kind||w.stepState[w.step]!=='running')return {}
- return {rosterFound:mergeWizardRoster(kind,w.rosterStash?.[kind]??[]).length}
+ return {rosterFound:kind==='scene'&&w.sceneIdentityVersion===1?(w.sceneIdentity?.identities.length??0):mergeWizardRoster(kind,w.rosterStash?.[kind]??[]).length}
 }
-function wizardView(w:NonNullable<ImportSession['wizard']>):ImportWizardView{
- const {rosterStash:_stash,touchStash:_touches,foreshadowRefs:_refs,structureDecision:_decision,structureHash:_hash,materializedVolumes:_volumes,selectionHash:_selection,imageGrants,tasks,...rest}=w
- return {...structuredClone(rest),structure:w.structure?.map(({title,volume})=>({title,...(volume!==undefined?{volume}:{})})),imageGrants:Object.fromEntries(Object.entries(imageGrants).map(([k,g])=>[k,g?{model:{id:g.model.id,name:g.model.name}}:undefined])),tasks:tasks.map(({resultSha256:_sha,image,...t})=>({...t,...(image?{image:{mime:image.mime,bytes:image.bytes}}:{})}))}
+function wizardView(w:NonNullable<ImportSession['wizard']>,artifacts:ImportArtifact[]=[]):ImportWizardView{
+ const {rosterStash:_stash,touchStash:_touches,foreshadowRefs:_refs,structureDecision:_decision,structureHash:_hash,materializedVolumes:_volumes,selectionHash:_selection,sceneIdentity:ledger,imageGrants,tasks,...rest}=w
+ const selected=new Set((w.candidates.scene??[]).filter(c=>c.selected).map(c=>c.id)),generated=new Set(artifacts.filter(a=>a.kind==='scene'&&selected.has(a.id)&&ledger?.identities.some(i=>i.id===a.id&&i.state!=='unresolved')).map(a=>a.id)),currentKeys=new Set(ledger?expectedSceneOwnershipKeys(ledger,artifacts,generated):[]),sceneIdentitySummary=ledger?{version:1 as const,ledgerHash:ledger.ledgerHash,identityRevision:ledger.identityRevision,concreteCount:ledger.identities.filter(i=>i.state==='concrete').length,sourceScopedCount:ledger.identities.filter(i=>i.state==='source-scoped').length,unresolvedCount:ledger.identities.filter(i=>i.state==='unresolved').length,ownershipDone:new Set(ledger.ownershipReviewed.filter(key=>currentKeys.has(key))).size,ownershipTotal:ledger.identities.filter(i=>selected.has(i.id)).reduce((n,i)=>n+i.memberKeys.length,0)}:undefined
+ return {...structuredClone(rest),...(sceneIdentitySummary?{sceneIdentitySummary}:{}),structure:w.structure?.map(({title,volume})=>({title,...(volume!==undefined?{volume}:{})})),imageGrants:Object.fromEntries(Object.entries(imageGrants).map(([k,g])=>[k,g?{model:{id:g.model.id,name:g.model.name}}:undefined])),tasks:tasks.map(({resultSha256:_sha,image,...t})=>({...t,...(image?{image:{mime:image.mime,bytes:image.bytes}}:{})}))}
 }
 
 function pdfFileView(file:ImportFile){const inspection=file.pdfInspection;if(!inspection)return {pdfReady:false,pdfPendingPages:0,...(file.pdfSourceInvalidated?{pdfSourceInvalidated:true}:{})};const {proof:_proof,sourceTextDecoding,...view}=inspection;return {pdfInspection:{...structuredClone(view),...(sourceTextDecoding?{sourceTextDecoding:sourceTextSummary(sourceTextDecoding)}:{}),sourceKey:pdfSourceKey(file)},pdfReady:pdfReviewsReady([{...file,included:true}]),pdfPendingPages:pdfPendingPages(file),...(file.pdfPageDecisions?{pdfPageDecisions:file.pdfPageDecisions.map(({page,decision,confirmedAt,decisionRevision})=>({page,decision,confirmedAt,decisionRevision}))}:{}),...(file.pdfPreviewFailures?{pdfPreviewFailures:structuredClone(file.pdfPreviewFailures)}:{}),...(file.pdfSourceInvalidated?{pdfSourceInvalidated:true}:{})}}

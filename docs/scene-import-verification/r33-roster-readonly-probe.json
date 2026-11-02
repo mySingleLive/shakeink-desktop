@@ -1,0 +1,52 @@
+{
+  "trials": [
+    {
+      "ok": false,
+      "category": "invalid_schema",
+      "invalidFieldCount": 1,
+      "observations": [
+        {
+          "promptSha256": "e6cde4f479ed1189d9564cf4e82d52a046f65848c6b8d68bd91c1b209c7b2ff8",
+          "promptCharacters": 247475,
+          "reason": "stop",
+          "promptTokens": 114287,
+          "completionTokens": 1610,
+          "textCharacters": 4006,
+          "maxOutputTokens": null
+        },
+        {
+          "promptSha256": "c1ac5f5cc5f3d0bc1daf9c0b3bc628c58c57c5c47d6b255a460c0f46751bbedf",
+          "promptCharacters": 252882,
+          "reason": "stop",
+          "promptTokens": 116615,
+          "completionTokens": 1090,
+          "textCharacters": 2852,
+          "maxOutputTokens": null
+        }
+      ]
+    }
+  ],
+  "elapsedMs": 12927,
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "run": "R33",
+  "diagnosticOnly": true,
+  "fullBookAcceptance": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "classification": {
+    "firstRecords": 23,
+    "firstRawAnchors": 32,
+    "firstRefAnchors": 0,
+    "firstSpanAnchors": 0,
+    "unmatchedQuotes": 7,
+    "literalCoverageErrors": 3,
+    "badRecords": 8,
+    "secondRecords": 23,
+    "retentionFailure": "mention-window"
+  },
+  "record": "docs/347-scene-roster-repair-retention-verification.md"
+}

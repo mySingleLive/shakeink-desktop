@@ -27,7 +27,7 @@ async function performanceFixture(){
 async function until(check:()=>boolean|Promise<boolean>){const end=Date.now()+5000;while(!await check()){if(Date.now()>end)break;await sleep(5)}}
 const runtime=async(f:Awaited<ReturnType<typeof fixture>>)=>JSON.parse(await readFile(join(f.root,'novel-imports',(await f.view()).id,'runtime.json'),'utf8'))
 
-test('CP-13a/CP-01: characters actually reach 31 concurrent requests while scenes remain at four',async()=>{
+test('CP-13a/CP-01: characters reach 31 concurrent requests and the eight scenes use their own pool',async()=>{
  const p=await performanceFixture(),f=p.f
  try{
   await toImportChar(f);await until(()=>p.pending.size===31);assert.equal(p.pending.size,31)
@@ -35,7 +35,7 @@ test('CP-13a/CP-01: characters actually reach 31 concurrent requests while scene
   assert.equal((await runtime(f)).calls.filter((c:{state:string})=>c.state==='pending').length,31)
   p.releaseAll();let v=await f.settle();assert.equal(p.peak,31);assert.equal(v.wizard!.step,'detect-scene');assert.ok(v.wizard!.tasks.every(t=>t.state==='done'))
   const j=await f.journal();assert.deepEqual(j.artifacts.map(a=>a.id).sort(),j.wizard!.candidates.character!.map(c=>c.id).sort());assert.deepEqual(j.wizard!.dropped,[])
-  await f.act('wizard-next');v=await f.settle();assert.equal(p.scenePeak,4);assert.ok(v.wizard!.tasks.every(t=>t.state==='done'))
+  await f.act('wizard-next');v=await f.settle();assert.equal(p.scenePeak,8);assert.ok(v.wizard!.tasks.every(t=>t.state==='done'))
  }finally{p.releaseAll();await f.dispose()}
 })
 
@@ -58,13 +58,13 @@ test('CP-13b/CP-04: pausing drains exactly 31 pending calls and resume preserves
 
 const api=ai as typeof ai&{importGenerationModel?:(request:ImportAiRequest,resolved:ResolvedModel,model:Record<string,unknown>)=>ResolvedModel;runImportGenerationLane?:<T>(request:ImportAiRequest,work:()=>Promise<T>)=>Promise<T>}
 const character={semanticVersion:1,phase:'analyze',intent:'entity',kind:'character'} as ImportAiRequest
-test('CP-02: production generation policy limits light thinking to roster and character entity extraction',()=>{
+test('CP-02: production generation policy limits light thinking to roster and character/scene entity extraction',()=>{
  assert.equal(typeof api.importGenerationModel,'function')
  const resolved={model:{} as ResolvedModel['model'],modelRecord:{} as ResolvedModel['modelRecord'],providerOptions:{openai:{store:false},original:{kept:true}} as unknown as ResolvedModel['providerOptions']},saved={provider:'deepseek',protocol:'openai',modelId:'deepseek-flash',thinkingLevels:['low','high'],defaultThinking:'high'},before=structuredClone(saved)
  const light=api.importGenerationModel!(character,resolved,saved);assert.deepEqual(light.providerOptions,{openai:{store:false},original:{kept:true},deepseek:{thinking:{type:'disabled'}}});assert.equal(light.model,resolved.model);assert.deepEqual(saved,before)
- for(const request of [{...character,intent:'roster'},{...character,intent:undefined},{...character,kind:'scene'},{...character,kind:'item'},{...character,kind:'world'},{...character,intent:'reconcile'},{...character,phase:'review'},{...character,phase:'patch'},{...character,semanticVersion:undefined}]){
+ for(const request of [{...character,intent:'roster'},{...character,kind:'scene'},{...character,intent:undefined},{...character,kind:'scene',intent:undefined},{...character,kind:'item'},{...character,kind:'world'},{...character,intent:'reconcile'},{...character,phase:'review'},{...character,phase:'patch'},{...character,semanticVersion:undefined}]){
   const output=api.importGenerationModel!(request as ImportAiRequest,resolved,saved)
-  assert.equal(output===resolved,request.intent!=='roster')
+  assert.equal(output===resolved,request.intent!=='roster'&&!(request.kind==='scene'&&request.intent==='entity'))
  }
  const anthropic=api.importGenerationModel!(character,resolved,{...saved,protocol:'anthropic'});assert.ok(!Object.hasOwn(anthropic.providerOptions!,'deepseek'))
 })

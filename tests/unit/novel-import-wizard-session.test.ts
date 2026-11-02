@@ -7,7 +7,7 @@ import {join} from 'node:path'
 import {NovelImportController} from '../../desktop/main/novel-import'
 import type {ImportAiRequest,ImportFile,ImportSession,ImportView} from '../../desktop/shared/novel-import'
 import {WIZARD_ROSTER_CONCURRENCY,WIZARD_CHARACTER_CONCURRENCY} from '../../desktop/main/novel-import'
-import {allCuts,bodyF,cast,classifyF,entityName,entityResult,entityTarget,filesF,fixture,fullAi,indexOfTitle,linesAi,model,passCharacters,relatingAi,injectJournalEdit,review,rosterAi,settingsF,sleep,source,toImportChar,toRoster,toStep,toTree,toVerify,toWorldImport,touchesAi,verifyAgain,volumesF,worldsAi} from '../helpers/novel-import-wizard-fixture'
+import {allCuts,bodyF,cast,classifyF,entityName,entityResult,entityTarget,filesF,fixture,legacySceneFixture,fullAi,indexOfTitle,linesAi,model,passCharacters,relatingAi,injectJournalEdit,review,rosterAi,settingsF,sleep,source,toImportChar,toRoster,toStep,toTree,toVerify,toWorldImport,touchesAi,verifyAgain,volumesF,worldsAi} from '../helpers/novel-import-wizard-fixture'
 
 test('NIW-C01: wizard sessions order files, work and kinds; step 3 requires a title and folder',async()=>{
  const f=await fixture();try{
@@ -222,7 +222,7 @@ test('NIW-C38: relationships to later or skipped characters resolve at the end o
  }finally{await g.dispose()}
 })
 test('NIW-C39: a skipped parent place leaves its child at top level',async()=>{
- const f=await fixture(filesF(),rosterAi());const base=f.handler()
+ const f=await legacySceneFixture(filesF(),rosterAi());const base=f.handler()
  f.setAi(async r=>{if(r.intent==='entity'&&r.kind==='scene'&&entityName(r)==='北城')throw Error('Server Error');return relatingAi(base)(r)})
  try{
   await passCharacters(f);await f.act('wizard-next');await f.settle();await f.act('wizard-task',{op:'skip-failed'});const v=await f.settle()
@@ -231,7 +231,7 @@ test('NIW-C39: a skipped parent place leaves its child at top level',async()=>{
  }finally{await f.dispose()}
 })
 test('NIW-C40: entity requests carry a strict catalogue and aliases in the instruction',async()=>{
- const f=await fixture(filesF(),rosterAi());const base=f.handler();f.setAi(relatingAi(base))
+ const f=await legacySceneFixture(filesF(),rosterAi());const base=f.handler();f.setAi(relatingAi(base))
  try{
   await passCharacters(f);await f.act('wizard-next');await f.settle()
   const ch=f.requests.find(r=>r.intent==='entity'&&r.kind==='character')!,sc=f.requests.find(r=>r.intent==='entity'&&r.kind==='scene')!
@@ -240,7 +240,7 @@ test('NIW-C40: entity requests carry a strict catalogue and aliases in the instr
  }finally{await f.dispose()}
 })
 test('NIW-C26/C28: world tasks run before their settings; a parent with only a selected child world stays as its container',async()=>{
- const f=await fixture(filesF(),rosterAi());f.setAi(worldsAi(f.handler()))
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(worldsAi(f.handler()))
  try{
   await toImportChar(f);let v=await toWorldImport(f)
   const list=v.wizard!.candidates.world!,top=list.find(c=>c.name==='北城世界')!,child=list.find(c=>c.name==='南巷梦境')!
@@ -256,7 +256,7 @@ test('NIW-C26/C28: world tasks run before their settings; a parent with only a s
  }finally{await f.dispose()}
 })
 test('NIW-C27: a failed world blocks its settings until retried or skipped together',async()=>{
- const f=await fixture(filesF(),rosterAi());const w=worldsAi(f.handler())
+ const f=await legacySceneFixture(filesF(),rosterAi());const w=worldsAi(f.handler())
  f.setAi(async r=>{if(r.intent==='entity'&&r.kind==='world'&&entityName(r)==='北城世界')throw Error('Server Error');return w(r)})
  try{
   await toImportChar(f);await toWorldImport(f);await f.act('wizard-next');let v=await f.settle()
@@ -268,7 +268,7 @@ test('NIW-C27: a failed world blocks its settings until retried or skipped toget
  }finally{await f.dispose()}
 })
 test('NIW-C10: step 16 runs one task per other setting kind; source-only kinds copy without a model call',async()=>{
- const f=await fixture(filesF(),rosterAi());const w=worldsAi(f.handler())
+ const f=await legacySceneFixture(filesF(),rosterAi());const w=worldsAi(f.handler())
  f.setAi(async r=>{if(r.phase==='analyze'&&!r.intent&&r.kind==='style'){const u=r.units[0];return {artifacts:[{id:'style-1',kind:'style',name:'文风',text:'冷峻短句。',facts:{},evidence:[{unitId:u.id,quote:u.text.slice(0,10)}],sourceUnitIds:[u.id],origin:'inferred'}]}}return w(r)})
  try{
   await toImportChar(f);await toWorldImport(f);await f.act('wizard-next');const v=await f.settle()
@@ -279,7 +279,7 @@ test('NIW-C10: step 16 runs one task per other setting kind; source-only kinds c
  }finally{await f.dispose()}
 })
 test('NIW-C05/C11: worldline, narrative and outline run in order over the selected chapters only',async()=>{
- const f=await fixture(filesF(),rosterAi());f.setAi(linesAi(worldsAi(f.handler())))
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(linesAi(worldsAi(f.handler())))
  try{
   const v0=await toTree(f),keep=v0.wizard!.structure!.map((c,i)=>c.volume==='丙卷'||c.title==='后记'?-1:i).filter(i=>i>=0)
   await f.act('wizard-select-chapters',{indices:keep});await f.act('wizard-next',{consent:true})
@@ -293,7 +293,7 @@ test('NIW-C05/C11: worldline, narrative and outline run in order over the select
  }finally{await f.dispose()}
 })
 test('NIW-C43: conflicts raised during entity steps do not stop the wizard and wait for step 21',async()=>{
- const f=await fixture(filesF(),rosterAi());const base=linesAi(worldsAi(f.handler()))
+ const f=await legacySceneFixture(filesF(),rosterAi());const base=linesAi(worldsAi(f.handler()))
  f.setAi(async r=>{if(r.intent==='entity'&&entityName(r)==='林舟'){const out=entityResult(r);return out}return base(r)})
  try{
   await toTree(f);await f.act('wizard-next',{consent:true});await toStep(f,'detect-scene')
@@ -301,7 +301,7 @@ test('NIW-C43: conflicts raised during entity steps do not stop the wizard and w
  }finally{await f.dispose()}
 })
 test('NIW-C64a: step 20 imports foreshadows with planned touches and records dropped ones',async()=>{
- const f=await fixture(filesF(),rosterAi());f.setAi(touchesAi(linesAi(worldsAi(f.handler()))))
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(touchesAi(linesAi(worldsAi(f.handler()))))
  try{
   await toTree(f);await f.act('wizard-next',{consent:true});const v=await toStep(f,'verify')
   assert.equal(v.wizard!.stepState.foreshadow,'done')
@@ -312,7 +312,7 @@ test('NIW-C64a: step 20 imports foreshadows with planned touches and records dro
  }finally{await f.dispose()}
 })
 test('NIW-C61: all eight checks pass and step 21 moves on to publishing',async()=>{
- const f=await fixture(filesF(),rosterAi());f.setAi(fullAi(f))
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(fullAi(f))
  try{
   const v=await toVerify(f);assert.equal(v.wizard!.checks!.length,8);assert.ok(v.wizard!.checks!.every(c=>c.ok),JSON.stringify(v.wizard!.checks!.filter(c=>!c.ok)))
   assert.equal(v.wizard!.stepState.verify,'waiting')
@@ -320,7 +320,7 @@ test('NIW-C61: all eight checks pass and step 21 moves on to publishing',async()
  }finally{await f.dispose()}
 })
 test('NIW-C55/C62: a broken relationship fails its check, blocks saving, and retry-kind returns to that import',async()=>{
- const f=await fixture(filesF(),rosterAi());f.setAi(fullAi(f))
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(fullAi(f))
  try{
   await toVerify(f)
   const c=await injectJournalEdit(f,j=>{const a=j.artifacts.find(a=>a.kind==='character')!;a.facts.relationships=JSON.stringify([{target:'无名',description:'旧识',characterId:'c-ffffffffffffffff'}])})
@@ -334,7 +334,7 @@ test('NIW-C55/C62: a broken relationship fails its check, blocks saving, and ret
  }finally{await rm(f.root,{recursive:true,force:true});await rm(f.target,{recursive:true,force:true})}
 })
 test('NIW-C60/C63: a review conflict opens the decision flow without rerunning the whole book',async()=>{
- const f=await fixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false
+ const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false
  f.setAi(async r=>{if(r.phase==='review'&&!conflicted){const a=r.artifacts.find(a=>a.kind==='character');const u=r.units.find(u=>a&&u.text.includes(a.name));if(a&&u){conflicted=true;return {conflicts:[{id:'cf-1',type:'setting-body',kind:'character',entity:a.name,field:'text',source:{text:a.text,value:a.text,artifactId:a.id},candidate:{text:'另一种说法',value:'另一种说法'},evidence:[{unitId:u.id,quote:a.name}],status:'pending',hash:'h'}]}}}return ai(r)})
  try{
   const v=await toVerify(f);assert.equal(v.phase,'conflicts');assert.equal(v.wizard!.checks!.find(c=>c.key==='consistency')!.ok,false)
@@ -400,7 +400,7 @@ test('NIW-C80/C81: thumbnails read back the staged bytes; discard removes the im
 })
 
 test('NIW-C65: revising to scenes during a later step keeps characters and drops the rest',async()=>{
- const f=await fixture(filesF(),rosterAi());f.setAi(touchesAi(linesAi(worldsAi(f.handler()))))
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(touchesAi(linesAi(worldsAi(f.handler()))))
  try{
   await toTree(f);await f.act('wizard-next',{consent:true});await toStep(f,'verify')
   const before=await f.journal(),chars=before.artifacts.filter(a=>a.kind==='character').map(a=>a.id)
@@ -411,7 +411,7 @@ test('NIW-C65: revising to scenes during a later step keeps characters and drops
  }finally{await f.dispose()}
 })
 test('NIW-C66/C66b/C68: revise to work keeps results; revise to kinds clears structure; image grants are revoked',async()=>{
- const f=await fixture(filesF(),rosterAi());f.setAi(lookAi(f.handler()));withImages(f)
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(lookAi(f.handler()));withImages(f)
  try{
   await toRoster(f);await f.act('wizard-set-images',{avatar:true});await f.act('wizard-next',{imageConsent:true});await f.settle()
   const kept=(await f.journal()).artifacts.length
@@ -485,7 +485,7 @@ test('NIW-C83: without a model a source-only import copies from the file and cal
 })
 test('NIW-C65b/F7: a list emptied once imports again after revising and choosing entries',async()=>{
  let none=true
- const f=await fixture(filesF(),rosterAi({'roster:scene':()=>none?{roster:[]}:undefined}));f.setAi(relatingAi(f.handler()))
+ const f=await legacySceneFixture(filesF(),rosterAi({'roster:scene':()=>none?{roster:[]}:undefined}));f.setAi(relatingAi(f.handler()))
  try{
   await passCharacters(f);let v=await toStep(f,'detect-scene');await f.act('wizard-next');v=await f.settle()
   assert.equal(v.wizard!.stepState['import-scene'],'skipped')
@@ -508,7 +508,7 @@ test('NIW-C67b/F7: turning inference back on at step 4 clears the skip markers i
  }finally{await f.dispose()}
 })
 test('NIW-C19/F2: accepting a body patch shifts chapters, keeps the scope and lists, and imports again from step 9',async()=>{
- const f=await fixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false
+ const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false
  f.setAi(async r=>{
   if(r.phase==='review'&&!conflicted){const a=r.artifacts.find(a=>a.kind==='character');const u=r.units.find(u=>a&&u.text.includes(a.name));if(a&&u){conflicted=true;return {conflicts:[{id:'cf-1',type:'setting-body',kind:'character',entity:a.name,field:'text',source:{text:a.text,value:a.text,artifactId:a.id},candidate:{text:'另一种说法',value:'另一种说法'},evidence:[{unitId:u.id,quote:a.name}],status:'pending',hash:'h'}]}}}
   if(r.phase==='patch'){const u=r.units.find(u=>u.text.includes('之夜'))!,at=u.start+u.text.indexOf('之夜');return {patches:[{id:'p-1',conflictId:r.conflict!.id,workingRevision:r.workingRevision!,start:at,end:at+2,before:'之夜',after:'之晨',reason:'与资料一致'}]}}
@@ -596,7 +596,7 @@ test('NIW-C16b/F16: closing the app aborts image generation instead of waiting f
  }finally{await rm(f.root,{recursive:true,force:true});await rm(f.target,{recursive:true,force:true})}
 })
 test('NIW-C62b/F10: retry-kind recomputes lines and keeps foreshadows; a failed step 21 can be retried',async()=>{
- const f=await fixture(filesF(),rosterAi());const ai=fullAi(f);let failReview=false
+ const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f);let failReview=false
  f.setAi(async r=>{if(r.phase==='review'&&failReview)throw Error('Server Error');return ai(r)})
  try{
   let v=await toVerify(f);const foreshadows=(await f.journal()).artifacts.filter(a=>a.kind==='foreshadow').length;assert.ok(foreshadows>0)
@@ -651,7 +651,7 @@ test('NIW-C82/F13: image permission is revoked on restart and can be given again
 test('NIW-C12s/F11: text of a deselected source entry never reaches the model',async()=>{
  const notes=settingsF+'\n# 场景\n\n## 北城\n\n城门向北，独有暗记。\n\n## 南巷\n\n巷尾有座无人知晓的密室。\n'
  const heads=[...notes.matchAll(/^# (角色|世界观|场景|物品)$/gmu)].map(m=>({start:m.index!,kind:({角色:'character',世界观:'world',场景:'scene',物品:'item'} as const)[m[1] as '角色']}))
- const f=await fixture([filesF()[0],source(notes,'资料.md','f-notes')],rosterAi({'classify:':r=>({classifications:r.units.map(u=>({unitId:u.id,kind:u.fileId==='f-body'?'body' as const:[...heads].reverse().find(h=>h.start<=u.start)?.kind??'world'}))})}))
+ const f=await legacySceneFixture([filesF()[0],source(notes,'资料.md','f-notes')],rosterAi({'classify:':r=>({classifications:r.units.map(u=>({unitId:u.id,kind:u.fileId==='f-body'?'body' as const:[...heads].reverse().find(h=>h.start<=u.start)?.kind??'world'}))})}))
  f.setAi(fullAi(f))
  try{
   await toTree(f,{selected:['body','character','world','scene'],infer:true});await f.act('wizard-next',{consent:true})
@@ -678,7 +678,7 @@ test('NIW-C41/F19: a malformed field is retried once with a structure hint; twic
  }finally{await f.dispose()}
 })
 test('NIW-C40b/F18: an entity result with another type or an unchosen parent fails that item',async()=>{
- const f=await fixture(filesF(),rosterAi());const base=worldsAi(f.handler())
+ const f=await legacySceneFixture(filesF(),rosterAi());const base=worldsAi(f.handler())
  f.setAi(async r=>{if(r.intent==='entity'&&r.kind==='world'&&entityName(r)==='城制')return entityResult(r,()=>({entityType:'WORLD'}));if(r.intent==='entity'&&r.kind==='character'&&entityName(r)==='林舟')return entityResult(r,()=>({relationships:JSON.stringify([{target:'外人',description:'旧识',characterId:'c-0000000000000000'}])}));return base(r)})
  try{
   await toImportChar(f);let v=await f.settle()
@@ -757,7 +757,7 @@ test('NIW-C12w/N4: a setting of a deselected world never lends its text to a sam
 })
 test('NIW-C62c/N6: retry-kind drops skip records of tasks it re-imports',async()=>{
  let fail=true
- const f=await fixture(filesF(),rosterAi());const ai=fullAi(f)
+ const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f)
  f.setAi(async r=>r.intent==='entity'&&r.kind==='character'&&fail&&entityName(r)==='顾三'?(()=>{throw Error('Server Error')})():ai(r))
  try{
   await toImportChar(f);await f.settle();await f.act('wizard-task',{op:'skip-failed'});let v=await toStep(f,'verify')

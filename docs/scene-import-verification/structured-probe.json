@@ -1,0 +1,20 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "outbound": {
+        "route": "/responses",
+        "format": "json_schema",
+        "strict": true
+      },
+      "finish": "stop",
+      "inputTokens": 103,
+      "outputTokens": 63
+    }
+  ],
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  }
+}

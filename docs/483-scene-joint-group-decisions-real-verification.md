@@ -1,0 +1,17 @@
+# 483 · 联合分组正常全文实测
+
+结论：R73正常全文导入仍失败。26个实际场景识别RPC中19成功、7拒绝，59代完整捕获及零API忠实回放输入SHA均匹配。未跳过、未发布，尚未进入场景实体导入、完整复核或重开。889项定向测试、类型/build及482独审通过，不能替代真实全文结果。
+
+冻结构建为build-identity-r73.json：57源、8 bundle、303 renderer、53测试、25 helper、7 review及验证工具哈希全部匹配。仅三个产品模块改变，已审核的重开退出验证工具作为独立基础设施补充；原claim-patch、source/proof、retention门未变。第一次freeze白名单遗漏已获481补充独审的退出工具变更，guard在App/API/manifest前拒绝；只补该已审路径后全部冻结门通过，原提前拒绝记录保留，没有借此重置实际计时。
+
+新session为dc669d19-1a9c-4b6d-8204-0153f07fc233，driver与R72逐字一致。consent为2026-11-01T18:28:04.837Z，失败18:28:58.565Z，经过53728ms；18:29:01.885Z正常关闭，App0/signalnull、driver2。原420000ms未放宽。129个完整计划包实际调用26包。
+
+实际七包均达到第四代后invalid_schema拒绝，没有HTTP、length、捕获缺失或预算中止。六包最终在claims逐项域校验处拒绝：返回的共享号不在对应完整eligible域，包含唯一允许号却连续返回其它号、空域但允许显式reject仍返回非空号等情形。另一包各项域及Native形状合法，但到原apply时重复使用同一occurrence，原new-mention-duplicate门拒绝。定位反馈已进入后续实际prompt，模型仍未按完整域修正；最终拒绝均非预算或retention门；早期各代仍按原门记录，其中一包先经历不可解析及context窗口限定失败，随后进入定点claims，不能把全流程均称作域错误。失败七包的28代首拒分布为source7、decode17、apply3、unparsed1，未在owner/retention末门或预算首拒。诊断收据为r73-failures-diagnostic-safe.json，SHA62c482ae2ba1883353db8ab66f6f47f73cfe122993abd8165f4a1abc64af9a5c。8cd6包同row七个相同literal的位置中，local1及local4选同完整CF5；其最终为claims：独立准备诊断证明该组各域22项，原编译先触4096 rowSteps（同刻requestSteps4096），整组丢弃partial结果进入remainder；不是256 options/request总阈值，也不是soft降级。首次hard-fit固定54745B，soft commit0；诊断中首稿及准备第二代输入SHA均等实际。不将本地反事实改写为供应商成功。
+
+26条payload与本轮129包计划精确绑定，59/59捕获complete/closed/completed，delta、done、completed文本逐字相同。零API回放同为19接受/7拒绝，所有实际输入SHA匹配。原R72两失败首稿在新协议的反事实与压力检查通过，与此次新增真实返回失败分别保留；本地Native匹配不能推定服务端强制约束了所有返回值。代码链以Output.object及strict json_schema传完整schema，未发现降为json_object的路径；本轮未保存出站schema网络捕获，不能冒称每次wire已取证，更不能声称服务端实际强制enum。
+
+原小说9468472字节SHA04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e、正文4785312 UTF16/SHA81d901770a84a1280664fa77dbf30922aa5b8d52a208417af0c99dbb7ad07414、1402章及4912连续无重叠的安全分区均与独立基线保持。部分覆盖705单元，账本362成员/253记录/249身份/33关系/0未决、artifact0；这些是部分识别记录，不是完整导入的场景数。workingRevision0，skip/drop0。
+
+四个状态文件的before/after原始bytes及hash均保留。模型配置、catalog、根标记字节不变；只有drafts字节与内容变化。逐值核实空chat的draftId轮换，旧99条恢复记录全留，新增第100条RESTORE_DISABLED.value严格等before.chat，恢复id精确绑定原createdAt/revision/chat/source；其它sources、autosaves及issues全部相同。保留draftContentUnchanged=false，不以metadata规则自动豁免内容变化。
+
+独立安全收据：`/private/tmp/shakeink-scene-import-20261031/r73-independent-evidence-safe.json`，SHAacec64151e07522c35185e10e73b210c19bbc1dbc656797df9065978ead6f8c6。原会话、请求、完整流及回放均在私有600隔离目录，公开报告不放小说正文、开放模型回复或Key。当前产品/构建保持冻结，下一步先核七份真实返回及Native传输事实，再按方案、用例、TDD、审核顺序推进。全文、七分钟、发布、正常重开及完整DB验收均未通过。

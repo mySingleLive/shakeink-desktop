@@ -1,0 +1,56 @@
+{
+  "lateServiceRejectedCases": 8,
+  "genericUiErrorCases": 8,
+  "rows": [
+    {
+      "case": "unselected-kind",
+      "serviceFixedError": "遗漏目标或来源范围无效",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    },
+    {
+      "case": "unknown-unit-id",
+      "serviceFixedError": "遗漏目标或来源范围无效",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    },
+    {
+      "case": "wrong-existing-base-hash",
+      "serviceFixedError": "已有实体遗漏目标、版本、字段或锁定范围无效",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    },
+    {
+      "case": "unknown-artifact-id",
+      "serviceFixedError": "已有实体遗漏目标、版本、字段或锁定范围无效",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    },
+    {
+      "case": "invalid-existing-field",
+      "serviceFixedError": "已有实体遗漏目标、版本、字段或锁定范围无效",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    },
+    {
+      "case": "evidence-misses-declared-unit",
+      "serviceFixedError": "遗漏目标证据未完整覆盖来源范围",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    },
+    {
+      "case": "evidence-has-extra-unit",
+      "serviceFixedError": "遗漏目标证据未完整覆盖来源范围",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    },
+    {
+      "case": "existing-text-not-fully-provided",
+      "serviceFixedError": "已有实体遗漏文字未完整提供，片外内容不能判缺",
+      "mainSafeError": "导入处理失败，请核对来源、模型配置后重试",
+      "notHistoricalFailedReply": true
+    }
+  ],
+  "scope": "bounded synthetic reply audit on R27 request; not the historical failed reply",
+  "fullSceneImportVerified": false
+}

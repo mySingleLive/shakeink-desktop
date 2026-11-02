@@ -1,0 +1,176 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "observations": [
+        {
+          "rawShape": {
+            "textCharacters": 50773,
+            "textScalarCharacters": 50773,
+            "whitespaceCharacters": 2550,
+            "longestWhitespaceRun": 2,
+            "nonWhitespaceCharacters": 48223,
+            "firstClass": "object",
+            "jsonParsePassed": false,
+            "edgeNgrams": [
+              {
+                "n": 1,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 2,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 4,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 8,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 16,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 32,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 64,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              }
+            ],
+            "sourceCopy": {
+              "rawVerbatim": {
+                "minimumCharacters": 100,
+                "sourceUnits": 56,
+                "sourceUnitCharacters": 51388,
+                "eligibleUnits": 56,
+                "eligibleUnitCharacters": 51388,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              },
+              "rawJsonEscaped": {
+                "minimumCharacters": 100,
+                "sourceUnits": 56,
+                "sourceUnitCharacters": 51388,
+                "eligibleUnits": 56,
+                "eligibleUnitCharacters": 51388,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 52,
+                "matchedUnitCharacters": 47388,
+                "uniqueMatchedSourceCharacters": 47388
+              }
+            }
+          },
+          "reason": "length",
+          "promptTokens": 52351,
+          "completionTokens": 32768,
+          "textCharacters": 50773,
+          "maxOutputTokens": 32768,
+          "wireStatus": "unavailable"
+        },
+        {
+          "rawShape": {
+            "textCharacters": 1466,
+            "textScalarCharacters": 1466,
+            "whitespaceCharacters": 233,
+            "longestWhitespaceRun": 7,
+            "nonWhitespaceCharacters": 1233,
+            "firstClass": "codefence",
+            "jsonParsePassed": false,
+            "edgeNgrams": [
+              {
+                "n": 1,
+                "prefixRepeats": 3,
+                "suffixRepeats": 3
+              },
+              {
+                "n": 2,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 4,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 8,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 16,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 32,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 64,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              }
+            ],
+            "sourceCopy": {
+              "rawVerbatim": {
+                "minimumCharacters": 100,
+                "sourceUnits": 56,
+                "sourceUnitCharacters": 51388,
+                "eligibleUnits": 56,
+                "eligibleUnitCharacters": 51388,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              },
+              "rawJsonEscaped": {
+                "minimumCharacters": 100,
+                "sourceUnits": 56,
+                "sourceUnitCharacters": 51388,
+                "eligibleUnits": 56,
+                "eligibleUnitCharacters": 51388,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              }
+            }
+          },
+          "reason": "stop",
+          "promptTokens": 52390,
+          "completionTokens": 788,
+          "textCharacters": 1466,
+          "maxOutputTokens": 32768,
+          "wireStatus": "unavailable"
+        }
+      ],
+      "artifacts": 1
+    }
+  ],
+  "elapsedMs": 130331,
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "scope": "R26 saved target rebuilt first request; old bundled prompt, historical stream identity unproven",
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false
+}

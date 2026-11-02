@@ -1,0 +1,56 @@
+{
+  "run": "R46",
+  "normalFreshFullBook": true,
+  "chapters": 1402,
+  "workingUnits": 5589,
+  "consentedAt": "2026-11-01T03:59:05.405Z",
+  "failedAt": "2026-11-01T04:00:09.466Z",
+  "closedAt": "2026-11-01T04:00:12.228Z",
+  "appExit": 0,
+  "driverExit": 2,
+  "rpc": {
+    "requested": 38,
+    "fulfilled": 31,
+    "rejected": 7,
+    "pending": 0,
+    "observationFailures": 0,
+    "writeFailures": 0,
+    "restored": true
+  },
+  "textObserver": {
+    "requested": 38,
+    "transfers": 77,
+    "captured": 77,
+    "pending": 0,
+    "unmatched": 0,
+    "ambiguous": 0,
+    "observationFailures": 0,
+    "limitFailures": 0,
+    "retainedBytes": 0,
+    "writeFailures": 0,
+    "restored": true
+  },
+  "captureComplete": 77,
+  "captureCount": 77,
+  "deltaEqualCompleted": 77,
+  "labels": {
+    "修复事务": 6,
+    "原文限定": 1
+  },
+  "succeededUnits": 1288,
+  "members": 494,
+  "records": 381,
+  "identities": 376,
+  "relations": 23,
+  "offlineReplay": {
+    "providerCalls": 0,
+    "attempted": 38,
+    "accepted": 31,
+    "rejected": 7,
+    "allInputHashesEqual": true
+  },
+  "fullSceneImportVerified": false,
+  "fullReviewVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false
+}

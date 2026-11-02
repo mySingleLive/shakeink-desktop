@@ -4,7 +4,7 @@ export const IMPORT_LARGE_CONTEXT_MIN=262144
 export const IMPORT_FIXED_PROMPT_RESERVE_BYTES=65536
 export interface ImportBudgetProfile {contextWindow:number;characters:number;maxUnits:100|300}
 export interface ImportExecutionBudget extends ImportBudgetProfile {version:1|2}
-export interface ImportBudgetPolicy {version:2;text:ImportBudgetProfile;review:ImportBudgetProfile;workingUnits:'adjacent-1000-v2'}
+export interface ImportBudgetPolicy {version:2;text:ImportBudgetProfile;review:ImportBudgetProfile;workingUnits:'adjacent-1000-v2'|'sentence-1000-v3'}
 export interface ImportLegacyBudget {version:1;text?:ImportBudgetProfile;review?:ImportBudgetProfile}
 export interface ImportBudgetState {budgetPolicy?:ImportBudgetPolicy;legacyBudget?:ImportLegacyBudget}
 export class ImportBudgetPolicyError extends Error {constructor(){super('导入预算策略无效，请保留草稿并核对配置')}}
@@ -26,7 +26,7 @@ function validateProfile(value:unknown,version:1|2):ImportBudgetProfile{
  return value as unknown as ImportBudgetProfile
 }
 export function validateImportBudgetPolicy(value:unknown):ImportBudgetPolicy{
- if(!object(value)||!exact(value,['version','text','review','workingUnits'])||value.version!==2||value.workingUnits!=='adjacent-1000-v2')return invalid()
+ if(!object(value)||!exact(value,['version','text','review','workingUnits'])||value.version!==2||value.workingUnits!=='adjacent-1000-v2'&&value.workingUnits!=='sentence-1000-v3')return invalid()
  validateProfile(value.text,2);validateProfile(value.review,2);return value as unknown as ImportBudgetPolicy
 }
 export function validateImportLegacyBudget(value:unknown):ImportLegacyBudget{
@@ -65,7 +65,7 @@ export function importSessionBudget(s:SessionBudgetState,role:'text'|'review',mo
 }
 export function createImportBudgetPolicy(models:{text?:ImportModel;review?:ImportModel}):ImportBudgetPolicy|undefined{
  if(!models.text||!models.review||[models.text,models.review].some(m=>!Number.isSafeInteger(m.contextWindow)||m.contextWindow<IMPORT_LARGE_CONTEXT_MIN))return undefined
- return {version:2,text:importBudgetProfile(models.text.contextWindow,2),review:importBudgetProfile(models.review.contextWindow,2),workingUnits:'adjacent-1000-v2'}
+ return {version:2,text:importBudgetProfile(models.text.contextWindow,2),review:importBudgetProfile(models.review.contextWindow,2),workingUnits:'sentence-1000-v3'}
 }
 /** The worker verifies frozen request geometry against the actual resolved role.
  * Missing fields retain the old API's exact default budget. Capacity growth is

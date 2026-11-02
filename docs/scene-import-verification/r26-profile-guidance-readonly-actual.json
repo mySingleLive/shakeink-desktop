@@ -1,0 +1,126 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "observations": [
+        {
+          "rawShape": {
+            "textCharacters": 1123,
+            "textScalarCharacters": 1123,
+            "whitespaceCharacters": 0,
+            "longestWhitespaceRun": 0,
+            "nonWhitespaceCharacters": 1123,
+            "firstClass": "object",
+            "jsonParsePassed": true,
+            "edgeNgrams": [
+              {
+                "n": 1,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 2,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 4,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 8,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 16,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 32,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 64,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              }
+            ],
+            "fixedWireFieldValueLengths": {
+              "text": 698,
+              "facts": 153,
+              "facts.coordinates": 0,
+              "facts.reliability": 0,
+              "facts.attribution": 0,
+              "facts.temporalScope": 0,
+              "facts.exteriorDescription": 0,
+              "facts.interiorDescription": 0,
+              "facts.backstory": 0,
+              "facts.entryMethod": 0,
+              "references": 53,
+              "references.characterIndex": 2,
+              "references.sceneIndex": 3,
+              "references.itemIndex": 2,
+              "primaryEvidence": 17,
+              "primaryEvidence.optionIndex": 1,
+              "additionalEvidence": 127
+            },
+            "sourceCopy": {
+              "rawVerbatim": {
+                "minimumCharacters": 100,
+                "sourceUnits": 56,
+                "sourceUnitCharacters": 51388,
+                "eligibleUnits": 56,
+                "eligibleUnitCharacters": 51388,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              },
+              "rawJsonEscaped": {
+                "minimumCharacters": 100,
+                "sourceUnits": 56,
+                "sourceUnitCharacters": 51388,
+                "eligibleUnits": 56,
+                "eligibleUnitCharacters": 51388,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              },
+              "parsedWireText": {
+                "minimumCharacters": 100,
+                "sourceUnits": 56,
+                "sourceUnitCharacters": 51388,
+                "eligibleUnits": 56,
+                "eligibleUnitCharacters": 51388,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              }
+            }
+          },
+          "reason": "stop",
+          "promptTokens": 52502,
+          "completionTokens": 604,
+          "textCharacters": 1123,
+          "maxOutputTokens": 32768,
+          "wireStatus": "valid"
+        }
+      ],
+      "artifacts": 1
+    }
+  ],
+  "elapsedMs": 9378,
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "scope": "same R26 saved first request; new profile guidance, no historical identity claim",
+  "fullSceneImportVerified": false
+}

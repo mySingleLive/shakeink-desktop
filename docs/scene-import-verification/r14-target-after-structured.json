@@ -1,0 +1,21 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "artifacts": 1
+    },
+    {
+      "ok": true,
+      "artifacts": 1
+    },
+    {
+      "ok": true,
+      "artifacts": 1
+    }
+  ],
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  }
+}

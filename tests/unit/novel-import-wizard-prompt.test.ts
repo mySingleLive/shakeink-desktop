@@ -12,7 +12,7 @@ test('WP-01: roster requests describe the roster output, not artifacts',()=>{
  const fields={character:['roleType','PROTAGONIST','SUPPORTING','ANTAGONIST'],scene:['parent'],item:['itemType','important'],world:['parent','settings','settingType','LEVEL_SYSTEM']} as const
  for(const [kind,extra] of Object.entries(fields)){
   const prompt=importAiPrompt(request('roster',kind as ImportAiRequest['kind'])),c=contract(prompt)
-  assert.match(c,/roster:\[/u,kind);assert.doesNotMatch(c,/artifacts:\[/u,kind)
+  assert.match(c,/(?:roster|"roster"):\[/u,kind);assert.doesNotMatch(c,/artifacts:\[/u,kind)
   for(const field of ['name','aliases',...extra])assert.ok(c.includes(field),kind+' '+field)
   // Evidence is located locally from the returned names; the model copies no quotes (docs/238 B).
   for(const field of ['evidence','quote','逐字摘取'])assert.ok(!c.includes(field),kind+' must not ask for '+field)

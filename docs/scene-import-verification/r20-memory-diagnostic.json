@@ -1,0 +1,32 @@
+{
+  "run": "R20",
+  "diagnosticOnly": true,
+  "acceptance": false,
+  "scenes": 970,
+  "done": 306,
+  "failedTasks": 0,
+  "processCrashed": true,
+  "cause": "V8 worker heap out of memory",
+  "published": false,
+  "reopened": false,
+  "samples": 29,
+  "lastSampleAt": "2026-10-31T01:12:14.855Z",
+  "mainHeapUsedBytes": 76348652,
+  "workerHeapUsedBytes": 2527260076,
+  "dominantAllocatedBytes": [
+    {
+      "scriptId": 390,
+      "lineNumber": 3318,
+      "columnNumber": 28,
+      "bytes": 2050709960
+    },
+    {
+      "scriptId": 390,
+      "lineNumber": 2149,
+      "columnNumber": 24,
+      "bytes": 308258700
+    }
+  ],
+  "matchingLocalSource": "@ai-sdk/provider-utils/dist/index.js: safeParseJSON and secureJsonParse; corroborated by postJsonToApi frame",
+  "normalBundleUnchanged": true
+}

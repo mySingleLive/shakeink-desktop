@@ -1,0 +1,128 @@
+✖ SH-01: cycle nodes are exact, repairs are atomic and acyclic branches and metadata remain intact (2.818375ms)
+✖ SH-02/03: dedicated parent proposals validate the new full graph and use only two bounded generations (257.027666ms)
+✖ SH-02/04: target catalog is independently checked before generation and payload forces every repair target (0.553959ms)
+✖ SH-05: a cross-batch scene cycle is repaired before the checklist and every scene imports with its confirmed hierarchy (208.508958ms)
+✖ SH-06: failure never publishes half a repaired checklist or starts entities (172.593833ms)
+✖ SH-06: cancel never publishes half a repaired checklist or starts entities (162.870791ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 0
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1275.372084
+
+✖ failing tests:
+
+test at tests/unit/novel-import-scene-hierarchy.test.ts:2:1783
+✖ SH-01: cycle nodes are exact, repairs are atomic and acyclic branches and metadata remain intact (2.818375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-hierarchy.test.ts:16:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-hierarchy.test.ts:2:4425
+✖ SH-02/03: dedicated parent proposals validate the new full graph and use only two bounded generations (257.027666ms)
+  Error [StructuredGenerationError]: 模型返回的场景清单结构无效（场景清单、响应结构），请重新识别
+      at parseJsonOutput (/Users/dt_flys/Projects/shakeink-desktop/src/lib/ai/generate.ts:252:9)
+      at generateJSON (/Users/dt_flys/Projects/shakeink-desktop/src/lib/ai/generate.ts:200:22)
+      at async generateImportAiJson (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:212:14)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-hierarchy.test.ts:31:57)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    kind: 'invalid_schema',
+    invalidFields: [ 'roster', '' ],
+    feedback: [ 'roster: Invalid input: expected array, received undefined', ': Unrecognized key: "sceneParents"' ]
+  }
+
+test at tests/unit/novel-import-scene-hierarchy.test.ts:2:6666
+✖ SH-02/04: target catalog is independently checked before generation and payload forces every repair target (0.553959ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + undefined
+  - [
+  -   'a',
+  -   'b'
+  - ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-hierarchy.test.ts:41:133)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: [ 'a', 'b' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-hierarchy.test.ts:2:10607
+✖ SH-05: a cross-batch scene cycle is repaired before the checklist and every scene imports with its confirmed hierarchy (208.508958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-hierarchy.test.ts:65:44)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-hierarchy.test.ts:2:12192
+✖ SH-06: failure never publishes half a repaired checklist or starts entities (172.593833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-hierarchy.test.ts:72:62)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-hierarchy.test.ts:2:12192
+✖ SH-06: cancel never publishes half a repaired checklist or starts entities (162.870791ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-hierarchy.test.ts:72:62)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

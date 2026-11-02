@@ -5,6 +5,7 @@ import type {ImportRuntimeAiCall,ImportRuntimePauseProof} from '../core/novel-im
 import type {ImportSemanticCheckpoint} from '../core/novel-import-semantic-state'
 import type {ImportStructureDraft} from '../core/novel-import-structure'
 import type {ImportWizardState} from '../core/novel-import-wizard-state'
+import {sceneIdentityChangeSchema,type NamePart} from './novel-import-scene-identity'
 
 export const IMPORT_KINDS = ['body','outline','theme','style','world','character','scene','item','foreshadow','goldenFinger','trope','worldline','narrative'] as const
 export type ImportKind = typeof IMPORT_KINDS[number]
@@ -19,6 +20,15 @@ const targetSchema=z.enum(IMPORT_TARGETS as [ImportTarget,...ImportTarget[]])
 const unitKindSchema=z.enum([...IMPORT_KINDS,'unknown','excluded'])
 const unique=<T extends z.ZodType>(schema:T,max=100)=>z.array(schema).max(max).refine(values=>new Set(values).size===values.length,'选项不能重复')
 const mutable={id:z.uuid(),revision:z.number().int().nonnegative()}
+const sceneLedgerHash=z.string().regex(/^[0-9a-f]{64}$/u)
+const sceneIdentityId=z.string().regex(/^s-[0-9a-f]{16}$/u)
+const sceneIdentityCommand={type:z.literal('wizard-scene-identity'),...mutable}
+const sceneIdentityActionSchema=z.discriminatedUnion('op',[
+ sceneIdentityChangeSchema.options[0].extend(sceneIdentityCommand).strict(),
+ sceneIdentityChangeSchema.options[1].extend(sceneIdentityCommand).strict(),
+ sceneIdentityChangeSchema.options[2].extend(sceneIdentityCommand).strict(),
+ sceneIdentityChangeSchema.options[3].extend(sceneIdentityCommand).strict(),
+])
 const volumeName=z.string().min(1).max(300).refine(value=>value===value.trim()&&!!value.trim()&&value.isWellFormed()&&!/[\r\n\u0000-\u001f]/u.test(value),'卷名无效')
 const pdfPage=z.number().int().min(1).max(5000)
 const pdfDecisionChange=z.discriminatedUnion('decision',[
@@ -26,6 +36,9 @@ const pdfDecisionChange=z.discriminatedUnion('decision',[
  z.object({page:pdfPage,decision:z.enum(['contains-content','uncertain','pending'])}).strict(),
 ])
 export const importActionSchema=z.discriminatedUnion('type',[
+ sceneIdentityActionSchema,
+ z.object({type:z.literal('wizard-read-scene-identity'),...mutable,expectedLedgerHash:sceneLedgerHash,identityId:sceneIdentityId,cursor:z.number().int().nonnegative(),limit:z.number().int().min(1).max(50)}).strict(),
+ z.object({type:z.literal('wizard-read-scene-source'),...mutable,expectedLedgerHash:sceneLedgerHash,memberKey:sceneLedgerHash,neighbor:z.union([z.literal(-1),z.literal(0),z.literal(1)]),offset:z.number().int().nonnegative(),limit:z.number().int().min(1).max(32768)}).strict(),
  z.object({type:z.literal('current')}).strict(),
  z.object({type:z.literal('choose'),mode:z.enum(['files','folder']).optional(),append:z.boolean().optional()}).strict(),
  z.object({type:z.literal('read-source'),id:z.uuid(),fileId:z.string().min(1).max(160),offset:z.number().int().nonnegative().optional(),limit:z.number().int().min(1).max(32768).optional()}).strict(),
@@ -137,11 +150,21 @@ export interface ImportView {
  pdfReady?:boolean;pdfPendingPages?:number
  wizard?:ImportWizardView
 }
-export type ImportWizardView=Omit<ImportWizardState,'rosterStash'|'touchStash'|'foreshadowRefs'|'structure'|'structureDecision'|'structureHash'|'materializedVolumes'|'selectionHash'|'imageGrants'|'tasks'>&{rosterFound?:number;structure?:{title:string;volume?:string}[];imageGrants:Partial<Record<'character'|'scene'|'item',{model:{id:string;name:string}}|undefined>>;tasks:(Omit<ImportWizardState['tasks'][number],'resultSha256'|'image'>&{image?:{mime:string;bytes:number}})[];lineProgress?:{done:number;total:number}}
+export interface ImportSceneIdentitySummary {version:1;ledgerHash:string;identityRevision:number;concreteCount:number;sourceScopedCount:number;unresolvedCount:number;ownershipDone:number;ownershipTotal:number}
+export interface ImportSceneIdentityDetail {
+ ledgerHash:string;identityRevision:number;identityId:string;state:'concrete'|'source-scoped'|'unresolved';name:string
+ parent:{state:'unknown'}|{state:'known';id:string;name:string}
+ totalMembers:number;members:{key:string;origin:'body'|'source-block';literal?:string;unitId?:string;range?:{start:number;end:number};sourceName?:string;blockIndex?:number;contextKeys:string[]}[];nextCursor?:number
+ nameParts:NamePart[];namePartOptions:(NamePart&{label:string})[];contexts:{key:string;label:string}[]
+ relations:{key:string;relation:'same-place'|'different-place'|'parent'|'not-parent';label:string;evidenceKeys:string[]}[]
+ relationTotal?:number
+}
+export interface ImportSceneIdentitySource {ledgerHash:string;memberKey:string;neighbor:-1|0|1;unitId?:string;offset:number;total:number;text:string;nextOffset?:number}
+export type ImportWizardView=Omit<ImportWizardState,'rosterStash'|'touchStash'|'foreshadowRefs'|'structure'|'structureDecision'|'structureHash'|'materializedVolumes'|'selectionHash'|'imageGrants'|'tasks'|'sceneIdentity'>&{sceneIdentitySummary?:ImportSceneIdentitySummary;rosterFound?:number;structure?:{title:string;volume?:string}[];imageGrants:Partial<Record<'character'|'scene'|'item',{model:{id:string;name:string}}|undefined>>;tasks:(Omit<ImportWizardState['tasks'][number],'resultSha256'|'image'>&{image?:{mime:string;bytes:number}})[];lineProgress?:{done:number;total:number}}
 export interface ImportSourcePage {fileId:string;offset:number;total:number;text:string;units:{id:string;start:number;end:number;kind:UnitKind;part?:string}[]}
-export interface ImportResponse {view:ImportView|null;source?:ImportSourcePage;pdfPage?:ImportPdfPageResponse;image?:{mime:string;bytes:Uint8Array}}
+export interface ImportResponse {view:ImportView|null;source?:ImportSourcePage;sceneIdentityDetail?:ImportSceneIdentityDetail;sceneIdentitySource?:ImportSceneIdentitySource;pdfPage?:ImportPdfPageResponse;image?:{mime:string;bytes:Uint8Array}}
 export interface ImportBridge {novelImport(action:ImportAction):Promise<ImportResponse>}
-export interface ImportAiRequest extends ImportSemanticRequestFields {executionBudget?:ImportExecutionBudget;chapters?:{id:string;title:string;start:number;end:number}[];entities?:ImportSemanticEntity[];operationId:string;phase:'classify'|'analyze'|'review'|'patch';kind?:ImportTarget;units:ImportUnit[];artifacts:ImportArtifact[];models:{text:ImportModel;review?:ImportModel};instruction?:string;conflict?:ImportConflict;workingRevision?:number}
+export interface ImportAiRequest extends ImportSemanticRequestFields {executionBudget?:ImportExecutionBudget;executionLane?:'scene-review-wave-v1';chapters?:{id:string;title:string;start:number;end:number}[];entities?:ImportSemanticEntity[];operationId:string;phase:'classify'|'analyze'|'review'|'patch';kind?:ImportTarget;units:ImportUnit[];artifacts:ImportArtifact[];models:{text:ImportModel;review?:ImportModel};instruction?:string;conflict?:ImportConflict;workingRevision?:number}
 export interface ImportAiResult extends ImportSemanticResult {classifications?:{unitId:string;kind:UnitKind}[];artifacts?:ImportArtifact[];conflicts?:ImportConflict[];patches?:ImportPatch[];chapterCuts?:{start:number;title:string;volume?:string;candidateId?:string}[];ignoredStarts?:number[];notFound?:boolean}
 /** Staged wizard images travel with the publish request; the worker re-checks every digest. */
 export interface ImportPublishImage {taskId:string;mime:'image/png'|'image/jpeg'|'image/webp';sha256:string;bytes:Uint8Array}

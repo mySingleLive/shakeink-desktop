@@ -1,0 +1,19 @@
+{
+  "run": "R28",
+  "freshSession": true,
+  "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+  "chapters": 1402,
+  "workingUnits": 5589,
+  "step": "detect-scene",
+  "outcome": "invalid_schema",
+  "rosterCovered": 0,
+  "identityRecords": 0,
+  "sceneArtifacts": 0,
+  "driverExit": 2,
+  "normalAppExit": 0,
+  "published": false,
+  "reopened": false,
+  "fullBookVerified": false,
+  "historicalRawFailureRetained": false,
+  "nextDiagnostic": "reconstructed original first roster packet; not proven historical failed packet"
+}

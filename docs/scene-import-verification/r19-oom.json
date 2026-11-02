@@ -1,0 +1,16 @@
+{
+  "run": "R19",
+  "diagnosticOnly": false,
+  "acceptance": false,
+  "scenes": 908,
+  "done": 277,
+  "failedTasks": 0,
+  "processCrashed": true,
+  "cause": "V8 heap out of memory",
+  "signal": "SIGABRT",
+  "driverExit": 1,
+  "normalElectronExit": false,
+  "published": false,
+  "reopened": false,
+  "modelConfigurationUnchanged": true
+}

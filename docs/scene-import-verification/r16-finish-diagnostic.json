@@ -1,0 +1,27 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "observations": [
+        {
+          "reason": "length",
+          "promptTokens": 13904,
+          "completionTokens": 8192,
+          "textCharacters": 12516
+        },
+        {
+          "reason": "stop",
+          "promptTokens": 13943,
+          "completionTokens": 832,
+          "textCharacters": 1489
+        }
+      ],
+      "artifacts": 1
+    }
+  ],
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  }
+}

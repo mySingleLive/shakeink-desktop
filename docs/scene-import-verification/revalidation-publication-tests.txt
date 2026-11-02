@@ -1,0 +1,13 @@
+✔ NI-SEM-P01: native publication populates characters places worlds and nine editable setting types (8727.944208ms)
+✔ NI-SEM-P02: publication preserves attributed events and qualified narrative references (5768.323292ms)
+✔ NI-SEM-P03: new semantic runs leave legacy publication receipts and hashes unchanged (2790.435834ms)
+✔ NIW-S06/S07/S08/S09/S15: wizard publication writes only selected chapters, v2 profiles, touches and the record (11998.36875ms)
+✔ NIW-S14: the import initializer has an asset store (1224.397709ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19223.039959

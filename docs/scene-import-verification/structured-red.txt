@@ -1,0 +1,124 @@
+✖ SO-01: optional JSON schema reaches the real SDK call while ordinary generation retains text output (14.58425ms)
+✖ SO-02: complete immutable typed catalogs restore index zero, aliases, context artifacts and all business fields (0.347125ms)
+✖ SO-03: malformed wire controls, fields, typed indexes and every bad evidence entry fail without dropping data (0.140916ms)
+✖ SO-04: actual Responses SDK uses the authorized gateway, strict format, reasoning none and no legacy fallback (0.183583ms)
+✖ SO-05: controller scene imports decode structured wire through the original complete canonical gates (2231.790291ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3019.504
+
+✖ failing tests:
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:4883
+✖ SO-01: optional JSON schema reaches the real SDK call while ordinary generation retains text output (14.58425ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'json'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:31:124)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'json',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:6161
+✖ SO-02: complete immutable typed catalogs restore index zero, aliases, context artifacts and all business fields (0.347125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at contract (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:26:53)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:36:42)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:8557
+✖ SO-03: malformed wire controls, fields, typed indexes and every bad evidence entry fail without dropping data (0.140916ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at contract (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:26:53)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:45:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:11119
+✖ SO-04: actual Responses SDK uses the authorized gateway, strict format, reasoning none and no legacy fallback (0.183583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:57:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:14826
+✖ SO-05: controller scene imports decode structured wire through the original complete canonical gates (2231.790291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'import-scene'
+  - 'verify'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:73:81)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'import-scene',
+    expected: 'verify',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

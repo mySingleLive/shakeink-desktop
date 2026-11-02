@@ -1,0 +1,33 @@
+{
+  "kind": "new-fragment-wire-readonly-diagnostic",
+  "freshFullBookRun": false,
+  "fullBookAccepted": false,
+  "coverageCredit": 0,
+  "ok": false,
+  "elapsedMs": 15070,
+  "stateUnchanged": true,
+  "normalAppExit": {
+    "code": 0,
+    "signal": null
+  },
+  "observations": [
+    {
+      "promptSha256": "a084ab1566deb4e00d794a3e06b1316effa810748c19c9482f78c664032b2c4f",
+      "promptCharacters": 246689,
+      "reason": "stop",
+      "promptTokens": 101673,
+      "completionTokens": 1833,
+      "textCharacters": 5943,
+      "maxOutputTokens": null
+    },
+    {
+      "promptSha256": "9b488e0cf5c317bc31842ecd8376b9d23d0bad97d2e0063012dc973635fd9db4",
+      "promptCharacters": 246773,
+      "reason": "stop",
+      "promptTokens": 101714,
+      "completionTokens": 1515,
+      "textCharacters": 4930,
+      "maxOutputTokens": null
+    }
+  ]
+}

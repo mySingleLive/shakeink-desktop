@@ -1,0 +1,9 @@
+# 364 独立技术审核
+
+通过，无阻塞。SHA-256：`189b05137462e2b29ee3dc8ebed6e69e709873d673657f21a5390a499382a014`。
+
+仅原candidateundefined失败分支增加闭合SRU1 ASCII码，native为实际首合同启用状态，kind限定原三值，candidateRoot来自原parseJsonOutput(z.unknown)候选分类。对象可判断own roster/数组/额外键存在，不输出任意键名或值。它不是供应商原始回复根或历史根因证明。
+
+保持原前缀、主safeError generic、次数/预算/采用集合及全部原门；不加RPC。私有observer仅整条全锚定已知enum，未知suffix立即unclassified且不回显。可进入365用例审核；没有真实资料/App/API或产品修改。
+
+finish补充版本 `84a2fb2b1f226956f754f1aa12dd23939cb8f86921f49be5196f45ff45348da5` 复核通过：仅捕获自身StructuredGenerationError时best-effort在同一error附非枚举可选finishReason，declare readonly不产生旧实例字段；仅SDK七值/unknown，不改identity/message/kind、回调、opts或次数。附注失败不能替换原异常。SRU1/observer仅增加闭合finish字段，直接parser无SDK→unknown。

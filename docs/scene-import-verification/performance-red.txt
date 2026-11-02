@@ -1,0 +1,171 @@
+✔ CP-15a character: the real 64-entity controller path computes the complete scope once, with independent payload hashes (909.940917ms)
+✖ CP-15a scene: the real 64-entity controller path computes the complete scope once, with independent payload hashes (413.726125ms)
+✔ CP-15b: every scope lifetime key invalidates; mismatched computations never populate the cache (1.240333ms)
+✔ CP-15c character: first wrong grant results in zero entity AI calls (2142.207542ms)
+✔ CP-15c character: invalidated warm wrong grant results in zero entity AI calls (2135.020625ms)
+✖ CP-15c scene: first wrong grant results in zero entity AI calls (2145.747791ms)
+✖ CP-15c scene: invalidated warm wrong grant results in zero entity AI calls (2158.019708ms)
+✖ SP-01: scene extraction uses the light model policy without changing saved configuration or ordinary analysis (2.528292ms)
+✖ SP-02: scene prompts keep related aliases and all ancestors while validation keeps the complete catalog and material (3123.957542ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 4
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10296.226417
+
+✖ failing tests:
+
+test at tests/unit/novel-import-character-scope-cache.test.ts:2:1345
+✖ CP-15a scene: the real 64-entity controller path computes the complete scope once, with independent payload hashes (413.726125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-character-scope-cache.test.ts:20:148)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processTimers (node:internal/timers:538:9)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-character-scope-cache.test.ts:6:3940
+✖ CP-15c scene: first wrong grant results in zero entity AI calls (2145.747791ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  4 !== 0
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-character-scope-cache.test.ts:38:121)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-character-scope-cache.test.ts:6:3940
+✖ CP-15c scene: invalidated warm wrong grant results in zero entity AI calls (2158.019708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  4 !== 0
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-character-scope-cache.test.ts:38:121)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-performance.test.ts:2:1226
+✖ SP-01: scene extraction uses the light model policy without changing saved configuration or ordinary analysis (2.528292ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      deepseek: {
+        thinking: {
+  +       type: 'enabled'
+  -       type: 'disabled'
+        }
+      },
+      openai: {
+        store: false
+      },
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-performance.test.ts:12:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { deepseek: { thinking: [Object] }, openai: { store: false }, original: { kept: true } },
+    expected: { deepseek: { thinking: [Object] }, openai: { store: false }, original: { kept: true } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-performance.test.ts:2:2429
+✖ SP-02: scene prompts keep related aliases and all ancestors while validation keeps the complete catalog and material (3123.957542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      's-02f3d03de815ccdf',
+  +   's-0356122324006414',
+  +   's-18ee7041066706d3',
+  +   's-19d9251cb0e1415b',
+  +   's-19f09f205a58b2aa',
+  +   's-21565b3464e5a434',
+  +   's-216f371372cebba7',
+  +   's-22f0165c06726e56',
+  +   's-23ff8e654edc426b',
+  +   's-27783ada4f3e12c0',
+  +   's-360a620b236a1b12',
+  +   's-3aada3be85697e7e',
+  +   's-3d816fa9ccccd7e9',
+  +   's-414bb09cf32e2c2e',
+  +   's-424852bc1af20725',
+      's-471397ba879819d2',
+  +   's-5041b2afa1f4ac42',
+  +   's-581d4adfbc821932',
+  +   's-5c11a9c5b036b7e8',
+  +   's-664bdfb1329141ce',
+  +   's-670b6753e95070aa',
+  +   's-7248da347b75288c',
+  +   's-83450d7465ac6198',
+  +   's-83a3bf82b15a25e6',
+  +   's-882624a2eefbe4d8',
+  +   's-8db8198d742e0fb4',
+  +   's-9bef0bb0da2746a8',
+  +   's-a66bd21c41abd5e0',
+  +   's-ad700651eb530842',
+      's-c8a1a6a33b2d9be0',
+  +   's-e0f3019c562b30db',
+  +   's-e74b161eb68eaa1f',
+  +   's-ee186a31145d3a3e'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-performance.test.ts:26:136)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [
+      's-02f3d03de815ccdf', 's-0356122324006414',
+      's-18ee7041066706d3', 's-19d9251cb0e1415b',
+      's-19f09f205a58b2aa', 's-21565b3464e5a434',
+      's-216f371372cebba7', 's-22f0165c06726e56',
+      's-23ff8e654edc426b', 's-27783ada4f3e12c0',
+      's-360a620b236a1b12', 's-3aada3be85697e7e',
+      's-3d816fa9ccccd7e9', 's-414bb09cf32e2c2e',
+      's-424852bc1af20725', 's-471397ba879819d2',
+      's-5041b2afa1f4ac42', 's-581d4adfbc821932',
+      's-5c11a9c5b036b7e8', 's-664bdfb1329141ce',
+      's-670b6753e95070aa', 's-7248da347b75288c',
+      's-83450d7465ac6198', 's-83a3bf82b15a25e6',
+      's-882624a2eefbe4d8', 's-8db8198d742e0fb4',
+      's-9bef0bb0da2746a8', 's-a66bd21c41abd5e0',
+      's-ad700651eb530842', 's-c8a1a6a33b2d9be0',
+      's-e0f3019c562b30db', 's-e74b161eb68eaa1f',
+      's-ee186a31145d3a3e'
+    ],
+    expected: [ 's-02f3d03de815ccdf', 's-471397ba879819d2', 's-c8a1a6a33b2d9be0' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

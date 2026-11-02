@@ -1,0 +1,14 @@
+✔ SL-01: each rejected scene parent or typed link gets exact static field guidance and recovers without losing data (241.126ms)
+✔ SL-02: permanent invalid links stay rejected after two generations with safe final field diagnostics (7.067ms)
+✔ SL-03/04: scene link outer correction recovers on generation three with exact guidance (2285.209125ms)
+✔ SL-03/04: scene link outer correction stops at four generations (2188.486333ms)
+✔ SL-05: full catalog, context artifact and self links remain accepted and final diagnostics never inherit a previous field (7.893667ms)
+✔ SL-05b: unknown or extended scene link error labels cannot gain an outer correction (4311.208041ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9399.382417

@@ -1,0 +1,22 @@
+{
+  "run": "R17",
+  "scenes": 929,
+  "chapters": 1402,
+  "units": 5589,
+  "states": {
+    "done": 279,
+    "running": 31,
+    "failed": 3,
+    "waiting": 616
+  },
+  "artifacts": 279,
+  "failure": "structured generation request failure",
+  "fullImportVerified": false,
+  "published": false,
+  "reopened": false,
+  "driverExit": 2,
+  "electronExit": {
+    "code": 0,
+    "signal": null
+  }
+}

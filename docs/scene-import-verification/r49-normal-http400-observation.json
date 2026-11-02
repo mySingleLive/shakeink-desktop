@@ -1,0 +1,44 @@
+{
+  "run": "R49",
+  "status": "normal-fresh-full-book-scene-recognition-failed-http400",
+  "buildIdentity": "docs/scene-import-verification/build-identity-r49.json",
+  "sourceUnchanged": true,
+  "chapters": 1402,
+  "workingUnits": 5589,
+  "rosterCoveredUnits": 163,
+  "identityMembers": 46,
+  "identityRecords": 41,
+  "identities": 41,
+  "relations": 1,
+  "rpc": {
+    "total": 17,
+    "fulfilled": 4,
+    "http400Rejected": 13
+  },
+  "transfers": {
+    "total": 32,
+    "providerCompleted": 19,
+    "nonSSEHttp400": 13,
+    "allCapturedAndClosed": true
+  },
+  "offlinePromptReconstruction": {
+    "providerCalls": 0,
+    "actualInputHashesMatched": 32,
+    "acceptedFromCompletedCaptures": 4,
+    "stoppedAtNonSSEBoundary": 13,
+    "allNonSSERequestsUseTupleItems": true,
+    "originalHTTPBodyAvailable": false,
+    "originalHTTPErrorReproduced": false
+  },
+  "productAndRendererFingerprintUnchanged": true,
+  "observerStoppedAndRestored": true,
+  "normalAppExitCode": 0,
+  "driverExitCode": 2,
+  "consentAt": "2026-11-01T06:20:40.675Z",
+  "failedAt": "2026-11-01T06:21:20.009Z",
+  "closedAt": "2026-11-01T06:21:22.399Z",
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "nextStep": "bounded static tuple-vs-object Native schema diagnostic, no novel input"
+}

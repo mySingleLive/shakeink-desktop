@@ -1,0 +1,15 @@
+# 454 独立技术方案审核
+
+结论：通过，无实质阻塞；455按序独审通过后可并行TDD几何与来源焦点。R65仍失败，私有原型与人工改选只作缺陷及可行性证据，不是模型成功或全书验收。
+
+审核版本SHA256：`81f24ed3241e81a7f1e26eb567b46e6e364f7343e92fbee03bee327bcebcc819`。
+
+新几何作为明确的fresh working-body策略进入现有version2结构及审计指纹，旧adjacent策略、已有cache、legacy、raw splitter/分类/排除/事实文本均保持，未静默迁移旧ledger/coverage/决定/anchor。新单元直接按workingProse真实范围产生，不能先固化旧1000硬切点再仅合并而冒作修复；last-safe句末/换行选择、UTF16与CRLF安全fallback、连续不重叠/rejoin、确定性ID和coalesce仅合完整块可实施。它改善已证跨界案例，但不保证任意无标点或含缩写材料不会再跨实体；fallback必须统计，不能把原型4912硬编码或当全场景证明。正文和章节原文/offset/content不改。
+
+焦点仅在原门拒绝后对唯一可映射replacement产生，完整所选窗与全部原resolver/label条件候选均从冻结目录恢复；不新建CF、截窗/firstN、改变域或自动选值。patch内层压缩、多task和未知/歧义路径保守不构造，空候选不等于hasSource=false或可拒。完整转义后的实际block按UTF8上限16384并计原prompt-fixed/schema/context；不fit时先整块省略，原完整source/CF/keep/draft/current仍在，不能为了可选块改变原预算或采用部分回答。
+
+每次原schema实际调用先清旧焦点，再由当前source拒绝产生新背景；原parser完全无法取得候选、未调用schema时才可保留上次与冻结任务/CF/旧被核对值绑定的资料，明确不是本轮诊断。当前parser可能尝试多个JSON候选，生命周期须由实际schema调用决定，不以generation序号或另写解析器猜测。新可解析候选、早shape/range失败或source通过都不能沿用旧焦点作当前错误结论。该设计不强迫返回旧值、不绕原四代/Native/接受门。
+
+原source/canonical/retention/owner/关系/作者/发布判定和全部容量上限保持；sourcefocus只是重复背景。最终必须独立覆盖新fresh全部planner及完整新geometry、原文件/workingProse/1402章exact；旧130first和357历史代/146接受27拒作为旧几何控制，不冒新SHA。类型、构建、定向验证及代码独审后才fresh正常全文，以原420000ms总时钟及全部场景/完整资料/发布/重开验收。
+
+审核只读454、453及455预览，并核当前splitter/cache/fingerprint/coalesce及原JSON候选循环；未改产品或测试，未App/模型API。此通过不提前替代后续代码审核、预算与真实验收。

@@ -20,6 +20,81 @@ async function mount(options:Record<string,unknown>,run:(page:Page)=>Promise<voi
 }
 const calls=(page:Page)=>page.evaluate(()=>window.wizardFixture.calls) as Promise<{type:string;[k:string]:unknown}[]>
 const dialog=(page:Page)=>page.getByRole('dialog')
+const businessCalls=async(page:Page)=>(await calls(page)).filter(call=>call.type!=='current')
+const idle=(page:Page)=>page.waitForFunction(()=>window.wizardFixture.state().busy===0)
+async function waitAction(page:Page,type:string,count=1){
+ try{await page.waitForFunction(({type,count})=>window.wizardFixture.calls.filter(call=>call.type===type).length>=count,{type,count})}
+ catch(error){const state=await page.evaluate(()=>({calls:window.wizardFixture.calls,view:window.wizardFixture.view(),state:window.wizardFixture.state()}));throw Error(`等待 ${type} 第 ${count} 次动作失败：${JSON.stringify(state)}`,{cause:error})}
+}
+
+for(const reselect of [false,true])test(`NIW-B01: edited title is saved before ${reselect?'reselecting':'the first directory selection'}`,()=>mount({step:'work',deferredTitle:true},async page=>{
+ const d=dialog(page);if(reselect)await page.evaluate(()=>window.wizardFixture.set(v=>{v.targetLabel='已选目录 A';v.targetReady=true}))
+ await idle(page);const revision=await page.evaluate(()=>window.wizardFixture.view().revision),button=d.getByRole('button',{name:'选择目录',exact:true})
+ await d.getByLabel('作品名称',{exact:true}).fill('隔离新标题');await button.click();await waitAction(page,'set-title')
+ assert.equal((await businessCalls(page)).some(call=>call.type==='choose-target'),false);assert.equal(await button.isDisabled(),true)
+ await page.evaluate(()=>window.wizardFixture.releaseTitle());await waitAction(page,'choose-target')
+ await page.waitForFunction(revision=>window.wizardFixture.state().busy===0&&window.wizardFixture.view().revision===revision+2&&window.wizardFixture.view().targetLabel==='作品目录',revision)
+ const actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title','choose-target']);assert.deepEqual(actions.map(call=>call.revision),[revision,revision+1])
+ assert.equal(await d.getByLabel('作品名称',{exact:true}).inputValue(),'隔离新标题');assert.equal(await button.isDisabled(),false)
+}))
+
+test('NIW-B01: unchanged title supports success, reselection, cancellation and another selection',()=>mount({step:'work',targetReplies:[{kind:'success',label:'隔离目录 A'},{kind:'success',label:'隔离目录 B'},{kind:'cancel'},{kind:'success',label:'隔离目录 C'}]},async page=>{
+ const d=dialog(page),button=d.getByRole('button',{name:'选择目录',exact:true}),initial=await page.evaluate(()=>window.wizardFixture.view().revision)
+ for(const [index,label] of ['隔离目录 A','隔离目录 B','隔离目录 B','隔离目录 C'].entries()){
+  await button.click();await page.waitForFunction(({revision,label})=>window.wizardFixture.state().busy===0&&window.wizardFixture.view().revision===revision&&window.wizardFixture.view().targetLabel===label,{revision:initial+index+1,label})
+  assert.equal(await button.isDisabled(),false)
+ }
+ const actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),Array(4).fill('choose-target'));assert.deepEqual(actions.map(call=>call.revision),[initial,initial+1,initial+2,initial+3])
+}))
+
+test('NIW-B01: a failed title save blocks directory selection and can be retried',()=>mount({step:'work',titleFailures:1},async page=>{
+ const d=dialog(page),button=d.getByRole('button',{name:'选择目录',exact:true}),initial=await page.evaluate(()=>window.wizardFixture.view().revision)
+ await d.getByLabel('作品名称',{exact:true}).fill('隔离重试标题');await button.click();await d.getByText('隔离标题保存失败',{exact:true}).waitFor();await idle(page)
+ let actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title']);assert.equal(actions[0].revision,initial)
+ await button.click();await waitAction(page,'choose-target');await page.waitForFunction(revision=>window.wizardFixture.state().busy===0&&window.wizardFixture.state().error===null&&window.wizardFixture.view().revision===revision+2,initial)
+ actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title','set-title','choose-target']);assert.deepEqual(actions.map(call=>call.revision),[initial,initial,initial+1])
+}))
+
+test('NIW-B01: continue shares the successful title-save gate',()=>mount({step:'work',deferredTitle:true},async page=>{
+ const d=dialog(page);await page.evaluate(()=>window.wizardFixture.set(v=>{v.targetLabel='隔离目录 A';v.targetReady=true}));await idle(page)
+ const initial=await page.evaluate(()=>window.wizardFixture.view().revision);await d.getByLabel('作品名称',{exact:true}).fill('隔离继续标题');await d.getByRole('button',{name:'继续',exact:true}).click();await waitAction(page,'set-title')
+ assert.equal((await businessCalls(page)).some(call=>call.type==='wizard-next'),false);await page.evaluate(()=>window.wizardFixture.releaseTitle());await waitAction(page,'wizard-next')
+ await page.waitForFunction(revision=>window.wizardFixture.state().busy===0&&window.wizardFixture.view().revision===revision+2,initial)
+ const actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title','wizard-next']);assert.deepEqual(actions.map(call=>call.revision),[initial,initial+1])
+}))
+
+test('NIW-B01: continue is blocked when the title save fails',()=>mount({step:'work',titleFailures:1},async page=>{
+ const d=dialog(page);await page.evaluate(()=>window.wizardFixture.set(v=>{v.targetLabel='隔离目录 A';v.targetReady=true}));await idle(page)
+ await d.getByLabel('作品名称',{exact:true}).fill('隔离失败标题');await d.getByRole('button',{name:'继续',exact:true}).click();await d.getByText('隔离标题保存失败',{exact:true}).waitFor();await idle(page)
+ const actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title']);assert.equal((await calls(page)).some(call=>call.type==='wizard-next'),false)
+}))
+
+test('NIW-B01: back shares the successful title-save gate',()=>mount({step:'work',deferredTitle:true},async page=>{
+ const d=dialog(page);await idle(page);const initial=await page.evaluate(()=>window.wizardFixture.view().revision)
+ await d.getByLabel('作品名称',{exact:true}).fill('隔离返回标题');await d.getByRole('button',{name:'上一步',exact:true}).click();await waitAction(page,'set-title')
+ assert.equal((await businessCalls(page)).some(call=>call.type==='wizard-back'),false);await page.evaluate(()=>window.wizardFixture.releaseTitle());await waitAction(page,'wizard-back')
+ await page.waitForFunction(revision=>window.wizardFixture.state().busy===0&&window.wizardFixture.view().revision===revision+2,initial)
+ const actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title','wizard-back']);assert.deepEqual(actions.map(call=>call.revision),[initial,initial+1])
+}))
+
+test('NIW-B01: back is blocked by a failed title save and preserves the draft for retry',()=>mount({step:'work',titleFailures:1},async page=>{
+ const d=dialog(page),button=d.getByRole('button',{name:'上一步',exact:true});await idle(page);const initial=await page.evaluate(()=>window.wizardFixture.view().revision)
+ await d.getByLabel('作品名称',{exact:true}).fill('隔离返回重试标题');await button.click();await d.getByText('隔离标题保存失败',{exact:true}).waitFor();await idle(page)
+ let actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title']);assert.equal(await d.getByLabel('作品名称',{exact:true}).inputValue(),'隔离返回重试标题')
+ await button.click();await waitAction(page,'wizard-back');await page.waitForFunction(revision=>window.wizardFixture.state().busy===0&&window.wizardFixture.view().revision===revision+2,initial)
+ actions=await businessCalls(page);assert.deepEqual(actions.map(call=>call.type),['set-title','set-title','wizard-back']);assert.deepEqual(actions.map(call=>call.revision),[initial,initial,initial+1])
+}))
+
+test('NIW-B01: an in-flight directory picker suppresses duplicate clicks but not a later deliberate selection',async()=>{
+ for(const first of [{kind:'success',label:'隔离目录 A'},{kind:'cancel'}])await mount({step:'work',deferredTarget:true,targetReplies:[first,{kind:'success',label:'隔离目录 C'}]},async page=>{
+  const d=dialog(page),button=d.getByRole('button',{name:'选择目录',exact:true}),initial=await page.evaluate(()=>window.wizardFixture.view().revision)
+  await idle(page);await button.click();await waitAction(page,'choose-target');assert.equal(await button.isDisabled(),true)
+  const box=await button.boundingBox();assert.ok(box);await page.mouse.click(box.x+box.width/2,box.y+box.height/2);await page.evaluate(()=>window.wizardFixture.releaseTarget())
+  await page.waitForFunction(revision=>window.wizardFixture.state().busy===0&&window.wizardFixture.view().revision===revision+1,initial);assert.equal((await businessCalls(page)).filter(call=>call.type==='choose-target').length,1)
+  await button.click();await waitAction(page,'choose-target',2);await page.evaluate(()=>window.wizardFixture.releaseTarget());await page.waitForFunction(revision=>window.wizardFixture.state().busy===0&&window.wizardFixture.view().revision===revision+2,initial)
+  const actions=(await businessCalls(page)).filter(call=>call.type==='choose-target');assert.equal(actions.length,2);assert.deepEqual(actions.map(call=>call.revision),[initial,initial+1]);assert.equal(await page.evaluate(()=>window.wizardFixture.view().targetLabel),'隔离目录 C')
+ })
+})
 
 test('NIW-B01/B03: step titles; files show automatic encoding without a confirm button',()=>mount({step:'files'},async page=>{
  const d=dialog(page);await d.getByRole('heading',{name:'确认文件'}).waitFor()

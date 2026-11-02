@@ -1,0 +1,12 @@
+# 场景复核有界并发用例
+
+与298方案同日，先独审后执行。合成来源/模型，不写真实小说或Key。
+
+- RW01 确定性及上限：制造至少33个正文包及多个facts包，deferred屏障使首wave31请求全在途，证明第32包尚未启动；逆序返回，无重复来源/任务coverage；第二wave及facts阶段的原units/artifacts/projection/任务几何逐值等于原planner。最终coverage.review全选工作单元、reviewFacts与importReviewTaskKeys顺序完全一致，所有字段/正文不变。到facts请求前所有body请求已排空；发现普通pending conflict仍完成所有包并保留冲突，不能直接publish。
+- RW02 失败与重试：无初始pending conflicts，首wave中间包失败，其余在途成功；另覆盖ai成功但证据/semanticMissing末端验证失败。等待全wave排空，成功结果按包序保存，失败包无coverage，下一wave零请求。正常重试只请求未覆盖body/facts；facts中间失败后后位成功、补前位时最终reviewFacts严格等于importReviewTaskKeys全序，不重新付费已成功包；已有pending冲突不能自动清除。
+- RW03 取消与授权：暂停/epoch变化时所有在途通过既有cancelAi排空，迟到旧结果不给coverage/conflicts/missing；落盘前更改模型authRevision或来源hash，整wave零credit且无新wave。原ai仍调用每请求前后授权和来源门；覆盖早成功等到wave末端失效、serial排队期间失效、runtime写失败、candidate保存失败无内存/磁盘新credit及post-rename阻断。
+- RW04 精确范围及模型：非wizard、旧协议、组合目标、非scene仍沿原串行行为；只有主进程精确pool门产生executionLane='scene-review-wave-v1'，schema限制字面量，service要求标记加普通scene包双门，作者解释/无标记review保持原slot；审核providerOptions/模型对象逐值不变，review不能落入lightImportGeneration，普通聊天并发设置不改。
+
+独审补充RW03真实RPC边界：RpcPeer只回传Error.message，故机器授权码和service/models的固定中文拒绝都须在name/code丢失且public models不变时，仍令整wave无credit、无后续wave。仅固定精确白名单，不以任意message子串或provider原文分类；分别预定AUTHORIZATION_REVOKED及既有密钥不可用中文错误证明，不操作真实Key。
+
+实现测试以最少独立场景覆盖上述门，避免墙钟/RSS阈值和实现镜像断言。既有semantic-session/预算/runtime/发布用例补足通用门，不重复写同构测试。

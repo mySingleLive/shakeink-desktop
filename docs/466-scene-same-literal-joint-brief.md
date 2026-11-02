@@ -1,0 +1,19 @@
+# 同记录同称呼的提及联合选项
+
+465及其独审记录R68仍actualFailed：36请求35成功/1拒绝，67份完整生成原输入SHA逐份相同；正文、1402章、4912单元保真，未完整导入/发布/重开。唯一失败202543…首稿20行，后续三代39个selection答案全部在各自局部整数域内，但原select拒绝`new-mention-duplicate`。这不是非法编号或格式包装；不能放宽该拒绝。
+
+原boundGroups为每条未证mention单独建组，而最终同一行patch.apply对全部claim联合调用select；memberKey包含literal和具体来源发生位置。同一行同literal的两条claim因而可以各自选择合法option，却联合选择同一次发生。修复仅把这项现有依赖提前纳入有限方案编译，仍由模型显式选方案。
+
+只修改claim-patch.ts中boundGroups的mention分组：按该行claim.literal的精确字符串相等建立组（Map首次出现顺序）；组内claimRef保持原claim顺序。不同literal各自独立；context/link原分组与顺序保持。每组validate仍调用同一个原select(decisions,expected)，不改select/apply/displayClaims/memberKey/source/保留/whole-owner图，也不改变任何claim的eligible域、reject资格、位置或基底。
+
+原compileBoundGroup完整枚举该组原域的笛卡尔积并调用原联合验证，重复发生位置组合会被原门排除。保留全部合法方案及其原窗口，不自动选择、不按首项/最短窗口/发生位置代表去重，不缩域、采样或只保部分组合。256 options、row4096/request65536步骤限制不变；无合法完整方案或触阈值仍按原CompileLimit整行fallback完整replacement，不能拆回独立组绕联合条件，也不增加代数/预算。不同组之间原最终全部联合门继续执行，局部方案不是全局接受保证。
+
+生成wire仍原keyed answers、Native工厂/字段/容量原样，任务编号仅随可信完整分组重建。A/C的slot/claimIndexes/全域共享视图保持，索引与新多claim组逐位一致。来源空半开范围继续原拒，既有无旧owner资格和显式claim基底规则保持。
+
+私有内存变换已通过同一实际首稿的原完整业务入口：首输入SHA/首稿不变；新deck为32个selection，Native1853B、prompt-fixed52640B，无fallback/额外SDK代数。明确构造每个新任务选项1的反事实，经原全部门接受20记录；旧39数字没有复用。关键原slot7的mention0/1合为新task16，保留8个完整联合方案，显式option1分别选择shared19/unit16和shared20/unit17的不同发生位置。原独立任务16/17均选shared19时确为相同member而被拒。证据为私有r68-joint-mention-feasibility-v2-{actual,joint}-private.json（0600），0API/0产品写入；不是实际供应商或全文成功。组合增大仍须在正式新代码上测全预算，不能以该单例替代。
+
+测试先RED复现分开局部选项能同指一次发生而原apply拒，GREEN证明同literal组选项均经原select联合验证。手写完整小域枚举对照全部合法组合；多窗口同发生位置仍视同member，不通过裁窗口消歧；不同literal/原source/所有拒绝/步骤和整行fallback控制保留。包含交错literal顺序、无源reject、旧member借用、可用发生位置不足、有源跨unit无单元候选、不重复raw及最终跨组/全图门，不增加默认选择。
+
+历史口径沿462/463：提前冻结R68完整baseline；260请求/519原捕获及原actual receipts保持。每次后续复用均须旧实际前缀SHA可证且完整语义绑定（含新联合claim组、每option的完整CF assignment、共享目录/窗口/Native）相同；changed/unknown只测已准备next请求并在SDK前停，余捕获互斥记账，不能盲复用旧39数字。used+全部unused=519，不宣称519新调用或旧接受数不变。全部新129/旧130首轮、每个已知首稿准备请求及2/3/4代合成完整资料预算，均保持原上限。类型/desktop build/diff和定向测试、独立code review后冻结R69，再正常fresh全文原420000ms、全部场景/完整复核/发布/正常重开及全DB比较。未全部通过继续如实失败，不跑全仓。
+
+分工拟AI owner仅该分组函数和新增joint-mentions测试；另一owner独立阈值/源保留审核或必要已批准helper适配，主代理组合/验收；方案与用例按序独审后才产品TDD。当前方案/用例尚待按序独审，不准入实现。

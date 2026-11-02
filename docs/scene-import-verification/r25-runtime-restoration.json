@@ -1,0 +1,16 @@
+{
+  "restoredDate": "2026-11-01",
+  "source": "node_modules/electron/dist/Electron.app",
+  "runtimeVersion": "44.6.0",
+  "binarySha256": "c9da78c3c79b9e6d6714fbf2a1136c4eb4a93cc5edad0f8ccfb058d681325e7e",
+  "bundleId": "ink.shakeink.lotm-verification",
+  "onlyInfoPropertyChanged": "CFBundleIdentifier",
+  "verifiedFiles": 256,
+  "verifiedSymlinks": 14,
+  "treeSha256": "9e33fca20f7b588a800b7dd7b2a0d850af093d3ec5f4d6b157237b6f4f1a9bd1",
+  "damagedRuntimePreserved": true,
+  "modelConfigurationTouched": false,
+  "modelCalls": 0,
+  "minimalNativeStartupExitCode": 0,
+  "minimalNativeStartupAppReady": true
+}

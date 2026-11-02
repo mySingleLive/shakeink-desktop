@@ -1,0 +1,72 @@
+✖ SF-01: exact scene facts guidance reaches the actual second generation without truncated fields or private keys (252.727458ms)
+✖ SF-02: full scene facts guidance in outer correction recovers on generation three (2215.192666ms)
+✖ SF-02: full scene facts guidance in outer correction fails after four generations (2167.858958ms)
+✔ SF-03: all thirteen legal fields remain intact while unknown undefined keys and explicit invalid values remain rejected (14.460875ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 1
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5134.691166
+
+✖ failing tests:
+
+test at tests/unit/novel-import-scene-facts.test.ts:2:3025
+✖ SF-01: exact scene facts guidance reaches the actual second generation without truncated fields or private keys (252.727458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'string'
+  
+      at guide (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-facts.test.ts:13:131)
+      at generateText (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-facts.test.ts:17:28)
+      at generateText (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:244:173)
+      at generateJSON (/Users/dt_flys/Projects/shakeink-desktop/src/lib/ai/generate.ts:194:26)
+      at async generateImportAiJson (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:245:14)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-facts.test.ts:16:27)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'string',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-facts.test.ts:2:4836
+✖ SF-02: full scene facts guidance in outer correction recovers on generation three (2215.192666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 3
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-facts.test.ts:28:133)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-facts.test.ts:2:4836
+✖ SF-02: full scene facts guidance in outer correction fails after four generations (2167.858958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 4
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-facts.test.ts:28:133)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

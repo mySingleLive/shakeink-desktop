@@ -5,6 +5,36 @@ export type WizardRosterKind='character'|'scene'|'item'|'world'
 export interface WizardRosterStashEntry extends WizardRosterEntry {unitId?:string;settings?:{settingType:WizardSettingType;name:string}[]}
 export type WizardRosterStash=Partial<Record<WizardRosterKind,WizardRosterStashEntry[]>>
 
+/** Return only nodes on cycles, not the branches leading to them. No recursion on long books. */
+export function sceneParentCycleIds(nodes:readonly {id:string;parentId?:string}[]):string[]{
+ const byId=new Map(nodes.map(node=>[node.id,node]));if(byId.size!==nodes.length)throw Error('场景清单标识重复')
+ if(nodes.some(node=>node.parentId!==undefined&&!byId.has(node.parentId)))throw Error('场景上级不在完整清单中')
+ const done=new Set<string>(),cycles=new Set<string>()
+ for(const node of nodes){
+  if(done.has(node.id))continue
+  const path:string[]=[],seen=new Map<string,number>();let cursor:string|undefined=node.id
+  while(cursor!==undefined&&!done.has(cursor)){
+   const at=seen.get(cursor);if(at!==undefined){for(const id of path.slice(at))cycles.add(id);break}
+   seen.set(cursor,path.length);path.push(cursor);cursor=byId.get(cursor)!.parentId
+  }
+  for(const id of path)done.add(id)
+ }
+ return nodes.filter(node=>cycles.has(node.id)).map(node=>node.id)
+}
+/** Apply explicit model proposals to a copy, after exact target coverage and full-graph validation. */
+export function applySceneParentProposals<T extends {id:string;parentId?:string}>(nodes:readonly T[],targets:readonly string[],proposals:readonly {id:string;parentId?:string;evidence:{unitId:string;quote:string}}[]):T[]{
+ const cyclic=sceneParentCycleIds(nodes),targetIds=new Set(targets),byId=new Map(nodes.map(node=>[node.id,node]))
+ if(!targets.length||targets.length>32||targetIds.size!==targets.length||cyclic.length!==targets.length||cyclic.some(id=>!targetIds.has(id)))throw Error('场景上级修订目标必须恰好覆盖全部循环节点')
+ if(!Array.isArray(proposals)||proposals.length!==targets.length||new Set(proposals.map(item=>item.id)).size!==targets.length||proposals.some(item=>!targetIds.has(item.id)||Object.keys(item).some(key=>!['id','parentId','evidence'].includes(key))||item.parentId!==undefined&&(typeof item.parentId!=='string'||!byId.has(item.parentId)||item.parentId===item.id)))throw Error('场景上级修订必须为每个目标提供唯一有效的父级提案')
+ const changes=new Map(proposals.map(item=>[item.id,item])),next=nodes.map(node=>{
+  const change=changes.get(node.id);if(!change)return node
+  if(change.parentId!==undefined)return {...node,parentId:change.parentId}
+  const {parentId:_parent,...root}=node;return root as T
+ })
+ if(sceneParentCycleIds(next).length)throw Error('场景上级修订后仍存在循环')
+ return next
+}
+
 /** Turn merged model rosters and copied source blocks into the author's checklist. Source entries
  * are always kept; body items need importance; worlds expand into setting leaves. */
 /** A category heading such as “# 场景” with nothing under it names a group, not an entry. */

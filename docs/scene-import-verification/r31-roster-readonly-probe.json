@@ -1,0 +1,33 @@
+{
+  "kind": "manual-contiguous-24-unit-readonly-diagnostic",
+  "freshFullBookRun": false,
+  "fullBookAccepted": false,
+  "coverageCredit": 0,
+  "ok": false,
+  "elapsedMs": 11950,
+  "stateUnchanged": true,
+  "normalAppExit": {
+    "code": 0,
+    "signal": null
+  },
+  "observations": [
+    {
+      "promptSha256": "c65f0f7f644b307c0f080e1fa2e5c33b3b1ede5f89f22a1a25451fdccaf81f43",
+      "promptCharacters": 82115,
+      "reason": "stop",
+      "promptTokens": 34107,
+      "completionTokens": 1295,
+      "textCharacters": 4321,
+      "maxOutputTokens": null
+    },
+    {
+      "promptSha256": "f675ef864a57aff2afb0bffdd34fee50c611d84f6b92c17e673b8933bec75f7e",
+      "promptCharacters": 82366,
+      "reason": "stop",
+      "promptTokens": 34234,
+      "completionTokens": 1476,
+      "textCharacters": 4871,
+      "maxOutputTokens": null
+    }
+  ]
+}

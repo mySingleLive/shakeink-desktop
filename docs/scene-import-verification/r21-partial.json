@@ -1,0 +1,30 @@
+{
+  "run": "R21",
+  "acceptance": false,
+  "normalProduct": true,
+  "readOnlyNumericObservation": true,
+  "scenes": 1164,
+  "states": {
+    "done": 658,
+    "failed": 1,
+    "running": 30,
+    "waiting": 475
+  },
+  "errorCategory": "scene-field-format",
+  "heapSamples": 47,
+  "maxObservedWorkerHeapBytes": 553144812,
+  "lastObservedWorkerHeapBytes": 246298572,
+  "memoryOOM": false,
+  "shutdown": {
+    "at": "2026-10-31T01:34:13.711Z",
+    "event": "shutdown",
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "exitCode": 2
+  },
+  "published": false,
+  "reopened": false,
+  "configurationUnchanged": true
+}

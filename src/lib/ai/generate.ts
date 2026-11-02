@@ -1,6 +1,6 @@
 import { snapshotForRecord } from "@desktop/service/models"
 import { acquireLongTask, runInsideLongTask, withLongTask } from "@/lib/long-task"
-import { streamText } from "ai"
+import { jsonSchema, Output, streamText, type JSONSchema7 } from "ai"
 import type { z } from "zod"
 
 import { currentChatExecution } from "@/lib/chat-execution"
@@ -11,6 +11,7 @@ import { getModelForUser, type ResolvedModel } from "@/lib/ai/provider"
 import { renderPrompt } from "@/lib/prompts/render"
 import { checkQuota, recordUsage } from "@/lib/quota"
 import { storyDraftText } from "@/lib/story-draft"
+import { JSON_OUTPUT_INSTRUCTION } from "@/lib/ai/json-output-instruction"
 
 export type GenerateUsage = { checkQuota: typeof checkQuota; recordUsage: typeof recordUsage }
 
@@ -28,6 +29,10 @@ interface GenerateBaseOptions {
   abortSignal?: AbortSignal
   /** 服务层固定评审配置后注入，不能来自路由/工具参数。 */
   resolvedModel?: ResolvedModel
+  /** 服务层显式选择的原生 JSON 输出合同；不改变默认文本生成。 */
+  jsonOutputSchema?: JSONSchema7
+  /** 服务层按实际模型容量显式预留输出；省略时使用原SDK默认值。 */
+  maxOutputTokens?: number
   /** 子生成仅透出创作文本预览，评审和内部推理不发送到内容面板。 */
   preview?: boolean
 }
@@ -86,7 +91,10 @@ async function generateTextInSlot(opts: GenerateOptions): Promise<GenerateResult
     const progress = opts.preview ? execution?.progress : undefined
     progress?.({ storyDraft: { text: "" } })
     let streamError: unknown
-    const stream = streamText({ onError: ({ error }) => { streamError = error }, model, prompt, providerOptions, maxRetries: 0, abortSignal, onChunk: ({ chunk }) => {
+    // These callers consume complete JSON. Keep its server format and final
+    // validator, without repeatedly parsing incomplete prefixes for partials.
+    const output = opts.jsonOutputSchema ? { ...Output.object({ schema: jsonSchema(opts.jsonOutputSchema) }), parsePartialOutput: async () => undefined } : undefined
+    const stream = streamText({ onError: ({ error }) => { streamError = error }, model, prompt, providerOptions, ...(output ? { output } : {}), ...(opts.maxOutputTokens === undefined ? {} : { maxOutputTokens: opts.maxOutputTokens }), maxRetries: 0, abortSignal, onChunk: ({ chunk }) => {
       if (!progress || chunk.type !== "text-delta") return
       raw += chunk.text
       if (Date.now() - previewAt >= 120) { previewAt = Date.now(); progress?.({ storyDraft: { text: storyDraftText(raw) } }) }
@@ -170,28 +178,27 @@ export async function streamGeneration(opts: GenerateOptions) {
   } catch (error) { release(); throw error }
 }
 
-const JSON_OUTPUT_INSTRUCTION =
-  "\n\n请严格按要求的结构输出结果：只输出一个 JSON 代码块（```json ... ```）或纯 JSON，不要输出任何解释性文字。"
-
 /**
  * 结构化生成：generateText 后从输出中提取 JSON（兼容 ```json 代码块与纯 JSON），
  * 再用 zod 校验。用于大纲生成等结构化输出场景。
  * 提取或校验失败抛 Error。
  */
 export async function generateJSON<T>(
-  opts: GenerateOptions & { schema: z.ZodType<T> },
+  opts: GenerateOptions & { schema: z.ZodType<T>;maxGenerations?:number;repair?:(input:{text:string;error:StructuredGenerationError;prompt:string;correction:string})=>string|{correction:string;jsonOutputSchema:JSONSchema7}|Promise<string|{correction:string;jsonOutputSchema:JSONSchema7}> },
   deps?: { generateText: typeof generateText }
 ): Promise<GenerateJSONResult<T>> {
-  const { schema, ...rest } = opts
+  const { schema, repair, maxGenerations = 2, ...rest } = opts
+  if (!Number.isSafeInteger(maxGenerations) || maxGenerations < 1 || maxGenerations > 4) throw new Error('结构化生成次数预算无效')
   const prompt = (await resolvePrompt(rest)) + JSON_OUTPUT_INSTRUCTION
   const generate = deps?.generateText ?? generateText
   let correction = ""
+  let nextOutputSchema: JSONSchema7 | undefined
   let promptTokens = 0
   let completionTokens = 0
   let cost = 0
-  // 格式错误允许一次重新生成；每次仍走配额、取消与用量记录，不重放外层写入工具。
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const result = await generate({ ...rest, prompt: prompt + correction })
+  // 默认允许一次纠错；受信服务可在有限预算内选择次数，所有代次仍走原生成与用量路径。
+  for (let attempt = 0; attempt < maxGenerations; attempt += 1) {
+    const result = await generate({ ...rest, ...(nextOutputSchema === undefined ? {} : { jsonOutputSchema: nextOutputSchema }), prompt: prompt + correction })
     promptTokens += result.promptTokens
     completionTokens += result.completionTokens
     cost += result.cost
@@ -199,16 +206,25 @@ export async function generateJSON<T>(
       if (result.finishReason && result.finishReason !== "stop") throw new StructuredGenerationError("incomplete")
       return { data: parseJsonOutput(result.text, schema), promptTokens, completionTokens, cost, finishReason: result.finishReason }
     } catch (error) {
-      if (!(error instanceof StructuredGenerationError) || attempt === 1) throw error
+      if (!(error instanceof StructuredGenerationError)) throw error
+      const finishReason = result.finishReason === 'stop' || result.finishReason === 'length' || result.finishReason === 'content-filter' || result.finishReason === 'tool-calls' || result.finishReason === 'error' || result.finishReason === 'other' ? result.finishReason : 'unknown'
+      try { Object.defineProperty(error, 'finishReason', { value: finishReason, enumerable: false }) } catch { /* Diagnostics never replace the original error. */ }
+      if (attempt === maxGenerations - 1) throw error
       correction = `\n\n上一次输出未通过结构校验（${error.message}）。${error.feedback.length ? `具体字段要求：${error.feedback.join("；")}。` : ""}请重新生成完整、闭合的 JSON，严格保留要求的字段与类型，不要加入解释或 Markdown 之外的内容。`
+      if (repair) {
+        const repaired = await repair({ text: result.text, error, prompt, correction })
+        if (typeof repaired === "string") correction = repaired
+        else { correction = repaired.correction; nextOutputSchema = repaired.jsonOutputSchema }
+      }
     }
   }
   throw new StructuredGenerationError("invalid_json")
 }
 
 export class StructuredGenerationError extends Error {
+  declare readonly finishReason?: 'stop' | 'length' | 'content-filter' | 'tool-calls' | 'error' | 'other' | 'unknown'
   constructor(readonly kind: "invalid_json" | "invalid_schema" | "incomplete", readonly invalidFields: string[] = [], readonly feedback: string[] = []) {
-    super(kind === "incomplete" ? "模型输出未完整结束" : kind === "invalid_json" ? "模型未返回可解析的 JSON" : `模型返回结构不完整${invalidFields.length ? `（${invalidFields.join("、")}）` : ""}`)
+    super(kind === "incomplete" ? "模型输出未完整结束" : kind === "invalid_json" ? "模型未返回可解析的 JSON" : `模型返回结构不完整${invalidFields.some(Boolean) ? `（${invalidFields.filter(Boolean).join("、")}）` : ""}`)
     this.name = "StructuredGenerationError"
   }
 }

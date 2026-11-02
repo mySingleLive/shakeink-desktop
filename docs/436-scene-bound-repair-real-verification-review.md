@@ -1,0 +1,15 @@
+# R61 实际证据记录独立审核
+
+结论：436主文及安全标量记录有效，失败边界准确，无待修正的证据口径阻塞。R61完整导入未通过，七分钟目标、发布及正常重开均未通过；不能用此前测试或本次不足一分钟的失败耗时代替完成验收。
+
+独立只读核验：27个runtime调用全部settled，20 fulfilled/7 rejected；RPC观察器对应27请求/20成功/7失败，7个失败均闭合标为修复事务。60份实际capture逐transfer/operation/payload与27份原零API重放收据一一绑定，无重复或遗漏；60个inputTextHashEqual全true，delta长度/SHA逐项相符，captureComplete/streamClosed全true、providerEvent全completed，解析/UTF8/terminal冲突均0。原重放providerCalls=0，复现20/7；原私有重放文件SHA与公开 `087deac151eb3af19e0d3b701d4fa4168204449370fd4b0b2b71cd626edf6372` 相符。本审核未重跑回放或读取新产品提示冒历史输入。
+
+observer停止记录的pending/unmatched/ambiguous/observationFailures/limitFailures/writeFailures均0、restored=true，page error为0。events确认允许分析时间对应click、识别失败时间08:43:06.144Z、正常关闭08:43:08.768Z，原始App exit0/signalnull、driver exit2。此次可见调用没有再出现HTTP400或预算首拒，不外推未执行请求或未来运行。
+
+会话抽取计数与公开记录一致：1402章、5589 workingUnits；覆盖829、members352、records258、identities255、relations22。workingRevision=0，original/working正文SHA相等；正式artifacts为0。全书是正常载入/规划来源，部分覆盖或识别记录不表示5589单元或全部场景已经成功处理，更不表示已发布作品。
+
+原接受门私有诊断的公开投影逐字段匹配、文件SHA相符：7包中已记录20次绑定首拒，6次答案数不符；另外记录为严格record或局部选择类型/范围拒绝。没有记录的某一代不算通过。9个record首拒摘要为6次数组evidence、1次旧ref、2次缺三数组/extra，合计与record首拒数相符；属于该只读分类收据，不是全部后续门通过证明。闭合独立汇总 `r61-bound-display-safe-summary.json` SHA `e6b6ace12a3cbf0237458e692bdeda702d9d422e3ee85fdb31225ba220e2e9ec` 已核，实际parser、60输入SHA及request bytes保持，31个bound提示中16个含旧repairs指导。该冲突可支持后续修复，但不能宣称修复已生效或全部根因已查清。
+
+台账当前R61 status失败，fullSceneImport/sceneStage/sevenMinute/publication/reopen全部false；旧R27范围已移至historical字段，latestCountsScope明确R61识别失败及后续阶段未到达。主组合655及独立168是重叠的代码验证证据，不相加、不冒全仓或真实全文通过。
+
+实际执行Node24纯JSON/元数据/SHA断言，全部exit0；只抽取计数、闭合代码、时序及hash，不输出或阅读小说/生成文本值、Key或开放错误正文，无App/API、产品/测试改动。后续439须独立审核，当前新产品变化不能回写R61输入SHA或失败结果。

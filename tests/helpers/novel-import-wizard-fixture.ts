@@ -44,6 +44,28 @@ export async function fixture(files:ImportFile[]=filesF(),ai?:Ai,over:{models?:{
  const journal=async()=>{const v=await view();return JSON.parse(await readFile(join(root,'novel-imports',v.id,'session.json'),'utf8')) as ImportSession}
  return {controller,options,act,settle,view,journal,requests,root,target,setModels(m:typeof models){models=m},handler:()=>handler,setAi(next:Ai){handler=next},get published(){return published},async dispose(){await controller.close().catch(()=>undefined);await rm(root,{recursive:true,force:true});await rm(target,{recursive:true,force:true})}}
 }
+/** Explicit compatibility fixture for pre-identity scene controller tests.
+ * Only the initial synthetic journal is made genuinely versionless. Fresh
+ * fixture() and every production migration/validation rule remain unchanged.
+ * This is a controlled old-contract fixture, not actual app restart evidence. */
+export async function legacySceneFixture(...args:Parameters<typeof fixture>){
+ const f=await fixture(...args),act=f.act;let adopted=false
+ f.act=async(type,extra={})=>{
+  const response=await act(type,extra)
+  if(type!=='choose'||adopted||!response.view)return response
+  assert.equal(f.controller.active,0,'legacy fixture adoption precedes all background work')
+  const session=await f.journal();assert.ok(session.wizard);assert.equal(session.artifacts.length,0);assert.equal(session.wizard.sceneIdentity,undefined)
+  assert.ok(Object.values(session.wizard.candidates).every(entries=>!entries?.length),'legacy fixture adoption precedes every recognized candidate')
+  assert.ok(Object.values(session.wizard.rosterStash??{}).every(entries=>!entries?.length),'legacy fixture adoption cannot erase recognized material')
+  delete session.wizard.sceneIdentityVersion;delete session.wizard.sceneIdentity
+  const c=f.controller as unknown as {session:ImportSession;validJournal(j:unknown,id:string):boolean}
+  assert.ok(c.validJournal(structuredClone(session),session.id),'the original controller accepts a genuine legacy journal')
+  await writeFile(join(f.root,'novel-imports',session.id,'session.json'),JSON.stringify(session));c.session=session;adopted=true
+  const stored=await f.journal();assert.ok(!Object.hasOwn(stored.wizard!,'sceneIdentityVersion'));assert.ok(!Object.hasOwn(stored.wizard!,'sceneIdentity'))
+  return{...response,view:await f.view()}
+ }
+ return f
+}
 /** Drive steps 1–5: choose sources, confirm files, name and folder, content kinds, local structure. */
 export async function toTree(f:Awaited<ReturnType<typeof fixture>>,kinds={selected:['body','character','world'],infer:true}){
  await f.act('choose',{mode:'files'})
@@ -93,6 +115,13 @@ export function entityResult(r:ImportAiRequest,facts:(id:string,name:string)=>Re
 }
 export const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms))
 export async function toImportChar(f:Awaited<ReturnType<typeof fixture>>){await toRoster(f);await f.act('wizard-next')}
+/** Scene-only extraction through the same content and consent actions as the UI. */
+export async function toSceneRoster(f:Awaited<ReturnType<typeof fixture>>){
+ await f.act('choose',{mode:'files'});await f.act('wizard-next');await f.act('set-title',{title:'合成场景作品'});await f.act('choose-target');await f.act('wizard-next')
+ await f.act('classify',{mode:'ai',consent:true});await f.settle();await f.act('select',{selected:['body'],targets:['scene'],infer:true});await f.act('wizard-next',{consent:true});await f.settle()
+ await f.act('wizard-next',{consent:true});return f.settle()
+}
+export async function toImportScene(f:Awaited<ReturnType<typeof fixture>>){await toSceneRoster(f);await f.act('wizard-next')}
 
 
 /** Drive past the character step with every candidate imported. */

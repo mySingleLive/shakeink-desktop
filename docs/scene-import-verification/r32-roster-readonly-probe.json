@@ -1,0 +1,48 @@
+{
+  "kind": "current-planner-opaque-ref-readonly-diagnostic",
+  "freshFullBookRun": false,
+  "fullBookAccepted": false,
+  "structuralServiceValidationPassed": true,
+  "informationRetentionPassed": false,
+  "coverageCredit": 0,
+  "elapsedMs": 12964,
+  "stateUnchanged": true,
+  "normalAppExit": {
+    "code": 0,
+    "signal": null
+  },
+  "observations": [
+    {
+      "promptSha256": "e6cde4f479ed1189d9564cf4e82d52a046f65848c6b8d68bd91c1b209c7b2ff8",
+      "promptCharacters": 247475,
+      "reason": "stop",
+      "promptTokens": 114287,
+      "completionTokens": 1720,
+      "textCharacters": 4465,
+      "maxOutputTokens": null
+    },
+    {
+      "promptSha256": "8aeb2e1f0a4872625716a8eca713275df10d41d2e6407e54c5c9af2dc7477bbc",
+      "promptCharacters": 247729,
+      "reason": "stop",
+      "promptTokens": 114422,
+      "completionTokens": 531,
+      "textCharacters": 1371,
+      "maxOutputTokens": null
+    }
+  ],
+  "first": {
+    "records": 27,
+    "mentions": 48,
+    "contexts": 9,
+    "individuallyValidatedRows": 26,
+    "distinctFullyValidatedMentionKeys": 42
+  },
+  "second": {
+    "records": 10,
+    "mentions": 11,
+    "contexts": 5,
+    "retainedFirstFullyValidatedMentionKeys": 11,
+    "lostFirstFullyValidatedMentionKeys": 31
+  }
+}

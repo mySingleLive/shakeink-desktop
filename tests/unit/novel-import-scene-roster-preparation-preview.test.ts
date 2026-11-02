@@ -1,0 +1,35 @@
+import assert from'node:assert/strict'
+import{test}from'node:test'
+import{createSceneRosterBoundDecisions}from'../../desktop/service/novel-import-scene-roster-bound-decisions'
+const ref='cf'+'1'.repeat(16),claim='pc'+'1'.repeat(16)
+function deck(){return createSceneRosterBoundDecisions({plan:{choices:[{choiceRef:ref,unitIndex:0,start:0,end:1,literals:['甲']}],rows:[{repairRef:'rr'+'1'.repeat(16),slot:0,canReject:false,requiredSpellings:[],candidates:[],keep:{mentions:[],context:[],links:[]},patch:{claims:[{claimRef:claim,kind:'mention',index:0,literal:'甲',canReject:false,eligibleChoiceRefs:[ref]}]}}]},draft:[{}],groups:()=>[{claimRefs:[claim],validate(){}}]})}
+test('PP01: preview cannot execute or change the current deck; discard revokes the same-version token',()=>{const current=deck(),before=structuredClone(current.data),preview=current.previewNext();assert.ok(preview);assert.deepEqual(current.data,before);assert.equal(current.transitions,0);assert.equal(Object.hasOwn(preview,'decode'),false);assert.equal(Object.hasOwn(preview,'activate'),false);assert.equal(preview.data.tasks[0].kind,'claims');assert.equal(current.decode([1],v=>v)[0].disposition,'patch');current.discard(preview);assert.throws(()=>current.commit(preview));assert.deepEqual(current.data,before)})
+
+import{sceneRosterBoundTaskDisplay,sceneRosterKeyedInlineSchema}from'../../desktop/service/novel-import-scene-roster-bound-decisions'
+import type{SceneRosterTargetedPlan}from'../../desktop/service/novel-import-scene-roster-targeted-repair'
+function jointDeck(){
+ const choices=[1,2].map(n=>({choiceRef:'cf'+n.toString(16).padStart(16,'0'),unitIndex:0,start:n-1,end:n,literals:['甲']})),rows=[0,2].map(slot=>({repairRef:'rr'+(slot+1).toString(16).padStart(16,'0'),slot,canReject:false,requiredSpellings:[],candidates:[],keep:{mentions:[],context:[],links:[]},patch:{claims:[0,1,2].map(index=>({claimRef:'pc'+(slot*3+index+1).toString(16).padStart(16,'0'),kind:'mention' as const,index,literal:'甲'+index,canReject:false,eligibleChoiceRefs:choices.map(c=>c.choiceRef)}))}})),plan:SceneRosterTargetedPlan={choices,rows};let validations=0
+ const current=createSceneRosterBoundDecisions({plan,draft:[{}, {}, {}],strategy:'joint-groups',groups:slot=>[[0,1],[2]].map(indexes=>({claimRefs:indexes.map(index=>rows.find(row=>row.slot===slot)!.patch.claims[index].claimRef),validate(){validations++}}))})
+ return{current,plan,validations:()=>validations}
+}
+test('PP02: re-peek, explicit discard, commit, eager advance and activation revoke every obsolete token without changing the current bundle',()=>{
+ const{current}=jointDeck(),before=structuredClone(current.data),first=current.previewNext()!,second=current.previewNext()!
+ assert.notEqual(first,second);assert.deepEqual(first.data,second.data);assert.throws(()=>current.commit(first));assert.deepEqual(current.data,before);assert.equal(current.transitions,0);assert.ok(Object.isFrozen(second));assert.ok(Object.isFrozen(second.data.tasks));assert.throws(()=>second.data.tasks.push(second.data.tasks[0]));assert.equal(Object.hasOwn(second,'decodeRoot'),false)
+ assert.throws(()=>jointDeck().current.commit(second));assert.throws(()=>current.commit(structuredClone(second)));current.discard(second);assert.throws(()=>current.commit(second));assert.throws(()=>current.discard(second))
+ const third=current.previewNext()!,next=current.commit(third);assert.equal(next.transitions,1);assert.throws(()=>current.commit(third));assert.throws(()=>current.decode([],v=>v));assert.throws(()=>current.previewNext());assert.equal(next.data.tasks.some(t=>t.slot===0&&t.kind==='selection'),false,'equal full costs tie by original slot')
+ const pending=next.previewNext()!,advanced=next.advance(2);assert.throws(()=>next.commit(pending));assert.equal(advanced.transitions,2);const token=advanced.previewNext()!;advanced.activate();assert.throws(()=>advanced.commit(token));assert.throws(()=>advanced.discard(token));assert.throws(()=>advanced.previewNext());assert.throws(()=>advanced.next());assert.throws(()=>advanced.advance(0));assert.throws(()=>advanced.activate())
+})
+test('PP03: preparation has finite G+R transitions, compiles once, atomically replaces a whole sparse row and preserves every other row',()=>{
+ const{current:initial,validations}=jointDeck(),count=validations();let current=initial,steps=0
+ while(true){const before=structuredClone(current.data),preview=current.previewNext();if(!preview)break;assert.deepEqual(current.data,before);assert.equal(current.transitions,steps);const changedSlots=[0,2].filter(slot=>JSON.stringify(before.tasks.filter(t=>t.slot===slot))!==JSON.stringify(preview.data.tasks.filter(t=>t.slot===slot)));assert.equal(changedSlots.length,1);const changed=changedSlots[0];for(const slot of[0,2].filter(slot=>slot!==changed))assert.deepEqual(preview.data.tasks.filter(t=>t.slot===slot),before.tasks.filter(t=>t.slot===slot));current=current.commit(preview);steps++;assert.ok(steps<=4);if(current.data.tasks.some(t=>t.slot===changed&&t.kind==='replacement'))assert.equal(current.data.tasks.filter(t=>t.slot===changed).length,1)}
+ assert.equal(steps,4);assert.equal(validations(),count);assert.deepEqual(current.data.tasks.map(t=>[t.slot,t.kind]),[[0,'replacement'],[2,'replacement']]);assert.equal(current.previewNext(),undefined);assert.equal(current.next(),undefined);assert.throws(()=>current.advance(0))
+})
+test('PP04: next candidate compares complete provider display plus Native bytes, with deterministic ties and frozen mode',()=>{
+ const{current,plan}=jointDeck(),tasks=current.data.tasks,candidates=[0,2].map(slot=>{
+  const indexes=plan.rows.find(r=>r.slot===slot)!.patch!.claims.map((_,index)=>index),combined={kind:'claims' as const,slot,claimIndexes:indexes,domains:indexes.map(()=>({kind:'mention' as const,canReject:false,choices:[1,2]}))},proposed=tasks.flatMap(t=>t.slot!==slot?[t]:t.kind==='selection'?[combined]:[])
+  return{slot,tasks:proposed,bytes:Buffer.byteLength(JSON.stringify({selectionEncoding:'object',tasks:sceneRosterBoundTaskDisplay(proposed,plan)})+JSON.stringify(sceneRosterKeyedInlineSchema(proposed,2,'object')))}
+ }).sort((a,b)=>a.bytes-b.bytes||a.slot-b.slot),preview=current.previewNext()!
+ assert.equal(preview.data.selectionEncoding,'object');assert.deepEqual(preview.data.tasks,candidates[0].tasks);assert.equal(candidates[0].slot,0)
+})
+
+test('PP05: a superseded deck cannot invoke even the explicit legacy callback; the current legacy path remains valid',()=>{const initial=deck();let staleCallbacks=0,currentCallbacks=0;assert.deepEqual(initial.decodeRoot({repairs:[]},v=>v,()=>{currentCallbacks++;return[]}),[]);assert.equal(currentCallbacks,1);const preview=initial.previewNext()!,current=initial.commit(preview);assert.throws(()=>initial.decodeRoot({repairs:[]},v=>v,()=>{staleCallbacks++;return[]}));assert.equal(staleCallbacks,0);assert.deepEqual(current.decodeRoot({repairs:[]},v=>v,()=>{currentCallbacks++;return[]}),[]);assert.equal(currentCallbacks,2);current.activate();assert.deepEqual(current.decodeRoot({repairs:[]},v=>v,()=>{currentCallbacks++;return[]}),[]);assert.equal(currentCallbacks,3)})

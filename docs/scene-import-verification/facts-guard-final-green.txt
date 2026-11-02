@@ -1,0 +1,12 @@
+✔ SF-01: exact scene facts guidance reaches the actual second generation without truncated fields or private keys (244.046792ms)
+✔ SF-02: full scene facts guidance in outer correction recovers on generation three (2267.148666ms)
+✔ SF-02: full scene facts guidance in outer correction fails after four generations (2167.433375ms)
+✔ SF-03: all thirteen legal fields remain intact while unknown undefined keys and explicit invalid values remain rejected (10.577834ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5154.9515

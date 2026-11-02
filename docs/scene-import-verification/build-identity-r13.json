@@ -1,0 +1,52 @@
+{
+  "at": "2026-10-30T21:13:35.872Z",
+  "runtimeBundleId": "ink.shakeink.lotm-verification",
+  "runtimeBinarySha256": "c9da78c3c79b9e6d6714fbf2a1136c4eb4a93cc5edad0f8ccfb058d681325e7e",
+  "identities": [
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "sha256": "f723fada95fa1fc01e738c5e991e842ac88d73b47814ec5a6c7b03164fc5eb24",
+      "bytes": 40007
+    },
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "sha256": "3a2f04d2c4b053bac78006a4989527df61041d4dac46179dd7b10b25676e71f2",
+      "bytes": 62902
+    },
+    {
+      "path": "desktop/main/novel-import.ts",
+      "sha256": "6746731e8e79ec536f67588f82f9ac199a4452d8b6439f15568e70cbd408d81f",
+      "bytes": 208854
+    },
+    {
+      "path": "desktop/shared/novel-import-scene-links.ts",
+      "sha256": "54e011ff77a683347402717960b13b488e8a898159b4325e98a7a0a9b1282467",
+      "bytes": 1242
+    },
+    {
+      "path": "scripts/run-lotm-wizard-import.mjs",
+      "sha256": "0337ccccc3ff4587e5cf2aa73026f859f0e614e60c21741e1ad75f675212988c",
+      "bytes": 27999
+    },
+    {
+      "path": "scripts/verify-lotm-scenes-persistence.mjs",
+      "sha256": "127a2b70a0e9330e90d1e2097dbef7847a7921088fbfde92846b38c142757dce",
+      "bytes": 7450
+    },
+    {
+      "path": "dist/main/index.cjs",
+      "sha256": "01d99e11a7d2ba0cfc80675af84550b993026f2e5a5d0191b309217de5f94dd1",
+      "bytes": 3169448
+    },
+    {
+      "path": "dist/service/index.cjs",
+      "sha256": "75846ec1c204bfa94547e16b58ffaaa4910943708029b01c8a3c5fbf9c7ab95e",
+      "bytes": 3948074
+    },
+    {
+      "path": ".next/BUILD_ID",
+      "sha256": "0f012e0874786f95a5779bfbe7a6f961ca51d3c41d6463f0673a451d43cd5dbd",
+      "bytes": 21
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "trials": [
+    {
+      "ok": false,
+      "category": "invalid_schema",
+      "invalidFieldCount": 1,
+      "observations": [
+        {
+          "promptSha256": "e6cde4f479ed1189d9564cf4e82d52a046f65848c6b8d68bd91c1b209c7b2ff8",
+          "promptCharacters": 247475,
+          "reason": "stop",
+          "promptTokens": 114287,
+          "completionTokens": 755,
+          "textCharacters": 2017,
+          "maxOutputTokens": null
+        },
+        {
+          "promptSha256": "e14736a4af1ae259105b8d72fc3e5abc8309aa4951793864207cbbd06d978849",
+          "promptCharacters": 257783,
+          "reason": "stop",
+          "promptTokens": 118488,
+          "completionTokens": 217,
+          "textCharacters": 568,
+          "maxOutputTokens": null
+        }
+      ]
+    }
+  ],
+  "elapsedMs": 7448,
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "run": "R34",
+  "diagnosticOnly": true,
+  "fullBookAcceptance": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "record": "docs/351-scene-roster-targeted-repair-verification.md",
+  "classification": {
+    "firstRows": 17,
+    "firstMentions": 21,
+    "declaredRepairRows": 2,
+    "secondRepairs": 2,
+    "secondFragmentAnchors": 4,
+    "secondChoiceAnchors": 0,
+    "secondLiteralCoverageErrors": 1
+  }
+}

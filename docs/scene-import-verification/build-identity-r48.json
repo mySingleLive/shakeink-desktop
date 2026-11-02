@@ -1,0 +1,32 @@
+{
+  "run": "R48",
+  "kind": "static-current-interface-schema-capability-diagnostic",
+  "status": "reviewed-frozen-pending-once-only-live-static-probe",
+  "productBuild": "R47",
+  "protectedProductFiles": 367,
+  "productChanged": false,
+  "novelInputSent": false,
+  "liveProviderCalls": 0,
+  "fullBookVerified": false,
+  "syntheticControls": {
+    "nodes": 21,
+    "pass": 21,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "helperSourceSha256": "1db302ac126f69a9608cbb7cbe40d9dddcf5b3a460a6d0ea9c1f21698de9d5e1",
+  "helperBundleSha256": "8abeb6433ff6025ad356aee0fc1bad0f8f40d89cef6427b056e61f773640e2d9",
+  "manifestSha256": "4146217e952b9bcb5f7f872a1c05536c9d211f4ff04192f442ce376a420afd10",
+  "runnerHashes": {
+    "run-scene-native-capability-probe.mjs": "8a84246e6418fdae776eee268a75afa418aba912948f4c10f6d7cf061373a525",
+    "scene-native-capability-runner-state.mjs": "f6a00412fbdbe57ddbeb3d44aaa647aaa1e58bb086464b62518215ca9d9f6fa3",
+    "scene-native-capability-runner-state.test.mjs": "b027fbafa622d1abbc24634420f65154540ac0f36cfd81224d3053bd9d79131d"
+  },
+  "reviewHashes": {
+    "docs/400-scene-native-capability-probe-plan-review.md": "39d7462377128a1b471df62d1ae6313eb240985c80960dbc7007def4737d21f9",
+    "docs/401-scene-native-capability-probe-cases-review.md": "61a1f5a158da6019164f90a17cdd9bfb43d0d55ee848e3b578f022f808a53e1d",
+    "docs/402-scene-native-capability-probe-code-review.md": "e25d157793d393ec34ce801fd36f7e4d68c53729c10670acc16e82de0119c6bf"
+  },
+  "runtimeHash": "c9da78c3c79b9e6d6714fbf2a1136c4eb4a93cc5edad0f8ccfb058d681325e7e"
+}

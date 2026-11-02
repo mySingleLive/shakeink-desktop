@@ -101,9 +101,10 @@ test('LOTM-L-ID04: controller keeps the committed leaf and original prose unchan
  let full=0,leaf=false,conflict=true,beforeConflict:ImportSession|undefined
  const f=await fixture(async r=>{
   if(r.phase!=='analyze')return {conflicts:[]}
-  if(!full){full=r.units.length;throw Error(fixed('no-match'))}
-  if(!leaf){leaf=true;const a=artifact(r.units[0],'outline-main');a.name='首叶';return {artifacts:[a]}}
-  if(conflict){beforeConflict=await f.saved();const a=artifact(r.units[0],'outline-main');a.name='不同后续';return {artifacts:[a]}}
+  if(!full)full=r.units.length
+  if(r.units.length===full)throw Error(fixed('no-match'))
+  if(!leaf){leaf=true;outlineAssignments.add(0);const a=artifact(r.units[0],'outline-main','outline',{chapterIndex:'0'});a.name='首叶';return {artifacts:[a]}}
+  if(conflict){beforeConflict=await f.saved();const a=artifact(r.units[0],'outline-main','outline',{chapterIndex:'0'});a.name='不同后续';return {artifacts:[a]}}
   return succeed(r)
  })
  try{

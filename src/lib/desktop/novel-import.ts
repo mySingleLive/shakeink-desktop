@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import {toast} from 'sonner'
 import type { ImportAction, ImportKind, ImportResponse, ImportSourcePage, ImportView, ImportPdfPageResponse } from '@desktop/shared/novel-import'
+import type {SceneIdentityChange} from '@desktop/shared/novel-import-scene-identity'
 
 export type ImportScreen = ImportView['phase'] | 'consent' | 'preview' | 'chapters' | 'patches' | 'replace'
 export interface ImportDecisionDraft { choice: string; explanation: string; mergedText: string; confirmInference: boolean }
@@ -152,6 +153,59 @@ export async function readNovelImportWizardImage(taskId:string){
  const view=useNovelImportStore.getState().view
  if(!view||!window.desktop?.novelImport)return null
  try{return (await window.desktop.novelImport({type:'wizard-read-image',id:view.id,taskId})).image??null}catch{return null}
+}
+
+export interface SceneIdentityUiScope {id:string;revision:number;ledgerHash:string;identityRevision:number}
+export type SceneIdentityDetailPage=NonNullable<ImportResponse['sceneIdentityDetail']>
+export type SceneIdentitySourcePage=NonNullable<ImportResponse['sceneIdentitySource']>
+export function sceneIdentityScope(view:ImportView|null):SceneIdentityUiScope|null{
+ const summary=view?.wizard?.sceneIdentitySummary
+ return view&&summary?{id:view.id,revision:view.revision,ledgerHash:summary.ledgerHash,identityRevision:summary.identityRevision}:null
+}
+function sameSceneScope(a:SceneIdentityUiScope|null,b:SceneIdentityUiScope|null){return !!a&&!!b&&a.id===b.id&&a.revision===b.revision&&a.ledgerHash===b.ledgerHash&&a.identityRevision===b.identityRevision}
+function assertSceneScope(scope:SceneIdentityUiScope){if(!sameSceneScope(scope,sceneIdentityScope(useNovelImportStore.getState().view)))throw Error('场景清单已变化，请重新打开详情后再操作。')}
+/** Read a bounded page against the exact displayed revision; never upgrade a draft. */
+export async function readNovelImportSceneIdentity(scope:SceneIdentityUiScope,identityId:string,cursor=0){
+ assertSceneScope(scope)
+ if(!window.desktop?.novelImport)throw Error('请在桌面应用中核对场景。')
+ const response=await window.desktop.novelImport({type:'wizard-read-scene-identity',id:scope.id,revision:scope.revision,expectedLedgerHash:scope.ledgerHash,identityId,cursor,limit:50})
+ assertSceneScope(scope)
+ const page=response.sceneIdentityDetail
+ if(!sameSceneScope(scope,sceneIdentityScope(response.view))||!page||page.ledgerHash!==scope.ledgerHash||page.identityRevision!==scope.identityRevision||page.identityId!==identityId)throw Error('场景详情已过期，请重新打开。')
+ return page
+}
+export async function readNovelImportSceneSource(scope:SceneIdentityUiScope,memberKey:string,neighbor:-1|0|1=0,offset=0){
+ assertSceneScope(scope)
+ if(!window.desktop?.novelImport)throw Error('请在桌面应用中核对场景。')
+ const response=await window.desktop.novelImport({type:'wizard-read-scene-source',id:scope.id,revision:scope.revision,expectedLedgerHash:scope.ledgerHash,memberKey,neighbor,offset,limit:32768})
+ assertSceneScope(scope)
+ const page=response.sceneIdentitySource
+ if(!sameSceneScope(scope,sceneIdentityScope(response.view))||!page||page.ledgerHash!==scope.ledgerHash||page.memberKey!==memberKey||page.neighbor!==neighbor)throw Error('场景原文已过期，请重新打开。')
+ return page
+}
+/** Author decisions keep their issued scope, outside the generic revision-upgrading queue. */
+export async function saveNovelImportSceneIdentity(scope:SceneIdentityUiScope,change:SceneIdentityChange){
+ assertSceneScope(scope)
+ if(change.expectedLedgerHash!==scope.ledgerHash)throw Error('场景清单已变化，请重新打开详情后再保存。')
+ if(!window.desktop?.novelImport)throw Error('请在桌面应用中核对场景。')
+ useNovelImportStore.setState(state=>({busy:state.busy+1,error:null}))
+ try{
+  const response=await window.desktop.novelImport({type:'wizard-scene-identity',...change,id:scope.id,revision:scope.revision})
+  const current=sceneIdentityScope(useNovelImportStore.getState().view),next=sceneIdentityScope(response.view)
+  if(!current||!next||current.id!==scope.id||next.id!==scope.id||current.revision>next.revision||!sameSceneScope(current,scope)&&!sameSceneScope(current,next))throw Error('场景清单已变化，本次回执未采用，请重新核对。')
+  adopt(response)
+  return response
+ }catch(error){
+  useNovelImportStore.setState({error:error instanceof Error?error.message:'场景更改未能保存，请重试。'})
+  // Refresh a rejected issued view, without replaying its decision or replacing
+  // a different, already newer view observed while this request was pending.
+  if(sameSceneScope(scope,sceneIdentityScope(useNovelImportStore.getState().view)))try{
+   const response=await window.desktop.novelImport({type:'current'})
+   if(response.view?.id===scope.id&&sameSceneScope(scope,sceneIdentityScope(useNovelImportStore.getState().view)))adopt(response)
+  }catch{/* Keep the original error and author draft. */}
+  throw error
+ }
+ finally{useNovelImportStore.setState(state=>({busy:Math.max(0,state.busy-1)}))}
 }
 export function setNovelImportScreen(screen: ImportScreen) { useNovelImportStore.setState({ screen, error: null }) }
 export function setImportDecisionDraft(key: string, change: Partial<ImportDecisionDraft>) {

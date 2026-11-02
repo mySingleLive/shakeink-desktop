@@ -2,6 +2,7 @@ import type {ImportArtifact,ImportSession,ImportUnit} from '../shared/novel-impo
 import {importHash,selectedImportUnits,splitImportUnits,workingImportUnits} from './novel-import'
 import {importBudgetProfile,importReviewGeometry,splitBudgetBatches,validateImportBudgetPolicy,validateImportLegacyBudget,type ImportBudgetState} from './novel-import-budget-policy'
 import {createImportReviewProjection,type ImportReviewProjection} from './novel-import-semantics'
+import {IMPORT_SCENE_PROFILE_TEXT_FIELDS} from '../shared/novel-import-scene-links'
 
 type State=ImportSession&ImportBudgetState
 export interface ImportReviewTask {key:string;units:ImportUnit[];artifact:ImportArtifact;projection?:ImportReviewProjection}
@@ -19,7 +20,13 @@ export function* iterateImportReviewTasks(s:State):Generator<ImportReviewTask>{
   const evidenceIds=[...new Set(artifact.evidence.map(e=>e.unitId))],evidenceUnits=evidenceIds.map(id=>lookup.get(id))
   if(!evidenceUnits.length||evidenceUnits.some(u=>!u))throw Error('推断或来源设定缺少可复核的原文证据')
   const pieces:{text:string;facts:Record<string,string>;textRange?:{start:number;end:number}}[]=splitImportUnits([{id:artifact.id,name:artifact.name,path:'',format:'txt',bytes:0,hash:'',text:artifact.text,included:true}],geometry.pieceCharacters).map(u=>({text:u.text,facts:{},textRange:{start:u.start,end:u.end}}))
-  for(const [field,value] of Object.entries(artifact.facts)){if(field.length+value.length>geometry.pieceCharacters)throw Error('模型结构事实超过复核分片预算，请细分设定后重试');pieces.push({text:'',facts:{[field]:value}})}
+  for(const [field,value] of Object.entries(artifact.facts)){
+   // These native free-text values have no text-piece limit. Keep them whole;
+   // the controller still checks the full fact, evidence and metadata budget.
+   const nativeText=artifact.kind==='scene'&&artifact.schema===2&&IMPORT_SCENE_PROFILE_TEXT_FIELDS.some(name=>name===field)
+   if(!nativeText&&field.length+value.length>geometry.pieceCharacters)throw Error('模型结构事实超过复核分片预算，请细分设定后重试')
+   pieces.push({text:'',facts:{[field]:value}})
+  }
   if(!pieces.length)pieces.push({text:'',facts:{}})
   const batches=splitBudgetBatches(evidenceUnits as ImportUnit[],geometry.evidenceCharacters,geometry.maxUnits)
   for(let index=0;index<pieces.length;index++)for(const batch of batches){

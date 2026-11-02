@@ -1,0 +1,224 @@
+{
+  "run": "R61",
+  "result": "failed-scene-roster-repair-transaction",
+  "consentAt": "2026-11-01T08:42:10.435Z",
+  "failureAt": "2026-11-01T08:43:06.144Z",
+  "closedAt": "2026-11-01T08:43:08.768Z",
+  "normalAppExit": 0,
+  "driverExit": 2,
+  "rpc": {
+    "total": 27,
+    "fulfilled": 20,
+    "rejected": 7
+  },
+  "generations": 60,
+  "allCapturedComplete": true,
+  "allProviderEventsCompleted": true,
+  "allInputTextHashesMatched": true,
+  "offlineReplayProviderCalls": 0,
+  "coverageUnits": 829,
+  "sceneMembers": 352,
+  "sceneRecords": 258,
+  "sceneIdentities": 255,
+  "sceneRelations": 22,
+  "observerStop": {
+    "requested": 27,
+    "transfers": 60,
+    "captured": 60,
+    "pending": 0,
+    "unmatched": 0,
+    "ambiguous": 0,
+    "observationFailures": 0,
+    "limitFailures": 0,
+    "retainedBytes": 0,
+    "writeFailures": 0,
+    "restored": true
+  },
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "privateReplaySha256": "087deac151eb3af19e0d3b701d4fa4168204449370fd4b0b2b71cd626edf6372",
+  "buildIdentity": "docs/scene-import-verification/build-identity-r61.json",
+  "offlineGuardDiagnosis": {
+    "providerCalls": 0,
+    "privateSha256": "6f77a539e6da4d369d0ede7afbc8537b53576580e5b8abce1921a5cbbf4e7ffb",
+    "allRecordedFirstGuardsAtBoundControlOrRecordShape": true,
+    "sourceRetentionOwnerFirstRejectionObserved": false,
+    "details": [
+      {
+        "payloadSha256": "e61b6e35be6e678f1b467831dc5b0576b0f4b082756743b3e45023e9c693a514",
+        "generations": [
+          {
+            "generation": 2,
+            "inputShaMatched": true,
+            "firstGuard": "BND_ANSWER_COUNT",
+            "expected": 11,
+            "actual": 10
+          },
+          {
+            "generation": 3,
+            "inputShaMatched": true,
+            "firstGuard": "BND_ANSWER_COUNT",
+            "expected": 11,
+            "actual": 10
+          },
+          {
+            "generation": 4,
+            "inputShaMatched": true,
+            "firstGuard": "BND_ANSWER_COUNT",
+            "expected": 11,
+            "actual": 10
+          }
+        ]
+      },
+      {
+        "payloadSha256": "3649c894afefdceecbd4b9aab20222f282a7e8756e6111f9b173cdb84bcac239",
+        "generations": [
+          {
+            "generation": 2,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          },
+          {
+            "generation": 3,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          },
+          {
+            "generation": 4,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          }
+        ]
+      },
+      {
+        "payloadSha256": "aed0ffca9825f825de86934439992d18abe6f2b1c4bbe7523090bfa7e2bc239f",
+        "generations": [
+          {
+            "generation": 2,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          },
+          {
+            "generation": 3,
+            "inputShaMatched": true,
+            "firstGuard": "BND_LOCAL_OPTION",
+            "index": 1,
+            "actual": -1,
+            "max": 30,
+            "valueType": "object"
+          },
+          {
+            "generation": 4,
+            "inputShaMatched": true,
+            "firstGuard": "BND_LOCAL_OPTION",
+            "index": 1,
+            "actual": -1,
+            "max": 30,
+            "valueType": "array"
+          }
+        ]
+      },
+      {
+        "payloadSha256": "1eb73bfdaabf94d0b77edbcf2a3e15f0560a3865ad7f0619f3b9e2ca4ce9f545",
+        "generations": [
+          {
+            "generation": 2,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          },
+          {
+            "generation": 3,
+            "inputShaMatched": true,
+            "firstGuard": "BND_LOCAL_OPTION",
+            "index": 0,
+            "actual": -1,
+            "max": 11,
+            "valueType": "object"
+          },
+          {
+            "generation": 4,
+            "inputShaMatched": true,
+            "firstGuard": "BND_LOCAL_OPTION",
+            "index": 0,
+            "actual": -1,
+            "max": 11,
+            "valueType": "object"
+          }
+        ]
+      },
+      {
+        "payloadSha256": "29f38d65b152b19e2cd647d057a074dd1ef6aeeeb121ea79c6d5ba8977ca56ba",
+        "generations": [
+          {
+            "generation": 2,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          },
+          {
+            "generation": 3,
+            "inputShaMatched": true,
+            "firstGuard": "BND_LOCAL_OPTION",
+            "index": 1,
+            "actual": 23,
+            "max": 8,
+            "valueType": "number"
+          },
+          {
+            "generation": 4,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          }
+        ]
+      },
+      {
+        "payloadSha256": "2eae788f107acca81f83f391dac295e84a52d746e934033842bade32b5cbed93",
+        "generations": [
+          {
+            "generation": 2,
+            "inputShaMatched": true,
+            "firstGuard": "BND_ANSWER_COUNT",
+            "expected": 34,
+            "actual": 40
+          },
+          {
+            "generation": 3,
+            "inputShaMatched": true,
+            "firstGuard": "BND_ANSWER_COUNT",
+            "expected": 34,
+            "actual": 38
+          },
+          {
+            "generation": 4,
+            "inputShaMatched": true,
+            "firstGuard": "BND_ANSWER_COUNT",
+            "expected": 34,
+            "actual": 38
+          }
+        ]
+      },
+      {
+        "payloadSha256": "95e41cd1b9bf0a5edbdfb5b4bbf1b7188ddc687366728f735b1a47624ef0e1b6",
+        "generations": [
+          {
+            "generation": 3,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          },
+          {
+            "generation": 4,
+            "inputShaMatched": true,
+            "firstGuard": "BND_RECORD_SHAPE"
+          }
+        ]
+      }
+    ],
+    "strictRecordBreakdown": {
+      "generations": 9,
+      "mentionEvidenceArray": 6,
+      "oldRefInsteadOfChoice": 1,
+      "missingAllThreeArraysAndExtraKeys": 2,
+      "privateV2Sha256": "5194cf097bdd81ce182c4f7f2f49fa647f7daba3edededa8ad080d8f79666713"
+    }
+  }
+}

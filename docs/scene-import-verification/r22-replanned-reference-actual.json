@@ -1,0 +1,25 @@
+{
+  "scope": "first legally replanned body-review packet",
+  "units": 90,
+  "artifacts": 137,
+  "projections": 137,
+  "catalog": 935,
+  "fullServiceAccepted": true,
+  "generations": 1,
+  "observations": [
+    {
+      "reason": "stop",
+      "promptTokens": 114566,
+      "completionTokens": 51356,
+      "textCharacters": 1290,
+      "maxOutputTokens": null
+    }
+  ],
+  "modelConfigurationUnchanged": true,
+  "normalExit": {
+    "code": 0,
+    "signal": null
+  },
+  "readOnly": true,
+  "fullBookAcceptance": false
+}

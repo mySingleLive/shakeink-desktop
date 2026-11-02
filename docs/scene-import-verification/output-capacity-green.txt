@@ -1,0 +1,35 @@
+✔ SO-01: optional JSON schema reaches the real SDK call while ordinary generation retains text output (19.76075ms)
+✔ SO-02: complete immutable typed catalogs restore index zero, aliases, context artifacts and all business fields (12.485667ms)
+✔ SO-03: malformed wire controls, fields, typed indexes and every bad evidence entry fail without dropping data (2.447334ms)
+✔ SO-04: actual Responses SDK uses the authorized gateway, strict format, reasoning none and no legacy fallback (56.258667ms)
+✔ SO-05: controller scene imports decode structured wire through the original complete canonical gates (2315.791584ms)
+✔ SO-06: schema and added index metadata count toward the original budget before any generation (1.559ms)
+✔ SO-07: structured scene recovers on generation three without leaking provider keys (2231.466042ms)
+✔ SO-07: structured scene stops after four generations without leaking provider keys (2175.209292ms)
+✔ SO-08: successful wire cannot bypass the final authorization, snapshot or cancellation gates (7.183667ms)
+✔ SO-09: explicit review generation uses its own eligibility and schema budget (4.014375ms)
+▶ OC-03: output headroom includes complete prompt/schema UTF8 bytes, wrapper reserve and the actual role pin
+  ✔ complete-byte boundary -1 (2.744084ms)
+  ✔ complete-byte boundary 0 (2.118042ms)
+  ✔ complete-byte boundary 1 (1.8875ms)
+  ✔ review capacity cannot borrow a larger text window (1.869125ms)
+  ✔ eligible review capacity is used when text is unrelated and small (1.893666ms)
+  ✔ invalid or unavailable capacity undefined (1.7895ms)
+  ✔ invalid or unavailable capacity 0 (1.660625ms)
+  ✔ invalid or unavailable capacity -1 (1.626959ms)
+  ✔ invalid or unavailable capacity NaN (2.062708ms)
+  ✔ invalid or unavailable capacity Infinity (1.777167ms)
+  ✔ invalid or unavailable capacity 1048576.5 (1.729208ms)
+✔ OC-03: output headroom includes complete prompt/schema UTF8 bytes, wrapper reserve and the actual role pin (23.321667ms)
+▶ OC-04: complete large synthetic wire is preserved, while parsable length-finished output remains a bounded failure
+  ✔ stop (6.571625ms)
+  ✔ length (6.307416ms)
+✔ OC-04: complete large synthetic wire is preserved, while parsable length-finished output remains a bounded failure (13.150833ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7791.978208

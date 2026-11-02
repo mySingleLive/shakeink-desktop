@@ -1,0 +1,99 @@
+✔ SP-01: scene extraction uses the light model policy without changing saved configuration or ordinary analysis (1.508917ms)
+✖ SP-05: only absent scene control metadata is supplied from the trusted target; explicit wrong values stay rejected (4.735333ms)
+✔ SP-02: scene prompts keep related aliases and all ancestors while validation keeps the complete catalog and material (3077.452833ms)
+✔ SI-09a: scene wire indexes only verified quotes and keeps the complete native profile (16.706459ms)
+✔ SI-09b: scene service fields recover on generation three (2310.513125ms)
+✔ SI-09b: scene service fields stop at four generations (2175.290375ms)
+✔ SI-09b: scene service anchor recover on generation three (2216.511458ms)
+✔ SI-09b: scene service anchor stop at four generations (2168.335833ms)
+✖ SI-09b: scene service json recover on generation three (2165.34775ms)
+✖ SI-09b: scene service json stop at four generations (2160.568084ms)
+✖ SI-09b: scene service incomplete recover on generation three (2161.493291ms)
+✖ SI-09b: scene service incomplete stop at four generations (2164.297375ms)
+✔ SI-09c: scene outer correction does not retry authorization, network, budget, cancellation or persistence errors (8790.725459ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 8
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 26808.674667
+
+✖ failing tests:
+
+test at tests/unit/novel-import-scene-performance.test.ts:2:2429
+✖ SP-05: only absent scene control metadata is supplied from the trusted target; explicit wrong values stay rejected (4.735333ms)
+  Error: 模型返回结构或类别无效，请重试
+      at runImportAi (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:469:70)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-performance.test.ts:19:15)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-scene-wire.test.ts:2:4705
+✖ SI-09b: scene service json recover on generation three (2165.34775ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 3
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-wire.test.ts:37:99)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-wire.test.ts:2:4705
+✖ SI-09b: scene service json stop at four generations (2160.568084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 4
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-wire.test.ts:37:99)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-wire.test.ts:2:4705
+✖ SI-09b: scene service incomplete recover on generation three (2161.493291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 3
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-wire.test.ts:37:99)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-wire.test.ts:2:4705
+✖ SI-09b: scene service incomplete stop at four generations (2164.297375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 4
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-wire.test.ts:37:99)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

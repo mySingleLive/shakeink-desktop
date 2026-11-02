@@ -1,0 +1,66 @@
+{
+  "run": "R63",
+  "providerCalls": 2,
+  "novelInputSent": false,
+  "samePrompt": true,
+  "strictTrueBoth": true,
+  "cases": [
+    {
+      "id": "tuple-array",
+      "schemaBytes": 18946,
+      "schemaSha256": "a8306b69104c704a9cd783106972c8c7c2d4de1c26a06035702df11a0566e8b8",
+      "promptSha256": "81381c865de3fa1cb8547355e9893cddf3afc9da5b59742fe228377d09d1e2e2",
+      "status": 200,
+      "category": "completed",
+      "validation": {
+        "directJSON": true,
+        "schema": "pass",
+        "keywordCounts": {},
+        "originalTuple": "pass",
+        "originalDecoder": "pass",
+        "commonWitness": true
+      },
+      "reasonTokens": [],
+      "wireMatches": true,
+      "fetchAttempts": 1
+    },
+    {
+      "id": "homogeneous-items",
+      "schemaBytes": 3481,
+      "schemaSha256": "0b9c691c55ca53f36cb998da5960f17c7393ce9a2cd04e0697cf9a0a93204855",
+      "promptSha256": "81381c865de3fa1cb8547355e9893cddf3afc9da5b59742fe228377d09d1e2e2",
+      "status": 400,
+      "category": "HTTP_400",
+      "validation": {
+        "directJSON": false,
+        "schema": "not-run",
+        "keywordCounts": {}
+      },
+      "reasonTokens": [
+        "an",
+        "object",
+        "with",
+        "other",
+        "properties",
+        "is",
+        "not",
+        "other"
+      ],
+      "wireMatches": true,
+      "fetchAttempts": 1
+    }
+  ],
+  "normalAppExit": 0,
+  "runnerExit": 0,
+  "quitTimedOut": false,
+  "stateUnchanged": true,
+  "protectedArtifacts368Unchanged": true,
+  "helperUnchanged": true,
+  "inputHashesUnchanged": true,
+  "pageErrors": 0,
+  "productTDDCondition441Satisfied": false,
+  "fullBookVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "privateSummarySha256": "c971585ae79508d4fddc731dff027b8bf3cf15afb10f474de2327ad6d19f0131"
+}

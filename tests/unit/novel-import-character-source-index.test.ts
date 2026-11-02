@@ -30,7 +30,7 @@ test('CP-10b: missing, forged, unknown and ambiguous evidence is never repaired 
  const ordinary={...input,intent:undefined,entityTarget:undefined},base={...actor,facts:{roleType:'SUPPORTING'}}
  for(const sourceUnitIds of [undefined,['foreign']])await assert.rejects(run(ordinary,{artifacts:[{...base,sourceUnitIds}]}),/结构|来源/)
  const scene:ImportAiRequest={...input,kind:'scene',entities:[{id:'place-a',kind:'scene',name:'合成室',entityType:'PLACE'}],entityTarget:{id:'place-a',aliases:[]}},place={...base,id:'place-a',kind:'scene',name:'合成室',facts:{entityType:'PLACE'},evidence:[{unitId:'a',quote:'合成室'}]}
- for(const sourceUnitIds of [undefined,['foreign']])await assert.rejects(run(scene,{artifacts:[{...place,sourceUnitIds}]}),/结构|来源/)
+ for(const sourceUnitIds of [undefined,['foreign']])await assert.rejects(run({...scene,intent:undefined,entityTarget:undefined},{artifacts:[{...place,sourceUnitIds}]}),/结构|来源/)
 })
 
 test('CP-10c: the production generation/controller chain accepts omitted mechanical indexes without losing facts',async()=>{
@@ -62,8 +62,8 @@ test('CP-11b: malformed, mixed and out-of-scope references cannot launder missin
  }
  const raw={artifacts:[{...actor,evidence:[{optionIndex:0}]}]}
  for(const noOptions of [input,{...input,intent:undefined,entityTarget:undefined}])await assert.rejects(run(noOptions,raw),/结构|证据/)
- const scene:ImportAiRequest={...r,kind:'scene',entities:[{id:'place-a',kind:'scene',name:'合成室',entityType:'PLACE'}],entityTarget:{id:'place-a',aliases:[],evidenceOptions:[actor.evidence[0]]}}
- await assert.rejects(run(scene,{artifacts:[{...actor,id:'place-a',kind:'scene',name:'合成室',facts:{entityType:'PLACE'},evidence:[{optionIndex:0}]}]}),/结构|证据/)
+ const item:ImportAiRequest={...r,kind:'item',entities:[{id:'item-a',kind:'item',name:'合成物'}],entityTarget:{id:'item-a',aliases:[],evidenceOptions:[actor.evidence[0]]}}
+ await assert.rejects(run(item,{artifacts:[{...actor,id:'item-a',kind:'item',name:'合成物',facts:{},evidence:[{optionIndex:0}]}]}),/结构|证据/)
  let calls=0;await assert.rejects(generateImportAiJson(r,{userId:'synthetic-user',resolvedModel:{} as ResolvedModel},new AbortController().signal,importAiPrompt(r),{generateText:async()=>{calls++;return {text:JSON.stringify({artifacts:[{...actor,evidence:[{optionIndex:99}]}]}),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}}}),/结构|schema|JSON/);assert.equal(calls,2)
 })
 
