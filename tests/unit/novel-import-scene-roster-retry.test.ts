@@ -19,6 +19,8 @@ async function sceneFixture(hook:Hook){
   hook(r)
   let raw:unknown
   if(r.sceneIdentity?.mode==='roster')raw={roster:places.flatMap(quote=>r.units.filter(u=>u.text.includes(quote)).map(u=>({name:literal(quote),aliases:[],mentions:[{literal:literal(quote),evidence:{unitId:u.id,quote}}],context:[{label:locator(quote),evidence:[{unitId:u.id,quote}]}],links:[]})))}
+  // 486 adds a scene-list cleanup stage after links; this fixture keeps every entry (neutral answer).
+  else if((r.sceneIdentity as {mode?:string}|undefined)?.mode==='cleanup')raw={sceneCleanup:(r.sceneIdentity as unknown as {focus:{index:number}[]}).focus.map(f=>({index:f.index,action:'keep'}))}
   else if(r.sceneIdentity?.mode==='links')raw={sceneIdentityDecisions:r.sceneIdentity.tasks.map(t=>({taskIndex:t.taskIndex,result:'unknown',evidence:[]}))}
   else return {notFound:true}
   return runImportAi(r,new AbortController().signal,{resolve:async role=>r.models[role]!,assert:async()=>{},generate:async(input,_m,signal,prompt)=>generateImportAiJson(input,{userId:'synthetic-retry',resolvedModel:{} as ResolvedModel},signal,prompt,{generateText:async()=>({text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'})})}) as Promise<ImportAiResult>

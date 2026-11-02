@@ -3,7 +3,7 @@ import {normalizeContent,type SettingContent,type LevelNode,type LevelPathway} f
 import {importHash,safeImportBoundary,validateImportEvidence} from './novel-import'
 import {IMPORT_TARGETS,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportTarget,type ImportUnit} from '../shared/novel-import'
 import {IMPORT_SCENE_PROFILE_TEXT_FIELDS} from '../shared/novel-import-scene-links'
-import type {SceneMentionRecord,SceneIdentityDecision,SceneIdentityRequestContext} from '../shared/novel-import-scene-identity'
+import type {SceneMentionRecord,SceneIdentityDecision,SceneCleanupDecision,SceneIdentityRequestContext} from '../shared/novel-import-scene-identity'
 export type {SceneMentionRecord,SceneIdentityDecision,SceneIdentityRequestContext,SceneIdentityMembership} from '../shared/novel-import-scene-identity'
 
 /** Pure contracts only. They validate structure and provenance links, not whether
@@ -39,7 +39,7 @@ export interface ImportMissingTarget {kind:ImportTarget;unitIds:string[];evidenc
 export interface ImportReviewProjection {artifactId:string;semanticHash:string;fullTextLength:number;fullFactKeys:string[];fields:string[];textRange?:{start:number;end:number}}
 export interface ImportRosterEntry {name:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';parent?:string;itemType?:string;important?:boolean;settings?:{settingType:ImportWorldSettingType;name:string}[];evidence:ImportEvidence}
 export interface ImportTouchEntry {foreshadowKey:string;title:string;content:string;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string};evidence:ImportEvidence}
-export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];sceneRosterRecords?:SceneMentionRecord[];sceneIdentityDecisions?:SceneIdentityDecision[];touches?:ImportTouchEntry[];sceneParents?:{id:string;parentId?:string;evidence:ImportEvidence}[]}
+export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];sceneRosterRecords?:SceneMentionRecord[];sceneIdentityDecisions?:SceneIdentityDecision[];sceneCleanup?:SceneCleanupDecision[];touches?:ImportTouchEntry[];sceneParents?:{id:string;parentId?:string;evidence:ImportEvidence}[]}
 export interface ImportSemanticEntity {id:string;kind:ImportTarget;name:string;unitIds?:string[];parentId?:string;entityType?:'PLACE'|'WORLD'|'SETTING';worldId?:string;settingType?:ImportWorldSettingType}
 export interface ImportSemanticRequestFields {semanticVersion?:1;intent?:'reconcile'|'structure'|'roster'|'entity'|'touches';entityTarget?:{id:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';evidenceOptions?:ImportEvidence[]};sceneIdentity?:SceneIdentityRequestContext;sceneParentTargets?:string[];reconcile?:ImportReconcileContext;selectedTargets?:ImportTarget[];semanticLocks?:ImportSemanticLock[];entities?:ImportSemanticEntity[];reviewProjection?:ImportReviewProjection[]}
 export type ImportSemanticAiRequest=ImportAiRequest&ImportSemanticRequestFields

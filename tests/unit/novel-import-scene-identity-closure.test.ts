@@ -27,6 +27,8 @@ async function sceneFixture(mixed=false){
   if(r.phase==='classify')return {classifications:r.units.map(u=>({unitId:u.id,kind:'body'}))}
   if(r.intent==='roster'&&r.kind==='character')return compiled(r,{roster:[]})
   if(r.sceneIdentity?.mode==='roster')return compiled(r,{roster:[east,west].flatMap(quote=>r.units.filter(u=>u.text.includes(quote)).map(u=>({name:'书房',aliases:[],mentions:[{literal:'书房',evidence:{unitId:u.id,quote}}],context:[{label:quote.slice(0,4),evidence:[{unitId:u.id,quote}]}],links:[]})))})
+  // 486 adds a scene-list cleanup stage after links; this fixture keeps every entry (neutral answer).
+  if((r.sceneIdentity as {mode?:string}|undefined)?.mode==='cleanup')return compiled(r,{sceneCleanup:(r.sceneIdentity as unknown as {focus:{index:number}[]}).focus.map(f=>({index:f.index,action:'keep'}))})
   if(r.sceneIdentity?.mode==='links')return compiled(r,{sceneIdentityDecisions:r.sceneIdentity.tasks.map(t=>({taskIndex:t.taskIndex,result:'unknown',evidence:[]}))})
   if(r.intent==='entity'){
    assert.equal(r.kind,'scene');assert.equal(r.sceneIdentity?.mode,'ownership')
@@ -108,6 +110,8 @@ for(const infer of [false,true])test('CI-C03/12: author-merged same-ID source bl
   if(r.intent==='structure')return allCuts(r)
   if(r.phase==='classify')return {classifications:r.units.map(u=>({unitId:u.id,kind:u.fileId==='f-body'?'body':'scene'}))}
   if(r.sceneIdentity?.mode==='roster')return compiled(r,{roster:[]})
+  // 486 adds a scene-list cleanup stage after links; this fixture keeps every entry (neutral answer).
+  if((r.sceneIdentity as {mode?:string}|undefined)?.mode==='cleanup')return compiled(r,{sceneCleanup:(r.sceneIdentity as unknown as {focus:{index:number}[]}).focus.map(f=>({index:f.index,action:'keep'}))})
   if(r.sceneIdentity?.mode==='links')return compiled(r,{sceneIdentityDecisions:r.sceneIdentity.tasks.map(t=>({taskIndex:t.taskIndex,result:'unknown',evidence:[]}))})
   if(r.phase==='review')return compiled(r,{conflicts:[],missingTargets:[]})
   throw Error('source fixture unexpectedly generated entity content')

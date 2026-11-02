@@ -1,11 +1,14 @@
 import {createHash} from 'node:crypto'
 import type {ImportAiRequest,ImportArtifact,ImportUnit} from '../shared/novel-import'
 import {normalizeWizardName,type WizardCandidate} from '../shared/novel-import-wizard'
-import {sceneMentionRecordSchema,sceneRosterRecordsSchema,sceneIdentityLedgerSchema,sceneIdentityChangeSchema,sceneIdentityDecisionsSchema,sceneIdentityRequestContextSchema,type Anchor,type Mention,type SceneMentionRecord,type SourceRange,type BodyMember,type SourceMember,type SceneMember,type StoredRecord,type StoredRelation,type Identity,type NamePart,type LinkTask,type SceneIdentityLedger,type SceneIdentityChange,type SceneIdentityDecision,type SceneIdentityLinksContext,type SceneIdentityMembership} from '../shared/novel-import-scene-identity'
+import {sceneMentionRecordSchema,sceneRosterRecordsSchema,sceneIdentityLedgerSchema,sceneIdentityChangeSchema,sceneIdentityDecisionsSchema,sceneIdentityRequestContextSchema,type Anchor,type Mention,type SceneMentionRecord,type SourceRange,type BodyMember,type SourceMember,type SceneMember,type StoredRecord,type StoredRelation,type Identity,type NamePart,type LinkTask,type SceneIdentityLedger,type SceneIdentityChange,type SceneIdentityDecision,type SceneIdentityLinksContext,type SceneIdentityMembership,type SceneIdentityCleanupContext,type SceneCleanupDecision,sceneCleanupDecisionsSchema} from '../shared/novel-import-scene-identity'
 import {sceneParentCycleIds,applySceneParentProposals} from './novel-import-wizard-roster'
 
 function nameValue(l:SceneIdentityLedger,i:Identity):string{const values=i.nameParts.map(p=>{if(p.kind==='literal'){const m=l.members.find(m=>m.key===p.key&&i.memberKeys.includes(p.key));if(!m)fail('name');return m.origin==='body'?m.literal:m.sourceName}const c=l.records.filter(r=>i.recordKeys.includes(r.key)).flatMap(r=>r.context).find(c=>c.key===p.key);if(!c)fail('name');return c.label});const name=[...new Set(values)].join('·'),sourceOnly=i.memberKeys.every(k=>l.members.find(m=>m.key===k)?.origin==='source-block');if(i.state==='unresolved'){const m=l.members.find(m=>m.key===i.memberKeys[0])!;return m.origin==='body'?m.literal:m.sourceName}if(!name||!name.isWellFormed()||name.length>(sourceOnly?300:50))fail('name');return name}
-export function buildSceneWizardCandidates(l:SceneIdentityLedger,previous:readonly WizardCandidate[]=[]):WizardCandidate[]{assertSceneIdentityLedger(l);const selected=new Map(previous.map(c=>[c.id,c.selected]));return l.identities.map(i=>{const members=l.members.filter(m=>i.memberKeys.includes(m.key)),records=l.records.filter(r=>i.recordKeys.includes(r.key)),name=nameValue(l,i),aliases=[...new Set(members.map(m=>m.origin==='body'?m.literal:m.sourceName).filter(n=>n!==name))].slice(0,50),body=members.filter((m):m is BodyMember=>m.origin==='body'),blocks=members.filter((m):m is SourceMember=>m.origin==='source-block');return {id:i.id,kind:'scene',name,aliases,...(i.parent.state==='known'?{parentId:i.parent.id}:{}),chapterCount:new Set(body.map(m=>m.range.unitId)).size,sources:[...(blocks.length?['source' as const]:[]),...(body.length?['body' as const]:[])],sourceArtifactIds:[...new Set(blocks.map(m=>m.artifactId))],selected:selected.get(i.id)??true,evidenceUnitIds:[...new Set(body.map(m=>m.range.unitId))],sceneIdentityState:i.state}})}
+/** Qualifiers that tell same-named scenes apart (486 §3R): deduplicated, 、-joined, at most 60 UTF-16 units, never part of the name. */
+function sceneHint(records:readonly StoredRecord[]):string|undefined{let text=[...new Set(records.flatMap(r=>r.context.map(c=>c.label)))].join('、');if(!text)return undefined;if(text.length>60){text=text.slice(0,60);if(/[\uD800-\uDBFF]$/u.test(text))text=text.slice(0,-1)}return text||undefined}
+/** `cleanup` marks excluded entries; an exclusion the author has not re-ticked always starts unselected (3R3-5). */
+export function buildSceneWizardCandidates(l:SceneIdentityLedger,previous:readonly WizardCandidate[]=[],cleanup?:{excluded:readonly {id:string}[];authorKept:readonly string[]}):WizardCandidate[]{assertSceneIdentityLedger(l);const selected=new Map(previous.map(c=>[c.id,c.selected])),excluded=new Set(cleanup?.excluded.map(e=>e.id)),kept=new Set(cleanup?.authorKept);return l.identities.map(i=>{const members=l.members.filter(m=>i.memberKeys.includes(m.key)),records=l.records.filter(r=>i.recordKeys.includes(r.key)),name=nameValue(l,i),aliases=[...new Set(members.map(m=>m.origin==='body'?m.literal:m.sourceName).filter(n=>n!==name))].slice(0,50),body=members.filter((m):m is BodyMember=>m.origin==='body'),blocks=members.filter((m):m is SourceMember=>m.origin==='source-block'),hint=sceneHint(records),out=excluded.has(i.id);return {id:i.id,kind:'scene',name,aliases,...(i.parent.state==='known'?{parentId:i.parent.id}:{}),chapterCount:new Set(body.map(m=>m.range.unitId)).size,sources:[...(blocks.length?['source' as const]:[]),...(body.length?['body' as const]:[])],sourceArtifactIds:[...new Set(blocks.map(m=>m.artifactId))],selected:out&&!kept.has(i.id)?false:selected.get(i.id)??true,evidenceUnitIds:[...new Set(body.map(m=>m.range.unitId))],sceneIdentityState:i.state,...(out?{sceneExcluded:true as const}:{}),...(hint?{sceneHint:hint}:{})}})}
 const registryCache=new WeakMap<SceneIdentityLedger,ReadonlyMap<string,string>>()
 export function sceneIdentityRegistry(l:SceneIdentityLedger):ReadonlyMap<string,string>{const cached=registryCache.get(l);if(cached)return cached;assertSceneIdentityLedger(l);const map=new Map(l.identities.filter(i=>i.state!=='unresolved').map(i=>[i.id,h({sourceScopeHash:l.sourceScopeHash,memberKeys:i.memberKeys})]));registryCache.set(l,map);return map}
 function evidenceKeys(l:SceneIdentityLedger,i:Identity,keys:readonly string[],s:SceneIdentitySources):SourceRange[]{if(!keys.length||!unique(keys))fail('reference');return keys.flatMap(k=>{const member=l.members.find(m=>m.key===k&&i.memberKeys.includes(k));if(member)return member.origin==='body'?[member.evidenceRange]:sceneSourceBlockOwnedUnits(sourceBlock(l,member,s)).map(u=>{const original=originalFor(u,s);if(!original)fail('source');return {unitId:u.id,unitHash:h(original.text),start:u.start-original.start,end:u.end-original.start}});const ctx=l.records.filter(r=>i.recordKeys.includes(r.key)).flatMap(r=>r.context).find(c=>c.key===k);if(ctx)return ctx.evidence;const rel=l.relations.find(r=>r.key===k&&(i.memberKeys.includes(r.leftKey)||i.memberKeys.includes(r.rightKey)));if(rel)return rel.evidence;return fail('reference')})}
@@ -91,15 +94,8 @@ function finish(l:SceneIdentityLedger,bump=false):SceneIdentityLedger{if(bump){l
 const memberOrder=(s:SceneIdentitySources,m:SceneMember)=>m.origin==='body'?[s.workingUnits.findIndex(u=>u.id===m.range.unitId),m.range.start,m.range.end,m.key] as const:[s.workingUnits.length+s.sourceBlocks.findIndex(b=>b.artifactId===m.artifactId&&b.blockIndex===m.blockIndex),0,0,m.key] as const
 function sortMembers(l:SceneIdentityLedger,s:SceneIdentitySources){const order=new Map(l.members.map(m=>[m.key,memberOrder(s,m)]));l.members.sort((a,b)=>{const x=order.get(a.key)!,y=order.get(b.key)!;return Number(x[0])-Number(y[0])||Number(x[1])-Number(y[1])||String(x[3]).localeCompare(String(y[3]))});const positions=new Map(l.members.map((m,i)=>[m.key,i]));l.records.sort((a,b)=>Math.min(...a.memberKeys.map(k=>positions.get(k)!))-Math.min(...b.memberKeys.map(k=>positions.get(k)!))||a.key.localeCompare(b.key));return positions}
 function identityId(l:SceneIdentityLedger,memberKey:string){const m=l.members.find(m=>m.key===memberKey)!;const name=m.origin==='body'?m.literal:m.sourceName;return 's-'+createHash('sha256').update('scene\0v1\0'+l.sourceScopeHash+'\0'+memberKey+'\0'+normalizeWizardName(name)).digest('hex').slice(0,16)}
-function defaultParts(l:SceneIdentityLedger,members:string[]):NamePart[]{
- const records=l.records.filter(r=>r.memberKeys.some(k=>members.includes(k))),literal={kind:'literal' as const,key:members[0]},context=[...new Map(records.flatMap(r=>r.context).map(c=>[c.label,c])).values()]
- const text=(p:NamePart)=>{if(p.kind==='context')return context.find(c=>c.key===p.key)!.label;const m=l.members.find(m=>m.key===p.key)!;return m.origin==='body'?m.literal:m.sourceName}
- const all=[...context.map(c=>({kind:'context' as const,key:c.key})),literal]
- if([...new Set(all.map(text))].join('·').length<=50)return all
- const shorter=context.map(c=>[{kind:'context' as const,key:c.key},literal]).filter(parts=>[...new Set(parts.map(text))].join('·').length<=50).sort((a,b)=>a.map(text).join('·').length-b.map(text).join('·').length)
- if(shorter.length)return shorter[0]
- return [literal]
-}
+/** A new identity is named by its earliest original spelling only (486 decision 3); qualifiers stay in the ledger and the hint. */
+function defaultParts(_l:SceneIdentityLedger,members:string[]):NamePart[]{return [{kind:'literal',key:members[0]}]}
 function partitionRelation(l:SceneIdentityLedger,a:string,b:string):'same'|'different'|undefined {
  for(const d of [...l.decisions].reverse())if(d.operation==='partition'&&d.memberKeys.includes(a)&&d.memberKeys.includes(b))return d.after.some(i=>i.memberKeys.includes(a)&&i.memberKeys.includes(b))?'same':'different'
  return undefined
@@ -231,3 +227,88 @@ export function planSceneIdentityLinkWave(ledger:SceneIdentityLedger,s:SceneIden
  if(current.length&&packets.length<maxPackets)packets.push(make(current));finish(l);return {ledger:l,packets,pendingTaskCount:pairs.length-oversized}
 }
 export function applySceneIdentityLinkWave(ledger:SceneIdentityLedger,outcomes:readonly {packet:SceneIdentityLinkPacket;decisions:readonly SceneIdentityDecision[]}[],s:SceneIdentitySources):SceneIdentityLedger{checked(ledger,s);const l=copy(ledger),seen=new Set<string>(),oldRelations=new Set(ledger.relations.map(r=>r.key));for(const {packet,decisions}of outcomes){const ctx=packet.context;if(!sceneIdentityRequestContextSchema.safeParse(ctx).success||ctx.ledgerHash!==ledger.ledgerHash||ctx.identityRevision!==ledger.identityRevision)fail('stale');if(!sceneIdentityDecisionsSchema.safeParse(decisions).success||decisions.length!==ctx.tasks.length||!unique(decisions.map(d=>d.taskIndex)))fail('shape');if(!ctx.tasks.every((t,i)=>t.taskIndex===i)||!ctx.records.every((r,i)=>r.recordIndex===i))fail('reference');for(const row of ctx.records){const identity=ledger.identities.find(i=>i.memberKeys[0]===row.key);if(!identity)fail('reference');const {sourceBlocks:_s,...fields}=row,expected=linkRow(ledger,identity,row.recordIndex),visible=new Set(ctx.records.flatMap(r=>[r.key,...r.members.map(m=>m.key),...r.records.map(v=>v.key)]));expected.knownRelations=expected.knownRelations.filter(r=>visible.has(r.leftKey)&&visible.has(r.rightKey));if(h(fields)!==h(expected))fail('stale')}const unitMap=unitsMap(packet.units);for(const d of decisions){const t=ctx.tasks.find(t=>t.taskIndex===d.taskIndex);if(!t||t.leftIndex===t.rightIndex||!ctx.records[t.leftIndex]||!ctx.records[t.rightIndex])fail('reference');if(t.type==='identity'&&!['same-place','different-place','unknown'].includes(d.result)||t.type==='parent'&&!['parent','not-parent','unknown'].includes(d.result))fail('shape');if(d.result!=='unknown'&&!d.evidence.length)fail('anchor');const leftKey=ctx.records[t.leftIndex].key,rightKey=ctx.records[t.rightIndex].key,task=l.linkTasks.find(t=>t.leftKey===leftKey&&t.rightKey===rightKey&&t.type===ctx.tasks[d.taskIndex].type&&!t.result);if(!task||seen.has(task.key))fail('reference');seen.add(task.key);const ranges=d.evidence.map(e=>restoreRange(anchorRange(e,unitMap),packet.units,s));task.result={outcome:d.result,evidence:ranges};if(d.result!=='unknown')addRelation(l,{leftKey,rightKey,relation:d.result,evidence:ranges,basis:'model'})}}regroup(l,s,new Set(l.relations.filter(r=>!oldRelations.has(r.key)).map(r=>r.key)));return finish(l,ledgerHash(l)!==ledger.ledgerHash)}
+
+/* ---- Scene list cleanup (486 §3.2 as revised by 3R–3R4) ---- */
+export type SceneCleanupPacket={context:SceneIdentityCleanupContext;units:ImportUnit[]}
+export type {SceneIdentityCleanupContext,SceneCleanupDecision}
+/** Participants: non-unresolved identities with at least one body mention (3R, 3R2-8). Catalog order follows the ledger. */
+function cleanupParticipants(l:SceneIdentityLedger){const members=new Map(l.members.map(m=>[m.key,m]));return l.identities.filter(i=>i.state!=='unresolved'&&i.memberKeys.some(k=>members.get(k)?.origin==='body'))}
+function cleanupCatalog(l:SceneIdentityLedger){const members=new Map(l.members.map(m=>[m.key,m]));return cleanupParticipants(l).map((i,index)=>{const name=nameValue(l,i),aliases=[...new Set(i.memberKeys.map(k=>{const m=members.get(k)!;return m.origin==='body'?m.literal:m.sourceName}).filter(n=>n!==name))].slice(0,50);return {identity:i,item:{index,name,aliases}}})}
+/** Earliest body mention's complete working unit (members are kept in source order). */
+function cleanupFocusUnit(l:SceneIdentityLedger,i:Identity,s:SceneIdentitySources):ImportUnit{const first=l.members.find((m):m is BodyMember=>m.origin==='body'&&i.memberKeys.includes(m.key))!,unit=s.workingUnits.find(u=>u.id===first.range.unitId);if(!unit)fail('source');return unit}
+/** The item's own mention windows in its focus unit (each unique there), so the model can quote inside them (489 H1). */
+function cleanupOwnQuotes(l:SceneIdentityLedger,i:Identity,unit:ImportUnit):string[]{const quotes:string[]=[];for(const m of l.members){if(m.origin!=='body'||!i.memberKeys.includes(m.key)||m.evidenceRange.unitId!==unit.id||m.evidenceRange.unitHash!==h(unit.text))continue;const q=unit.text.slice(m.evidenceRange.start,m.evidenceRange.end);if(!quotes.includes(q)&&occurrences(unit.text,q).length===1)quotes.push(q);if(quotes.length===8)break}if(!quotes.length)fail('source');return quotes}
+/** Every packet carries the complete catalog; focus items are packed greedily in catalog order. A catalog that cannot fit
+ * with even one focus item fails as a budget problem, never truncated (3R). Returns no packets when nobody participates. */
+export function planSceneCleanup(ledger:SceneIdentityLedger,s:SceneIdentitySources,fits:(packet:SceneCleanupPacket)=>boolean):{packets:SceneCleanupPacket[]}{
+ checked(ledger,s);const rows=cleanupCatalog(ledger);if(!rows.length)return {packets:[]}
+ const catalog=rows.map(r=>r.item),make=(items:typeof rows):SceneCleanupPacket=>{const units=[...new Map(items.map(r=>{const u=cleanupFocusUnit(ledger,r.identity,s);return [u.id,u] as const})).values()];return {context:{version:1,mode:'cleanup',ledgerHash:ledger.ledgerHash,identityRevision:ledger.identityRevision,catalog,focus:items.map(r=>{const u=cleanupFocusUnit(ledger,r.identity,s);return {index:r.item.index,unitIds:[u.id],ownQuotes:cleanupOwnQuotes(ledger,r.identity,u)}})},units:units.map(u=>({...u}))}}
+ const packets:SceneCleanupPacket[]=[];let current:typeof rows=[]
+ for(const row of rows){const trial=[...current,row];if(fits(make(trial))){current=trial;continue}if(!current.length)fail('budget');packets.push(make(current));current=[row];if(!fits(make(current)))fail('budget')}
+ if(current.length)packets.push(make(current));return {packets}
+}
+/** Strict per-packet validation shared by the service schema and the applier: one decision per focus index, no
+ * duplicates, legal target and name, and merge/drop evidence that is unique in the item's own focus unit, names it, and lies
+ * inside one of its ownQuotes windows. A violation is a schema error, so it goes through correction and packet retry (489 H1). */
+export function validateSceneCleanupDecisions(ctx:SceneIdentityCleanupContext,units:readonly ImportUnit[],decisions:readonly SceneCleanupDecision[]):void{
+ if(!plain(decisions)||!sceneCleanupDecisionsSchema.safeParse(decisions).success)fail('shape')
+ const focus=new Map(ctx.focus.map(f=>[f.index,f])),catalog=new Map(ctx.catalog.map(c=>[c.index,c])),byId=unitsMap(units)
+ if(decisions.length!==ctx.focus.length||!unique(decisions.map(d=>d.index))||decisions.some(d=>!focus.has(d.index)))fail('reference')
+ for(const d of decisions){const own=catalog.get(d.index)!
+  if(d.action==='keep'){if(d.target!==undefined||d.name!==undefined||d.evidence!==undefined)fail('shape');continue}
+  if(d.action==='drop'&&(d.target!==undefined||d.name!==undefined))fail('shape')
+  if(d.action==='merge'){if(d.target===undefined||d.target===d.index||!catalog.has(d.target))fail('reference');const target=catalog.get(d.target)!;if(d.name!==undefined&&![own.name,...own.aliases,target.name,...target.aliases].includes(d.name))fail('name')}
+  const item=focus.get(d.index)!;if(!d.evidence||d.evidence.unitId!==item.unitIds[0])fail('anchor');const range=anchorRange(d.evidence,byId),text=byId.get(item.unitIds[0])!.text;if(![own.name,...own.aliases].some(n=>d.evidence!.quote.includes(n)))fail('anchor')
+  if(!item.ownQuotes.some(q=>{const at=occurrences(text,q);return at.length===1&&at[0]<=range.start&&range.end<=at[0]+q.length}))fail('anchor')
+ }
+}
+type CleanupOutcome={packet:SceneCleanupPacket;decisions:readonly SceneCleanupDecision[]}
+export type SceneCleanupResult={ledger:SceneIdentityLedger;excluded:{id:string;evidence:SourceRange}[];merged:number;ignored:number;reverted:number}
+/** Members whose identity would be cyclic in the parent graph of `l`. */
+function cycleMemberKeys(l:SceneIdentityLedger):Set<string>{const ids=new Set(sceneParentCycleIds(l.identities.map(i=>({id:i.id,...(i.parent.state==='known'?{parentId:i.parent.id}:{})}))));return new Set(l.identities.filter(i=>ids.has(i.id)).flatMap(i=>i.memberKeys))}
+/** Applies every packet of one plan at once (3R atomic). Merges are prechecked, then added one at a time on a working copy and
+ * reverted when they would make a previously resolved member unresolved or enlarge the baseline parent-cycle members (3R2-5, 3R3-1).
+ * `options.testOnlyUnchecked` exists only for the guard test (487 C5b): it bypasses the precheck. Production never passes it
+ * and no IPC action can reach it. */
+export function applySceneCleanup(ledger:SceneIdentityLedger,outcomes:readonly CleanupOutcome[],s:SceneIdentitySources,options:{testOnlyUnchecked?:readonly {from:string;to:string}[]}={}):SceneCleanupResult{
+ checked(ledger,s);const rows=cleanupCatalog(ledger),byIndex=new Map(rows.map(r=>[r.item.index,r.identity])),decided=new Map<number,{decision:SceneCleanupDecision;packet:SceneCleanupPacket}>()
+ const expected=JSON.stringify(rows.map(r=>r.item))
+ for(const o of outcomes){const ctx=o.packet.context;if(!sceneIdentityRequestContextSchema.safeParse(ctx).success||ctx.ledgerHash!==ledger.ledgerHash||ctx.identityRevision!==ledger.identityRevision||JSON.stringify(ctx.catalog)!==expected)fail('stale')
+  for(const f of ctx.focus){const i=byIndex.get(f.index),u=i&&cleanupFocusUnit(ledger,i,s);if(!i||!u||u.id!==f.unitIds[0]||JSON.stringify(cleanupOwnQuotes(ledger,i,u))!==JSON.stringify(f.ownQuotes))fail('stale')}
+  validateSceneCleanupDecisions(ctx,o.packet.units,o.decisions)
+  const memberships=sceneIdentityMemberships(ledger,o.packet.units,s)
+  for(const d of o.decisions){if(decided.has(d.index))fail('reference');if(d.evidence)assertSceneIdentityEvidence(d.evidence,o.packet.units,memberships,byIndex.get(d.index)!.id);decided.set(d.index,{decision:d,packet:o.packet})}}
+ const order=[...decided.keys()].sort((a,b)=>a-b),action=(index:number)=>decided.get(index)?.decision.action??'keep'
+ // Rule 1: only a merge into a target that itself keeps can apply, so no chain or cycle forms.
+ const planned:{from:Identity;to:Identity;name?:string;evidence:SourceRange[];checked:boolean}[]=[]
+ for(const index of order){const {decision:d,packet}=decided.get(index)!;if(d.action!=='merge'||action(d.target!)!=='keep')continue;planned.push({from:byIndex.get(index)!,to:byIndex.get(d.target!)!,...(d.name?{name:d.name}:{}),evidence:[restoreRange(anchorRange(d.evidence!,unitsMap(packet.units)),packet.units,s)],checked:true})}
+ for(const u of options.testOnlyUnchecked??[]){const from=ledger.identities.find(i=>i.id===u.from),to=ledger.identities.find(i=>i.id===u.to);if(!from||!to)fail('reference');const m=ledger.members.find((m):m is BodyMember=>m.origin==='body'&&from.memberKeys.includes(m.key))!;planned.push({from,to,evidence:[m.evidenceRange],checked:false})}
+ const baselineUnresolved=new Set(ledger.identities.filter(i=>i.state==='unresolved').flatMap(i=>i.memberKeys)),baselineCycle=cycleMemberKeys(ledger)
+ const ownerOf=(l:SceneIdentityLedger)=>new Map(l.identities.flatMap(i=>i.memberKeys.map(k=>[k,i] as const)))
+ let work=copy(ledger),merged=0,ignored=0,reverted=0;const applied:{keys:Set<string>;name?:string;fromFirst:string}[]=[]
+ for(const m of planned){
+  if(m.checked){
+   // Rule 2 precheck on the current working groups: no different-place or author separation, at most one outer parent, no new cycle.
+   const owner=ownerOf(work),a=owner.get(m.from.memberKeys[0])!,b=owner.get(m.to.memberKeys[0])!;if(a===b){ignored++;continue}
+   const keys=new Set([...a.memberKeys,...b.memberKeys]),split=work.relations.some(r=>r.relation==='different-place'&&(a.memberKeys.includes(r.leftKey)&&b.memberKeys.includes(r.rightKey)||b.memberKeys.includes(r.leftKey)&&a.memberKeys.includes(r.rightKey)))||a.memberKeys.some(x=>b.memberKeys.some(y=>partitionRelation(work,x,y)==='different'))
+   const parents=new Set([a,b].flatMap(i=>i.parent.state==='known'?[i.parent.id]:[]).map(id=>{const p=work.identities.find(v=>v.id===id)!;return p.memberKeys.some(k=>keys.has(k))?'self':p.id}))
+   if(split||parents.size>1||parents.has('self')){ignored++;continue}
+   const nodes=work.identities.filter(i=>i!==a&&i!==b).map(i=>({id:i.id,...(i.parent.state==='known'?{parentId:[a.id,b.id].includes(i.parent.id)?'merged':i.parent.id}:{})}));const parent=[...parents][0];nodes.push({id:'merged',...(parent?{parentId:parent}:{})})
+   const cyc=new Set(sceneParentCycleIds(nodes)),cycKeys=new Set([...work.identities.filter(i=>cyc.has(i.id)).flatMap(i=>i.memberKeys),...(cyc.has('merged')?keys:[])]);if([...cycKeys].some(k=>!baselineCycle.has(k))){ignored++;continue}
+  }
+  const trial=copy(work),fresh=new Set<string>(),rel={leftKey:m.from.memberKeys[0],rightKey:m.to.memberKeys[0],relation:'same-place' as const,evidence:m.evidence,basis:'model' as const};const key=h(rel);if(!trial.relations.some(r=>r.key===key)){trial.relations.push({key,...rel});fresh.add(key)}
+  regroup(trial,s,fresh);if(trial.relations.length+trial.decisions.length>20000)fail('capacity')
+  const unresolved=trial.identities.filter(i=>i.state==='unresolved').flatMap(i=>i.memberKeys),cycle=cycleMemberKeys(trial)
+  if(unresolved.some(k=>!baselineUnresolved.has(k))||[...cycle].some(k=>!baselineCycle.has(k))){reverted++;continue}
+  work=trial;merged++;applied.push({keys:new Set([...m.from.memberKeys,...m.to.memberKeys]),...(m.name?{name:m.name}:{}),fromFirst:m.from.memberKeys[0]})
+ }
+ if(reverted&&process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('scene-cleanup',JSON.stringify({reverted}))
+ // Chosen names: among the group's choices, the item mentioned earliest decides; the literal is the member spelled that way.
+ const position=new Map(work.members.map((m,i)=>[m.key,i]))
+ for(const i of work.identities){const choices=applied.filter(a=>a.name&&i.memberKeys.includes(a.fromFirst)).sort((x,y)=>position.get(x.fromFirst)!-position.get(y.fromFirst)!);if(!choices.length)continue;const literal=work.members.find(m=>i.memberKeys.includes(m.key)&&(m.origin==='body'?m.literal:m.sourceName)===choices[0].name);if(literal)i.nameParts=[{kind:'literal',key:literal.key}]}
+ // A drop applies only when no applied merge involves the item.
+ const involved=new Set(applied.flatMap(a=>[...a.keys])),excluded:{id:string;evidence:SourceRange}[]=[]
+ for(const index of order){const {decision:d,packet}=decided.get(index)!;if(d.action!=='drop')continue;const i=byIndex.get(index)!;if(i.memberKeys.some(k=>involved.has(k)))continue;const now=work.identities.find(v=>v.memberKeys.length===i.memberKeys.length&&v.memberKeys.every(k=>i.memberKeys.includes(k)));if(!now)continue;excluded.push({id:now.id,evidence:restoreRange(anchorRange(d.evidence!,unitsMap(packet.units)),packet.units,s)})}
+ const next=finish(work,ledgerHash(work)!==ledger.ledgerHash);assertLedgerRanges(next,s);checkedCache.set(next,s)
+ return {ledger:next,excluded,merged,ignored,reverted}
+}

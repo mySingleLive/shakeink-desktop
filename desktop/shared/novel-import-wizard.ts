@@ -16,6 +16,10 @@ export interface WizardCandidate {
  evidenceUnitIds?:string[]
  /** A scene's source-bound identity status; absent on legacy and non-scene entries. */
  sceneIdentityState?:'concrete'|'source-scoped'|'unresolved'
+ /** The scene cleanup judged this entry not a concrete place; it starts unselected and the author may tick it. */
+ sceneExcluded?:true
+ /** Deduplicated qualifiers (、-joined, ≤60) that tell same-named scenes apart; never part of the name. */
+ sceneHint?:string
 }
 
 export const WIZARD_IMAGE_KINDS=['avatar','portrait','exterior','interior','icon'] as const

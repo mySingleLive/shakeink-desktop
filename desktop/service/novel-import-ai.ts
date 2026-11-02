@@ -9,8 +9,8 @@ import {providerFamily} from '../../src/lib/ai/provider-family'
 import {IMPORT_SCENE_LINK_FEEDBACK,IMPORT_SCENE_FACT_GUIDANCE} from '../shared/novel-import-scene-links'
 import {sceneReviewUnitReferenceRequest,sceneReviewWaveRequest,IMPORT_SCENE_REVIEW_UNIT_GUIDANCE,IMPORT_SCENE_REVIEW_SOURCE_GUIDANCE} from '../shared/novel-import-scene-review'
 import {sceneReviewArtifactBindings} from '../core/novel-import-review-bindings'
-import {sceneIdentityRequestContextSchema,sceneAnchorSchema,sceneMentionRecordSchema,sceneRosterRecordsSchema,sceneIdentityDecisionsSchema,type SceneMentionRecord,type SourceRange,type SceneIdentityLinksContext} from '../shared/novel-import-scene-identity'
-import {validateSceneRosterRecord,validateSceneRosterRecords,assertSceneIdentityEvidence} from '../core/novel-import-scene-identity'
+import {sceneIdentityRequestContextSchema,sceneAnchorSchema,sceneMentionRecordSchema,sceneRosterRecordsSchema,sceneIdentityDecisionsSchema,sceneCleanupDecisionsSchema,type SceneMentionRecord,type SourceRange,type SceneIdentityLinksContext} from '../shared/novel-import-scene-identity'
+import {validateSceneRosterRecord,validateSceneRosterRecords,assertSceneIdentityEvidence,validateSceneCleanupDecisions} from '../core/novel-import-scene-identity'
 import {sceneRosterFragmentRequest,restoreSceneRosterFragmentAnchor,createSceneRosterFragmentTable} from '../core/novel-import-scene-roster-fragments'
 import {createSceneRosterRetention,sceneRosterPriorData,type SceneRosterRetentionRow,type SceneRosterRetentionProofRow} from './novel-import-scene-roster-retention'
 import {createSceneRosterTargetedRepair,type SceneRosterTargetedPlan} from './novel-import-scene-roster-targeted-repair'
@@ -68,8 +68,15 @@ function sceneLinksResponseSchema(request:ImportSemanticAiRequest):z.ZodType<Imp
   for(const entry of result.sceneIdentityDecisions){const task=context.tasks[entry.taskIndex];if(!task||!((task.type==='identity'?['same-place','different-place','unknown']:['parent','not-parent','unknown']).includes(entry.result))||entry.result!=='unknown'&&!entry.evidence.length)throw Error();for(const anchor of entry.evidence)exactSceneAnchor(anchor,request.units)}
  }catch{ctx.addIssue({code:'custom',message:SCENE_LINKS_GUIDANCE})}}),SCENE_LINKS_GUIDANCE)
 }
+const SCENE_CLEANUP_GUIDANCE='sceneCleanup每项仅含index、action及按需的target、name、evidence；恰好覆盖本包focus每个index一次。merge的target为catalog中另一项index，name只能逐字取本项或目标的name/aliases；merge与drop须有evidence{unitId,quote}，unitId为本项focus单元，quote逐字取自本项ownQuotes的一段，在该单元唯一连续出现且含本项名称或别名；keep不带其它字段。不加键、不跨包。'
+function sceneCleanupResponseSchema(request:ImportSemanticAiRequest):z.ZodType<ImportSemanticAiResult>{
+ const context=request.sceneIdentity
+ if(context?.mode!=='cleanup')throw Error('场景清单整理上下文无效')
+ return sceneIdentitySchema(z.strictObject({sceneCleanup:sceneCleanupDecisionsSchema}).superRefine((result,ctx)=>{try{validateSceneCleanupDecisions(context,request.units,result.sceneCleanup)}catch{ctx.addIssue({code:'custom',message:SCENE_CLEANUP_GUIDANCE})}}),SCENE_CLEANUP_GUIDANCE)
+}
 function sceneIdentityWireSchema(request:ImportSemanticAiRequest):z.ZodType<ImportSemanticAiResult>{
  if(request.sceneIdentity?.mode==='links')return sceneLinksResponseSchema(request)
+ if(request.sceneIdentity?.mode==='cleanup')return sceneCleanupResponseSchema(request)
  return sceneRosterGenerationSchema(request)
 }
 /** Generation wire only. The public response schema still accepts canonical
@@ -313,6 +320,10 @@ function validateSceneIdentityRequest(request:ImportSemanticAiRequest){
   for(const membership of context.memberships){for(const key of membership.memberKeys){if(keys.has(key))throw Error('场景归属成员重复');keys.add(key)}for(const range of [...membership.ownedRanges,...membership.contextRanges])assertSceneRange(range,request.units)}
   if(request.phase==='analyze'){const target=context.memberships.find(entry=>entry.identityId===request.entityTarget?.id);if(!target?.ownedRanges.length)throw Error('场景归属缺少当前目标真实范围');for(const entry of request.entityTarget?.evidenceOptions??[])assertSceneIdentityEvidence(entry,request.units,context.memberships,request.entityTarget!.id)}
  }
+ if(context.mode==='cleanup'){
+  const indexes=context.catalog.map(entry=>entry.index),units=new Set(request.units.map(unit=>unit.id))
+  if(indexes.some((index,i)=>index!==i)||new Set(context.focus.map(entry=>entry.index)).size!==context.focus.length||context.focus.some(entry=>entry.index>=indexes.length||!units.has(entry.unitIds[0]))||request.units.some(unit=>!context.focus.some(entry=>entry.unitIds[0]===unit.id)))throw Error('场景清单整理名录或材料范围无效')
+ }
  if(context.mode==='links'){
   validateSceneSourceBlocks(context,request.units)
   const keys=new Set(context.records.flatMap(row=>[row.key,...row.members.map(member=>member.key),...row.records.map(record=>record.key)])),tasks=new Set<string>()
@@ -432,6 +443,7 @@ export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodTyp
  validateSceneIdentityRequest(request)
  if(request.sceneIdentity?.mode==='roster')return sceneRosterCanonicalSchema(request)
  if(request.sceneIdentity?.mode==='links')return sceneLinksResponseSchema(request)
+ if(request.sceneIdentity?.mode==='cleanup')return sceneCleanupResponseSchema(request)
  if(request.sceneParentTargets!==undefined)return sceneParentResponseSchema(request)
  const selected=selectedEntityTarget(request),anchorFeedback=importEvidenceFeedback(request)
  if(request.intent==='structure')return structureSchema
@@ -581,7 +593,7 @@ export async function generateImportAiJson(request:ImportSemanticAiRequest,conte
  // skips the final check and therefore cannot inherit an earlier reason.
  const rosterContract=sceneRosterFragmentRequest(request)?createSceneRosterGeneration(request):undefined
  const nativeRoster=context.structuredSceneRoster===true?(()=>{const pinned=request.models[role],first=pinned&&sceneRosterNativeSchema(request,pinned,'first'),repair=pinned&&sceneRosterNativeSchema(request,pinned,'repair');if(!rosterContract||!pinned||!first||!repair||context.structuredScene)throw Error('当前模型或阶段不支持场景清单结构化输出');const budget=importRequestBudget(request,pinned);assertSceneRosterNativeBudget(request,pinned,budget,serializeImportAiPayload(request),prompt,'first');return{first,repair}})():undefined
- const base=importAiResponseSchema(request),generationBase=rosterContract?.schema??(request.sceneIdentity?.mode==='roster'||request.sceneIdentity?.mode==='links'?sceneIdentityWireSchema(request):base),reviewIds=new Set(request.units.map(unit=>unit.id)),reviewBase=sceneReviewUnitReferenceRequest(request)?generationBase.check(ctx=>{
+ const base=importAiResponseSchema(request),generationBase=rosterContract?.schema??(request.sceneIdentity?.mode==='roster'||request.sceneIdentity?.mode==='links'||request.sceneIdentity?.mode==='cleanup'?sceneIdentityWireSchema(request):base),reviewIds=new Set(request.units.map(unit=>unit.id)),reviewBase=sceneReviewUnitReferenceRequest(request)?generationBase.check(ctx=>{
   // Keep the public raw matcher diagnostics unchanged. Only this generation
   // bridge adds the alternative encoding to a known safe anchor correction.
   for(const [index,issue]of ctx.issues.entries()){const path=issue.path??[]
@@ -820,8 +832,10 @@ function validateSemanticRequest(request:ImportSemanticAiRequest){
  for(const lock of semanticLocks(request)){const a=request.artifacts.find(a=>a.id===lock.artifactId),key=lock.artifactId+'\0'+lock.field;if(!a||lock.field!=='text'&&!IMPORT_SEMANTIC_FACT_FIELDS[a.kind].includes(lock.field)||(lock.field==='text'?a.text:a.facts[lock.field])!==lock.value||values.has(key)&&values.get(key)!==lock.value)throw Error('语义锁定字段或基础版本无效');values.set(key,lock.value)}
 }
 function validateSemanticStage(request:ImportSemanticAiRequest,result:ImportSemanticAiResult){
- const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneParentTargets!==undefined?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'?(request.intent==='reconcile'?'reconcile':request.intent==='roster'?'roster':request.intent==='touches'?'touches':'analyze'):request.phase,allowed:Record<string,string[]>={classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:request.sceneIdentity?.mode==='roster'?['roster','sceneRosterRecords']:['roster'],sceneLinks:['sceneIdentityDecisions'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']}
- for(const field of ['classifications','artifacts','artifactEdits','conflicts','patches','missingTargets','chapterCuts','ignoredStarts','roster','sceneRosterRecords','sceneIdentityDecisions','touches','sceneParents'] as const)if(result[field]?.length&&!allowed[stage].includes(field))throw Error('当前语义阶段包含越权结果：'+field)
+ const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneIdentity?.mode==='cleanup'?'sceneCleanup':request.sceneParentTargets!==undefined?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'?(request.intent==='reconcile'?'reconcile':request.intent==='roster'?'roster':request.intent==='touches'?'touches':'analyze'):request.phase,allowed:Record<string,string[]>={classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:request.sceneIdentity?.mode==='roster'?['roster','sceneRosterRecords']:['roster'],sceneLinks:['sceneIdentityDecisions'],sceneCleanup:['sceneCleanup'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']}
+ for(const field of ['classifications','artifacts','artifactEdits','conflicts','patches','missingTargets','chapterCuts','ignoredStarts','roster','sceneRosterRecords','sceneIdentityDecisions','sceneCleanup','touches','sceneParents'] as const)if(result[field]?.length&&!allowed[stage].includes(field))throw Error('当前语义阶段包含越权结果：'+field)
+ if(Object.hasOwn(result,'sceneCleanup')&&stage!=='sceneCleanup')throw Error('当前语义阶段包含越权结果：sceneCleanup')
+ if(stage==='sceneCleanup'&&(Reflect.ownKeys(result).length!==1||!Array.isArray(result.sceneCleanup)))throw Error('场景清单整理返回结构无效')
  if(result.notFound===true&&stage!=='analyze')throw Error('当前语义阶段不能返回notFound')
 }
 function validateIdentityLinks(request:ImportSemanticAiRequest,items:NonNullable<ImportAiResult['artifacts']>){

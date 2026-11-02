@@ -60,6 +60,15 @@ export const sceneIdentityRequestContextSchema=z.discriminatedUnion('mode',[
  strict({version:z.literal(1),mode:z.literal('roster')}),
  strict({version:z.literal(1),mode:z.literal('links'),ledgerHash:key,identityRevision:int,records:z.array(linkRecord).min(1).max(32),tasks:z.array(packetTask).min(1).max(64)}),
  strict({version:z.literal(1),mode:z.literal('ownership'),ledgerHash:key,identityRevision:int,memberships:z.array(sceneIdentityMembershipSchema).max(5000)}),
+ strict({version:z.literal(1),mode:z.literal('cleanup'),ledgerHash:key,identityRevision:int,catalog:z.array(strict({index:int,name,aliases:z.array(name).max(50)})).min(1).max(5000),focus:z.array(strict({index:int,unitIds:z.array(str(512)).length(1),ownQuotes:z.array(str()).min(1).max(8)})).min(1).max(5000)}),
 ])
 export type SceneIdentityRequestContext=z.infer<typeof sceneIdentityRequestContextSchema>
 export type SceneIdentityLinksContext=Extract<SceneIdentityRequestContext,{mode:'links'}>
+export type SceneIdentityCleanupContext=Extract<SceneIdentityRequestContext,{mode:'cleanup'}>
+/** One model decision per focus index (486 §3.2/3R): keep, merge into another catalog entry, or drop a non-place. */
+export const sceneCleanupDecisionSchema=strict({index:int,action:z.enum(['keep','merge','drop']),target:int.optional(),name:name.optional(),evidence:sceneAnchorSchema.optional()})
+export type SceneCleanupDecision=z.infer<typeof sceneCleanupDecisionSchema>
+export const sceneCleanupDecisionsSchema=z.array(sceneCleanupDecisionSchema).max(5000)
+/** Wizard-private cleanup record (3R2-6, 3R4-1). */
+export const sceneCleanupStateSchema=strict({inputHash:key,cleanedHash:key,excluded:z.array(strict({id,evidence:sourceRangeSchema})).max(5000),authorKept:z.array(id).max(5000)}).refine(v=>new Set(v.excluded.map(e=>e.id)).size===v.excluded.length&&new Set(v.authorKept).size===v.authorKept.length,SCENE_IDENTITY_GUIDANCE)
+export type SceneCleanupState=z.infer<typeof sceneCleanupStateSchema>

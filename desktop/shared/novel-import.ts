@@ -150,7 +150,9 @@ export interface ImportView {
  pdfReady?:boolean;pdfPendingPages?:number
  wizard?:ImportWizardView
 }
-export interface ImportSceneIdentitySummary {version:1;ledgerHash:string;identityRevision:number;concreteCount:number;sourceScopedCount:number;unresolvedCount:number;ownershipDone:number;ownershipTotal:number}
+export interface ImportSceneIdentitySummary {version:1;ledgerHash:string;identityRevision:number;concreteCount:number;sourceScopedCount:number;unresolvedCount:number;ownershipDone:number;ownershipTotal:number;
+ /** Unselected unresolved places, not imported (486 §3R): at most 200 listed, deferredTotal counts all. */
+ deferred?:{id:string;name:string}[];deferredTotal?:number}
 export interface ImportSceneIdentityDetail {
  ledgerHash:string;identityRevision:number;identityId:string;state:'concrete'|'source-scoped'|'unresolved';name:string
  parent:{state:'unknown'}|{state:'known';id:string;name:string}
@@ -160,7 +162,7 @@ export interface ImportSceneIdentityDetail {
  relationTotal?:number
 }
 export interface ImportSceneIdentitySource {ledgerHash:string;memberKey:string;neighbor:-1|0|1;unitId?:string;offset:number;total:number;text:string;nextOffset?:number}
-export type ImportWizardView=Omit<ImportWizardState,'rosterStash'|'touchStash'|'foreshadowRefs'|'structure'|'structureDecision'|'structureHash'|'materializedVolumes'|'selectionHash'|'imageGrants'|'tasks'|'sceneIdentity'>&{sceneIdentitySummary?:ImportSceneIdentitySummary;rosterFound?:number;structure?:{title:string;volume?:string}[];imageGrants:Partial<Record<'character'|'scene'|'item',{model:{id:string;name:string}}|undefined>>;tasks:(Omit<ImportWizardState['tasks'][number],'resultSha256'|'image'>&{image?:{mime:string;bytes:number}})[];lineProgress?:{done:number;total:number}}
+export type ImportWizardView=Omit<ImportWizardState,'rosterStash'|'touchStash'|'foreshadowRefs'|'structure'|'structureDecision'|'structureHash'|'materializedVolumes'|'selectionHash'|'imageGrants'|'tasks'|'sceneIdentity'|'sceneCleanup'>&{sceneIdentitySummary?:ImportSceneIdentitySummary;rosterFound?:number;structure?:{title:string;volume?:string}[];imageGrants:Partial<Record<'character'|'scene'|'item',{model:{id:string;name:string}}|undefined>>;tasks:(Omit<ImportWizardState['tasks'][number],'resultSha256'|'image'>&{image?:{mime:string;bytes:number}})[];lineProgress?:{done:number;total:number}}
 export interface ImportSourcePage {fileId:string;offset:number;total:number;text:string;units:{id:string;start:number;end:number;kind:UnitKind;part?:string}[]}
 export interface ImportResponse {view:ImportView|null;source?:ImportSourcePage;sceneIdentityDetail?:ImportSceneIdentityDetail;sceneIdentitySource?:ImportSceneIdentitySource;pdfPage?:ImportPdfPageResponse;image?:{mime:string;bytes:Uint8Array}}
 export interface ImportBridge {novelImport(action:ImportAction):Promise<ImportResponse>}

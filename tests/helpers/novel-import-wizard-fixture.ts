@@ -42,7 +42,10 @@ export async function fixture(files:ImportFile[]=filesF(),ai?:Ai,over:{models?:{
  async function act(type:string,extra:Record<string,unknown>={}){const v=type==='choose'?undefined:await view();return controller.act({type,...(v?{id:v.id,revision:v.revision}:{}),...extra})}
  async function settle(){for(let i=0;i<3000&&controller.active;i++)await new Promise(r=>setTimeout(r,5));assert.equal(controller.active,0,'background work drained');return view()}
  const journal=async()=>{const v=await view();return JSON.parse(await readFile(join(root,'novel-imports',v.id,'session.json'),'utf8')) as ImportSession}
- return {controller,options,act,settle,view,journal,requests,root,target,setModels(m:typeof models){models=m},handler:()=>handler,setAi(next:Ai){handler=next},get published(){return published},async dispose(){await controller.close().catch(()=>undefined);await rm(root,{recursive:true,force:true});await rm(target,{recursive:true,force:true})}}
+ return {controller,options,act,settle,view,journal,requests,root,target,setModels(m:typeof models){models=m},
+  /** Test-only switch: the image model (and optionally its generator) the controller sees from now on. */
+  setImageModel(m:ImportModel|undefined,generate?:unknown){(options as {imageModel?:()=>Promise<ImportModel|undefined>}).imageModel=async()=>m;if(generate)(options as {generateImage?:unknown}).generateImage=generate},
+  handler:()=>handler,setAi(next:Ai){handler=next},get published(){return published},async dispose(){await controller.close().catch(()=>undefined);await rm(root,{recursive:true,force:true});await rm(target,{recursive:true,force:true})}}
 }
 /** Explicit compatibility fixture for pre-identity scene controller tests.
  * Only the initial synthetic journal is made genuinely versionless. Fresh

@@ -26,6 +26,8 @@ async function concreteSceneFixture(discoverThird=false,sameLocator=false,longQu
   if(r.phase==='classify')return {classifications:r.units.map(u=>({unitId:u.id,kind:'body'}))}
   let raw:unknown
   if(r.sceneIdentity?.mode==='roster'){rosterCalls++;raw={roster:[first,second,...(discoverThird&&rosterCalls>1?[thirdPlace]:[])].flatMap(quote=>r.units.filter(u=>u.text.includes(quote)).map(u=>{const literal=quote.includes('阅览室')?'阅览室':'书房';return {name:literal,aliases:[],mentions:[{literal,evidence:{unitId:u.id,quote}}],context:[{label:quote.match(/甲城东宅|乙城西宅|丙城南宅/u)![0],evidence:[{unitId:u.id,quote}]}],links:[]}}))}}
+  // 486 adds a scene-list cleanup stage after links; this fixture keeps every entry (neutral answer).
+  else if((r.sceneIdentity as {mode?:string}|undefined)?.mode==='cleanup')raw={sceneCleanup:(r.sceneIdentity as unknown as {focus:{index:number}[]}).focus.map(f=>({index:f.index,action:'keep'}))}
   else if(r.sceneIdentity?.mode==='links')raw={sceneIdentityDecisions:r.sceneIdentity.tasks.map(t=>({taskIndex:t.taskIndex,result:t.type==='parent'?'not-parent':'different-place',evidence:r.units.flatMap(u=>[first,second].filter(q=>u.text.includes(q)).map(quote=>({unitId:u.id,quote})))}))}
   else if(r.intent==='entity'){
    const target=r.entities!.find(e=>e.id===r.entityTarget!.id)!,own=r.sceneIdentity?.mode==='ownership'?r.sceneIdentity.memberships.find(m=>m.identityId===target.id):undefined

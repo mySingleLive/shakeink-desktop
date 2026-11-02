@@ -27,6 +27,8 @@ async function fresh(groups:Group[]=[{label:'东宅',quotes:[east]},{label:'西�
   if(request.phase==='classify')return{classifications:request.units.map(unit=>({unitId:unit.id,kind:'body'}))}
   let raw:unknown
   if(request.sceneIdentity?.mode==='roster')raw={roster:groups.flatMap(group=>{const mentions=group.quotes.flatMap(quote=>request.units.filter(unit=>unit.text.includes(quote)).map(unit=>({literal:'书房',evidence:{unitId:unit.id,quote}})));return mentions.length?[{name:'书房',aliases:[],mentions,context:[{label:group.label,evidence:[mentions[0].evidence]}],links:[]}]:[]})}
+  // 486 adds a scene-list cleanup stage after links; this fixture keeps every entry (neutral answer).
+  else if((request.sceneIdentity as {mode?:string}|undefined)?.mode==='cleanup')raw={sceneCleanup:(request.sceneIdentity as unknown as {focus:{index:number}[]}).focus.map(f=>({index:f.index,action:'keep'}))}
   else if(request.sceneIdentity?.mode==='links')raw={sceneIdentityDecisions:request.sceneIdentity.tasks.map(task=>({taskIndex:task.taskIndex,result:'unknown',evidence:[]}))}
   else if(request.phase==='review')raw={conflicts:[],missingTargets:[]}
   else return{notFound:true}
