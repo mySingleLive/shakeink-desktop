@@ -1,6 +1,6 @@
 import type {ImportWizardView} from '../shared/novel-import'
 import {sourceTextSummary} from './novel-import-pdf-source-text'
-import {mergeWizardRoster} from './novel-import-wizard'
+import {mergeWizardRoster,wizardItemRejected} from './novel-import-wizard'
 import {expectedSceneOwnershipKeys} from './novel-import-scene-identity'
 import {createHash} from 'node:crypto'
 import {prepareImportWorkingUnits,validateImportBudgetPolicy,splitBudgetBatches} from './novel-import-budget-policy'
@@ -404,7 +404,7 @@ const ROSTER_STEP_KINDS={'detect-char':'character','detect-scene':'scene','detec
 /** While a recognition step runs: distinct names merged so far from the returned batches. */
 function wizardRosterFound(w:NonNullable<ImportSession['wizard']>):{rosterFound?:number}{
  const kind=ROSTER_STEP_KINDS[w.step as keyof typeof ROSTER_STEP_KINDS];if(!kind||w.stepState[w.step]!=='running')return {}
- return {rosterFound:kind==='scene'&&w.sceneIdentityVersion===1?(w.sceneIdentity?.identities.length??0):mergeWizardRoster(kind,w.rosterStash?.[kind]??[]).length}
+ return {rosterFound:kind==='scene'&&w.sceneIdentityVersion===1?(w.sceneIdentity?.identities.length??0):mergeWizardRoster(kind,w.rosterStash?.[kind]??[]).filter(g=>kind!=='item'||!wizardItemRejected(g)).length}
 }
 /** Unresolved places the author has not selected are not imported; verify lists them (486 §3R). Names come from the candidates. */
 function wizardDeferredScenes(w:NonNullable<ImportSession['wizard']>,ledger:NonNullable<NonNullable<ImportSession['wizard']>['sceneIdentity']>,selected:ReadonlySet<string>){

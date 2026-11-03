@@ -4443,6 +4443,67 @@
         "487 E4 真实验证（LotmVerification.app、隔离目录、第一部全部章节）未执行",
         "单元用例的模型回复均为合成数据，经真实服务校验桥，不代表真实模型通过"
       ]
+    },
+    {
+      "id": "NI-11",
+      "requirement": "导入《诡秘之主》第一卷全部物品的时长不超过 30 秒；物品资料完整导入（面板字段、已核验引文），零失败",
+      "source": [
+        "docs/493-item-import-performance-plan.md",
+        "docs/493-item-import-performance-plan-review.md",
+        "docs/494-item-import-performance-cases.md",
+        "docs/494-item-import-performance-cases-review.md",
+        "docs/497-item-entity-profile-contract-plan.md",
+        "docs/497-item-entity-profile-contract-review.md",
+        "docs/498-item-entity-profile-contract-cases.md",
+        "docs/500-item-evidence-options-plan.md",
+        "docs/500-item-evidence-options-plan-review.md",
+        "docs/501-item-evidence-options-cases.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts"
+      ],
+      "testIds": [
+        "493-IP-01",
+        "493-IP-02",
+        "493-IP-03",
+        "493-IP-04",
+        "493-IP-05",
+        "493-IP-06",
+        "493-IP-08",
+        "493-IC-01",
+        "493-IC-02",
+        "493-IC-03",
+        "493-IC-04",
+        "493-IC-05",
+        "493-IC-07",
+        "493-IE-01",
+        "493-IE-02",
+        "493-IE-03",
+        "493-IE-04",
+        "493-IE-05",
+        "493-IE-08",
+        "493-IP-REAL"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-verified",
+      "evidence": [
+        "docs/495-item-import-performance-code-review.md",
+        "docs/499-item-entity-profile-contract-code-review.md",
+        "docs/502-item-evidence-options-code-review.md",
+        "docs/496-item-import-performance-verification.md",
+        "tests/unit/novel-import-item-performance.test.ts",
+        "tests/unit/novel-import-item-profile.test.ts",
+        "tests/unit/novel-import-character-commit.test.ts",
+        "tests/unit/novel-import-character-source-index.test.ts"
+      ],
+      "verificationLimits": [
+        "真实计时为单轮（item-perf-r3，20002 ms，128 项）；r1、r2 因代码缺陷中途失败并据此修复，记录保留于 docs/496",
+        "文件/目录选择器由驱动控制，未验收原生文件对话框；未开启物品图标",
+        "runtime.json 只保留最近 64 次调用，请求耗时分布为采样口径；生成期纠错次数不可见",
+        "CP-13a/CP-01 在干净 HEAD b26975f 上同样失败，为既有问题，未在本任务修复"
+      ]
     }
   ],
   "developmentRecordUpdated": "2026-10-09",

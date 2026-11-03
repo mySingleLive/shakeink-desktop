@@ -30,6 +30,7 @@ import {normalizeWizardName,wizardCandidateId,WIZARD_ALIAS_LIMIT,splitWizardSour
 import type {WizardTask} from '../shared/novel-import-wizard'
 import type {ImportSemanticEntity} from '../core/novel-import-semantics'
 import {buildWizardCandidates} from '../core/novel-import-wizard-roster'
+import {itemRosterTaken} from '../core/novel-import-wizard'
 import {IMAGE_NAME,IMAGE_TEMP,imageFileName,readStagedImage,stagedImageBytes,sniffImage,stageImage,reconcileStagedImages} from './novel-import-images'
 import {WIZARD_IMAGE_KINDS,WIZARD_IMAGE_LABELS,WIZARD_IMAGE_OWNER,WIZARD_LIMITS} from '../shared/novel-import-wizard'
 import {WIZARD_RUNTIME_FILE,WIZARD_RUNTIME_TEMP,encodeWizardRuntime,parseWizardRuntime,trimWizardRuntimeCalls} from '../core/novel-import-wizard-runtime'
@@ -46,6 +47,7 @@ const LINE_STEPS={worldline:'worldline',narrative:'narrative',outline:'outline'}
 export const WIZARD_ENTITY_CONCURRENCY=4,WIZARD_IMAGE_CONCURRENCY=2
 export const WIZARD_CHARACTER_CONCURRENCY=IMPORT_RUNTIME_MAX_CALLS-1
 export const WIZARD_SCENE_CONCURRENCY=IMPORT_RUNTIME_MAX_CALLS-1
+export const WIZARD_ITEM_CONCURRENCY=IMPORT_RUNTIME_MAX_CALLS-1
 export const WIZARD_SCENE_REVIEW_CONCURRENCY=IMPORT_RUNTIME_MAX_CALLS-1
 type ReviewPacket={request:Omit<ImportAiRequest,'operationId'|'models'>;keys:string[];facts:boolean}
 type ImportStopCapture={done:Promise<void>;finish():void}
@@ -572,7 +574,7 @@ export class NovelImportController {
     const flush=async():Promise<void>=>{
      while(finished.length){const batch=finished.splice(0);await this.checkpoint(s,epoch,()=>{const stash=(w.rosterStash??={});
       // Stash order follows the text, not arrival, so display names and ids do not depend on timing.
-      stash[kind]=[...(stash[kind]??[]),...batch.flatMap(({entries})=>entries.map(e=>({unitId:e.evidence.unitId,name:e.name,aliases:e.aliases,...(e.roleType?{roleType:e.roleType}:{}),...(e.parent?{parent:e.parent}:{}),...(e.itemType?{itemType:e.itemType}:{}),...(e.important!==undefined?{important:e.important}:{}),...(e.settings?{settings:e.settings}:{})})))].map((e,k)=>({e,k})).sort((a,b)=>(order.get(a.e.unitId??'')??-1)-(order.get(b.e.unitId??'')??-1)||a.k-b.k).map(({e})=>e)
+      stash[kind]=[...(stash[kind]??[]),...batch.flatMap(({entries})=>entries.map(e=>({unitId:e.evidence.unitId,name:e.name,aliases:e.aliases,...(e.roleType?{roleType:e.roleType}:{}),...(e.parent?{parent:e.parent}:{}),...(e.itemType?{itemType:e.itemType}:{}),...(e.important!==undefined?{important:e.important}:{}),...(e.category?{category:e.category}:{}),...(e.settings?{settings:e.settings}:{})})))].map((e,k)=>({e,k})).sort((a,b)=>(order.get(a.e.unitId??'')??-1)-(order.get(b.e.unitId??'')??-1)||a.k-b.k).map(({e})=>e)
       s.coverage[coverageKey]=[...new Set([...(s.coverage[coverageKey]??[]),...batch.flatMap(({request})=>request.units.map(u=>u.id))])]})}
     }
     const save=()=>{saving??=flush().finally(()=>{saving=undefined});return saving}
@@ -594,7 +596,7 @@ export class NovelImportController {
     // Always checked before the list is built, also when every batch was already covered.
     await this.verify(s)
    }
-   const prior=new Map((w.candidates[kind]??[]).map(c=>[c.id,c]));let candidates=buildWizardCandidates(kind,w.rosterStash?.[kind]??[],sources,s.chapters).map(c=>{const p=prior.get(c.id);return p?{...c,selected:p.selected,...(p.roleType?{roleType:p.roleType}:{})}:c})
+   const prior=new Map((w.candidates[kind]??[]).map(c=>[c.id,c]));let candidates=buildWizardCandidates(kind,w.rosterStash?.[kind]??[],sources,s.chapters,kind==='item'?itemRosterTaken(w):undefined).map(c=>{const p=prior.get(c.id);return p?{...c,selected:p.selected,...(p.roleType?{roleType:p.roleType}:{})}:c})
    if(kind==='scene'&&infer)candidates=await this.repairSceneParents(s,epoch,candidates)
    await this.serial(async()=>{
     this.assertCandidateOpen();this.current(s,epoch)
@@ -748,7 +750,7 @@ export class NovelImportController {
  /** Parallel entity import. Returns true when every task is done or skipped; otherwise the job ends
   * and the step waits for the author (retry/skip restarts it). */
  private async runEntities(s:ImportSession,epoch:number,kind:RosterKind):Promise<boolean>{
-  const w=this.wizard(s),coalesced=kind==='character'||kind==='scene'
+  const w=this.wizard(s),coalesced=kind==='character'||kind==='scene'||kind==='item'
   await this.checkpoint(s,epoch,()=>{if(kind==='scene')this.deferUnresolvedScenes(s);this.planEntityTasks(s,kind);for(const t of w.tasks)if(t.state==='paused'||t.state==='running')t.state='waiting'})
   const pending=()=>w.tasks.filter(t=>(t.kind==='entity'||t.kind==='image')&&this.taskKind(s,t)===kind||kind==='world'&&t.kind==='settings')
   const ready=(t:WizardTask)=>!t.dependsOn||w.tasks.find(x=>x.id===t.dependsOn)?.state==='done'
@@ -810,7 +812,7 @@ export class NovelImportController {
    }
   }
   for(;;){
-   const settled=await Promise.allSettled([...Array.from({length:kind==='character'?WIZARD_CHARACTER_CONCURRENCY:kind==='scene'?WIZARD_SCENE_CONCURRENCY:WIZARD_ENTITY_CONCURRENCY},()=>worker(false).catch(error=>{stop(error);throw error})),...Array.from({length:WIZARD_IMAGE_CONCURRENCY},()=>worker(true).catch(error=>{stop(error);throw error}))])
+   const settled=await Promise.allSettled([...Array.from({length:kind==='character'?WIZARD_CHARACTER_CONCURRENCY:kind==='scene'?WIZARD_SCENE_CONCURRENCY:kind==='item'?WIZARD_ITEM_CONCURRENCY:WIZARD_ENTITY_CONCURRENCY},()=>worker(false).catch(error=>{stop(error);throw error})),...Array.from({length:WIZARD_IMAGE_CONCURRENCY},()=>worker(true).catch(error=>{stop(error);throw error}))])
    const rejected=settled.find((r):r is PromiseRejectedResult=>r.status==='rejected')
    if(halt||rejected)throw halt?.error??rejected!.reason
    await commit(true)
@@ -1030,7 +1032,8 @@ export class NovelImportController {
   const units=splitImportBatches([...hits.slice(0,1),...[...hits].sort((a,b)=>names.reduce((n,x)=>n+b.text.split(x).length-a.text.split(x).length,0)),...sourceUnits].filter((u,i,list)=>list.findIndex(x=>x.id===u.id)===i),profile.characters,profile.maxUnits)[0]??[]
   if(!units.length)throw Error('正文中没有找到该项内容')
   units.sort((a,b)=>a.start-b.start)
-  const selected=(w.candidates[kind]??[]).filter(c=>c.selected),entities=selected.map(c=>wizardEntity(c)),indexed=kind==='character'||kind==='scene',prose=indexed?units.map(u=>u.text).join(''):''
+  // A place whose parent is not selected (author choice or deferred unresolved) enters the catalog as top level.
+  const picked=(w.candidates[kind]??[]).filter(c=>c.selected),pickedIds=new Set(picked.map(c=>c.id)),selected=kind==='scene'?picked.map((c):WizardCandidate=>c.parentId&&!pickedIds.has(c.parentId)?(({parentId:_parent,...rest})=>rest)(c):c):picked,entities=selected.map(c=>wizardEntity(c)),indexed=kind==='character'||kind==='scene'||kind==='item',prose=indexed?units.map(u=>u.text).join(''):''
   const memberships=sceneLedger?sceneIdentityMemberships(sceneLedger,units,sceneSources!):undefined,ownedIds=new Set(memberships?.map(m=>m.identityId))
   const relevant=memberships?selected.filter(c=>c.id===candidate.id||ownedIds.has(c.id)):indexed?selected.filter(c=>c.id===candidate.id||[c.name,...c.aliases].some(name=>prose.includes(name))):selected
   if(kind==='scene'){const byId=new Map(selected.map(c=>[c.id,c])),included=new Set(relevant.map(c=>c.id));for(const c of relevant){const parent=c.parentId?byId.get(c.parentId):undefined;if(parent&&!included.has(parent.id)){included.add(parent.id);relevant.push(parent)}}}
@@ -1508,7 +1511,7 @@ export class NovelImportController {
   assertImportPayloadBudget(snapshot,payload,budget.characters,budget.maxUnits);assertImportReconcileContextBudget(snapshot,budget.characters);assertImportFixedPromptReserve(importAiPrompt(snapshot,payload),payload)
   const pinned=request.phase==='review'?grant.reviewModel:grant.textModel;if(pinned)assertSceneRosterNativeBudget(snapshot,pinned,budget,payload,importAiPrompt(snapshot,payload),'first')
   const operationId=randomUUID();this.operations.add(operationId)
-  try{const invoke=()=>this.options.ai({...snapshot,operationId,models:{text:grant.textModel,review:grant.reviewModel}}),original=s.semanticVersion===1?this.runtime.invoke({version:1,processRunId:this.runtime.processRunId,sessionId:s.id,operationId,epoch,phase:request.phase,...(request.kind?{kind:request.kind}:{}),...(request.intent?{intent:request.intent}:{}),workingRevision:s.workingRevision,scopeHash:request.intent==='structure'?grant.hash:s.wizardVersion===1&&verified&&request.phase==='analyze'&&(request.intent==='entity'&&(request.kind==='character'||request.kind==='scene')||request.intent==='roster'&&request.kind==='scene'&&!!request.sceneIdentity)?this.runtimeScopeCache.resolve(s,grant,()=>importScopeHash(s,'analyze')):importScopeHash(s,request.phase==='classify'?'classify':'analyze'),payloadHash:createHash('sha256').update(payload).digest('hex'),startedAt:new Date().toISOString()},invoke):invoke();if(s.semanticVersion===1)try{await this.recordRuntime(s,epoch,operationId)}catch(error){await Promise.allSettled([Promise.resolve().then(()=>this.options.cancelAi(operationId))]);await original.then(()=>undefined,()=>undefined);throw error}
+  try{const invoke=()=>this.options.ai({...snapshot,operationId,models:{text:grant.textModel,review:grant.reviewModel}}),original=s.semanticVersion===1?this.runtime.invoke({version:1,processRunId:this.runtime.processRunId,sessionId:s.id,operationId,epoch,phase:request.phase,...(request.kind?{kind:request.kind}:{}),...(request.intent?{intent:request.intent}:{}),workingRevision:s.workingRevision,scopeHash:request.intent==='structure'?grant.hash:s.wizardVersion===1&&verified&&request.phase==='analyze'&&(request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item')||request.intent==='roster'&&request.kind==='scene'&&!!request.sceneIdentity)?this.runtimeScopeCache.resolve(s,grant,()=>importScopeHash(s,'analyze')):importScopeHash(s,request.phase==='classify'?'classify':'analyze'),payloadHash:createHash('sha256').update(payload).digest('hex'),startedAt:new Date().toISOString()},invoke):invoke();if(s.semanticVersion===1)try{await this.recordRuntime(s,epoch,operationId)}catch(error){await Promise.allSettled([Promise.resolve().then(()=>this.options.cancelAi(operationId))]);await original.then(()=>undefined,()=>undefined);throw error}
    // The settled state reaches runtime.json too; a failed write here only loses diagnostics.
    if(s.wizardVersion===1)void original.then(()=>undefined,()=>undefined).then(()=>freshImportRuntimeTask(()=>undefined)).then(()=>this.writeWizardRuntime(s)).catch(()=>undefined)
    const result=await original.catch(error=>{if(wave&&!reviewGlobalFailure(error))throw new ReviewPacketFailure(error);throw error});this.current(s,epoch);if(!verified)await this.verify(s);this.current(s,epoch);const latest=await this.options.models();if(!same(grant.textModel,latest.text)||request.phase==='review'&&!same(grant.reviewModel,latest.review))throw Error('模型配置或授权已变化，未采用返回结果');if(s.semanticVersion===1){const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneIdentity?.mode==='cleanup'?'sceneCleanup':request.sceneIdentity?.mode==='roster'?'sceneRoster':request.sceneParentTargets?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'&&request.intent==='reconcile'?'reconcile':request.phase==='analyze'&&(request.intent==='roster'||request.intent==='touches')?request.intent:request.phase,allowed:Record<string,string[]>={classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:['roster'],sceneRoster:['roster','sceneRosterRecords'],sceneLinks:['sceneIdentityDecisions'],sceneCleanup:['sceneCleanup'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']};for(const key of ['sceneRosterRecords','sceneIdentityDecisions','sceneCleanup'] as const)if(Object.hasOwn(result,key)&&!allowed[stage].includes(key))throw Error('当前语义阶段返回了越权内容');if(stage==='sceneRoster')assertSceneRosterCanonical(result,request.units);if(stage==='sceneLinks'&&(Reflect.ownKeys(result).length!==1||!Object.hasOwn(result,'sceneIdentityDecisions')||!Array.isArray(result.sceneIdentityDecisions)))throw Error('场景身份核对返回结构无效');if(stage==='sceneCleanup'&&(Reflect.ownKeys(result).length!==1||!Object.hasOwn(result,'sceneCleanup')||!Array.isArray(result.sceneCleanup)))throw Error('场景清单整理返回结构无效');for(const key of ['classifications','artifacts','artifactEdits','conflicts','missingTargets','patches','chapterCuts','ignoredStarts','roster','touches','sceneParents'] as const)if(result[key]?.length&&!allowed[stage].includes(key))throw Error('当前语义阶段返回了越权内容');if(result.notFound===true&&stage!=='analyze')throw Error('当前语义阶段不能返回notFound')}return result}finally{this.operations.delete(operationId)}

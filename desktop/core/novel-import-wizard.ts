@@ -76,7 +76,11 @@ export function patchWizardChapters(prose:string,chapters:readonly ImportChapter
  }
  return {prose:text,chapters:result,volumes:result.map(c=>({start:c.start,...(c.volume!==undefined?{volume:c.volume}:{})}))}
 }
-export interface WizardRosterEntry {name:string;aliases:string[];roleType?:WizardRoleType;parent?:string;itemType?:string;important?:boolean}
+/** What the model says a roster item entry is (docs/490). Only `item` entries are things; the rest
+ * are people, places, groups or concepts listed by mistake. */
+export const ITEM_ROSTER_CATEGORIES=['item','character','place','organization','concept','other'] as const
+export type ItemRosterCategory=typeof ITEM_ROSTER_CATEGORIES[number]
+export interface WizardRosterEntry {name:string;aliases:string[];roleType?:WizardRoleType;parent?:string;itemType?:string;important?:boolean;category?:ItemRosterCategory}
 
 const ID_PREFIX:Record<WizardCandidateKind,string>={character:'c',scene:'s',item:'i',world:'w','world-setting':'ws'}
 /** Same name and kind always yield the same id; ids are safe as journal keys and file names. */
@@ -92,28 +96,32 @@ export const WIZARD_ALIAS_LIMIT=50
  * at least half of the rarer name's own entries. A single mistaken alias (one batch listing another
  * character, or a title such as 魔术师 shared by several people) does not merge different characters.
  * Groups keep the order of their first entry; the shown name is the own name used most often. */
-export function mergeWizardRoster(kind:WizardCandidateKind,entries:readonly WizardRosterEntry[]):(WizardCandidate&{important?:boolean;names:Set<string>})[]{
+/** `itemVotes`/`otherVotes` count entries by stated category (entries without one do not vote);
+ * `primaries` are the group's own names. These are internal and never stored on a candidate. */
+export function mergeWizardRoster(kind:WizardCandidateKind,entries:readonly WizardRosterEntry[]):(WizardCandidate&{important?:boolean;names:Set<string>;primaries:Set<string>;itemVotes:number;otherVotes:number})[]{
  const own=new Map<string,number>(),links=new Map<string,number>(),pair=(a:string,b:string)=>a<b?a+'\0'+b:b+'\0'+a
  for(const e of entries){const k=normalizeWizardName(e.name);if(k)own.set(k,(own.get(k)??0)+1)}
  for(const e of entries){const k=normalizeWizardName(e.name);if(!k)continue;for(const a of new Set(e.aliases.map(normalizeWizardName)))if(a&&a!==k&&own.has(a))links.set(pair(k,a),(links.get(pair(k,a))??0)+1)}
  const root=new Map([...own.keys()].map(k=>[k,k])),find=(k:string):string=>{let r=k;while(root.get(r)!==r)r=root.get(r)!;root.set(k,r);return r}
  for(const [key,count] of links){const [a,b]=key.split('\0');if(count*2>=Math.min(own.get(a)!,own.get(b)!)){const x=find(a),y=find(b);if(x!==y)root.set(y,x)}}
- const groups=new Map<string,{names:Set<string>;primaries:Map<string,{display:string;count:number}>;aliases:string[];votes:Map<WizardRoleType,number>;parent?:string;itemType?:string;important:boolean}>()
+ const groups=new Map<string,{names:Set<string>;primaries:Map<string,{display:string;count:number}>;aliases:string[];votes:Map<WizardRoleType,number>;parent?:string;itemType?:string;important:boolean;itemVotes:number;otherVotes:number}>()
  for(const e of entries){
   const k=normalizeWizardName(e.name);if(!k)continue
-  const id=find(k);let g=groups.get(id);if(!g){g={names:new Set(),primaries:new Map(),aliases:[],votes:new Map(),important:false};groups.set(id,g)}
+  const id=find(k);let g=groups.get(id);if(!g){g={names:new Set(),primaries:new Map(),aliases:[],votes:new Map(),important:false,itemVotes:0,otherVotes:0};groups.set(id,g)}
   // Another group's own name is never an alias here (it was not linked strongly enough).
   for(const n of [e.name,...e.aliases]){const m=normalizeWizardName(n);if(!m||own.has(m)&&find(m)!==id)continue;g.names.add(m);if(!g.aliases.some(a=>normalizeWizardName(a)===m))g.aliases.push(n.trim())}
   const p=g.primaries.get(k);if(p)p.count++;else g.primaries.set(k,{display:e.name.trim(),count:1})
   if(e.roleType)g.votes.set(e.roleType,(g.votes.get(e.roleType)??0)+1)
-  g.parent??=e.parent;g.itemType??=e.itemType;g.important||=!!e.important
+  // A batch that called this a person, place or concept does not decide its item type or importance.
+  if(e.category==='item')g.itemVotes++;else if(e.category)g.otherVotes++
+  g.parent??=e.parent;if(!e.category||e.category==='item'){g.itemType??=e.itemType;g.important||=!!e.important}
  }
  return [...groups.values()].map(g=>{
   let best:{display:string;count:number}|undefined;for(const v of g.primaries.values())if(!best||v.count>best.count)best=v
   const display=best!.display,roleType=[...g.votes].sort((a,b)=>b[1]-a[1]||ROLE_PRIORITY.indexOf(a[0])-ROLE_PRIORITY.indexOf(b[0]))[0]?.[0]
   // A candidate stores at most WIZARD_ALIAS_LIMIT aliases; the first-seen ones are kept.
   const aliases=[...new Set(g.aliases.filter(a=>a&&normalizeWizardName(a)!==normalizeWizardName(display)))].slice(0,WIZARD_ALIAS_LIMIT)
-  return {id:wizardCandidateId(kind,display),kind,name:display,aliases,names:g.names,...(roleType?{roleType}:{}),...(g.parent?{parentId:g.parent}:{}),...(g.itemType?{itemType:g.itemType}:{}),important:g.important,chapterCount:0,sources:['body'],sourceArtifactIds:[],selected:true}
+  return {id:wizardCandidateId(kind,display),kind,name:display,aliases,names:g.names,...(roleType?{roleType}:{}),...(g.parent?{parentId:g.parent}:{}),...(g.itemType?{itemType:g.itemType}:{}),important:g.important,primaries:new Set(g.primaries.keys()),itemVotes:g.itemVotes,otherVotes:g.otherVotes,chapterCount:0,sources:['body'],sourceArtifactIds:[],selected:true}
  })
 }
 export function wizardChapterCount(entity:{name:string;aliases:readonly string[]},chapters:readonly {content:string}[]){
@@ -122,6 +130,14 @@ export function wizardChapterCount(entity:{name:string;aliases:readonly string[]
 }
 export const WIZARD_IMPORTANT_ITEM_CHAPTERS=3
 export function keepWizardItem(item:{important:boolean;chapterCount:number;fromSource:boolean}){return item.fromSource||item.important||item.chapterCount>=WIZARD_IMPORTANT_ITEM_CHAPTERS}
+/** Not an item when at least as many batches said person/place/concept as said item (ties exclude). */
+export function wizardItemRejected(group:{itemVotes:number;otherVotes:number}){return group.otherVotes>0&&group.otherVotes>=group.itemVotes}
+/** Names an item must not have: selected characters and selected places that are not unresolved,
+ * with their aliases. A place the cleanup marked non-concrete counts only once the author re-selects it. */
+export function itemRosterTaken(w:{candidates:Partial<Record<WizardCandidateKind,readonly WizardCandidate[]>>}):Set<string>{
+ const kept=[...(w.candidates.character??[]).filter(c=>c.selected),...(w.candidates.scene??[]).filter(c=>c.selected&&c.sceneIdentityState!=='unresolved')]
+ return new Set(kept.flatMap(c=>[c.name,...c.aliases]).map(normalizeWizardName).filter(Boolean))
+}
 
 /** World tree: world nodes and their settings/child worlds. Selection is stored on leaves; a world
  * without children is its own leaf. */

@@ -39,8 +39,8 @@ test('RA-06: other roster field rules are unchanged',async()=>{
 test('RA-07: scenes, items and worlds are located the same way and keep their fields',async()=>{
  const scene=await run(request('scene'),{roster:[{name:'沈砚',aliases:[],parent:'北城'}]})
  assert.deepEqual(scene.roster,[{name:'沈砚',aliases:[],parent:'北城',evidence:{unitId:'u2',quote:'沈砚'}}])
- const item=await run(request('item'),{roster:[{name:'风声',aliases:[],itemType:'信物',important:true}]})
- assert.deepEqual(item.roster,[{name:'风声',aliases:[],itemType:'信物',important:true,evidence:{unitId:'u1',quote:'风声'}}])
+ const item=await run(request('item'),{roster:[{name:'风声',aliases:[],itemType:'信物',important:true,category:'item'}]})
+ assert.deepEqual(item.roster,[{name:'风声',aliases:[],itemType:'信物',important:true,category:'item',evidence:{unitId:'u1',quote:'风声'}}])
  const world=await run(request('world'),{roster:[{name:'雨',aliases:[],settings:[{settingType:'SOCIETY',name:'城制'}]}]})
  assert.deepEqual(world.roster,[{name:'雨',aliases:[],settings:[{settingType:'SOCIETY',name:'城制'}],evidence:{unitId:'u1',quote:'雨'}}])
 })
@@ -74,4 +74,11 @@ test('WP-04: the whole roster prompt asks for no quotes; other intents keep the 
  for(const kind of ['character','scene','item','world'] as const)for(const word of ['evidence','quote','逐字'])assert.ok(!fixed(request(kind)).includes(word),kind+' '+word)
  assert.ok(fixed(request(undefined,'touches')).includes('每项evidence引用真实输入unitId'))
  assert.ok(fixed({...request('character'),intent:'entity'} as ImportAiRequest).includes('每项evidence引用真实输入unitId'))
+})
+test('491-F2..F5: item category is optional, null means unknown, other values and other kinds reject it',async()=>{
+ const base={name:'风声',aliases:[],itemType:'信物',important:true}
+ assert.ok(!('category' in (await run(request('item'),{roster:[base]})).roster![0]),'F2')
+ assert.ok(!('category' in (await run(request('item'),{roster:[{...base,category:null}]})).roster![0]),'F3')
+ for(const category of ['Item','weapon'])await assert.rejects(run(request('item'),{roster:[{...base,category}]}),Error,'F4 '+category)
+ await assert.rejects(run(request('character'),{roster:[{name:'沈砚',aliases:[],roleType:'PROTAGONIST',category:'character'}]}),Error,'F5')
 })

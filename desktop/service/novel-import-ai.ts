@@ -364,13 +364,18 @@ const rosterEntrySchemas={
  // A null optional relation means no parent; retain every nonempty parent.
  // The canonical roster omits the key, and all other malformed values still fail.
  scene:z.object({name:rosterName,aliases:rosterAliases,parent:rosterName.nullable().optional(),evidence:rosterEvidence.optional()}).strict().transform(entry=>{if(entry.parent!==null)return entry;const {parent:_parent,...canonical}=entry;return canonical}),
- item:z.object({name:rosterName,aliases:rosterAliases,itemType:z.string().trim().max(100).default(''),important:z.boolean(),evidence:rosterEvidence.optional()}).strict(),
+ // A null category means unknown and is dropped, as for scene parent; missing also means unknown.
+ item:z.object({name:rosterName,aliases:rosterAliases,itemType:z.string().trim().max(100).default(''),important:z.boolean(),category:z.enum(['item','character','place','organization','concept','other']).nullable().optional(),evidence:rosterEvidence.optional()}).strict().transform(entry=>{if(entry.category!==null)return entry;const {category:_category,...rest}=entry;return rest}),
  world:z.object({name:rosterName,aliases:rosterAliases,parent:rosterName.optional(),settings:z.array(z.object({settingType:z.enum(IMPORT_WORLD_SETTING_TYPES),name:rosterName}).strict()).max(50),evidence:rosterEvidence.optional()}).strict(),
 }
 const touchSchema=z.object({foreshadowKey:rosterName,title:rosterName,content:z.string().max(4000).default(''),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:z.number().int().nonnegative(),summary:z.string().max(200),quote:z.string().min(1).max(200),eventId:z.string().min(1).optional(),narrativeId:z.string().min(1).optional()}).strict(),evidence:rosterEvidence}).strict()
 const structureSchema=z.object({chapterCuts:z.array(z.object({start:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),title:structureTitle,volume:structureTitle.optional(),candidateId:z.string().min(1).max(512).optional()}).strict()).max(5000),ignoredStarts:z.array(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)).max(20000)}).strict()
 function characterEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&request.kind==='character'}
-function indexedEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&(request.kind==='character'||request.kind==='scene')}
+// Items share the verified quote-option protocol since docs/500.
+function indexedEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item')}
+/** Item extraction fills the schema 2 panel fields but keeps the plain evidence and source-unit protocol (docs/497). */
+function itemEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&request.kind==='item'}
+const IMPORT_ITEM_FACT_GUIDANCE='物品facts仅允许reliability,attribution,temporalScope,characterId,sceneId,itemId,appearance,acquisition,effects,aliases,tags；每值为字符串；effects为[{name,description}]的JSON字符串且description非空，aliases与tags为字符串数组的JSON字符串；不写itemType等其它字段，未知省略，保留有据内容'
 /** Annotate an existing rejection without changing the trusted catalog or acceptance gate. */
 class SceneLinkValidationError extends Error{constructor(readonly field:keyof typeof IMPORT_SCENE_LINK_FEEDBACK,message:string){super(message)}}
 /** The wizard owns the panel version; provider values remain unmodified. */
@@ -507,6 +512,9 @@ export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodTyp
  }):indexedEntityRequest(request)&&kind==='scene'?indexedArtifact.superRefine((item,ctx)=>{
   if(ctx.issues.length)return
   try{validateImportSemanticArtifact(semanticResultArtifact(request,item))}catch{ctx.addIssue({code:'custom',path:['facts'],message:'场景原生字段必须符合PLACE、可信父级和现有字段结构；四个场景资料字段必须为文本，未知省略，不得自增字段，保留有据内容'})}
+ }):itemEntityRequest(request)?indexedArtifact.superRefine((item,ctx)=>{
+  if(ctx.issues.length)return
+  try{validateImportSemanticArtifact(semanticResultArtifact(request,item))}catch{ctx.addIssue({code:'custom',path:['facts'],message:IMPORT_ITEM_FACT_GUIDANCE})}
  }):indexedArtifact
  const checkedArtifact=kind==='worldline'?requestedArtifact.superRefine((item,ctx)=>{
   // Reuse the final native validator without transforming provider values.
@@ -923,7 +931,7 @@ const IMPORT_EVIDENCE_FEEDBACK:Record<ImportEvidenceAnchorReason,string>={
 }
 function importEvidenceFeedback(request:ImportSemanticAiRequest):Record<ImportEvidenceAnchorReason,string>{
  if(!indexedEntityRequest(request)||!request.entityTarget?.evidenceOptions?.length)return IMPORT_EVIDENCE_FEEDBACK
- return Object.fromEntries(Object.entries(IMPORT_EVIDENCE_FEEDBACK).map(([key,message])=>[key,message+'；本'+(request.kind==='scene'?'场景':'角色')+'已有核验引用选项，请只输出{optionIndex:0-based整数编号}，不要抄写unitId或quote，完整保留有据facts和关系'])) as Record<ImportEvidenceAnchorReason,string>
+ return Object.fromEntries(Object.entries(IMPORT_EVIDENCE_FEEDBACK).map(([key,message])=>[key,message+'；本'+(request.kind==='scene'?'场景':request.kind==='item'?'物品':'角色')+'已有核验引用选项，请只输出{optionIndex:0-based整数编号}，不要抄写unitId或quote，完整保留有据facts和关系'])) as Record<ImportEvidenceAnchorReason,string>
 }
 function anchorEvidence(entries:ImportEvidence[],units:ImportUnit[]):ImportEvidence[]{
  const lookup=new Map(units.map(unit=>[unit.id,unit.text]))
@@ -975,19 +983,19 @@ const defaults:ImportAiDependencies={
  async generate(request,model,signal,prompt,options){
   const [{localModelRecord},{LOCAL_AUTHOR_ID},{instantiateModel}]=await Promise.all([import('./models'),import('./context'),import('../../src/lib/ai/provider')])
   const instantiated=instantiateModel(localModelRecord(model as unknown as Parameters<typeof localModelRecord>[0])),light=importGenerationModel(request,instantiated,model as Resolved),structuredScene=supportsStructuredScene(request,model),structuredSceneRoster=supportsStructuredSceneRoster(request,model),resolved=structuredScene?structuredSceneModel(request,light,model):structuredSceneRoster?structuredSceneRosterModel(request,light,model):light
-  // The import scheduler bounds catalogue, character and scene extraction independently of chat slots.
+  // The import scheduler bounds catalogue, character, scene and item extraction independently of chat slots.
   if(lightImportGeneration(request)||sceneReviewWaveRequest(request))return runImportGenerationLane(request,()=>generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options,...(structuredScene?{structuredScene:true}:{}),...(structuredSceneRoster?{structuredSceneRoster:true}:{})},signal,prompt))
   return generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options},signal,prompt)
  }
 }
 type ImportGenerationScope=Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'selectedTargets'|'conflict'|'executionLane'>
-const lightImportGeneration=(request:ImportGenerationScope)=>request.semanticVersion===1&&request.phase==='analyze'&&(request.intent==='roster'||request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'))
+const lightImportGeneration=(request:ImportGenerationScope)=>request.semanticVersion===1&&request.phase==='analyze'&&(request.intent==='roster'||request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item'))
 export function importGenerationModel(request:ImportGenerationScope,resolved:ResolvedModel,model:Parameters<typeof importRosterModel>[1]){return lightImportGeneration(request)?importRosterModel(resolved,model):resolved}
 export async function runImportGenerationLane<T>(request:ImportGenerationScope,work:()=>Promise<T>):Promise<T>{
  if(!lightImportGeneration(request)&&!sceneReviewWaveRequest(request))return work()
  const {runInsideLongTask}=await import('../../src/lib/long-task');return runInsideLongTask(work)
 }
-/** Name lists are extraction, not reasoning. On the DeepSeek SDK (OpenAI protocol) DeepSeek runs
+/** Name lists and character/scene/item profiles are extraction, not reasoning. On the DeepSeek SDK (OpenAI protocol) DeepSeek runs
  * without thinking; other models whose default uses thinking drop to their lightest published level;
  * models without levels or with a thinking-off default keep their options. Thinking keys are merged per provider, so settings such as OpenAI store:false stay. */
 export function importRosterModel(resolved:ResolvedModel,model:{provider?:unknown;protocol?:unknown;modelId?:unknown;thinkingLevels?:unknown;defaultThinking?:unknown}):ResolvedModel{

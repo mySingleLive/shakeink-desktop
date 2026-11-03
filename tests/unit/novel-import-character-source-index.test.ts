@@ -63,7 +63,8 @@ test('CP-11b: malformed, mixed and out-of-scope references cannot launder missin
  const raw={artifacts:[{...actor,evidence:[{optionIndex:0}]}]}
  for(const noOptions of [input,{...input,intent:undefined,entityTarget:undefined}])await assert.rejects(run(noOptions,raw),/结构|证据/)
  const item:ImportAiRequest={...r,kind:'item',entities:[{id:'item-a',kind:'item',name:'合成物'}],entityTarget:{id:'item-a',aliases:[],evidenceOptions:[actor.evidence[0]]}}
- await assert.rejects(run(item,{artifacts:[{...actor,id:'item-a',kind:'item',name:'合成物',facts:{},evidence:[{optionIndex:0}]}]}),/结构|证据/)
+ // docs/500: items share the indexed protocol, so a valid item option index resolves to that option.
+ assert.deepEqual((await run(item,{artifacts:[{...actor,id:'item-a',kind:'item',name:'合成物',facts:{},evidence:[{optionIndex:0}]}]})).artifacts![0].evidence,[actor.evidence[0]])
  let calls=0;await assert.rejects(generateImportAiJson(r,{userId:'synthetic-user',resolvedModel:{} as ResolvedModel},new AbortController().signal,importAiPrompt(r),{generateText:async()=>{calls++;return {text:JSON.stringify({artifacts:[{...actor,evidence:[{optionIndex:99}]}]}),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}}}),/结构|schema|JSON/);assert.equal(calls,2)
 })
 

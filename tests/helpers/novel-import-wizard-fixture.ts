@@ -125,6 +125,13 @@ export async function toSceneRoster(f:Awaited<ReturnType<typeof fixture>>){
  await f.act('wizard-next',{consent:true});return f.settle()
 }
 export async function toImportScene(f:Awaited<ReturnType<typeof fixture>>){await toSceneRoster(f);await f.act('wizard-next')}
+/** Item-only extraction through the same content and consent actions as the UI. */
+export async function toItemRoster(f:Awaited<ReturnType<typeof fixture>>){
+ await f.act('choose',{mode:'files'});await f.act('wizard-next');await f.act('set-title',{title:'合成物品作品'});await f.act('choose-target');await f.act('wizard-next')
+ await f.act('classify',{mode:'ai',consent:true});await f.settle();await f.act('select',{selected:['body'],targets:['item'],infer:true});await f.act('wizard-next',{consent:true});await f.settle()
+ await f.act('wizard-next',{consent:true});return f.settle()
+}
+export async function toImportItem(f:Awaited<ReturnType<typeof fixture>>){await toItemRoster(f);await f.act('wizard-next')}
 
 
 /** Drive past the character step with every candidate imported. */

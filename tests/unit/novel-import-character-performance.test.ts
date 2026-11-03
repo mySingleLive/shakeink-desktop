@@ -58,13 +58,13 @@ test('CP-13b/CP-04: pausing drains exactly 31 pending calls and resume preserves
 
 const api=ai as typeof ai&{importGenerationModel?:(request:ImportAiRequest,resolved:ResolvedModel,model:Record<string,unknown>)=>ResolvedModel;runImportGenerationLane?:<T>(request:ImportAiRequest,work:()=>Promise<T>)=>Promise<T>}
 const character={semanticVersion:1,phase:'analyze',intent:'entity',kind:'character'} as ImportAiRequest
-test('CP-02: production generation policy limits light thinking to roster and character/scene entity extraction',()=>{
+test('CP-02: production generation policy limits light thinking to roster and character/scene/item entity extraction (docs/493)',()=>{
  assert.equal(typeof api.importGenerationModel,'function')
  const resolved={model:{} as ResolvedModel['model'],modelRecord:{} as ResolvedModel['modelRecord'],providerOptions:{openai:{store:false},original:{kept:true}} as unknown as ResolvedModel['providerOptions']},saved={provider:'deepseek',protocol:'openai',modelId:'deepseek-flash',thinkingLevels:['low','high'],defaultThinking:'high'},before=structuredClone(saved)
  const light=api.importGenerationModel!(character,resolved,saved);assert.deepEqual(light.providerOptions,{openai:{store:false},original:{kept:true},deepseek:{thinking:{type:'disabled'}}});assert.equal(light.model,resolved.model);assert.deepEqual(saved,before)
  for(const request of [{...character,intent:'roster'},{...character,kind:'scene'},{...character,intent:undefined},{...character,kind:'scene',intent:undefined},{...character,kind:'item'},{...character,kind:'world'},{...character,intent:'reconcile'},{...character,phase:'review'},{...character,phase:'patch'},{...character,semanticVersion:undefined}]){
   const output=api.importGenerationModel!(request as ImportAiRequest,resolved,saved)
-  assert.equal(output===resolved,request.intent!=='roster'&&!(request.kind==='scene'&&request.intent==='entity'))
+  assert.equal(output===resolved,request.intent!=='roster'&&!((request.kind==='scene'||request.kind==='item')&&request.intent==='entity'))
  }
  const anthropic=api.importGenerationModel!(character,resolved,{...saved,protocol:'anthropic'});assert.ok(!Object.hasOwn(anthropic.providerOptions!,'deepseek'))
 })

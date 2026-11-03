@@ -1,4 +1,4 @@
-import {mergeWizardRoster,wizardCandidateId,wizardChapterCount,keepWizardItem,normalizeWizardName,splitWizardSourceBlocks,splitWizardSourceWorlds,type WizardCandidate,type WizardRosterEntry,type WizardSettingType} from './novel-import-wizard'
+import {mergeWizardRoster,wizardCandidateId,wizardChapterCount,keepWizardItem,wizardItemRejected,normalizeWizardName,splitWizardSourceBlocks,splitWizardSourceWorlds,type WizardCandidate,type WizardRosterEntry,type WizardSettingType} from './novel-import-wizard'
 import type {ImportArtifact} from '../shared/novel-import'
 
 export type WizardRosterKind='character'|'scene'|'item'|'world'
@@ -39,7 +39,9 @@ export function applySceneParentProposals<T extends {id:string;parentId?:string}
  * are always kept; body items need importance; worlds expand into setting leaves. */
 /** A category heading such as “# 场景” with nothing under it names a group, not an entry. */
 const headingOnly=(text:string)=>!text.replace(/^#{1,4}[\t ]+[^\r\n]*$/gmu,'').trim()
-export function buildWizardCandidates(kind:WizardRosterKind,entries:readonly WizardRosterStashEntry[],sources:readonly ImportArtifact[],chapters:readonly {content:string}[]):WizardCandidate[]{
+/** `taken`: normalized names of selected characters and places; a body item with one of those own
+ * names is the same person or place, not an item (docs/490 2R2-4). Source items are always kept. */
+export function buildWizardCandidates(kind:WizardRosterKind,entries:readonly WizardRosterStashEntry[],sources:readonly ImportArtifact[],chapters:readonly {content:string}[],taken:ReadonlySet<string>=new Set()):WizardCandidate[]{
  if(kind==='world')return buildWorlds(entries,sources,chapters)
  const sourceEntries=sources.flatMap(a=>(kind==='character'?[{name:a.name,text:a.text}]:splitWizardSourceBlocks(a.text,a.name).filter(b=>!headingOnly(b.text))).map(b=>({name:b.name,artifactId:a.id,roleType:a.facts.roleType as WizardRosterEntry['roleType']})))
  const merged=mergeWizardRoster(kind,[...entries,...sourceEntries.map(e=>({name:e.name,aliases:[],...(e.roleType?{roleType:e.roleType}:{})}))])
@@ -49,8 +51,9 @@ export function buildWizardCandidates(kind:WizardRosterKind,entries:readonly Wiz
   const keys=c.names,hits=sourceEntries.filter(e=>keys.has(normalizeWizardName(e.name)))
   const fromBody=entries.some(e=>[e.name,...e.aliases].some(n=>keys.has(normalizeWizardName(n))))
   const chapterCount=wizardChapterCount({name:c.name,aliases:[...new Set([c.name,...c.aliases,...entries.flatMap(e=>[e.name,...e.aliases]),...hits.map(h=>h.name)].filter(n=>keys.has(normalizeWizardName(n))))]},chapters)
+  if(kind==='item'&&!hits.length&&(wizardItemRejected(c)||[...c.primaries].some(n=>taken.has(n))))continue
   if(kind==='item'&&!keepWizardItem({important:!!c.important,chapterCount,fromSource:hits.length>0}))continue
-  const {important:_important,names:_names,...rest}=c,evidenceUnitIds=[...new Set(entries.filter(e=>[e.name,...e.aliases].some(n=>keys.has(normalizeWizardName(n)))).flatMap(e=>e.unitId?[e.unitId]:[]))].slice(0,200)
+  const {important:_important,names:_names,primaries:_primaries,itemVotes:_itemVotes,otherVotes:_otherVotes,...rest}=c,evidenceUnitIds=[...new Set(entries.filter(e=>[e.name,...e.aliases].some(n=>keys.has(normalizeWizardName(n)))).flatMap(e=>e.unitId?[e.unitId]:[]))].slice(0,200)
   result.push({...rest,...(evidenceUnitIds.length?{evidenceUnitIds}:{}),chapterCount,sources:[...(hits.length?['source' as const]:[]),...(fromBody?['body' as const]:[])],sourceArtifactIds:[...new Set(hits.map(h=>h.artifactId))]})
  }
  // Scene parents are stored as candidate ids; unknown parents become top-level places.
