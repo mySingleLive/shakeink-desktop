@@ -1,4 +1,4 @@
-import {mergeWizardRoster,wizardCandidateId,wizardChapterCount,keepWizardItem,wizardItemRejected,normalizeWizardName,splitWizardSourceBlocks,splitWizardSourceWorlds,type WizardCandidate,type WizardRosterEntry,type WizardSettingType} from './novel-import-wizard'
+import {mergeWizardRoster,wizardCandidateId,WIZARD_ALIAS_LIMIT,WIZARD_MAIN_WORLD_ID,WIZARD_MAIN_WORLD_NAME,wizardChapterCount,keepWizardItem,wizardItemRejected,normalizeWizardName,splitWizardSourceBlocks,splitWizardSourceWorlds,type WizardCandidate,type WizardRosterEntry,type WizardSettingType} from './novel-import-wizard'
 import type {ImportArtifact} from '../shared/novel-import'
 
 export type WizardRosterKind='character'|'scene'|'item'|'world'
@@ -42,7 +42,7 @@ const headingOnly=(text:string)=>!text.replace(/^#{1,4}[\t ]+[^\r\n]*$/gmu,'').t
 /** `taken`: normalized names of selected characters and places; a body item with one of those own
  * names is the same person or place, not an item (docs/490 2R2-4). Source items are always kept. */
 export function buildWizardCandidates(kind:WizardRosterKind,entries:readonly WizardRosterStashEntry[],sources:readonly ImportArtifact[],chapters:readonly {content:string}[],taken:ReadonlySet<string>=new Set()):WizardCandidate[]{
- if(kind==='world')return buildWorlds(entries,sources,chapters)
+ if(kind==='world')return buildWorlds(entries,sources,chapters,taken)
  const sourceEntries=sources.flatMap(a=>(kind==='character'?[{name:a.name,text:a.text}]:splitWizardSourceBlocks(a.text,a.name).filter(b=>!headingOnly(b.text))).map(b=>({name:b.name,artifactId:a.id,roleType:a.facts.roleType as WizardRosterEntry['roleType']})))
  const merged=mergeWizardRoster(kind,[...entries,...sourceEntries.map(e=>({name:e.name,aliases:[],...(e.roleType?{roleType:e.roleType}:{})}))])
  const result:WizardCandidate[]=[]
@@ -60,15 +60,78 @@ export function buildWizardCandidates(kind:WizardRosterKind,entries:readonly Wiz
  if(kind==='scene'){const byName=new Map(result.flatMap(c=>[c.name,...c.aliases].map(n=>[normalizeWizardName(n),c.id] as const)));for(const c of result){const parent=c.parentId?byName.get(normalizeWizardName(c.parentId)):undefined;if(parent&&parent!==c.id)c.parentId=parent;else delete c.parentId}}
  return result.sort((a,b)=>Number(b.sources.includes('source'))-Number(a.sources.includes('source'))||b.chapterCount-a.chapterCount)
 }
-function buildWorlds(entries:readonly WizardRosterStashEntry[],sources:readonly ImportArtifact[],chapters:readonly {content:string}[]):WizardCandidate[]{
- const worlds=new Map<string,WizardCandidate>(),settings=new Map<string,WizardCandidate>()
- const base=(sources:('source'|'body')[])=>({aliases:[],chapterCount:0,sources,sourceArtifactIds:[] as string[],selected:true})
- const world=(name:string,from:'source'|'body',parent?:string)=>{const key=normalizeWizardName(name);let w=worlds.get(key);if(!w){w={...base([from]),id:wizardCandidateId('world',name),kind:'world',name};worlds.set(key,w)}else if(!w.sources.includes(from))w.sources.push(from);if(parent&&!w.parentId)w.parentId=parent;return w}
- const setting=(owner:WizardCandidate,name:string,settingType:WizardSettingType,from:'source'|'body',artifactId?:string)=>{const key=owner.id+'\0'+normalizeWizardName(name);let c=settings.get(key);if(!c){c={...base([from]),id:wizardCandidateId('world-setting',owner.name+'\0'+name),kind:'world-setting',name,parentId:owner.id,settingType};settings.set(key,c)}else if(!c.sources.includes(from))c.sources.push(from);if(artifactId&&!c.sourceArtifactIds.includes(artifactId))c.sourceArtifactIds.push(artifactId);return c}
- for(const a of sources)for(const w of splitWizardSourceWorlds(a.text,a.name)){const owner=world(w.world.name,'source');if(!owner.sourceArtifactIds.includes(a.id))owner.sourceArtifactIds.push(a.id);for(const s of w.settings)setting(owner,s.name,s.settingType,'source',a.id)}
+/** A source world titled only by its category (the neutral container or a “世界观” heading) takes the body name. */
+const NEUTRAL_WORLD_NAMES=new Set(['世界','世界观','世界设定'].map(normalizeWizardName))
+/** docs/503 2R: one main world for every body entry without parent or parallel flag. Entries named
+ * like a selected character, or child worlds named like a setting, only give settings. The main world
+ * keeps a fixed id; settings take their ids from their world, so selections survive a new vote. */
+function buildWorlds(entries:readonly WizardRosterStashEntry[],sources:readonly ImportArtifact[],chapters:readonly {content:string}[],taken:ReadonlySet<string>):WizardCandidate[]{
+ const norm=normalizeWizardName,mainKey=norm(WIZARD_MAIN_WORLD_NAME),worlds:WizardCandidate[]=[],settings=new Map<string,{c:WizardCandidate;votes:Map<WizardSettingType,number>;fixed?:WizardSettingType}>()
+ const base=(from:'source'|'body')=>({aliases:[] as string[],chapterCount:0,sources:[from] as ('source'|'body')[],sourceArtifactIds:[] as string[],selected:true})
+ const addSource=(c:WizardCandidate,from:'source'|'body')=>{if(!c.sources.includes(from))c.sources.push(from)}
  const cite=(c:WizardCandidate,unitId?:string)=>{if(unitId&&!(c.evidenceUnitIds??=[]).includes(unitId)&&c.evidenceUnitIds.length<200)c.evidenceUnitIds.push(unitId)}
- for(const e of entries){const owner=world(e.name,'body',e.parent);cite(owner,e.unitId);for(const s of e.settings??[])cite(setting(owner,s.name,s.settingType,'body'),e.unitId)}
- for(const w of worlds.values()){if(w.parentId){const parent=worlds.get(normalizeWizardName(w.parentId));if(parent&&parent.id!==w.id)w.parentId=parent.id;else delete w.parentId}w.chapterCount=wizardChapterCount(w,chapters)}
- for(const s of settings.values())s.chapterCount=wizardChapterCount(s,chapters)
- return [...worlds.values(),...settings.values()]
+ const setting=(owner:WizardCandidate,name:string,settingType:WizardSettingType,from:'source'|'body',artifactId?:string)=>{
+  const key=owner.id+'\0'+norm(name);let entry=settings.get(key)
+  if(!entry){entry={c:{...base(from),id:wizardCandidateId('world-setting',owner.id+'\0'+name),kind:'world-setting',name,parentId:owner.id,settingType},votes:new Map()};settings.set(key,entry)}else addSource(entry.c,from)
+  if(from==='source')entry.fixed??=settingType;else entry.votes.set(settingType,(entry.votes.get(settingType)??0)+1)
+  if(artifactId&&!entry.c.sourceArtifactIds.includes(artifactId))entry.c.sourceArtifactIds.push(artifactId)
+  return entry.c
+ }
+ // Source worlds keep their own names and ids.
+ const byName=new Map<string,WizardCandidate>(),sourceWorlds:WizardCandidate[]=[],sourceSettings:{owner:WizardCandidate;name:string;settingType:WizardSettingType;artifactId:string}[]=[]
+ for(const a of sources)for(const w of splitWizardSourceWorlds(a.text,a.name)){
+  const key=norm(w.world.name);let owner=byName.get(key)
+  if(!owner){owner={...base('source'),id:wizardCandidateId('world',w.world.name),kind:'world',name:w.world.name};byName.set(key,owner);sourceWorlds.push(owner)}
+  if(!owner.sourceArtifactIds.includes(a.id))owner.sourceArtifactIds.push(a.id)
+  for(const s of w.settings)sourceSettings.push({owner,name:s.name,settingType:s.settingType,artifactId:a.id})
+ }
+ // Decide each body entry's role. Settings named anywhere tell a misfiled child world.
+ const settingNames=new Set(entries.flatMap(e=>(e.settings??[]).map(s=>norm(s.name))))
+ const role=entries.map(e=>taken.has(norm(e.name))?'main-nameless':e.parallel?'parallel':e.parent?(settingNames.has(norm(e.name))?'main-nameless':'sub'):'main')
+ // A name that is also some setting (a country, era or concept) or a selected character never names the main world.
+ const unnamed=(k:string)=>!k||k===mainKey||taken.has(k)||settingNames.has(k)
+ const mainCounts=new Map<string,{display:string;count:number}>(),mainNames=new Set<string>()
+ const nameMain=(e:WizardRosterStashEntry)=>{for(const n of [e.name,...e.aliases]){const k=norm(n);if(unnamed(k))continue;mainNames.add(k)}const k=norm(e.name);if(!unnamed(k)){const v=mainCounts.get(k);if(v)v.count++;else mainCounts.set(k,{display:e.name.trim(),count:1})}}
+ entries.forEach((e,i)=>{if(role[i]==='main')nameMain(e)})
+ // A parallel or child world that shares a main world name is the main world.
+ entries.forEach((e,i)=>{if((role[i]==='parallel'||role[i]==='sub')&&(mainNames.has(norm(e.name))||norm(e.name)===mainKey)){role[i]='main';nameMain(e)}})
+ let main:WizardCandidate|undefined
+ if(role.some(r=>r==='main'||r==='main-nameless')||sourceWorlds.length===1&&role.some(r=>r==='sub')){
+  let best:{display:string;count:number}|undefined;for(const v of mainCounts.values())if(!best||v.count>best.count)best=v
+  const name=best?.display??WIZARD_MAIN_WORLD_NAME,aliases=[...new Set(entries.flatMap((e,i)=>role[i]==='main'?[e.name,...e.aliases]:[]).map(n=>n.trim()).filter(n=>{const k=norm(n);return !unnamed(k)&&k!==norm(name)}))]
+  const named=sourceWorlds.length===1?sourceWorlds[0]:sourceWorlds.find(w=>mainNames.has(norm(w.name)))
+  if(named){main=named;addSource(main,'body');if(NEUTRAL_WORLD_NAMES.has(norm(main.name))&&best){main.aliases=[...new Set([...main.aliases,main.name])];main.name=name}main.aliases=[...new Set([...main.aliases,...aliases,...(norm(main.name)!==norm(name)?[name]:[])])].filter(a=>norm(a)!==norm(main!.name)&&norm(a)!==mainKey).slice(0,WIZARD_ALIAS_LIMIT)}
+  else{main={...base('body'),id:WIZARD_MAIN_WORLD_ID,kind:'world',name,aliases:aliases.slice(0,WIZARD_ALIAS_LIMIT)};worlds.push(main)}
+  for(const k of mainNames)byName.set(k,main);byName.set(norm(main.name),main)
+ }
+ worlds.push(...sourceWorlds)
+ // Child and parallel worlds by name; the parent is the most voted one.
+ const votes=new Map<WizardCandidate,Map<string,number>>()
+ entries.forEach((e,i)=>{
+  if(role[i]!=='sub'&&role[i]!=='parallel')return
+  const key=norm(e.name);let w=byName.get(key)
+  if(!w){w={...base('body'),id:wizardCandidateId('world',e.name),kind:'world',name:e.name.trim()};byName.set(key,w);worlds.push(w)}else addSource(w,'body')
+  for(const a of e.aliases){const k=norm(a);if(k&&!byName.has(k)&&!taken.has(k)){byName.set(k,w);if(w.aliases.length<WIZARD_ALIAS_LIMIT)w.aliases.push(a.trim())}}
+  if(role[i]==='sub'&&e.parent){const m=votes.get(w)??new Map<string,number>();m.set(norm(e.parent),(m.get(norm(e.parent))??0)+1);votes.set(w,m)}
+ })
+ // Each parent name is resolved to a world first, so different names of one world vote together.
+ for(const [w,m] of votes){
+  if(w===main)continue
+  const tally=new Map<WizardCandidate|undefined,number>()
+  // Names that resolve to no world (or to itself) do not vote; with no valid vote the world goes under the main world.
+  for(const [k,n] of m){const t=k===mainKey?main:byName.get(k);if(t&&t!==w)tally.set(t,(tally.get(t)??0)+n)}
+  let resolved:WizardCandidate|undefined=main,count=0;for(const [t,n] of tally)if(n>count){resolved=t;count=n}
+  if(resolved&&resolved!==w)w.parentId=resolved.id
+ }
+ // Cycles among child worlds are cut onto the main world (or the top level).
+ for(const id of sceneParentCycleIds(worlds)){const w=worlds.find(x=>x.id===id)!;if(main&&main.id!==id)w.parentId=main.id;else delete w.parentId}
+ for(const s of sourceSettings)setting(s.owner,s.name,s.settingType,'source',s.artifactId)
+ entries.forEach((e,i)=>{
+  const owner=role[i]==='main'||role[i]==='main-nameless'?main!:byName.get(norm(e.name))!
+  cite(owner,e.unitId);for(const s of e.settings??[])cite(setting(owner,s.name,s.settingType,'body'),e.unitId)
+ })
+ for(const {c,votes:v,fixed} of settings.values()){if(fixed)c.settingType=fixed;else{let best=0;for(const [t,n] of v)if(n>best){best=n;c.settingType=t}}}
+ for(const w of worlds)w.chapterCount=wizardChapterCount(w,chapters)
+ const list=[...settings.values()].map(s=>s.c);for(const s of list)s.chapterCount=wizardChapterCount(s,chapters)
+ return [...worlds,...list]
 }

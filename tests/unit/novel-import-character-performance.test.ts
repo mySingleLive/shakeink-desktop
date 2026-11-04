@@ -64,7 +64,7 @@ test('CP-02: production generation policy limits light thinking to roster and ch
  const light=api.importGenerationModel!(character,resolved,saved);assert.deepEqual(light.providerOptions,{openai:{store:false},original:{kept:true},deepseek:{thinking:{type:'disabled'}}});assert.equal(light.model,resolved.model);assert.deepEqual(saved,before)
  for(const request of [{...character,intent:'roster'},{...character,kind:'scene'},{...character,intent:undefined},{...character,kind:'scene',intent:undefined},{...character,kind:'item'},{...character,kind:'world'},{...character,intent:'reconcile'},{...character,phase:'review'},{...character,phase:'patch'},{...character,semanticVersion:undefined}]){
   const output=api.importGenerationModel!(request as ImportAiRequest,resolved,saved)
-  assert.equal(output===resolved,request.intent!=='roster'&&!((request.kind==='scene'||request.kind==='item')&&request.intent==='entity'))
+  assert.equal(output===resolved,request.intent!=='roster'&&!((request.kind==='scene'||request.kind==='item'||request.kind==='world')&&request.intent==='entity'))
  }
  const anthropic=api.importGenerationModel!(character,resolved,{...saved,protocol:'anthropic'});assert.ok(!Object.hasOwn(anthropic.providerOptions!,'deepseek'))
 })

@@ -48,9 +48,13 @@ test('IC-04/IC-05: only item entity prompts gain the panel contract; other promp
  // Captured from the code before docs/497 (/private/tmp/shakeink-item-493/prompt-baseline.txt).
  assert.equal(sha({...base,intent:'entity',kind:'character',entityTarget:{id:'c-1',aliases:[],roleType:'SUPPORTING'},entities:[{id:'c-1',kind:'character',name:'甲'}]}),'6457fe3eac2a916a5f8b352a88b04420f71ab508cdf01dc79ff373f4115607c9')
  assert.equal(sha({...base,intent:'entity',kind:'scene',entityTarget:{id:'s-1',aliases:[]},entities:[{id:'s-1',kind:'scene',name:'乙',entityType:'PLACE'}]}),'34cc6a1a30a0cf37c5a0e44fdb9011a180f5e36f0c58390d018afbfa9d365fbd')
- assert.equal(sha({...base,intent:'entity',kind:'world',entityTarget:{id:'w-1',aliases:[]},entities:[{id:'w-1',kind:'world',name:'丙',entityType:'WORLD'}]}),'2b2fd225fe51f0999a30680c85081392b1f596a581ec8edc4c0be87d8e392576')
+ // docs/506 3R5: world entity prompts gain <world-setting-content-contract>; the others above and below are unchanged.
+ const world={...base,intent:'entity',kind:'world',entityTarget:{id:'w-1',aliases:[]},entities:[{id:'w-1',kind:'world',name:'丙',entityType:'WORLD'}]}
+ assert.equal(sha(world),'caeba5dd1a5c6f80307c7892400398158c1884c3003313cf28f416626cb70716');assert.ok(importAiPrompt(world as unknown as ImportAiRequest).includes('<world-setting-content-contract>'))
+ assert.ok(!importAiPrompt({...base,intent:'entity',kind:'item',entityTarget:{id:'i-1',aliases:[]},entities:[{id:'i-1',kind:'item',name:'丁'}]} as unknown as ImportAiRequest).includes('<world-setting-content-contract>'))
  assert.equal(sha({...base,kind:'item'}),'98ad4302db751c286985b39a46abac402b45d6102ff335125ba7f3aed0d7534b')
- assert.equal(sha({...base,intent:'roster',kind:'item'}),'4acdcea79d151ab8de6af1565b3c3dfc302527a60062b1ad9bc1c6aaf8ceb0e6')
+ // docs/503 2R8: the item roster contract dropped novel-specific example words.
+ assert.equal(sha({...base,intent:'roster',kind:'item'}),'c657694e2036f6041b7df558f65bd1ce0889c672064cc6fda791a0c153963ab9')
  const prompt=importAiPrompt(request)
  for(const field of ['appearance','acquisition','effects','aliases','tags'])assert.ok(prompt.includes('"'+field+'"'),field);assert.ok(prompt.includes('<item-native-profile-contract>'))
  // docs/500 supersedes the 498 IC-05 negative: item prompts now use the indexed evidence contract (IE-05).

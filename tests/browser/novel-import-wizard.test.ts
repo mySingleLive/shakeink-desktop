@@ -157,6 +157,21 @@ test('NIW-B08: the world tree nests child worlds and cascades selection',()=>mou
  await page.evaluate(()=>window.wizardFixture.set(v=>{const c=v.wizard!.candidates.world!.find(c=>c.name==='梦俗')!;c.selected=false}))
  assert.equal(await d.getByRole('checkbox',{name:'选择 北城世界 及其下全部设定'}).evaluate(e=>(e as HTMLInputElement).indeterminate),true)
 }))
+test('WU-01/WU-02: world cards and tree rows show their setting type with a distinct icon',()=>mount({step:'import-world'},async page=>{
+ const d=dialog(page),card=(n:string)=>d.locator('.ni-w-ent',{hasText:n}).first()
+ const icon=(n:string)=>card(n).locator('.ni-w-quill svg').getAttribute('class')
+ for(const [n,tag] of [['北城世界','世界'],['城制','社会环境'],['山川','地理'],['梦俗','人文环境']] as const)assert.equal(await card(n).locator('.ni-w-tag').innerText(),tag,n)
+ const classes=await Promise.all(['北城世界','城制','山川','梦俗'].map(icon));assert.equal(new Set(classes).size,4,classes.join(' | '))
+ assert.match(await card('主题').locator('.ni-w-quill svg').getAttribute('class')??'',/sparkles/)
+ // All nine setting types and the world itself have different icons (507 WU-01).
+ const types=['LEVEL_SYSTEM','POWER_SYSTEM','CONCEPT','FACTION','MAP','SOCIETY','CULTURE','GEOGRAPHY','WORLD_HISTORY']
+ await page.evaluate(t=>window.wizardFixture.set(v=>{const w=v.wizard!,base=w.candidates.world![1];w.candidates.world=[w.candidates.world![0],...t.map((settingType,k)=>({...base,id:'ws-'+String(k).padStart(16,'0'),name:'类型'+k,settingType:settingType as typeof base.settingType}))];w.tasks=w.candidates.world!.map((c,k)=>({id:'e-'+String(k).padStart(16,'0'),kind:'entity' as const,candidateId:c.id,state:'waiting' as const,attempts:0}))}),types)
+ const all=await Promise.all(['北城世界',...types.map((_,k)=>'类型'+k)].map(icon));assert.equal(new Set(all).size,10,all.join(' | '))
+}))
+test('WU-02: the world tree puts a type icon before each setting tag',()=>mount({step:'detect-world'},async page=>{
+ const d=dialog(page),rows=d.locator('.ni-w-tree .ni-w-node:has(.ni-w-tag)')
+ assert.ok(await rows.count()>=3);for(let k=0;k<await rows.count();k++)assert.equal(await rows.nth(k).locator('svg.ni-w-type').count(),1)
+}))
 test('NIW-B10: verify lists checks, blocks saving on problems and shows skipped items',()=>mount({step:'verify',checksBad:true},async page=>{
  const d=dialog(page);assert.equal(await d.locator('.ni-w-checks li').count(),8);await d.getByRole('button',{name:'重试导入角色'}).waitFor()
  assert.equal(await d.getByRole('button',{name:'保存作品'}).isDisabled(),true);assert.match(await d.innerText(),/已跳过 2 项/);assert.match(await d.innerText(),/林舟的头像/)

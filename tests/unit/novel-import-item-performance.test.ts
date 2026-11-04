@@ -35,7 +35,7 @@ function gated(f:Fixture){
 }
 
 test('IP-01: items reach 31 concurrent requests and every selected item is imported; other pools keep their sizes',async()=>{
- const pools=controllerModule as unknown as Record<string,number>;assert.equal(pools.WIZARD_ITEM_CONCURRENCY,31);assert.equal(pools.WIZARD_ENTITY_CONCURRENCY,4,'world and other entities keep four');assert.equal(pools.WIZARD_IMAGE_CONCURRENCY,2)
+ const pools=controllerModule as unknown as Record<string,number>;assert.equal(pools.WIZARD_ITEM_CONCURRENCY,31);assert.equal(pools.WIZARD_WORLD_CONCURRENCY,31,'world shares the 31 lanes since docs/506');assert.equal(pools.WIZARD_ENTITY_CONCURRENCY,undefined);assert.equal(pools.WIZARD_IMAGE_CONCURRENCY,2)
  const f=await itemFixture(),p=gated(f)
  try{
   await toImportItem(f);await until(()=>p.pending.size===31);assert.equal(p.pending.size,31)
@@ -67,7 +67,7 @@ const item={semanticVersion:1,phase:'analyze',intent:'entity',kind:'item'} as Im
 test('IP-03: item entity extraction uses the light policy; ordinary item analysis and other phases keep the original model',()=>{
  const resolved={model:{},modelRecord:{},providerOptions:{deepseek:{thinking:{type:'enabled'}},openai:{store:false}}} as unknown as ResolvedModel,saved={provider:'deepseek',protocol:'openai',modelId:'synthetic',thinkingLevels:['low','high'],defaultThinking:'high'},before=structuredClone(saved),options=structuredClone(resolved.providerOptions)
  const out=importGenerationModel(item,resolved,saved);assert.deepEqual(out.providerOptions,{deepseek:{thinking:{type:'disabled'}},openai:{store:false}});assert.equal(out.model,resolved.model);assert.deepEqual(resolved.providerOptions,options);assert.deepEqual(saved,before)
- for(const r of [{...item,intent:undefined},{...item,intent:'reconcile'},{...item,phase:'review'},{...item,phase:'patch'},{...item,kind:'world'},{...item,semanticVersion:undefined}])assert.equal(importGenerationModel(r as ImportAiRequest,resolved,saved),resolved)
+ for(const r of [{...item,intent:undefined},{...item,intent:'reconcile'},{...item,phase:'review'},{...item,phase:'patch'},{...item,kind:'world',intent:undefined},{...item,semanticVersion:undefined}])assert.equal(importGenerationModel(r as ImportAiRequest,resolved,saved),resolved)
  assert.equal(importGenerationModel(item,resolved,{...saved,protocol:'anthropic'}),resolved,'DeepSeek on the Anthropic protocol keeps its saved options')
 })
 

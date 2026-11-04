@@ -26,7 +26,7 @@ import {importStructureCandidateMetadata,importStructureResult} from '../core/no
 import {sceneParentCycleIds,applySceneParentProposals} from '../core/novel-import-wizard-roster'
 import {supportsStructuredScene,createStructuredSceneContract,structuredSceneModel,supportsStructuredSceneRoster,structuredSceneRosterModel} from './novel-import-structured-scene'
 export {supportsStructuredScene,createStructuredSceneContract,structuredSceneModel,supportsStructuredSceneRoster,structuredSceneRosterModel} from './novel-import-structured-scene'
-import {IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,IMPORT_SEMANTIC_FACT_FIELDS,importFactFields,importArtifactEditSchema,importArtifactSemanticHash,validateImportSemanticArtifact,applyImportArtifactFieldEdits,importReviewProjectionSchema,assertImportReviewProjection,assertImportMissingProjection,type ImportSemanticAiRequest,type ImportSemanticAiResult,type ImportSemanticEntity,type ImportSemanticLock,type ImportMissingTarget} from '../core/novel-import-semantics'
+import {IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,IMPORT_SEMANTIC_FACT_FIELDS,importFactFields,importArtifactEditSchema,importArtifactSemanticHash,validateImportSemanticArtifact,importWorldContentIssues,applyImportArtifactFieldEdits,importReviewProjectionSchema,assertImportReviewProjection,assertImportMissingProjection,type ImportSemanticAiRequest,type ImportSemanticAiResult,type ImportSemanticEntity,type ImportSemanticLock,type ImportMissingTarget} from '../core/novel-import-semantics'
 
 const evidence=z.object({unitId:z.string().min(1),quote:z.string().min(1)}).strict()
 const artifact=z.object({id:z.string().min(1),kind:z.enum(IMPORT_TARGETS as [typeof IMPORT_TARGETS[number],...typeof IMPORT_TARGETS]),name:z.string().min(1).max(300),text:z.string().min(1),facts:z.record(z.string(),z.string()),evidence:z.array(evidence).min(1),sourceUnitIds:z.array(z.string()),origin:z.enum(['source','inferred','confirmed'])}).strict()
@@ -366,7 +366,7 @@ const rosterEntrySchemas={
  scene:z.object({name:rosterName,aliases:rosterAliases,parent:rosterName.nullable().optional(),evidence:rosterEvidence.optional()}).strict().transform(entry=>{if(entry.parent!==null)return entry;const {parent:_parent,...canonical}=entry;return canonical}),
  // A null category means unknown and is dropped, as for scene parent; missing also means unknown.
  item:z.object({name:rosterName,aliases:rosterAliases,itemType:z.string().trim().max(100).default(''),important:z.boolean(),category:z.enum(['item','character','place','organization','concept','other']).nullable().optional(),evidence:rosterEvidence.optional()}).strict().transform(entry=>{if(entry.category!==null)return entry;const {category:_category,...rest}=entry;return rest}),
- world:z.object({name:rosterName,aliases:rosterAliases,parent:rosterName.optional(),settings:z.array(z.object({settingType:z.enum(IMPORT_WORLD_SETTING_TYPES),name:rosterName}).strict()).max(50),evidence:rosterEvidence.optional()}).strict(),
+ world:z.object({name:rosterName,aliases:rosterAliases,parent:rosterName.optional(),parallel:z.boolean().optional(),settings:z.array(z.object({settingType:z.enum(IMPORT_WORLD_SETTING_TYPES),name:rosterName}).strict()).max(50),evidence:rosterEvidence.optional()}).strict(),
 }
 const touchSchema=z.object({foreshadowKey:rosterName,title:rosterName,content:z.string().max(4000).default(''),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:z.number().int().nonnegative(),summary:z.string().max(200),quote:z.string().min(1).max(200),eventId:z.string().min(1).optional(),narrativeId:z.string().min(1).optional()}).strict(),evidence:rosterEvidence}).strict()
 const structureSchema=z.object({chapterCuts:z.array(z.object({start:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),title:structureTitle,volume:structureTitle.optional(),candidateId:z.string().min(1).max(512).optional()}).strict()).max(5000),ignoredStarts:z.array(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)).max(20000)}).strict()
@@ -376,6 +376,27 @@ function indexedEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'ph
 /** Item extraction fills the schema 2 panel fields but keeps the plain evidence and source-unit protocol (docs/497). */
 function itemEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&request.kind==='item'}
 const IMPORT_ITEM_FACT_GUIDANCE='物品facts仅允许reliability,attribution,temporalScope,characterId,sceneId,itemId,appearance,acquisition,effects,aliases,tags；每值为字符串；effects为[{name,description}]的JSON字符串且description非空，aliases与tags为字符串数组的JSON字符串；不写itemType等其它字段，未知省略，保留有据内容'
+const IMPORT_WORLD_FACT_GUIDANCE='world facts须符合目录项：WORLD仅entityType与可选parentId；SETTING须entityType、worldId、settingType与content(JSON字符串)。LEVEL_SYSTEM的content={scope,form,description,rules,levels,pathways}；CONCEPT={concepts:[{term,explanation}]}；FACTION={factions:[{name,description,relations}]}，每项三个值都是字符串，relations无内容时为空字符串；其余类型content={text}，text为非空字符串。不自增字段，未知省略，保留有据内容'
+/** A text-type world setting whose content is missing or has a blank text, while artifact.text is not blank, gets content={text}, the same
+ * mapping source copies use (docs/506 3R5-4). Any other shape is left for the strict check. */
+const WORLD_TEXT_SETTING_TYPES=new Set(['POWER_SYSTEM','MAP','SOCIETY','CULTURE','GEOGRAPHY','WORLD_HISTORY'])
+function worldTextContentFromText(value:unknown):unknown{
+ if(!value||typeof value!=='object'||Array.isArray(value))return value
+ let a=value as {text?:unknown;facts?:unknown},f=a.facts as Record<string,unknown>|undefined
+ // Some providers send the facts object itself as JSON text (cf. b7d4e33 for tool inputs). Only a string that
+ // decodes to a plain object is restored; anything else stays for the strict check (docs/506 3R5-7).
+ if(typeof a.facts==='string'){let decoded:unknown;try{decoded=JSON.parse(a.facts)}catch{decoded=undefined}if(decoded&&typeof decoded==='object'&&!Array.isArray(decoded)){f=decoded as Record<string,unknown>;a={...a,facts:f}}else if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('world-facts-shape',JSON.stringify({facts:'string-undecodable'}))}
+ if(f&&typeof f==='object'&&!Array.isArray(f)){
+  if(process.env.SHAKEINK_IMPORT_DEBUG==='1'){const odd=Object.entries(f).filter(([,v])=>typeof v!=='string').map(([k,v])=>(IMPORT_SEMANTIC_FACT_FIELDS.world.includes(k)?k:'?')+':'+(v===null?'null':Array.isArray(v)?'array':typeof v));if(odd.length)console.error('world-facts-types',JSON.stringify({settingType:typeof f.settingType==='string'?f.settingType:null,odd}))}
+  // content is a JSON string; an object or array content is the same value unencoded, so encode it
+  // losslessly and let the strict content check decide (docs/506 3R5-6).
+  if(f.content!==null&&typeof f.content==='object'){f={...f,content:JSON.stringify(f.content)};a={...a,facts:f}}
+ }
+ if(!f||typeof f!=='object'||Array.isArray(f)||f.entityType!=='SETTING'||!WORLD_TEXT_SETTING_TYPES.has(f.settingType as string)||typeof a.text!=='string'||!a.text.trim())return a
+ // Only a missing content or exactly {text:<blank>} is filled; any other shape stays for the strict check.
+ if(f.content!==undefined){let decoded:unknown;try{decoded=typeof f.content==='string'?JSON.parse(f.content):undefined}catch{return a}const keys=decoded&&typeof decoded==='object'&&!Array.isArray(decoded)?Object.keys(decoded):[];if(keys.length!==1||keys[0]!=='text'||typeof (decoded as {text:unknown}).text!=='string'||(decoded as {text:string}).text.trim())return a}
+ return {...a,facts:{...f,content:JSON.stringify({text:a.text})}}
+}
 /** Annotate an existing rejection without changing the trusted catalog or acceptance gate. */
 class SceneLinkValidationError extends Error{constructor(readonly field:keyof typeof IMPORT_SCENE_LINK_FEEDBACK,message:string){super(message)}}
 /** The wizard owns the panel version; provider values remain unmodified. */
@@ -515,6 +536,18 @@ export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodTyp
  }):itemEntityRequest(request)?indexedArtifact.superRefine((item,ctx)=>{
   if(ctx.issues.length)return
   try{validateImportSemanticArtifact(semanticResultArtifact(request,item))}catch{ctx.addIssue({code:'custom',path:['facts'],message:IMPORT_ITEM_FACT_GUIDANCE})}
+ }):selected&&kind==='world'?z.preprocess(worldTextContentFromText,indexedArtifact).superRefine((item,ctx)=>{
+  // A wrong native content shape gets the ordinary correction round instead of failing after parse (docs/503).
+  if(ctx.issues.length)return
+  // The validator's reason and the content issues are fixed texts (known field names, zod codes, value
+  // types) without provider values; naming them lets the single correction fix the exact field.
+  try{validateImportSemanticArtifact(item)}catch(error){
+   const reason=error instanceof Error?error.message.slice(0,80):'',issues=item.facts.settingType?importWorldContentIssues(item.facts.settingType,item.facts.content):[]
+   if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('world-facts-reject',JSON.stringify({settingType:item.facts.settingType??null,entityType:item.facts.entityType??null,contentType:typeof item.facts.content,textLength:item.text.trim().length,issues,reason}))
+   const detail=item.facts.entityType==='SETTING'&&item.facts.content===undefined?'facts.content缺失，SETTING必须提供content':reason==='世界等级内容与原生显示形态不一致'?'LEVEL_SYSTEM的form与内容不符：SINGLE只填levels且pathways为[]，MULTI_PATHWAY只填pathways且levels为[]':issues.map(i=>{const [path,rest]=i.split(/:(.*)/su);const type=/\(([^()]+)\)$/u.exec(rest??'')?.[1];return rest?.startsWith('invalid_type')?'content.'+path+'须为'+(path.endsWith('levels')||path.endsWith('children')||path.endsWith('pathways')||path.endsWith('aliases')||path.endsWith('tags')||path.endsWith('abilities')||path==='factions'||path==='concepts'?'数组':'字符串')+(type?'，收到'+type:''):rest==='invalid_value'&&(path==='scope'||path==='form')?'content.'+path+(path==='scope'?'只能是CHARACTER、ITEM、GENERAL之一':'只能是SINGLE或MULTI_PATHWAY'):rest?.startsWith('unrecognized_keys')?(path==='(根)'?'content':'content.'+path)+'含不允许的键'+(type&&type!=='?'?'（'+type+'）':'')+(path==='(根)'&&!['FACTION','CONCEPT','LEVEL_SYSTEM'].includes(item.facts.settingType)?'，'+item.facts.settingType+'的content解码后只有text一个字符串键，其它内容并入text':''):i}).join('；')
+   // Feedback is cut at 250 characters (src/lib/ai/generate.ts), so the specific failure goes first.
+   ctx.addIssue({code:'custom',path:['facts'],message:(detail||reason?'未通过：'+(detail||reason)+'。':'')+IMPORT_WORLD_FACT_GUIDANCE})
+  }
  }):indexedArtifact
  const checkedArtifact=kind==='worldline'?requestedArtifact.superRefine((item,ctx)=>{
   // Reuse the final native validator without transforming provider values.
@@ -820,7 +853,7 @@ function selectedEntityTarget(request:ImportSemanticAiRequest){
 function semanticLocks(request:ImportSemanticAiRequest):ImportSemanticLock[]{return [...(request.semanticLocks??[]),...(request.reconcile?.locks??[])]}
 function validateSemanticRequest(request:ImportSemanticAiRequest){
  validateSceneIdentityRequest(request)
- if(request.executionLane!==undefined&&(!z.literal('scene-review-wave-v1').safeParse(request.executionLane).success||!sceneReviewWaveRequest(request)))throw Error('导入调度通道无效')
+ if(request.executionLane!==undefined&&!(sceneReviewWaveRequest(request)||wizardSettingsLaneRequest(request)))throw Error('导入调度通道无效')
  if(request.semanticVersion===undefined){if(request.intent!==undefined||request.sceneIdentity!==undefined||request.sceneParentTargets!==undefined||request.reconcile!==undefined||request.semanticLocks!==undefined||request.selectedTargets!==undefined||request.reviewProjection!==undefined)throw Error('缺少语义版本，不能使用语义阶段上下文');return}
  if(!semanticContextSchema.safeParse({semanticVersion:request.semanticVersion,intent:request.intent,entityTarget:request.entityTarget,sceneIdentity:request.sceneIdentity,sceneParentTargets:request.sceneParentTargets,reconcile:request.reconcile,semanticLocks:request.semanticLocks,selectedTargets:request.selectedTargets,reviewProjection:request.reviewProjection}).success)throw Error('导入语义版本或上下文结构无效')
  if(request.sceneParentTargets!==undefined)sceneParentRequestEntities(request)
@@ -952,11 +985,12 @@ function anchorEvidence(entries:ImportEvidence[],units:ImportUnit[]):ImportEvide
  })
 }
 /** A roster entry cites the model quote when it locates, otherwise the first unit whose text holds
- * the name or an alias. Entries named nowhere in the request are dropped, never guessed. */
-function locatedRoster<T extends {name:string;aliases:string[];evidence?:ImportEvidence}>(entries:T[],units:ImportUnit[]):(T&{evidence:ImportEvidence})[]{
+ * the name or an alias. A world, often unnamed in the text, may also be found by one of its settings
+ * (docs/503 2R2). Entries named nowhere in the request are dropped, never guessed. */
+function locatedRoster<T extends {name:string;aliases:string[];evidence?:ImportEvidence;settings?:{name:string}[]}>(entries:T[],units:ImportUnit[]):(T&{evidence:ImportEvidence})[]{
  return entries.flatMap(entry=>{
   if(entry.evidence)try{return [{...entry,evidence:anchorEvidence([entry.evidence],units)[0]}]}catch{/* fall back to the name */}
-  for(const unit of units)for(const name of [entry.name,...entry.aliases])if(name&&unit.text.includes(name))return [{...entry,evidence:{unitId:unit.id,quote:name}}]
+  for(const names of [[entry.name,...entry.aliases],(entry.settings??[]).map(s=>s.name)])for(const unit of units)for(const name of names)if(name&&unit.text.includes(name))return [{...entry,evidence:{unitId:unit.id,quote:name}}]
   return []
  })
 }
@@ -983,19 +1017,22 @@ const defaults:ImportAiDependencies={
  async generate(request,model,signal,prompt,options){
   const [{localModelRecord},{LOCAL_AUTHOR_ID},{instantiateModel}]=await Promise.all([import('./models'),import('./context'),import('../../src/lib/ai/provider')])
   const instantiated=instantiateModel(localModelRecord(model as unknown as Parameters<typeof localModelRecord>[0])),light=importGenerationModel(request,instantiated,model as Resolved),structuredScene=supportsStructuredScene(request,model),structuredSceneRoster=supportsStructuredSceneRoster(request,model),resolved=structuredScene?structuredSceneModel(request,light,model):structuredSceneRoster?structuredSceneRosterModel(request,light,model):light
-  // The import scheduler bounds catalogue, character, scene and item extraction independently of chat slots.
-  if(lightImportGeneration(request)||sceneReviewWaveRequest(request))return runImportGenerationLane(request,()=>generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options,...(structuredScene?{structuredScene:true}:{}),...(structuredSceneRoster?{structuredSceneRoster:true}:{})},signal,prompt))
+  // The import scheduler bounds catalogue, character, scene, item and world extraction and the wizard's other-setting batches independently of chat slots.
+  if(lightImportGeneration(request)||sceneReviewWaveRequest(request)||wizardSettingsLaneRequest(request))return runImportGenerationLane(request,()=>generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options,...(structuredScene?{structuredScene:true}:{}),...(structuredSceneRoster?{structuredSceneRoster:true}:{})},signal,prompt))
   return generateImportAiJson(request,{userId:LOCAL_AUTHOR_ID,resolvedModel:resolved,...options},signal,prompt)
  }
 }
+/** docs/506 3R-1: a wizard other-setting batch skips the chat long-task slots but keeps the saved model options. */
+const WIZARD_SETTINGS_KINDS_LANE=new Set(['theme','style','goldenFinger','trope'])
+function wizardSettingsLaneRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'executionLane'>){return request.executionLane==='wizard-settings-v1'&&request.semanticVersion===1&&request.phase==='analyze'&&request.intent===undefined&&WIZARD_SETTINGS_KINDS_LANE.has(request.kind??'')}
 type ImportGenerationScope=Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'selectedTargets'|'conflict'|'executionLane'>
-const lightImportGeneration=(request:ImportGenerationScope)=>request.semanticVersion===1&&request.phase==='analyze'&&(request.intent==='roster'||request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item'))
+const lightImportGeneration=(request:ImportGenerationScope)=>request.semanticVersion===1&&request.phase==='analyze'&&(request.intent==='roster'||request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item'||request.kind==='world'))
 export function importGenerationModel(request:ImportGenerationScope,resolved:ResolvedModel,model:Parameters<typeof importRosterModel>[1]){return lightImportGeneration(request)?importRosterModel(resolved,model):resolved}
 export async function runImportGenerationLane<T>(request:ImportGenerationScope,work:()=>Promise<T>):Promise<T>{
- if(!lightImportGeneration(request)&&!sceneReviewWaveRequest(request))return work()
+ if(!lightImportGeneration(request)&&!sceneReviewWaveRequest(request)&&!wizardSettingsLaneRequest(request))return work()
  const {runInsideLongTask}=await import('../../src/lib/long-task');return runInsideLongTask(work)
 }
-/** Name lists and character/scene/item profiles are extraction, not reasoning. On the DeepSeek SDK (OpenAI protocol) DeepSeek runs
+/** Name lists and character/scene/item/world profiles are extraction, not reasoning. On the DeepSeek SDK (OpenAI protocol) DeepSeek runs
  * without thinking; other models whose default uses thinking drop to their lightest published level;
  * models without levels or with a thinking-off default keep their options. Thinking keys are merged per provider, so settings such as OpenAI store:false stay. */
 export function importRosterModel(resolved:ResolvedModel,model:{provider?:unknown;protocol?:unknown;modelId?:unknown;thinkingLevels?:unknown;defaultThinking?:unknown}):ResolvedModel{

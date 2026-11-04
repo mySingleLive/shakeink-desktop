@@ -10,7 +10,7 @@ const request=(intent:'roster'|'touches'|'entity',kind:ImportAiRequest['kind']):
 const contract=(prompt:string)=>/<phase-output-contract>([\s\S]*?)<\/phase-output-contract>/u.exec(prompt)?.[1]??''
 
 test('WP-01: roster requests describe the roster output, not artifacts',()=>{
- const fields={character:['roleType','PROTAGONIST','SUPPORTING','ANTAGONIST'],scene:['parent'],item:['itemType','important','category:"item"|"character"|"place"|"organization"|"concept"|"other"','可被持有'],world:['parent','settings','settingType','LEVEL_SYSTEM']} as const
+ const fields={character:['roleType','PROTAGONIST','SUPPORTING','ANTAGONIST'],scene:['parent'],item:['itemType','important','category:"item"|"character"|"place"|"organization"|"concept"|"other"','可被持有'],world:['parent','parallel','settings','settingType','LEVEL_SYSTEM']} as const
  for(const [kind,extra] of Object.entries(fields)){
   const prompt=importAiPrompt(request('roster',kind as ImportAiRequest['kind'])),c=contract(prompt)
   assert.match(c,/(?:roster|"roster"):\[/u,kind);assert.doesNotMatch(c,/artifacts:\[/u,kind)
@@ -32,7 +32,8 @@ test('WP-03: entity requests keep the artifacts contract',()=>{
  assert.match(contract(prompt),/artifacts:\[/u);assert.match(prompt,/character-facts-encoding-contract/u)
 })
 // 491-G2: hashes captured at b26975f, before the item category change. Other roster prompts must not move.
-test('491-G2: character, scene and world roster prompts are byte-identical to the baseline',()=>{
- const baseline={character:'6ffb4c39c663af39b401d6c9265e372a0f8baf24995ca0eb88c6b4a9850894f7',scene:'14c60245232033c0c696c5364bf55638176dcfad4c3b3441661f1e6970c832aa',world:'c677627093af52e8245a3c4810c4e316a5afc8a7f1872db8127c5325563c7377'}
+test('491-G2: character and scene roster prompts are byte-identical to the baseline; world and item follow docs/503',()=>{
+ // character/scene: b26975f. world/item: docs/503 2R (world definition, no novel-specific words).
+ const baseline={character:'6ffb4c39c663af39b401d6c9265e372a0f8baf24995ca0eb88c6b4a9850894f7',scene:'14c60245232033c0c696c5364bf55638176dcfad4c3b3441661f1e6970c832aa',world:'40874cb4e655f1540076fed82ff6ccc69b5b099fb67f0d98fa8ded83c258e724',item:'5b85aa0fb6e7e13e4262f41c76d3e185c02be1e98dedf56809d782c5d1789fc5'}
  for(const [kind,hash] of Object.entries(baseline))assert.equal(createHash('sha256').update(importAiPrompt(request('roster',kind as ImportAiRequest['kind']))).digest('hex'),hash,kind)
 })

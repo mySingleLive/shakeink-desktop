@@ -9,6 +9,8 @@ import {WIZARD_STEPS,WIZARD_STEP_TITLES,WIZARD_IMAGE_KINDS,WIZARD_IMAGE_OWNER,ty
 import {mutateNovelImport,readNovelImportWizardImage} from '@/lib/desktop/novel-import'
 import {WIZARD_ENTITY_LABELS,WIZARD_IMAGE_LABELS,wizardAnalyzeButton,wizardCandidateMatches,wizardImportButton,wizardProgressText,wizardStageText,wizardStepNumber,wizardVolumeToggle,type WizardEntityKind} from '@/lib/desktop/novel-import-wizard'
 import {SceneIdentityDetails} from './SceneIdentityDetails'
+import {getTabIcon} from '@/stores/tabs'
+import type {SettingType} from '@/generated/prisma/enums'
 
 /** The approved step-by-step import wizard (design/novel-import-wizard). Every value comes from view.wizard. */
 const STAGES=['准备','结构与正文','角色 · 场景 · 物品','世界观','线索','校验与完成']
@@ -19,6 +21,9 @@ const ROLE_LABELS={PROTAGONIST:'主角',SUPPORTING:'配角',ANTAGONIST:'反派'}
 const IMAGE_ICON:Record<WizardImageKind,typeof CircleUserRound>={avatar:CircleUserRound,portrait:ImageIcon,exterior:Mountain,interior:House,icon:Gem}
 const ENTITY_ICON={character:UserRound,scene:MapPin,item:Gem,world:Globe}
 const STATE_TEXT={waiting:'等待',running:'导入中',done:'已完成',failed:'失败',paused:'已暂停',skipped:'已跳过'} as const
+/** World candidates use the workbench tree icons, so each setting type has its own icon (docs/506 3R-6). */
+const worldIcon=(c?:WizardCandidate)=>c?.kind==='world-setting'&&c.settingType?getTabIcon({type:'setting',settingType:c.settingType as SettingType}):getTabIcon({type:'world'})
+const worldTag=(c:WizardCandidate)=>c.kind==='world'?'世界':SETTING_LABELS[c.settingType??'']??''
 const SETTING_LABELS:Record<string,string>={LEVEL_SYSTEM:'等级体系',POWER_SYSTEM:'力量体系',CONCEPT:'概念',MAP:'地图',FACTION:'势力',SOCIETY:'社会环境',CULTURE:'人文环境',GEOGRAPHY:'地理',WORLD_HISTORY:'世界历史'}
 
 type Props={view:ImportView&{wizard:ImportWizardView};busy:boolean;onStop():void;onRevise():void}
@@ -138,7 +143,7 @@ function WorldTree({list,busy,select}:{list:WizardCandidate[];busy:boolean;selec
  const leaves=(id:string):WizardCandidate[]=>{const kids=list.filter(c=>c.parentId===id);return kids.length?kids.flatMap(k=>leaves(k.id)):list.filter(c=>c.id===id)}
  const render=(parent:string|undefined,depth:number):ReactNode=>list.filter(c=>c.kind==='world'&&c.parentId===parent).map(world=>{const all=leaves(world.id),on=all.filter(c=>c.selected).length
   return <li key={world.id}><div className="ni-w-node ni-w-vol" style={{paddingLeft:12+depth*24}}><TriBox state={on===all.length?'checked':on?'mixed':'unchecked'} label={`选择 ${world.name} 及其下全部设定`} disabled={busy} onChange={checked=>select([world.id],checked)}/><Globe/><span>{world.name}</span><span className="ni-w-sub">{on} / {all.length}</span></div>
-   <ul>{list.filter(c=>c.kind==='world-setting'&&c.parentId===world.id).map(s=><li key={s.id}><div className={`ni-w-node ${s.selected?'':'ni-muted'}`} style={{paddingLeft:40+depth*24}}><input type="checkbox" aria-label={`选择 ${SETTING_LABELS[s.settingType??'']??''}：${s.name}`} checked={s.selected} disabled={busy} onChange={event=>select([s.id],event.target.checked)}/><span className="ni-w-tag">{SETTING_LABELS[s.settingType??'']}</span><span>{s.name}</span></div></li>)}{render(world.id,depth+1)}</ul></li>})
+   <ul>{list.filter(c=>c.kind==='world-setting'&&c.parentId===world.id).map(s=><li key={s.id}><div className={`ni-w-node ${s.selected?'':'ni-muted'}`} style={{paddingLeft:40+depth*24}}><input type="checkbox" aria-label={`选择 ${SETTING_LABELS[s.settingType??'']??''}：${s.name}`} checked={s.selected} disabled={busy} onChange={event=>select([s.id],event.target.checked)}/>{(()=>{const I=worldIcon(s);return <I className="ni-w-type" aria-hidden="true"/>})()}<span className="ni-w-tag">{SETTING_LABELS[s.settingType??'']}</span><span>{s.name}</span></div></li>)}{render(world.id,depth+1)}</ul></li>})
  return <ul className="ni-w-tree" aria-label="世界观">{render(undefined,0)}</ul>
 }
 
@@ -148,14 +153,14 @@ function Thumb({taskId,kind,name}:{taskId:string;kind:WizardImageKind;name:strin
  return url?<img className={`ni-w-thumb ni-w-thumb-${kind}`} src={url} alt=""/>:<span className={`ni-w-thumb ni-w-thumb-${kind}`} aria-hidden="true">{name.slice(0,1)}</span>
 }
 function ImportStep(props:Props&{kind:WizardEntityKind}){
- const {view,busy,kind}=props,w=view.wizard,list=w.candidates[kind]??[],name=(id?:string)=>list.find(c=>c.id===id)?.name??'',hint=(id?:string)=>list.find(c=>c.id===id)?.sceneHint
+ const {view,busy,kind}=props,w=view.wizard,list=w.candidates[kind]??[],entry=(id?:string)=>list.find(c=>c.id===id),name=(id?:string)=>entry(id)?.name??'',hint=(id?:string)=>list.find(c=>c.id===id)?.sceneHint
  const tasks=w.tasks.filter(t=>list.some(c=>c.id===t.candidateId)||kind==='world'&&t.kind==='settings'),entities=tasks.filter(t=>t.kind!=='image')
  const failed=tasks.filter(t=>t.state==='failed').length,done=tasks.filter(t=>t.state==='done'||t.state==='skipped').length
  // The step waits with unfinished work but nothing failed: continuing re-enters the import (486 3R).
  const stuck=w.stepState[w.step]==='waiting'&&view.phase==='select'&&!failed
  const Icon=ENTITY_ICON[kind],imagesOf=(id:string)=>tasks.filter(t=>t.kind==='image'&&t.dependsOn===id)
  const cell=(t:typeof tasks[number])=>{const label=t.kind==='settings'?IMPORT_LABELS[t.settingsKind!]:name(t.candidateId);return <div key={t.id} className="ni-w-ent" data-s={t.state}>
-  <span className="ni-w-quill">{t.kind==='settings'?<Sparkles/>:<Icon/>}</span><div className="ni-w-nm"><span>{label}</span>{hint(t.candidateId)&&<span className="ni-w-sub">{hint(t.candidateId)}</span>}{t.state==='done'&&<Check className="ni-w-ok"/>}<span className="ni-w-sr">，{STATE_TEXT[t.state]}</span></div>
+  <span className="ni-w-quill">{t.kind==='settings'?<Sparkles/>:kind==='world'?(()=>{const I=worldIcon(entry(t.candidateId));return <I/>})():<Icon/>}</span><div className="ni-w-nm"><span>{label}</span>{kind==='world'&&t.kind!=='settings'&&entry(t.candidateId)&&<span className="ni-w-tag">{worldTag(entry(t.candidateId)!)}</span>}{hint(t.candidateId)&&<span className="ni-w-sub">{hint(t.candidateId)}</span>}{t.state==='done'&&<Check className="ni-w-ok"/>}<span className="ni-w-sr">，{STATE_TEXT[t.state]}</span></div>
   <span className="ni-w-st" aria-hidden={t.state==='done'}>{t.state==='running'?<><LoaderCircle className="ni-spinner"/><span className="ni-w-rm">导入中</span></>:t.state==='failed'||t.state==='done'?'':STATE_TEXT[t.state]}</span>
   {t.state==='failed'&&<span className="ni-w-acts"><span className="ni-error-text">{t.error}</span><Button size="sm" variant="outline" disabled={busy} onClick={()=>void act('wizard-task',{taskId:t.id,op:'retry'})}><RotateCcw/>重试</Button><Button size="sm" variant="ghost" disabled={busy} onClick={()=>void act('wizard-task',{taskId:t.id,op:'skip'})}>跳过</Button></span>}
   {imagesOf(t.id).length>0&&<span className="ni-w-chips">{imagesOf(t.id).map(i=>{const IconI=IMAGE_ICON[i.imageKind!];return <span key={i.id} className="ni-w-chip" data-s={i.state}>{i.state==='done'?<Thumb taskId={i.id} kind={i.imageKind!} name={label}/>:<IconI/>}{WIZARD_IMAGE_LABELS[i.imageKind!]}{i.state==='running'&&<LoaderCircle className="ni-spinner"/>}{i.state==='done'&&<Check className="ni-w-ok"/>}{i.state==='failed'&&<><button type="button" className="ni-source-link" onClick={()=>void act('wizard-task',{taskId:i.id,op:'retry'})}>重试</button><button type="button" className="ni-source-link" onClick={()=>void act('wizard-task',{taskId:i.id,op:'skip'})}>跳过</button></>}{(i.state==='waiting'||i.state==='paused'||i.state==='skipped')&&<small>{STATE_TEXT[i.state]}</small>}<span className="ni-w-sr">，{WIZARD_IMAGE_LABELS[i.imageKind!]}{STATE_TEXT[i.state]}</span></span>})}</span>}

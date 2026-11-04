@@ -80,7 +80,7 @@ export function patchWizardChapters(prose:string,chapters:readonly ImportChapter
  * are people, places, groups or concepts listed by mistake. */
 export const ITEM_ROSTER_CATEGORIES=['item','character','place','organization','concept','other'] as const
 export type ItemRosterCategory=typeof ITEM_ROSTER_CATEGORIES[number]
-export interface WizardRosterEntry {name:string;aliases:string[];roleType?:WizardRoleType;parent?:string;itemType?:string;important?:boolean;category?:ItemRosterCategory}
+export interface WizardRosterEntry {name:string;aliases:string[];roleType?:WizardRoleType;parent?:string;itemType?:string;important?:boolean;category?:ItemRosterCategory;parallel?:boolean}
 
 const ID_PREFIX:Record<WizardCandidateKind,string>={character:'c',scene:'s',item:'i',world:'w','world-setting':'ws'}
 /** Same name and kind always yield the same id; ids are safe as journal keys and file names. */
@@ -138,6 +138,14 @@ export function itemRosterTaken(w:{candidates:Partial<Record<WizardCandidateKind
  const kept=[...(w.candidates.character??[]).filter(c=>c.selected),...(w.candidates.scene??[]).filter(c=>c.selected&&c.sceneIdentityState!=='unresolved')]
  return new Set(kept.flatMap(c=>[c.name,...c.aliases]).map(normalizeWizardName).filter(Boolean))
 }
+/** Names a world must not have: selected characters and their aliases (docs/503 2R4). Places are
+ * not included; a place-named child world is judged by its settings instead. */
+export function worldRosterTaken(w:{candidates:Partial<Record<WizardCandidateKind,readonly WizardCandidate[]>>}):Set<string>{
+ return new Set((w.candidates.character??[]).filter(c=>c.selected).flatMap(c=>[c.name,...c.aliases]).map(normalizeWizardName).filter(Boolean))
+}
+/** The one main world of a body roster keeps this id whatever name wins, so selections survive redetect. */
+export const WIZARD_MAIN_WORLD_ID=wizardCandidateId('world','主世界','main')
+export const WIZARD_MAIN_WORLD_NAME='主世界'
 
 /** World tree: world nodes and their settings/child worlds. Selection is stored on leaves; a world
  * without children is its own leaf. */

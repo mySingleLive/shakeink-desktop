@@ -239,7 +239,7 @@ test('NIW-C40: entity requests carry a strict catalogue and aliases in the instr
   assert.ok(sc.entities!.every(e=>e.entityType==='PLACE'));assert.ok(ch.instruction!.includes('"aliases"'))
  }finally{await f.dispose()}
 })
-test('NIW-C26/C28: world tasks run before their settings; a parent with only a selected child world stays as its container',async()=>{
+test('NIW-C26/C28: settings start without waiting for their world (docs/506 3R4); a parent with only a selected child world stays as its container',async()=>{
  const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(worldsAi(f.handler()))
  try{
   await toImportChar(f);let v=await toWorldImport(f)
@@ -249,22 +249,27 @@ test('NIW-C26/C28: world tasks run before their settings; a parent with only a s
   await f.act('wizard-select-candidates',{kind:'world',ids:own,selected:false})
   const order:string[]=[];const inner=f.handler();f.setAi(async r=>{if(r.intent==='entity'&&r.kind==='world')order.push(entityName(r));return inner(r)})
   await f.act('wizard-next');v=await f.settle()
-  assert.ok(order.indexOf('南巷梦境')>=0&&order.indexOf('梦俗')>order.indexOf('南巷梦境'),'setting after its world: '+order.join(','))
+  assert.ok(order.includes('南巷梦境')&&order.includes('梦俗'),'world and its setting both imported: '+order.join(','))
+  const tasks=v.wizard!.tasks,dream=v.wizard!.candidates.world!.find(c=>c.name==='梦俗')!,sub=tasks.find(t=>t.candidateId===child.id)!
+  assert.equal(tasks.find(t=>t.candidateId===dream.id)!.dependsOn,undefined,'a setting has no task dependency');assert.equal(sub.dependsOn,tasks.find(t=>t.candidateId===top.id)!.id,'a child world still waits for its parent')
   assert.ok(!order.includes('城制')&&!order.includes('山川'))
   const j=await f.journal(),childArtifact=j.artifacts.find(a=>a.name==='南巷梦境')!,container=j.artifacts.find(a=>a.name==='北城世界')!
   assert.equal(childArtifact.facts.parentId,container.id);assert.equal(container.facts.entityType,'WORLD')
  }finally{await f.dispose()}
 })
-test('NIW-C27: a failed world blocks its settings until retried or skipped together',async()=>{
+test('NIW-C27: a failed world does not hold its settings; skipping it also skips its child world and removes its imported settings (docs/506 3R4)',async()=>{
  const f=await legacySceneFixture(filesF(),rosterAi());const w=worldsAi(f.handler())
  f.setAi(async r=>{if(r.intent==='entity'&&r.kind==='world'&&entityName(r)==='北城世界')throw Error('Server Error');return w(r)})
  try{
   await toImportChar(f);await toWorldImport(f);await f.act('wizard-next');let v=await f.settle()
   const name=(id?:string)=>v.wizard!.candidates.world!.find(c=>c.id===id)?.name
   const byName=(n:string)=>v.wizard!.tasks.find(t=>name(t.candidateId)===n)!
-  assert.equal(byName('北城世界').state,'failed');assert.equal(byName('城制').state,'waiting');assert.equal(byName('山川').state,'waiting')
+  assert.equal(byName('北城世界').state,'failed');assert.equal(byName('城制').state,'done');assert.equal(byName('山川').state,'done');assert.equal(byName('南巷梦境').state,'waiting')
   await f.act('wizard-task',{taskId:byName('北城世界').id,op:'skip'});v=await f.settle()
-  assert.equal(byName('城制').state,'skipped');assert.ok(v.wizard!.skipped.some(s=>s.label==='城制'))
+  for(const n of ['南巷梦境','梦俗','城制','山川'])assert.equal(byName(n).state,'skipped',n)
+  assert.ok(['城制','山川','梦俗'].every(n=>v.wizard!.skipped.some(s=>s.label===n)))
+  const j=await f.journal();assert.ok(!j.artifacts.some(a=>['城制','山川'].includes(a.name)),'imported settings of a skipped world are removed')
+  assert.notEqual(v.wizard!.step,'import-world',v.wizard!.stepError)
  }finally{await f.dispose()}
 })
 test('NIW-C10: step 16 runs one task per other setting kind; source-only kinds copy without a model call',async()=>{

@@ -43,3 +43,4 @@
 @keyframes ni-w-pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}@keyframes ni-w-write{0%,100%{transform:none}50%{transform:translate(2px,-2px) rotate(-12deg)}}
 @media(max-width:700px){.ni-w-stages{display:none}.ni-w-stage-now{display:block}.ni-w-tree{max-height:none}.ni-w-after{padding:10px 20px}}
 @media(prefers-reduced-motion:reduce){.ni-w-ok,.ni-w-ent[data-s=running] .ni-w-quill svg{animation:none}.ni-w-bar i,.ni-w-tw svg{transition:none}.ni-w-rm{display:inline}.ni-w-st .ni-spinner{display:none}}
+.ni-w-type{width:14px;height:14px;flex-shrink:0;color:var(--muted-foreground,#77766e)}.ni-w-nm .ni-w-tag{flex-shrink:0}

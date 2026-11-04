@@ -37,7 +37,7 @@ export interface ImportArtifactEditContext {units:ImportUnit[];locks?:ImportSema
 export interface ImportReconcileContext {targetIds:string[];locks:ImportSemanticLock[];decisionHash:string;workingRevision:number;decisions?:{conflictId:string;choice:string;explanation?:string;hash:string}[];fragments?:{artifactId:string;baseHash:string;start:number;end:number;fields:string[]}[]}
 export interface ImportMissingTarget {kind:ImportTarget;unitIds:string[];evidence:ImportEvidence[];reason:string;artifactId?:string;field?:string;baseHash?:string}
 export interface ImportReviewProjection {artifactId:string;semanticHash:string;fullTextLength:number;fullFactKeys:string[];fields:string[];textRange?:{start:number;end:number}}
-export interface ImportRosterEntry {name:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';parent?:string;itemType?:string;important?:boolean;category?:'item'|'character'|'place'|'organization'|'concept'|'other';settings?:{settingType:ImportWorldSettingType;name:string}[];evidence:ImportEvidence}
+export interface ImportRosterEntry {name:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';parent?:string;itemType?:string;important?:boolean;category?:'item'|'character'|'place'|'organization'|'concept'|'other';parallel?:boolean;settings?:{settingType:ImportWorldSettingType;name:string}[];evidence:ImportEvidence}
 export interface ImportTouchEntry {foreshadowKey:string;title:string;content:string;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string};evidence:ImportEvidence}
 export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];sceneRosterRecords?:SceneMentionRecord[];sceneIdentityDecisions?:SceneIdentityDecision[];sceneCleanup?:SceneCleanupDecision[];touches?:ImportTouchEntry[];sceneParents?:{id:string;parentId?:string;evidence:ImportEvidence}[]}
 export interface ImportSemanticEntity {id:string;kind:ImportTarget;name:string;unitIds?:string[];parentId?:string;entityType?:'PLACE'|'WORLD'|'SETTING';worldId?:string;settingType?:ImportWorldSettingType}
@@ -124,6 +124,15 @@ function nativeWorldContentVisible(content:SettingContent):boolean{
 
 /** Strict native decode comes before the editor's deliberately tolerant legacy
  * normalizer. Equality rejects any normalization that discards source content. */
+/** Fixed descriptions of why world content fails its native schema: known field names and zod issue
+ * codes only, never provider values or unknown keys, so it may enter a correction or a debug log. */
+export function importWorldContentIssues(type:string,raw:unknown):string[]{
+ let value=raw;if(typeof raw==='string'){try{value=JSON.parse(raw)}catch{return ['content不是合法JSON字符串']}}
+ const schema=type==='LEVEL_SYSTEM'?levelContentSchema:type==='CONCEPT'?conceptSchema:type==='FACTION'?factionSchema:z.object({text:string}).strict()
+ const known=new Set(['factions','concepts','text','name','description','relations','id','term','explanation','scope','form','rules','levels','pathways','aliases','tags','condition','abilities','children'])
+ const result=schema.safeParse(value,{reportInput:true});if(result.success)return []
+ return [...new Set(result.error.issues.slice(0,6).map(issue=>{const path=issue.path.map(p=>typeof p==='number'?'[]':known.has(String(p))?String(p):'?').join('.')||'(根)';return path+':'+issue.code+(issue.code==='invalid_type'?'('+(issue.input===null?'null':Array.isArray(issue.input)?'array':typeof issue.input)+')':issue.code==='unrecognized_keys'?'('+(issue.keys.filter(k=>known.has(k)).join('/')||'?')+')':'')}))]
+}
 export function decodeImportWorldContent(type:string,raw:unknown):SettingContent{
  if(!IMPORT_WORLD_SETTING_TYPES.includes(type as ImportWorldSettingType))return fail('世界设定类型无效')
  let value=raw;if(typeof raw==='string'){try{value=JSON.parse(raw)}catch{return fail('世界设定内容结构无效')}}

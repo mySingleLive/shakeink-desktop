@@ -12,8 +12,8 @@ test('SP-01: scene extraction uses the light model policy without changing saved
  const resolved={model:{},modelRecord:{},providerOptions:{deepseek:{thinking:{type:'enabled'}},openai:{store:false},original:{kept:true}}} as unknown as ResolvedModel,saved={provider:'deepseek',protocol:'openai',modelId:'synthetic',thinkingLevels:['low','high'],defaultThinking:'high'},before=structuredClone(saved),options=structuredClone(resolved.providerOptions)
  const request={semanticVersion:1,phase:'analyze',intent:'entity',kind:'scene'} as ImportAiRequest,out=importGenerationModel(request,resolved,saved)
  assert.deepEqual(out.providerOptions,{...options,deepseek:{thinking:{type:'disabled'}}});assert.equal(out.model,resolved.model);assert.deepEqual(resolved.providerOptions,options);assert.deepEqual(saved,before)
- // Item entity extraction shares the light policy since docs/493; IP-03 covers it.
- for(const r of [{...request,intent:undefined},{...request,intent:'reconcile'},{...request,phase:'review'},{...request,kind:'world'},{...request,semanticVersion:undefined}])assert.equal(importGenerationModel(r as ImportAiRequest,resolved,saved),resolved)
+ // Item (docs/493) and world (docs/506) entity extraction share the light policy; IP-03 and WP-03 cover them.
+ for(const r of [{...request,intent:undefined},{...request,intent:'reconcile'},{...request,phase:'review'},{...request,semanticVersion:undefined}])assert.equal(importGenerationModel(r as ImportAiRequest,resolved,saved),resolved)
 })
 test('SP-05: only absent scene control metadata is supplied from the trusted target; explicit wrong values stay rejected',async()=>{
  const text='合成房间有灯火。',own={id:'s-room',kind:'scene' as const,name:'合成房间',entityType:'PLACE' as const,parentId:'s-parent'},request:ImportAiRequest={semanticVersion:1,operationId:'sp-control',phase:'analyze',intent:'entity',kind:'scene',entityTarget:{id:own.id,aliases:[]},entities:[own,{id:'s-parent',kind:'scene',name:'父城',entityType:'PLACE'},{id:'s-other',kind:'scene',name:'另一父城',entityType:'PLACE'}],units:[{id:'u-room',fileId:'f',start:0,end:text.length,text,kind:'body'}],artifacts:[],workingRevision:0,models:{text:model}}
