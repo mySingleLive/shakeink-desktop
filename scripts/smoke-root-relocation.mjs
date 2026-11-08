@@ -40,7 +40,7 @@ try{
  const seed=JSON.parse(execFileSync(process.execPath,['--import','tsx','scripts/seed-electron-fixture.ts',temporary],{encoding:'utf8'}).trim().split('\n').at(-1))
  const work=JSON.parse(await readFile(join(root,'catalog.json'),'utf8')).value[0]
  const workManifest=await readFile(join(work.path,'shakeink-work.json'))
- await launch();await page.getByRole('button',{name:'账号菜单'}).waitFor({timeout:60000})
+ await launch();{const later=page.getByRole('button',{name:'暂不配置',exact:true});await later.waitFor({timeout:20000}).then(()=>later.click(),()=>undefined)}await page.getByRole('button',{name:/^账号菜单/}).waitFor({timeout:60000})
  await page.locator('.chat-composer-editable').click();await page.keyboard.insertText('原目录移动后仍保留的未提交输入')
  const initialProcess=app.process(),initialPid=initialProcess.pid
  await page.evaluate(()=>window.desktop.command('app.quit')).catch(()=>{})
@@ -64,10 +64,7 @@ try{
    if(step===0)return{canceled:true,filePaths:[]}
    return{canceled:false,filePaths:[step===1?values.wrong:values.moved]}
   }
-  dialog.showMessageBox=async(_window,options)=>{
-   if(options.title!=='确认原数据目录'||!options.detail.includes(values.root)||!options.detail.includes(values.moved)||options.defaultId!==1||options.cancelId!==1)throw Error('unexpected native confirmation')
-   globalThis.relocationSmoke33.confirmations.push(options.detail);return{response:0}
-  }
+  dialog.showMessageBox=async()=>{throw Error('relocation must use the React confirmation, not a native message box')}
  },{root,moved,wrong:work.path})
  const choose=()=>page.getByRole('button',{name:'定位原数据目录',exact:true})
  await choose().click();await expect(page.getByRole('heading',{name:'定位已取消',exact:true})).toBeVisible()
@@ -80,9 +77,15 @@ try{
  checks.push('controlled native picker cancellation and selection of an existing work directory preserve pointer and work bytes; the actual UI rejects the unrelated directory and permits another selection')
  const oldProcess=app.process(),oldPid=oldProcess.pid,exited=new Promise(r=>oldProcess.once('exit',r))
  await choose().click()
+ // The confirmation is the relocation screen's React prompt (510).
+ const confirm=page.getByRole('dialog',{name:'确认原数据目录',exact:true});await confirm.waitFor({timeout:30000})
+ const detail=await confirm.innerText();if(!detail.includes(root)||!detail.includes(moved))throw Error('unexpected confirmation detail')
+ if(await page.evaluate(()=>document.activeElement?.textContent)!=='取消')throw Error('confirmation default must be cancel')
+ await page.screenshot({path:join(evidence,'relocation-confirm-prompt.png')})
+ await confirm.getByRole('button',{name:'使用原目录并重新打开',exact:true}).click()
  await Promise.race([exited,new Promise((_,reject)=>setTimeout(()=>reject(Error('relocation did not exit old process')),60000).unref())]);app=null
  const pid=await connect();assert.notEqual(pid,oldPid);assert.equal(alive(oldPid),false)
- await page.getByRole('button',{name:'账号菜单'}).waitFor({timeout:60000})
+ await page.getByRole('button',{name:/^账号菜单/}).waitFor({timeout:60000})
  await expect(page.getByText('桌面验收夹具',{exact:true}).first()).toBeVisible({timeout:30000})
  const pointer=JSON.parse(await readFile(join(bootstrap,'data-root.json'),'utf8'))
  assert.equal(pointer.revision,oldPointer.revision+1);assert.equal(pointer.rootId,oldPointer.rootId)

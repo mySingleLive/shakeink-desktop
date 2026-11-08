@@ -33,7 +33,7 @@ export function bodyOf(paragraphs:string[],pad=1100){return '第一章 起\n\n'+
 export const smallModel:ImportModel={id:'text-small',name:'受控小窗口模型',modelId:'synthetic-small',endpoint:'https://model.invalid/v1',authRevision:1,contextWindow:16000}
 export const smallReview:ImportModel={...smallModel,id:'review-small',name:'受控小窗口审核模型'}
 
-export async function sceneFixture(rows:Row[],text:string,handlers:Handlers={},over:{models?:{text?:ImportModel;review?:ImportModel};notes?:string}={}){
+export async function sceneFixture(rows:Row[],text:string,handlers:Handlers={},over:{models?:{text?:ImportModel;review?:ImportModel};notes?:string;promptLayout?:'legacy';sceneFragmentLayout?:'compact-v1'}={}){
  const calls={cleanup:0,links:0,parents:0,review:0}
  const unitWith=(units:readonly ImportUnit[],quote:string)=>units.find(u=>u.text.includes(quote))
  const rowsIn=(units:readonly ImportUnit[],memberRanges:{unitId:string;start:number;end:number}[])=>[...new Set(memberRanges.flatMap(r=>{const u=units.find(u=>u.id===r.unitId);if(!u)return [];const slice=u.text.slice(r.start,r.end);return rows.flatMap((row,i)=>row.mentions.some(m=>m.quote===slice)?[i]:[])}))]
@@ -73,7 +73,7 @@ export async function sceneFixture(rows:Row[],text:string,handlers:Handlers={},o
   else if(r.phase==='review'){const call=++calls.review;raw=handlers.review?.(r,call,r.units)??{conflicts:[],missingTargets:[]}}
   else return {notFound:true}
   return runImportAi(r,new AbortController().signal,{resolve:async role=>r.models[role]!,assert:async()=>{},generate:async(input,_model,signal,prompt)=>generateImportAiJson(input,{userId:'synthetic-scene-cleanup',resolvedModel:{} as ResolvedModel},signal,prompt,{generateText:async()=>({text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'})})})
- },{models:over.models})
+ },{models:over.models,...(over.promptLayout?{promptLayout:over.promptLayout}:{}),...(over.sceneFragmentLayout?{sceneFragmentLayout:over.sceneFragmentLayout}:{})})
  const session=()=>(f.controller as unknown as {session:ImportSession}).session
  const ledger=()=>session().wizard!.sceneIdentity! as SceneIdentityLedger
  const cleanupRequests=()=>f.requests.filter(r=>(r.sceneIdentity as {mode?:string}|undefined)?.mode==='cleanup')

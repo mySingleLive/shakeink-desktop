@@ -60,7 +60,7 @@ function fixture(options: { darwin?: Bindings; win32?: Bindings; write?: () => P
     ;(surface.props.onFocus as ((event: Props) => void) | undefined)?.({ target: surface })
   }
   globals.window = { addEventListener(_name: string, listener: Listener) { listeners.add(listener) }, removeEventListener(_name: string, listener: Listener) { listeners.delete(listener) } }
-  globals.document = { getElementById(id: string) { return surfaces.find(surface => surface.props.id === id) ?? null } }
+  globals.document = { getElementById(id: string) { return surfaces.find(surface => surface.props.id === id) ?? null }, querySelector() { return null } }
   globals.requestAnimationFrame = (callback: () => void) => { frames.push(callback); return frames.length }
   const react = {
     useSyncExternalStore(_subscribe:unknown,snapshot:()=>unknown){return snapshot()},

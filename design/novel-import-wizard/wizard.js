@@ -16,7 +16,7 @@ const ITEMS=[['铜灯',58,'封印物'],['星图残页',31,'线索'],['黑羽怀�
 const worldsSeed=()=>[{id:'w0',name:'雾海世界',items:[['等级体系','非凡序列（九级）'],['力量体系','途径与仪式'],['社会环境','王国议会与教会'],['人文环境','雾港民俗与信仰'],['地理','北大陆与镜海'],['势力','守夜人、灰袍会']],children:[{id:'w1',name:'梦境层',items:[['概念','梦境与灵性'],['地理','七层梦境']],children:[]}]}].map(function norm(w){return {...w,items:w.items.map(([type,name],k)=>({id:w.id+':'+k,type,name,on:true})),children:w.children.map(norm)}})
 const FAIL_ID='c4'
 const STEPS=[['entry','选择来源',0,'list'],['files','确认文件',0,'list'],['work','作品与目录',0,'list'],['kinds','选择内容',0,'list'],['detect-struct','识别卷章',1,'auto'],['tree','选择卷章',1,'list'],['import-struct','导入大纲结构',1,'auto'],['import-body','导入正文',1,'auto'],['detect-char','识别角色',2,'detect'],['import-char','导入角色',2,'import'],['detect-scene','识别场景',2,'detect'],['import-scene','导入场景',2,'import'],['detect-item','识别物品',2,'detect'],['import-item','导入物品',2,'import'],['detect-world','识别世界观',3,'detect'],['import-world','导入世界观',3,'import'],['worldline','导入世界线',4,'auto'],['narrative','导入叙事线',4,'auto'],['outline','补充细纲',4,'auto'],['foreshadow','导入伏笔',4,'auto'],['verify','校验',5,'final'],['done','完成',5,'final']].map(([id,title,stage,type])=>({id,title,stage,type}))
-const STAGES=['准备','结构与正文','角色 · 场景 · 物品','世界观','线索','校验与完成']
+const STAGES=['准备','结构与正文','角色 · 场景 · 物品','世界观','剧情','校验与完成']
 let S,timers=[]
 const at=id=>STEPS.findIndex(s=>s.id===id),step=()=>STEPS[S.i]
 function fresh(scenario='normal',fail=true){

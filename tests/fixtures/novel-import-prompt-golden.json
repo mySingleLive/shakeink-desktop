@@ -1,0 +1,198 @@
+{
+ "identity-characters:analyze/entity/character///": [
+  {
+   "payload": "6aa318ed0bbf4731a9e0fd2eeb6bdcbdab5c679c8be672de78bfc146efdfc120",
+   "prompt": "230f4968a52bbf4d2c56f4edb19d16b5b9d5c5768c4ef532f59b3d7bb424ee14"
+  },
+  {
+   "payload": "f74435c0c67a9c33d19a757d7684d3413d44ab11b7057baacfdc7f463a3aa5f2",
+   "prompt": "416ee080ed1fa11501bf8070cfa9b629c118eebc0bd99b9b3ce3cc58eca37326"
+  },
+  {
+   "payload": "0244bc6bb7eca51a20ebd191007bab556ba3720af7444a650ed38a9899a21d77",
+   "prompt": "e253cfdbbd408d70e2d9362c068edb7169a1583aed9009294af535e2fcd18c38"
+  }
+ ],
+ "identity-characters:analyze/roster/character///": [
+  {
+   "payload": "e1a1700384ad15ab24fd0a9bdde9f21423849ca3d09ed4f53bda5a34fbe1b404",
+   "prompt": "714ddca17105ec2e080c1e891d3abf3c37ff0d60c6c525807e31e69ccdea7f29"
+  }
+ ],
+ "identity-characters:analyze/roster/scene/roster//": [
+  {
+   "payload": "ad7a797500dd069cbf4e9cddf8dad3b585dd2ed49f4f48d853e594b39db89f72",
+   "prompt": "33e0caf3a6651f819606bb1d63620d2f73da6723324a1e3b2d80c8f4c4782d59"
+  },
+  {
+   "payload": "ad7a797500dd069cbf4e9cddf8dad3b585dd2ed49f4f48d853e594b39db89f72",
+   "prompt": "33e0caf3a6651f819606bb1d63620d2f73da6723324a1e3b2d80c8f4c4782d59"
+  },
+  {
+   "payload": "ad7a797500dd069cbf4e9cddf8dad3b585dd2ed49f4f48d853e594b39db89f72",
+   "prompt": "33e0caf3a6651f819606bb1d63620d2f73da6723324a1e3b2d80c8f4c4782d59"
+  }
+ ],
+ "identity-characters:classify/////": [
+  {
+   "payload": "4a89d88bc73d25ddebb358424c78e5b63221ce19e5902da735b502640e831187",
+   "prompt": "a53b5690d75fedf8852b3c9a5ecafca2d5a739430088031534cabda4c6d08349"
+  }
+ ],
+ "identity-characters:classify/structure////": [
+  {
+   "payload": "ccfc7a8d8890cbcd9aa3618730a17e27732572beec0862550bba0a17b465bc2a",
+   "prompt": "dd11351abdd91eaaf1e2d9a10b65fd3d63784d26f73dc9634a1e8ad60d688f0a"
+  }
+ ],
+ "legacy-scene:analyze//goldenFinger//wizard-settings-v1/": [
+  {
+   "payload": "26410ad5f8a882b12a2ed9b15ef2d3e38a26100a218d88fc6df8dd81945929a6",
+   "prompt": "99b74e8fbc046681e4d0785b8e9c1c8ce908fa7f0045857d43f3b709ab7609d1"
+  }
+ ],
+ "legacy-scene:analyze//narrative//wizard-lines-v1/": [
+  {
+   "payload": "a8916f212ac0f80939b0742c01665ba4ef1ecc42d4e2c1bbd463b050de57c2f3",
+   "prompt": "b1b0c7ae018e9c7493767cacf92a696f0f9cf9cecb5a30b010de959d3c92d964"
+  }
+ ],
+ "legacy-scene:analyze//outline//wizard-lines-v1/": [
+  {
+   "payload": "8998bd8b0d0c7219869b11ace203579910fcabf12d84517f8645cf7634281902",
+   "prompt": "35d17f0f4c8e7fc3004149e73865cf9329dada3e33fcc88ea5d1dfbb35b4a7ab"
+  },
+  {
+   "payload": "e90b4ef1fa0a62c8ff0a56559830f7356216990f663a1b6d82a6ceee947fe6a1",
+   "prompt": "75ac62194535b634010e9c4261e044da3dcec471a01a9851dcb5de48b675769b"
+  }
+ ],
+ "legacy-scene:analyze//style//wizard-settings-v1/": [
+  {
+   "payload": "af7611dc0e825fbd262c265fc84a3922a736aa86550029f2e0eb1bf22d55a315",
+   "prompt": "49edb0ebea51a65b1e9b51cd857c65dd3ee782b9393d71bf09b3154892b5a573"
+  }
+ ],
+ "legacy-scene:analyze//theme//wizard-settings-v1/": [
+  {
+   "payload": "57a8e492392130747b40f57a798cdd3ae3f3893988d1b210d87c09b7fa027dba",
+   "prompt": "f8f6289dfca765fd2fb9462a82d6b768944c4fa460cc17a28411c2d46a91cc65"
+  }
+ ],
+ "legacy-scene:analyze//trope//wizard-settings-v1/": [
+  {
+   "payload": "712a98cde38aded745db44f13c9f8c428c4d451aa3747d0627156b8072e153c2",
+   "prompt": "7f809e146baae146ac094faff0dca835bf0e73c4afa6f5cef904bf86f77d92e0"
+  }
+ ],
+ "legacy-scene:analyze//worldline//wizard-lines-v1/": [
+  {
+   "payload": "8f718c918c3e29b665a8d693f170416a9f22ba17aefc3ff65dabb8b133394521",
+   "prompt": "d8dd529847e5741881db42a03094f7b2957e9cbd9a5c69f01619ee75a4e9bdfa"
+  }
+ ],
+ "legacy-scene:analyze/entity/character///": [
+  {
+   "payload": "6aa318ed0bbf4731a9e0fd2eeb6bdcbdab5c679c8be672de78bfc146efdfc120",
+   "prompt": "230f4968a52bbf4d2c56f4edb19d16b5b9d5c5768c4ef532f59b3d7bb424ee14"
+  },
+  {
+   "payload": "f74435c0c67a9c33d19a757d7684d3413d44ab11b7057baacfdc7f463a3aa5f2",
+   "prompt": "416ee080ed1fa11501bf8070cfa9b629c118eebc0bd99b9b3ce3cc58eca37326"
+  },
+  {
+   "payload": "0244bc6bb7eca51a20ebd191007bab556ba3720af7444a650ed38a9899a21d77",
+   "prompt": "e253cfdbbd408d70e2d9362c068edb7169a1583aed9009294af535e2fcd18c38"
+  }
+ ],
+ "legacy-scene:analyze/entity/item///": [
+  {
+   "payload": "36fa1eead9d5273858ec3930e2a9ab085ae9e11e5aef584d3c646b353d03488b",
+   "prompt": "bebb3043607df517a82bafe6d39b82ab286926799108e4b6470f42adc5aeb5bc"
+  }
+ ],
+ "legacy-scene:analyze/entity/scene///": [
+  {
+   "payload": "ceebfd6eeb5018545a7e104128a2f3e07b87b59631c4119b1e782b67a58827a2",
+   "prompt": "7ab9313977f597eb5705eef325e9cdb01ed5b3e5821e47db2e716e43de3d05a5"
+  },
+  {
+   "payload": "b0a0405e30b242b99121aaf5eb2d98bfb123c76155a6850d7c5fefb059cf4448",
+   "prompt": "8dc4915b99577d613880d897f159d22a0266becd5426fbd5972469254da97f4a"
+  }
+ ],
+ "legacy-scene:analyze/entity/world///": [
+  {
+   "payload": "4c04797d7bda0777f619d6f0b34a88b79c858aac899135f99dd48b6afe375b71",
+   "prompt": "12fb0882c7a77a5623ee5d4cef1828e661bdf7791369ca1da47b8d08be51708d"
+  },
+  {
+   "payload": "1718d26a456c95c093b349ff808d19abbe9734d467db46561a2e9c8fa96291e7",
+   "prompt": "43825c9dc7c967154fc14c967a7a9b4a16847a89058a2a0ff9330eaaee755f32"
+  },
+  {
+   "payload": "924675c6ecb529c31d459b48b13d402bd0e88bb7c6b99d90f11d1bcff89c5301",
+   "prompt": "5124de0b5f5a819c3820a5ec30143782cd0820c4ec19e22f7086ede50e68f69d"
+  },
+  {
+   "payload": "41f161935756d64e54cb311f949da8f7f3850feb24a509fe00089653725e397d",
+   "prompt": "673c7597dc76017b0de5dc0aee194c2f5815b0bcdfcb830817a2f6357cb550ff"
+  },
+  {
+   "payload": "a3230837b04264ecbe1a4f52c911962c69c4686166660adb42eb32f1c6168670",
+   "prompt": "b278821add8d92ecc057bc0476ccf98f29e96167a82a6de37e19552671a64aa4"
+  }
+ ],
+ "legacy-scene:analyze/roster/character///": [
+  {
+   "payload": "e1a1700384ad15ab24fd0a9bdde9f21423849ca3d09ed4f53bda5a34fbe1b404",
+   "prompt": "714ddca17105ec2e080c1e891d3abf3c37ff0d60c6c525807e31e69ccdea7f29"
+  }
+ ],
+ "legacy-scene:analyze/roster/item///": [
+  {
+   "payload": "5c83dee4d4235adf3c86784c7fd199428799e4c4ec79056df4d79ef6b4ce1fe1",
+   "prompt": "30080597c3eab990f488c56a3e6bbd03586cdb13433daa9f2790e6654c9a2828"
+  }
+ ],
+ "legacy-scene:analyze/roster/scene///": [
+  {
+   "payload": "bd201f86851501ee6609ccc4ff2ba4a293725578305107582c6c79b3518c4958",
+   "prompt": "919cb89f862b96bfaf0760e22c7f9a7c34f05d0d7f4528162ada624683f2b3b9"
+  }
+ ],
+ "legacy-scene:analyze/roster/world///": [
+  {
+   "payload": "dd75624a2830a5e2626ac238610e74715c57f0bc0df35ca342725f76c2b8dce1",
+   "prompt": "8f1a150680d85c0160927519d7a82edf3d51efc3474416a61526864722ccecc5"
+  }
+ ],
+ "legacy-scene:analyze/touches////": [
+  {
+   "payload": "633ca3bfdef57a6716494fe0af168c12ef023a78431ba5e71855f0ac1701efe2",
+   "prompt": "799439825901c735d1f2bbb2280b56190ed3d9591a3fbfa97215fbda5be6faec"
+  }
+ ],
+ "legacy-scene:classify/////": [
+  {
+   "payload": "4a89d88bc73d25ddebb358424c78e5b63221ce19e5902da735b502640e831187",
+   "prompt": "a53b5690d75fedf8852b3c9a5ecafca2d5a739430088031534cabda4c6d08349"
+  }
+ ],
+ "legacy-scene:classify/structure////": [
+  {
+   "payload": "ccfc7a8d8890cbcd9aa3618730a17e27732572beec0862550bba0a17b465bc2a",
+   "prompt": "dd11351abdd91eaaf1e2d9a10b65fd3d63784d26f73dc9634a1e8ad60d688f0a"
+  }
+ ],
+ "legacy-scene:review/////": [
+  {
+   "payload": "d2a48c9e377c7be6975d7048f973794620097f50c15b935877d8b6294aa2a2e4",
+   "prompt": "77e7892d3435a2dd05a0c048ee7a535c0fa158c65a949451cdfe56e1eb326fd3"
+  },
+  {
+   "payload": "69d38af3c801f28edf02bc4b790213cba363e6ada41a31086a3453baa0f1c835",
+   "prompt": "c59298350bcfa5d59dca27ac2350ad1ac0c04b3e3fac5bcc6f33323cd9564d3a"
+  }
+ ]
+}

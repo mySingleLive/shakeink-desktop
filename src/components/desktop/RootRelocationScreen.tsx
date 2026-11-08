@@ -3,6 +3,7 @@
 import {useEffect,useRef,useState} from "react"
 import {Button} from "@/components/ui/button"
 import {Menu} from "lucide-react"
+import {DesktopPromptHost,type PromptHostBridge} from "./DesktopPromptHost"
 import type {RootRelocationBridge,RootRelocationCommand,RootRelocationNotice,RootRelocationPhase,RootRelocationState} from "@desktop/shared/root-relocation"
 
 const labels:Record<RootRelocationPhase,string>={checking:"正在检查数据目录…",unavailable:"原数据目录无法访问",picking:"正在选择目录…",confirming:"等待确认原数据目录…",writing:"正在保存目录记录…",cancelled:"定位已取消",complete:"已定位原数据目录",blocked:"需要检查数据目录","reset-confirm":"确认重置配置数据",resetting:"正在重置数据目录…","reset-failed":"重置未完成"}
@@ -37,7 +38,11 @@ function validState(value:RootRelocationState):boolean{
  * blocked diagnosis other than in-flight migration/restore history. */
 const recoveryView=(state:RootRelocationState)=>state.phase==="reset-confirm"||state.phase==="resetting"||state.phase==="reset-failed"||state.phase==="blocked"&&state.notice!=="history-needs-recovery"||state.notice==="reset-complete"
 interface Connection{bridge:RootRelocationBridge;alive:boolean;state:RootRelocationState|null;pending:Set<RootRelocationCommand>}
+function relocationPromptBridge(bridge:RootRelocationBridge|undefined):PromptHostBridge|null{
+ return bridge?{prompts:()=>bridge.prompts(),replyPrompt:(id,value)=>bridge.replyPrompt(id,value),subscribe:listener=>bridge.subscribePrompts(listener)}:null
+}
 export function RootRelocationScreen(){
+ const [promptBridge]=useState(()=>relocationPromptBridge(typeof window==="undefined"?undefined:window.desktopRootRelocation))
  const [state,setState]=useState<RootRelocationState|null>(null),[error,setError]=useState<string|null>(null)
  const [pending,setPending]=useState<RootRelocationCommand[]>([]),[available,setAvailable]=useState(false)
  const connection=useRef<Connection|null>(null)
@@ -78,7 +83,7 @@ export function RootRelocationScreen(){
  }
  const exiting=pending.includes("quit")||pending.includes("restart"),cancelling=pending.includes("cancel")
  const recovery=state?recoveryView(state):false
- return <main className={`${state?.theme??"paper"} flex h-dvh min-h-0 flex-col overflow-auto bg-background font-sans text-foreground`}>
+ return <><DesktopPromptHost bridge={promptBridge} themeClass={state?.theme??"paper"}/><main className={`${state?.theme??"paper"} flex h-dvh min-h-0 flex-col overflow-auto bg-background font-sans text-foreground`}>
   <div className="desktop-drag flex h-11 w-full shrink-0 items-center justify-end pr-[144px]">
    {state?.platform==="win32"&&available&&<Button data-relocation-command="menu" aria-label="应用菜单" size="icon" variant="ghost" disabled={pending.includes("menu")||exiting} onClick={()=>{void command("menu")}}><Menu className="size-4"/></Button>}
   </div>
@@ -124,5 +129,5 @@ export function RootRelocationScreen(){
     </div>}
    </section>
   </div>
- </main>
+ </main></>
 }

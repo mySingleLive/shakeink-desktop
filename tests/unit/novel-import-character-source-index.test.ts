@@ -76,7 +76,7 @@ test('CP-11c: the real generation and controller chain uses explicit citation in
   expected.set(a.id,{facts:structuredClone(a.facts),text:a.text,evidence:[structuredClone(option)]})
   const wire={artifacts:[{...a,sourceUnitIds:undefined,evidence:[{optionIndex:0}]}]}
   return runImportAi(r,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async(_r,_m,signal,prompt)=>generateImportAiJson(r,{userId:'synthetic-user',resolvedModel:{} as ResolvedModel},signal,prompt,{generateText:async options=>{
-   counts.set(a.id,(counts.get(a.id)??0)+1);assert.ok('prompt' in options);const data=JSON.parse(options.prompt.split('<novel-import-data>')[1].split('</novel-import-data>')[0]);assert.deepEqual(data.entityTarget.evidenceOptions,r.entityTarget!.evidenceOptions!.map((entry,optionIndex)=>({...entry,optionIndex})))
+   counts.set(a.id,(counts.get(a.id)??0)+1);assert.ok('prompt' in options);const raw=JSON.parse(options.prompt.split('<novel-import-data>')[1].split('</novel-import-data>')[0]),data=raw.task??raw;assert.deepEqual(data.entityTarget.evidenceOptions,r.entityTarget!.evidenceOptions!.map((entry,optionIndex)=>({...entry,optionIndex})))
    return {text:JSON.stringify(wire),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}
   }})})
  })

@@ -9,7 +9,7 @@ export function expandChoiceDirectory(value:unknown):CompactChoice[]{
  return value.map((row:unknown[],index)=>{
   if(row.length!==8)invalid()
   const [number,choiceRef,unitIndex,start,end,sourceRef,flags,literals]=row
-  if(number!==index+1||typeof choiceRef!=='string'||!/^cf[0-9a-f]{16}$/u.test(choiceRef)||![unitIndex,start,end].every(n=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0)||!(typeof start==='number'&&typeof end==='number'&&start<end)||sourceRef!==null&&(typeof sourceRef!=='string'||!/^ef[0-9a-f]{16}$/u.test(sourceRef))||typeof flags!=='number'||!Number.isSafeInteger(flags)||flags<0||flags>3||!Array.isArray(literals)||!literals.every(literal=>typeof literal==='string'))invalid()
+  if(number!==index+1||typeof choiceRef!=='string'||!/^cf[0-9a-f]{16}$/u.test(choiceRef)||![unitIndex,start,end].every(n=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0)||!(typeof start==='number'&&typeof end==='number'&&start<end)||sourceRef!==null&&(typeof sourceRef!=='string'||!/^ef(?:[0-9a-f]{12}|[0-9a-f]{16})$/u.test(sourceRef))||typeof flags!=='number'||!Number.isSafeInteger(flags)||flags<0||flags>3||!Array.isArray(literals)||!literals.every(literal=>typeof literal==='string'))invalid()
   return{choiceRef,unitIndex:unitIndex as number,start,end,...(sourceRef===null?{}:{sourceRef:sourceRef as string}),...(flags&1?{wholeUnit:true}:{}),literals:[...literals] as string[],...(flags&2?{preserved:true}:{})}
  })
 }

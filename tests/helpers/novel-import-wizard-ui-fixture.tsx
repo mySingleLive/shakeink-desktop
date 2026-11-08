@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client'
 import {flushSync} from 'react-dom'
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query'
 import {NovelImportDialog,NovelImportTaskButton} from '../../src/components/desktop/NovelImportDialog'
-import {useNovelImportStore} from '../../src/lib/desktop/novel-import'
+import {requestNovelImport,useNovelImportStore} from '../../src/lib/desktop/novel-import'
 import {IMPORT_KINDS,IMPORT_TARGETS,type ImportAction,type ImportView} from '../../desktop/shared/novel-import'
 import {WIZARD_STEPS,type WizardStep,type WizardCandidate,type WizardTask} from '../../desktop/shared/novel-import-wizard'
 import type {ImportWizardView} from '../../desktop/shared/novel-import'
@@ -11,8 +11,8 @@ import type {ImportWizardView} from '../../desktop/shared/novel-import'
 /* Controlled bridge with synthetic wizard views. It proves rendering and the actions the UI sends;
  * controller behaviour is covered by tests/unit/novel-import-wizard-session.test.ts. */
 type TargetReply={kind:'success';label:string}|{kind:'cancel'}
-type Options={step:WizardStep;noModel?:boolean;noImageModel?:boolean;phase?:ImportView['phase'];failing?:boolean;checksBad?:boolean;empty?:boolean;recognitionFailed?:boolean;rosterFound?:number;theme?:string;deferredTitle?:boolean;titleFailures?:number;deferredTarget?:boolean;targetReplies?:TargetReply[]}
-declare global{interface Window{mountWizard(o:Options):void;wizardFixture:{calls:ImportAction[];view():ImportView;set(change:(v:ImportView)=>void):void;state():{busy:number;error:string|null};releaseTitle():void;releaseTarget():void}}}
+type Options={step:WizardStep;settingsDropped?:boolean;linesDropped?:boolean;noModel?:boolean;noImageModel?:boolean;phase?:ImportView['phase'];failing?:boolean;checksBad?:boolean;empty?:boolean;recognitionFailed?:boolean;rosterFound?:number;theme?:string;deferredTitle?:boolean;titleFailures?:number;deferredTarget?:boolean;deferredCancel?:boolean;targetReplies?:TargetReply[];choosing?:boolean}
+declare global{interface Window{mountWizard(o:Options):void;wizardFixture:{calls:ImportAction[];view():ImportView;set(change:(v:ImportView)=>void):void;state():{busy:number;error:string|null};releaseTitle():void;releaseTarget():void;releaseCancel():void;releaseChoose():void}}}
 const base={aliases:[],chapterCount:3,sources:['body' as const],sourceArtifactIds:[],selected:true}
 const id=(p:string,n:number)=>`${p}-${n.toString(16).padStart(16,'0')}`
 function wizard(o:Options):ImportWizardView{
@@ -29,7 +29,7 @@ function wizard(o:Options):ImportWizardView{
   ...worlds.map((c,k)=>({id:'e-00000000000000w'+k,kind:'entity' as const,candidateId:c.id,state:'waiting' as const,attempts:0})),{id:'g-theme',kind:'settings',settingsKind:'theme',state:'waiting',attempts:0}]:[]
  const checks=o.step==='verify'?['chapters','scope','relationships','worlds','lines','outlines','touches','consistency'].map(key=>({key,ok:!(o.checksBad&&key==='relationships'),detail:o.checksBad&&key==='relationships'?'“沈砚”的关系指向未导入的角色“无名”':'通过'})):undefined
  return {version:1,step:o.step,stepState,...(o.rosterFound!==undefined?{rosterFound:o.rosterFound}:{}),...(o.recognitionFailed?{stepError:'模型服务返回请求频率限制提示，请稍后重试'}:{}),structure,chapterSelection:structure.map((_,i)=>i),...(index>WIZARD_STEPS.indexOf('tree')?{grantedChapters:structure.map((_,i)=>i)}:{}),
-  candidates:o.empty?{character:[]}:{character:characters,scene:scenes,item:items,world:worlds},images:{avatar:o.step==='import-char',portrait:false,exterior:false,interior:false,icon:false},imageGrants:{},tasks,skipped:o.step==='verify'?[{taskId:'i-x',label:'林舟的头像'},{taskId:'e-x',label:'顾三'}]:[],dropped:[],deferredConflicts:[],...(checks?{checks}:{})} as ImportWizardView
+  candidates:o.empty?{character:[]}:{character:characters,scene:scenes,item:items,world:worlds},images:{avatar:o.step==='import-char',portrait:false,exterior:false,interior:false,icon:false},imageGrants:{},tasks,skipped:o.step==='verify'?[{taskId:'i-x',label:'林舟的头像'},{taskId:'e-x',label:'顾三'}]:[],dropped:o.linesDropped?[{kind:'lines',label:'叙事线',reason:'丢弃 3 个无法对应已导入实体的关联'}]:o.settingsDropped?[{kind:'settings',label:'主题',reason:'丢弃 2 条无法定位的原文引文'},{kind:'parent',label:'南巷',reason:'上级未导入，作为顶层导入'}]:[],deferredConflicts:[],...(checks?{checks}:{})} as ImportWizardView
 }
 window.mountWizard=(o)=>{
  const text={id:'text',name:'受控文本模型',modelId:'m',endpoint:'https://model.invalid/v1',authRevision:1,contextWindow:1048576}
@@ -37,12 +37,18 @@ window.mountWizard=(o)=>{
  let view:ImportView={id:'60103f7f-b69b-4d56-a228-417c8b7b6053',revision:1,phase:o.phase??'select',title:'合成作品',files:[{id:'f1',name:'正文.txt',format:'txt',bytes:80,hash:'h',included:true,encoding:'gb18030',characters:4803,unitCount:10,unknownCount:0}],found,selected:['body','character','world'],targets:[...IMPORT_TARGETS],infer:true,steps:[],conflicts:[],patches:[],
   models:o.noModel?{}:{text,review:{...text,id:'review',name:'受控审核模型'},...(o.noImageModel?{}:{image:{id:'image',name:'受控图像模型'}})},targetLabel:o.step==='work'?undefined:'作品目录',targetReady:o.step!=='work',sourceReady:true,chapters:[],notFound:[],modified:false,wizard:wizard(o)}
  const calls:ImportAction[]=[],targetReplies=[...(o.targetReplies??[])]
- let titleFailures=o.titleFailures??0,releaseTitle=()=>{},releaseTarget=()=>{}
+ let titleFailures=o.titleFailures??0,releaseTitle=()=>{},releaseTarget=()=>{},releaseCancel=()=>{},releaseChoose=()=>{}
+ const listeners=new Set<(event:unknown)=>void>(),emit=(event:unknown)=>listeners.forEach(listener=>listener(event))
  const titleWait=()=>o.deferredTitle?new Promise<void>(resolve=>{releaseTitle=resolve}):Promise.resolve()
  const targetWait=()=>o.deferredTarget?new Promise<void>(resolve=>{releaseTarget=resolve}):Promise.resolve()
+ const cancelWait=()=>o.deferredCancel?new Promise<void>(resolve=>{releaseCancel=resolve}):Promise.resolve()
  const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgAAIAAAUAAarVyFEAAAAASUVORK5CYII='),c=>c.charCodeAt(0))
  ;(window as unknown as {desktop:unknown}).desktop={novelImport:async(action:ImportAction)=>{
-  calls.push(structuredClone(action));if(action.type==='cancel'||action.type==='discard')return {view:null};if(action.type==='wizard-read-image')return {view,image:{mime:'image/png',bytes:png}}
+  calls.push(structuredClone(action))
+  // Mirrors the main process: picker closed, files are read, then the first view is returned.
+  if(action.type==='choose'){emit({type:'novel-import-reading',active:true});await new Promise<void>(resolve=>{releaseChoose=resolve});emit({type:'novel-import-reading',active:false});view={...view,wizard:wizard({...o,step:'files'}),phase:'source'};return {view:structuredClone(view)}}
+  if(action.type==='current'&&o.choosing)return {view:null}
+  if(action.type==='cancel'||action.type==='discard'){await cancelWait();return {view:null}};if(action.type==='wizard-read-image')return {view,image:{mime:'image/png',bytes:png}}
   if('revision' in action){
    if(action.revision!==view.revision)throw Error('隔离版本冲突')
    if(action.type==='set-title'){await titleWait();if(titleFailures>0){titleFailures--;throw Error('隔离标题保存失败')}view.title=action.title}
@@ -50,10 +56,12 @@ window.mountWizard=(o)=>{
    view={...view,revision:view.revision+1}
   }
   return {view:structuredClone(view)}
- },subscribe:()=>()=>{}}
+ },subscribe:(listener:(event:unknown)=>void)=>{listeners.add(listener);return ()=>listeners.delete(listener)}}
  document.documentElement.className=o.theme??'ink'
- useNovelImportStore.setState({view:structuredClone(view),open:true,screen:view.phase==='conflicts'?'conflicts':'select',busy:0,error:null,source:null})
+ useNovelImportStore.setState(o.choosing?{view:null,open:false,busy:0,error:null,source:null}:{view:structuredClone(view),open:true,screen:view.phase==='conflicts'?'conflicts':'select',busy:0,error:null,source:null})
  const query=new QueryClient()
  flushSync(()=>createRoot(document.getElementById('app')!).render(<QueryClientProvider client={query}><NovelImportTaskButton/><NovelImportDialog/></QueryClientProvider>))
- window.wizardFixture={calls,view:()=>view,set(change){change(view);useNovelImportStore.setState({view:structuredClone(view)})},state:()=>useNovelImportStore.getState(),releaseTitle:()=>releaseTitle(),releaseTarget:()=>releaseTarget()}
+ window.wizardFixture={calls,view:()=>view,set(change){change(view);useNovelImportStore.setState({view:structuredClone(view)})},state:()=>useNovelImportStore.getState(),releaseTitle:()=>releaseTitle(),releaseTarget:()=>releaseTarget(),releaseCancel:()=>releaseCancel(),releaseChoose:()=>releaseChoose()}
+ // Like the menu command: the picker is opened while no import exists.
+ if(o.choosing)setTimeout(()=>void requestNovelImport('files'),50)
 }

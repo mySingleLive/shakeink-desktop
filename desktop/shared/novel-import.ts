@@ -128,6 +128,10 @@ export interface ImportSession {
  wizardVersion?:1;wizard?:ImportWizardState
  semanticVersion?:1;semanticState?:ImportSemanticCheckpoint;mappingWarnings?:ImportMappingWarning[]
  chapterVersion?:2
+ /** docs/526: set only when a new wizard session is created with the v2 budget policy. */
+ promptLayout?:'shared-source-v1'
+ /** docs/528: compact scene-roster fragment refs; written only when a new wizard session is created. */
+ sceneFragmentLayout?:'compact-v1'
  chapterDetection?:{mode:'auto'|'manual';diagnostic?:string;structureDecision?:{normalizationVersion?:1|2;chapterCuts:{start:number;title:string;volume?:string;candidateId?:string}[];ignoredStarts:number[];volumeCuts:{start:number;title:string;volume?:string;candidateId?:string}[]}}
  budgetPolicy?:ImportBudgetPolicy;legacyBudget?:ImportLegacyBudget
  version:1;id:string;revision:number;phase:ImportPhase;title:string;files:ImportFile[];units:ImportUnit[]
@@ -166,8 +170,12 @@ export type ImportWizardView=Omit<ImportWizardState,'rosterStash'|'touchStash'|'
 export interface ImportSourcePage {fileId:string;offset:number;total:number;text:string;units:{id:string;start:number;end:number;kind:UnitKind;part?:string}[]}
 export interface ImportResponse {view:ImportView|null;source?:ImportSourcePage;sceneIdentityDetail?:ImportSceneIdentityDetail;sceneIdentitySource?:ImportSceneIdentitySource;pdfPage?:ImportPdfPageResponse;image?:{mime:string;bytes:Uint8Array}}
 export interface ImportBridge {novelImport(action:ImportAction):Promise<ImportResponse>}
-export interface ImportAiRequest extends ImportSemanticRequestFields {executionBudget?:ImportExecutionBudget;executionLane?:'scene-review-wave-v1'|'wizard-settings-v1';chapters?:{id:string;title:string;start:number;end:number}[];entities?:ImportSemanticEntity[];operationId:string;phase:'classify'|'analyze'|'review'|'patch';kind?:ImportTarget;units:ImportUnit[];artifacts:ImportArtifact[];models:{text:ImportModel;review?:ImportModel};instruction?:string;conflict?:ImportConflict;workingRevision?:number}
-export interface ImportAiResult extends ImportSemanticResult {classifications?:{unitId:string;kind:UnitKind}[];artifacts?:ImportArtifact[];conflicts?:ImportConflict[];patches?:ImportPatch[];chapterCuts?:{start:number;title:string;volume?:string;candidateId?:string}[];ignoredStarts?:number[];notFound?:boolean}
+export interface ImportAiRequest extends ImportSemanticRequestFields {sceneFragmentRefs?:{version:1;width:12};sharedSource?:{version:1;windows:{index:number;unitIds:string[]}[];extraUnitIds:string[]};executionBudget?:ImportExecutionBudget;executionLane?:'scene-review-wave-v1'|'wizard-settings-v1'|'wizard-lines-v1';chapters?:{id:string;title:string;start:number;end:number}[];entities?:ImportSemanticEntity[];operationId:string;phase:'classify'|'analyze'|'review'|'patch';kind?:ImportTarget;units:ImportUnit[];artifacts:ImportArtifact[];models:{text:ImportModel;review?:ImportModel};instruction?:string;conflict?:ImportConflict;workingRevision?:number}
+export interface ImportAiResult extends ImportSemanticResult {classifications?:{unitId:string;kind:UnitKind}[];artifacts?:ImportArtifact[];conflicts?:ImportConflict[];patches?:ImportPatch[];chapterCuts?:{start:number;title:string;volume?:string;candidateId?:string}[];ignoredStarts?:number[];notFound?:boolean;settingsRepairs?:ImportSettingsRepairs;linesRepairs?:ImportLinesRepairs}
+/** docs/514: repair counts of a wizard other-setting batch (unlocatable quotes, dropped items, cleared reliability). */
+export interface ImportSettingsRepairs {droppedEvidence:number;droppedArtifacts:number;clearedReliability:number}
+/** docs/517 3R3-3: shape repairs of one wizard lines-lane reply; reported to the author. */
+export interface ImportLinesRepairs {droppedEvidence:number;droppedLinks:number;droppedEntries?:number}
 /** Staged wizard images travel with the publish request; the worker re-checks every digest. */
 export interface ImportPublishImage {taskId:string;mime:'image/png'|'image/jpeg'|'image/webp';sha256:string;bytes:Uint8Array}
 export interface ImportPublishInput {session:ImportSession;selection:{path:string;device:string;inode:string};importHash:string;images?:ImportPublishImage[]}

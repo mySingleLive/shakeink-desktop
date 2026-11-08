@@ -1,16 +1,16 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Check, File, FolderOpen, LoaderCircle, Sparkles, X } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { buildTabId, useTabsStore } from '@/stores/tabs'
 import { IMPORT_KINDS, IMPORT_LABELS, IMPORT_TARGETS, type ImportFileView, type ImportKind, type ImportModel, type ImportTarget, type ImportView, type UnitKind } from '@desktop/shared/novel-import'
-import { abandonNovelImport, abandonableImport, appendNovelImport, emptyImportDecision, hideNovelImport, inspectNovelImportSource, mutateNovelImport, novelImportFinalFocus, observeNovelImport, readNovelImportSource, keepCurrentNovelImport, reopenNovelImport, replaceNovelImport, setImportDecisionDraft, setNovelImportScreen, useNovelImportStore, type ImportScreen } from '@/lib/desktop/novel-import'
+import { abandonNovelImport, abandonableImport, appendNovelImport, emptyImportDecision, hideNovelImport, inspectNovelImportSource, mutateNovelImport, needsNovelImportCloseConfirmation, novelImportFinalFocus, observeNovelImport, readNovelImportSource, keepCurrentNovelImport, reopenNovelImport, replaceNovelImport, setImportDecisionDraft, setNovelImportScreen, useNovelImportStore, type ImportScreen } from '@/lib/desktop/novel-import'
 import { NovelImportRecord } from './NovelImportRecord'
 import {PdfPageReview} from './PdfPageReview'
-import {NovelImportWizard,NovelImportWizardHeader} from './NovelImportWizard'
+import {NovelImportReading,NovelImportWizard,NovelImportWizardHeader} from './NovelImportWizard'
 import {wizardTaskBarText} from '@/lib/desktop/novel-import-wizard'
 import {WIZARD_STEPS,WIZARD_STEP_TITLES,type WizardStep} from '@desktop/shared/novel-import-wizard'
 import './novel-import.css'
@@ -153,22 +153,49 @@ export function NovelImportTaskButton() {
 }
 
 export function NovelImportDialog({ suspended = false }: { suspended?: boolean }) {
-  const { view, open, screen, busy, error } = useNovelImportStore()
+  const { view, open, screen, busy, error, reading } = useNovelImportStore()
   const [recordOpen, setRecordOpen] = useState(false)
   const [pdfFileId, setPdfFileId] = useState<string|null>(null)
   const [reviseOpen, setReviseOpen] = useState(false)
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false)
+  const [closeConfirmBusy, setCloseConfirmBusy] = useState(false)
+  const closeConfirmBusyRef = useRef(false)
+  const importId = view?.id
   useEffect(() => { const open = () => setNovelImportScreen('conflicts'); window.addEventListener('novel-import:conflicts', open); return () => window.removeEventListener('novel-import:conflicts', open) }, [])
+  useEffect(() => { setCloseConfirmOpen(false) }, [importId, open, suspended])
+  useEffect(() => { closeConfirmBusyRef.current = false; setCloseConfirmBusy(false) }, [importId])
   const query = useQueryClient()
   useEffect(observeNovelImport, [])
   const completedId = view?.phase === 'completed' ? view.id : null
   useEffect(() => {
     if (completedId) void query.invalidateQueries({ queryKey: ['novels'] })
   }, [completedId, query])
+  // Reading a new selection: the wizard opens at once and waits for the file information.
+  if (reading && (!open || !view || view.phase === 'completed')) return <><Dialog open onOpenChange={() => undefined}><DialogContent className="ni-dialog chatpane" showCloseButton={false} finalFocus={() => novelImportFinalFocus() ?? true}><header className="ni-header"><div><div className="ni-eyebrow">导入作品</div><NovelImportWizardHeader step="files" /></div></header><NovelImportReading /></DialogContent></Dialog></>
   if (!view) return null
-  // Any interruption deletes an unfinished import; a completed one or a started save only hides.
   const cancel = () => void abandonNovelImport()
-  // Dismissing the replace prompt keeps the current import, like 返回当前导入.
-  const close = () => screen === 'replace' ? keepCurrentNovelImport() : abandonableImport(view) ? cancel() : hideNovelImport()
+  const close = () => {
+    if (screen === 'replace') keepCurrentNovelImport()
+    else if (needsNovelImportCloseConfirmation(view)) { if (!closeConfirmBusyRef.current) setCloseConfirmOpen(true) }
+    else if (abandonableImport(view)) cancel()
+    else hideNovelImport()
+  }
+  const dismissCloseConfirmation = () => { if (!closeConfirmBusyRef.current) setCloseConfirmOpen(false) }
+  const confirmClose = async () => {
+    if (closeConfirmBusyRef.current) return
+    const id = view.id
+    closeConfirmBusyRef.current = true
+    setCloseConfirmBusy(true)
+    try { await abandonNovelImport() }
+    finally {
+      const currentId = useNovelImportStore.getState().view?.id
+      if (!currentId || currentId === id) {
+        closeConfirmBusyRef.current = false
+        setCloseConfirmBusy(false)
+        setCloseConfirmOpen(false)
+      }
+    }
+  }
   const openWork = () => { const novelId = view.publication?.novelId; if (!novelId) return; useTabsStore.getState().openTab({ id: buildTabId('novel', novelId), type: 'novel', novelId, title: view.title }); hideNovelImport() }
   let content
   const props = { view, busy: !!busy }
@@ -189,7 +216,7 @@ export function NovelImportDialog({ suspended = false }: { suspended?: boolean }
   const pdfFile=pdfFileId ? view.files.find(file=>file.id===pdfFileId) : undefined
   const closePdf=()=>{const id=pdfFileId;setPdfFileId(null);requestAnimationFrame(()=>{if(id)document.querySelector<HTMLButtonElement>(`[data-pdf-review-file-id="${CSS.escape(id)}"]`)?.focus()})}
   const step = ['source', 'consent', 'recognizing', 'preview', 'chapters'].includes(screen) ? 0 : ['select', 'confirm'].includes(screen) ? 1 : 2
-  return <><Dialog open={open && !suspended && !recordOpen && !pdfFile} onOpenChange={value => { if (!value) close() }}><DialogContent className="ni-dialog chatpane" showCloseButton={false} finalFocus={() => novelImportFinalFocus() ?? true}><header className="ni-header"><div><div className="ni-eyebrow">导入作品</div>{wizard ? <NovelImportWizardHeader view={view as ImportView & { wizard: NonNullable<ImportView['wizard']> }} /> : <><DialogTitle>{screenTitles[screen] ?? '导入作品'}</DialogTitle><DialogDescription>核对来源、选择内容，再确认导入。</DialogDescription></>}</div><Button variant="ghost" size="icon-sm" aria-label={abandonableImport(view) ? '关闭导入窗口' : '收起导入窗口'} onClick={close}><X /></Button></header>{!wizard && <ol className="ni-stage-list" aria-label="导入步骤">{['核对来源', '选择内容', '导入'].map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined} data-done={step > index}><span>{index + 1}</span>{label}</li>)}</ol>}{(error || view.error) && <div className="ni-alert" role="alert">{error || view.error}</div>}{content}</DialogContent></Dialog>{open && !suspended && pdfFile && <PdfPageReview key={`${view.id}:${pdfFile.id}`} view={view} file={pdfFile} onClose={closePdf}/>} {view.publication?.novelId && recordOpen && <NovelImportRecord novelId={view.publication.novelId} open={recordOpen} onOpenChange={setRecordOpen} hideTrigger />}</>
+  return <><Dialog open={open && !suspended && !recordOpen && !pdfFile} onOpenChange={value => { if (!value) close() }}><DialogContent className="ni-dialog chatpane" showCloseButton={false} finalFocus={() => novelImportFinalFocus() ?? true}><header className="ni-header"><div><div className="ni-eyebrow">导入作品</div>{wizard ? <NovelImportWizardHeader step={wizard.step} /> : <><DialogTitle>{screenTitles[screen] ?? '导入作品'}</DialogTitle><DialogDescription>核对来源、选择内容，再确认导入。</DialogDescription></>}</div><Button variant="ghost" size="icon-sm" aria-label={abandonableImport(view) ? '关闭导入窗口' : '收起导入窗口'} onClick={close}><X /></Button></header>{!wizard && <ol className="ni-stage-list" aria-label="导入步骤">{['核对来源', '选择内容', '导入'].map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined} data-done={step > index}><span>{index + 1}</span>{label}</li>)}</ol>}{(error || view.error) && <div className="ni-alert" role="alert">{error || view.error}</div>}{content}</DialogContent><Dialog open={closeConfirmOpen && open && !suspended && !recordOpen && !pdfFile} onOpenChange={value => { if (!value) dismissCloseConfirmation() }}><DialogContent className="ni-close-confirm" showCloseButton={false}><DialogHeader><DialogTitle>关闭导入？</DialogTitle><DialogDescription>当前导入尚未完成，已导入的内容会被删除，且无法恢复。原始文件不会更改。确定要关闭吗？</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={closeConfirmBusy} onClick={dismissCloseConfirmation}>继续导入</Button><Button variant="destructive" disabled={closeConfirmBusy} onClick={() => void confirmClose()}>确认关闭并删除</Button></DialogFooter></DialogContent></Dialog></Dialog>{open && !suspended && pdfFile && <PdfPageReview key={`${view.id}:${pdfFile.id}`} view={view} file={pdfFile} onClose={closePdf}/>} {view.publication?.novelId && recordOpen && <NovelImportRecord novelId={view.publication.novelId} open={recordOpen} onOpenChange={setRecordOpen} hideTrigger />}</>
 }
 
 const REVISE_STEPS:WizardStep[]=['files','work','kinds','tree','detect-char','detect-scene','detect-item','detect-world']

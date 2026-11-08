@@ -19,7 +19,8 @@ async function mount(options:Record<string,unknown>,run:(page:Page)=>Promise<voi
  try{await page.setContent('<div id="app"></div>');await page.evaluate('globalThis.__name=t=>t');await page.addStyleTag({content:css});await page.addScriptTag({content:bundle});await page.evaluate(o=>window.mountWizard(o as never),options);await page.getByRole('dialog').waitFor();await run(page);assert.deepEqual(errors,[])}finally{await page.close()}
 }
 const calls=(page:Page)=>page.evaluate(()=>window.wizardFixture.calls) as Promise<{type:string;[k:string]:unknown}[]>
-const dialog=(page:Page)=>page.getByRole('dialog')
+const dialog=(page:Page)=>page.locator('.ni-dialog')
+const closeConfirmation=(page:Page)=>page.getByRole('dialog',{name:'关闭导入？',exact:true})
 const businessCalls=async(page:Page)=>(await calls(page)).filter(call=>call.type!=='current')
 const idle=(page:Page)=>page.waitForFunction(()=>window.wizardFixture.state().busy===0)
 async function waitAction(page:Page,type:string,count=1){
@@ -101,6 +102,18 @@ test('NIW-B01/B03: step titles; files show automatic encoding without a confirm 
  assert.match(await d.innerText(),/GB18030（自动识别）/);assert.equal(await d.getByRole('button',{name:'确认编码'}).count(),0)
  await d.getByRole('button',{name:'编码不对？'}).click();const select=d.getByRole('combobox',{name:'正文.txt 编码'});assert.deepEqual(await select.locator('option').allInnerTexts(),['UTF-8','UTF-16LE','UTF-16BE','GB18030'])
 }))
+test('NIW-B01: the files step has no verbatim-copy notice',()=>mount({step:'files'},async page=>{
+ const d=dialog(page);await d.getByRole('heading',{name:'确认文件'}).waitFor();const text=await d.innerText()
+ assert.doesNotMatch(text,/正文逐字拷贝|来源文件不会被修改|编码按文件内容自动识别/u);assert.equal(await d.locator('.ni-notice').count(),0)
+}))
+test('NIW-B01: the wizard opens with a waiting state as soon as the picker closes',()=>mount({step:'files',choosing:true},async page=>{
+ const d=dialog(page);await d.getByRole('heading',{name:'确认文件'}).waitFor()
+ const status=d.getByRole('status');await status.getByText('正在读取文件',{exact:true}).waitFor();assert.equal(await status.getAttribute('aria-busy'),'true')
+ assert.equal(await d.locator('.ni-spinner').count(),1);assert.equal(await d.getByRole('button',{name:'继续'}).isDisabled(),true);assert.equal(await d.getByText('正文.txt').count(),0)
+ await page.evaluate(()=>window.wizardFixture.releaseChoose())
+ await d.getByText('正文.txt',{exact:true}).waitFor();await idle(page)
+ assert.equal(await d.getByText('正在读取文件').count(),0);assert.equal(await d.getByRole('button',{name:'继续'}).isDisabled(),false);assert.equal(await page.getByRole('dialog').count(),1)
+}))
 test('NIW-B01: step 3 needs a folder before continuing',()=>mount({step:'work'},async page=>{
  const d=dialog(page);await d.getByRole('heading',{name:'作品与目录'}).waitFor();assert.equal(await d.getByRole('button',{name:'继续'}).isDisabled(),true)
 }))
@@ -108,6 +121,11 @@ test('NIW-B02: step rail and stage bar',()=>mount({step:'import-char',phase:'run
  const d=dialog(page);await d.getByRole('button',{name:/第 10 \/ 22 步 · 导入角色/}).click()
  const items=d.locator('.ni-w-steps li');assert.equal(await items.count(),22);assert.match(await items.nth(0).innerText(),/已完成/)
  assert.equal(await d.locator('.ni-w-stages li').count(),6);assert.equal(await d.locator('.ni-w-stages li[aria-current=step]').innerText().then(t=>t.includes('角色')),true)
+}))
+test('LP-13: steps 17–20 sit under the 剧情 stage; no 线索 label remains',()=>mount({step:'worldline',phase:'running'},async page=>{
+ const d=dialog(page),current=await d.locator('.ni-w-stages li[aria-current=step]').innerText()
+ assert.match(current,/剧情/u);assert.doesNotMatch(await d.locator('.ni-w-stages').innerText(),/线索/u)
+ assert.match(await d.locator('.ni-w-stage-now').innerText(),/阶段 5 \/ 6 · 剧情 · /u)
 }))
 test('NIW-B02: narrow window shows a one-line stage summary',()=>mount({step:'import-char',phase:'running'},async page=>{
  const d=dialog(page);assert.equal(await d.locator('.ni-w-stages').isVisible(),false);assert.match(await d.locator('.ni-w-stage-now').innerText(),/阶段 3 \/ 6 · 角色 · 场景 · 物品 · 第 10 \/ 22 步/)
@@ -129,7 +147,10 @@ test('NIW-B05: character rows show only name and type; details and role editing'
  await d.getByRole('button',{name:'详情'}).first().click();assert.match(await d.innerText(),/别名：砚哥 · 出场 3 章 · 来源：资料 \+ 正文/)
  await d.getByRole('button',{name:'林舟：配角，点击修改类型'}).click();await d.getByRole('combobox',{name:'林舟 类型'}).selectOption('ANTAGONIST')
  const set=(await calls(page)).at(-1)!;assert.equal(set.type,'wizard-set-role');assert.equal(set.roleType,'ANTAGONIST')
- assert.equal(await d.getByRole('button',{name:'合并为同一角色'}).isDisabled(),true)
+ assert.equal(await row.getByRole('checkbox').count(),1,'one selection checkbox per row');assert.equal(await d.getByRole('button',{name:'合并为同一角色'}).count(),0)
+ const into=d.getByRole('combobox',{name:/^将 .+ 合并到$/}).first(),merge=d.getByRole('button',{name:'合并',exact:true}).first()
+ assert.equal(await merge.isDisabled(),true);const target=await into.locator('option').nth(1).getAttribute('value');await into.selectOption(target!);await merge.click()
+ const merged=(await calls(page)).at(-1)!;assert.equal(merged.type,'wizard-merge-candidates');assert.equal(merged.keepId,target);assert.equal((merged.mergeIds as string[]).length,1);assert.notEqual((merged.mergeIds as string[])[0],target)
 }))
 test('NIW-B06: image options default unchecked, change the button and need an image model',()=>mount({step:'detect-char'},async page=>{
  const d=dialog(page),avatar=d.getByRole('checkbox',{name:'生成头像'}),portrait=d.getByRole('checkbox',{name:'生成立绘'})
@@ -176,6 +197,11 @@ test('NIW-B10: verify lists checks, blocks saving on problems and shows skipped 
  const d=dialog(page);assert.equal(await d.locator('.ni-w-checks li').count(),8);await d.getByRole('button',{name:'重试导入角色'}).waitFor()
  assert.equal(await d.getByRole('button',{name:'保存作品'}).isDisabled(),true);assert.match(await d.innerText(),/已跳过 2 项/);assert.match(await d.innerText(),/林舟的头像/)
 }))
+test('SU-01: verify shows other-setting repairs only when recorded (docs/515)',async()=>{
+ await mount({step:'verify',linesDropped:true},async page=>{const text=await dialog(page).innerText();assert.match(text,/部分剧情关联已修正/);assert.match(text,/叙事线：丢弃 3 个无法对应已导入实体的关联/);assert.doesNotMatch(text,/部分设定条目已修正/)})
+ await mount({step:'verify',settingsDropped:true},async page=>{const text=await dialog(page).innerText();assert.match(text,/部分设定条目已修正/);assert.match(text,/主题：丢弃 2 条无法定位的原文引文/);assert.doesNotMatch(text,/南巷：/)})
+ await mount({step:'verify'},async page=>{assert.doesNotMatch(await dialog(page).innerText(),/部分设定条目已修正/)})
+})
 test('NIW-B12/B13/IA-B03: pause text, the revise list, and stopping deletes without a second prompt',()=>mount({step:'import-char',phase:'paused'},async page=>{
  const d=dialog(page);assert.match(await d.locator('#ni-w-live').innerText(),/^已暂停 · /);await d.getByRole('button',{name:'继续导入'}).waitFor()
  await d.getByRole('button',{name:'返回修改选择'}).click();assert.match(await d.innerText(),/第 9 步 · 识别角色/);assert.match(await d.innerText(),/将丢弃第 10 步的结果/)
@@ -187,10 +213,34 @@ test('NIW-B14: recognition failure and empty roster screens',async()=>{
  await mount({step:'detect-char',recognitionFailed:true},async page=>{const d=dialog(page);assert.match(await d.getByRole('alert').innerText(),/识别失败/);await d.getByRole('button',{name:'重新识别'}).waitFor();await d.getByRole('button',{name:'跳过此步骤'}).waitFor()})
  await mount({step:'detect-char',empty:true},async page=>{const d=dialog(page);assert.match(await d.innerText(),/未识别到角色/);await d.getByRole('button',{name:'跳过'}).waitFor()})
 })
-test('NIW-B15/IA-B01: Esc deletes the unfinished wizard import and leaves no task bar entry',()=>mount({step:'detect-char'},async page=>{
- const before=(await calls(page)).length;await page.keyboard.press('Escape');await dialog(page).waitFor({state:'hidden'})
- assert.deepEqual((await calls(page)).slice(before).map(c=>c.type),['cancel'])
- assert.equal(await page.locator('.ni-task-button').count(),0)
+test('NICC-B01: closing during setup still deletes directly',()=>mount({step:'files'},async page=>{
+ await dialog(page).getByRole('button',{name:'关闭导入窗口',exact:true}).click();await dialog(page).waitFor({state:'hidden'})
+ assert.equal(await closeConfirmation(page).count(),0);assert.deepEqual((await businessCalls(page)).map(c=>c.type),['cancel'])
+}))
+test('NICC-B02: closing a running wizard traps focus in the warning and can continue safely',()=>mount({step:'import-char',phase:'running'},async page=>{
+ const d=dialog(page),c=closeConfirmation(page),close=()=>d.getByRole('button',{name:'关闭导入窗口',exact:true}).click()
+ await close();await c.waitFor();assert.match(await c.innerText(),/已导入的内容会被删除/);assert.match(await c.innerText(),/原始文件不会更改/)
+ assert.equal(await page.locator('[data-slot="dialog-content"]').count(),2);assert.equal(await page.locator('[data-slot="dialog-overlay"]').count(),1);assert.equal((await businessCalls(page)).filter(x=>x.type==='cancel').length,0)
+ for(const key of ['Tab','Tab','Shift+Tab','Shift+Tab']){await page.keyboard.press(key);const focus=await page.evaluate(()=>{const active=document.activeElement as HTMLElement;return{inside:document.querySelector('.ni-close-confirm')!.contains(active)||active.hasAttribute('data-base-ui-focus-guard'),active:active?.outerHTML}});assert.equal(focus.inside,true,key+': '+focus.active)}
+ await c.getByRole('button',{name:'继续导入',exact:true}).click();await c.waitFor({state:'hidden'});assert.equal(await d.isVisible(),true);assert.equal(await d.evaluate((node)=>node.contains(document.activeElement)),true)
+ await page.keyboard.press('Escape');await c.waitFor();await page.keyboard.press('Escape');await c.waitFor({state:'hidden'});assert.equal(await d.isVisible(),true);assert.equal((await businessCalls(page)).filter(x=>x.type==='cancel').length,0)
+ await close();await c.waitFor();await page.mouse.click(8,8);await page.waitForTimeout(100);assert.equal(await c.isVisible(),true);assert.equal((await businessCalls(page)).filter(x=>x.type==='cancel').length,0)
+ await c.getByRole('button',{name:'继续导入',exact:true}).click();await c.waitFor({state:'hidden'});assert.equal(await d.isVisible(),true);assert.equal(await d.evaluate((node)=>node.contains(document.activeElement)),true)
+}))
+test('NICC-B03/NIW-B15: a partially imported wizard confirms before Esc deletes it',()=>mount({step:'import-char',phase:'select'},async page=>{
+ const d=dialog(page),c=closeConfirmation(page);await page.keyboard.press('Escape');await c.waitFor();assert.equal((await businessCalls(page)).filter(x=>x.type==='cancel').length,0)
+ await c.getByRole('button',{name:'确认关闭并删除',exact:true}).click();await c.waitFor({state:'hidden'});await d.waitFor({state:'hidden'})
+ assert.equal((await businessCalls(page)).filter(x=>x.type==='cancel').length,1);assert.equal(await page.locator('.ni-task-button').count(),0)
+}))
+test('NICC-B04: a deferred deletion ignores repeated confirmation, Escape and backdrop',()=>mount({step:'import-char',phase:'running',deferredCancel:true},async page=>{
+ const d=dialog(page),c=closeConfirmation(page);await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();const confirm=c.getByRole('button',{name:'确认关闭并删除',exact:true})
+ await confirm.evaluate((button:HTMLButtonElement)=>{button.click();button.click()});await waitAction(page,'cancel');await page.waitForFunction(()=>window.wizardFixture.state().busy>0)
+ assert.equal(await confirm.isDisabled(),true);assert.equal(await c.getByRole('button',{name:'继续导入',exact:true}).isDisabled(),true)
+ await confirm.dispatchEvent('click');await page.keyboard.press('Escape');await page.mouse.click(8,8);assert.equal((await businessCalls(page)).filter(x=>x.type==='cancel').length,1);assert.equal(await c.isVisible(),true);assert.equal(await d.isVisible(),true)
+ await page.evaluate(()=>window.wizardFixture.releaseCancel());await c.waitFor({state:'hidden'});await d.waitFor({state:'hidden'});assert.equal((await businessCalls(page)).filter(x=>x.type==='cancel').length,1)
+}))
+test('NICC-B05/IA-B03: explicit stop during recognition still deletes without a warning',()=>mount({step:'detect-char',phase:'running'},async page=>{
+ const d=dialog(page);await d.getByRole('button',{name:'停止导入',exact:true}).click();await d.waitFor({state:'hidden'});assert.equal(await closeConfirmation(page).count(),0);assert.deepEqual((await businessCalls(page)).map(x=>x.type),['cancel'])
 }))
 test('NIW-B16: focus stays on a toggled chapter checkbox',()=>mount({step:'tree'},async page=>{
  const box=dialog(page).getByRole('checkbox',{name:'选择 第三章 转'});await box.focus();await page.keyboard.press('Space')

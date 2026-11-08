@@ -1,11 +1,12 @@
 import type {JSONSchema7} from '@ai-sdk/provider'
 import {JSON_OUTPUT_INSTRUCTION} from '../../src/lib/ai/json-output-instruction'
+import {sceneRosterFragmentWidth} from './novel-import-scene-roster-fragments'
 import type {ImportAiRequest} from '../shared/novel-import'
 import type {ImportExecutionBudget} from './novel-import-budget-policy'
 import {assertImportPayloadBudget,assertImportFixedPromptReserve} from './novel-import-ai-payload'
 
 export type NativeSceneJsonModel={provider?:unknown;protocol?:unknown;kind?:unknown;endpoint?:unknown;modelId?:unknown;contextWindow?:unknown}
-export type SceneRosterNativeRequest=Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'sceneIdentity'|'sceneParentTargets'>
+export type SceneRosterNativeRequest=Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'sceneIdentity'|'sceneParentTargets'>&Partial<Pick<ImportAiRequest,'units'|'sceneFragmentRefs'>>
 export type SceneRosterNativePhase='first'|'repair'
 /** The original entity capability whitelist, without a request-scope change. */
 export function supportsNativeSceneJsonModel(model:NativeSceneJsonModel):boolean{return model.provider==='deepseek'&&model.protocol==='openai'&&(model.kind===undefined||model.kind==='TEXT')&&(model.modelId==='deepseek-flash'||model.modelId==='deepseek-v4-pro')&&(model.endpoint==='https://api.deepseek.com'||model.endpoint==='https://api.deepseek.com/')}
@@ -16,6 +17,8 @@ const array=(items:JSONSchema7,maxItems:number,minItems=0):JSONSchema7=>({type:'
 const raw=object({unitId:string(512),quote:string()}),ef=object({ref:{type:'string',pattern:'^ef[0-9a-f]{16}$'}}),span=object({unitIndex:integer,fromFragment:integer,toFragment:integer}),cf=object({choiceRef:{type:'string',pattern:'^cf[0-9a-f]{16}$'}})
 function record(anchor:JSONSchema7):JSONSchema7{return object({mentions:array(object({literal:string(300),evidence:anchor}),50000,1),context:array(object({label:string(300),evidence:array(anchor,50000,1)}),50000),links:array(object({targetIndex:integer,relation:{type:'string',enum:['same-place','different-place','parent']},evidence:array(anchor,50000,1)}),20000)})}
 const firstSchema=object({roster:array(record({anyOf:[ef,raw,span]}),2000)})
+// docs/528: a compact packet's first schema accepts only its actual ref width.
+const compactFirstSchema=object({roster:array(record({anyOf:[object({ref:{type:'string',pattern:'^ef[0-9a-f]{12}$'}}),raw,span]}),2000)})
 const patchClaimRef={type:'string',pattern:'^pc[0-9a-f]{16}$'} as JSONSchema7
 const patchClaim:JSONSchema7={anyOf:[object({claimRef:patchClaimRef,disposition:{type:'string',enum:['resolve']},choiceRefs:array({type:'string',pattern:'^cf[0-9a-f]{16}$'},50000,1)}),object({claimRef:patchClaimRef,disposition:{type:'string',enum:['reject']}})]}
 const repairSchema=object({repairs:array({anyOf:[object({repairRef:{type:'string',pattern:'^rr[0-9a-f]{16}$'},disposition:{type:'string',enum:['replace']},replacement:record(cf)}),object({repairRef:{type:'string',pattern:'^rr[0-9a-f]{16}$'},disposition:{type:'string',enum:['reject']}}),object({repairRef:{type:'string',pattern:'^rr[0-9a-f]{16}$'},disposition:{type:'string',enum:['patch']},patch:object({claims:array(patchClaim,50000,1)})})]},2000,1)})
@@ -24,7 +27,7 @@ export function sceneRosterNativeSchema(request:SceneRosterNativeRequest,model:N
  if(phase!=='first'&&phase!=='repair')throw Error('场景原生结构化输出阶段无效')
  // Each SDK call receives its own copy; callers cannot mutate the planner's
  // next schema or the schema used to account for another request.
- return structuredClone(phase==='first'?firstSchema:repairSchema)
+ return structuredClone(phase==='first'?(request.sceneFragmentRefs&&request.units&&sceneRosterFragmentWidth({units:request.units,sceneFragmentRefs:request.sceneFragmentRefs})===12?compactFirstSchema:firstSchema):repairSchema)
 }
 export function assertSceneRosterNativeBudget(request:SceneRosterNativeRequest&Pick<ImportAiRequest,'units'>,model:NativeSceneJsonModel,budget:ImportExecutionBudget,payload:string,prompt:string,phase:SceneRosterNativePhase,actualSchema?:JSONSchema7):void{
  const supported=sceneRosterNativeSchema(request,model,phase);if(supported===undefined)return

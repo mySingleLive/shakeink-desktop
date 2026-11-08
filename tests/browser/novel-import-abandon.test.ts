@@ -22,12 +22,20 @@ const fx=(page:Page)=>({calls:()=>page.evaluate(()=>(window as any).novelImportF
 const cancels=async(page:Page)=>(await fx(page).calls()).filter(t=>t==='cancel').length
 const interrupted=(page:Page)=>page.getByText('导入已中断并删除，请重新导入作品',{exact:true})
 
-const unfinished:{phase:string;changes?:Record<string,unknown>}[]=[{phase:'source'},{phase:'select'},{phase:'running'},{phase:'paused'},{phase:'failed',changes:{error:'模型请求失败'}}]
-for(const how of ['Escape','backdrop','button'] as const)for(const {phase,changes} of unfinished)test(`IA-B01: ${how} on ${phase} deletes the import`,()=>fixture({phase},async page=>{
- const d=page.getByRole('dialog');if(changes)await fx(page).set(changes)
- if(how==='Escape')await page.keyboard.press('Escape');else if(how==='backdrop')await page.mouse.click(8,8);else await d.getByRole('button',{name:['source','select'].includes(phase)?'关闭导入窗口':'取消导入',exact:true}).first().click()
- await d.waitFor({state:'hidden'});assert.equal(await cancels(page),1);assert.equal(await page.locator('.ni-task-button').count(),0)
+const close=async(page:Page,how:'Escape'|'backdrop'|'button')=>{if(how==='Escape')await page.keyboard.press('Escape');else if(how==='backdrop')await page.mouse.click(8,8);else await page.locator('.ni-dialog').getByRole('button',{name:'关闭导入窗口',exact:true}).click()}
+const confirmation=(page:Page)=>page.getByRole('dialog',{name:'关闭导入？',exact:true})
+for(const how of ['Escape','backdrop','button'] as const)for(const phase of ['source','select','confirm','failed'])test(`IA-B01/NICC-B10: ${how} on early ${phase} deletes directly`,()=>fixture({phase},async page=>{
+ const d=page.locator('.ni-dialog');await close(page,how);await d.waitFor({state:'hidden'});assert.equal(await confirmation(page).count(),0);assert.equal(await cancels(page),1);assert.equal(await page.locator('.ni-task-button').count(),0)
  await page.waitForTimeout(150);assert.equal(await interrupted(page).count(),0,'a cancel the user started is not reported as an interruption')
+}))
+for(const how of ['Escape','backdrop','button'] as const)for(const phase of ['recognizing','running','paused','conflicts'])test(`IA-B01/NICC-B11: ${how} on active ${phase} requires confirmation`,()=>fixture({phase},async page=>{
+ const d=page.locator('.ni-dialog'),c=confirmation(page);await close(page,how);await c.waitFor();assert.equal(await cancels(page),0)
+ await c.getByRole('button',{name:'继续导入',exact:true}).click();await c.waitFor({state:'hidden'});assert.equal(await d.isVisible(),true);assert.equal(await cancels(page),0)
+ await close(page,how);await c.getByRole('button',{name:'确认关闭并删除',exact:true}).click();await c.waitFor({state:'hidden'});await d.waitFor({state:'hidden'});assert.equal(await cancels(page),1);assert.equal(await page.locator('.ni-task-button').count(),0)
+ await page.waitForTimeout(150);assert.equal(await interrupted(page).count(),0,'a cancel the user started is not reported as an interruption')
+}))
+for(const phase of ['recognizing','running','paused','failed','conflicts'])test(`NICC-B12: explicit cancel on ${phase} still deletes directly`,()=>fixture({phase},async page=>{
+ const d=page.locator('.ni-dialog');await d.getByRole('button',{name:'取消导入',exact:true}).first().click();await d.waitFor({state:'hidden'});assert.equal(await confirmation(page).count(),0);assert.equal(await cancels(page),1)
 }))
 
 test('IA-B02: no keep-draft, discard, later or collapse controls on unfinished screens',async()=>{
@@ -88,6 +96,31 @@ test('IA-B08: when deletion keeps unknown files the dialog still closes with the
 
 test('IA-B08b: deletion refused because saving started keeps the dialog open with the reason',()=>fixture({phase:'select',cancelMode:'publication'},async page=>{
  const d=page.getByRole('dialog');await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await d.getByRole('alert').getByText('保存已开始，不能删除这次导入，请重试保存',{exact:true}).waitFor();assert.equal(await d.isVisible(),true)
+}))
+
+test('NICC-B13: a refused confirmed deletion returns to the import and unlocks closing',()=>fixture({phase:'running',cancelMode:'publication'},async page=>{
+ const d=page.locator('.ni-dialog'),c=confirmation(page);await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await c.getByRole('button',{name:'确认关闭并删除',exact:true}).click()
+ await c.waitFor({state:'hidden'});await d.getByRole('alert').getByText('保存已开始，不能删除这次导入，请重试保存',{exact:true}).waitFor();assert.equal(await d.isVisible(),true);assert.equal(await fx(page).eval('window.novelImportFixture.state().busy'),0)
+ await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await c.waitFor();assert.equal(await cancels(page),1)
+}))
+
+test('NICC-B14: a confirmed deletion with retained unknown files leaves no stale warning',()=>fixture({phase:'running',cancelMode:'unknown-files'},async page=>{
+ const d=page.locator('.ni-dialog'),c=confirmation(page);await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await c.getByRole('button',{name:'确认关闭并删除',exact:true}).click()
+ await c.waitFor({state:'hidden'});await d.waitFor({state:'hidden'});await page.getByText('导入草稿目录含未知文件，已保留：60103f7f-b69b-4d56-a228-417c8b7b6053',{exact:true}).waitFor();assert.equal(await interrupted(page).count(),0);assert.equal(await fx(page).eval('window.novelImportFixture.state().busy'),0)
+ await page.locator('#fixture-import').click();await d.waitFor();assert.equal(await c.count(),0)
+}))
+
+test('NICC-B15: suspending, hiding or replacing the view clears the warning without deleting',()=>fixture({phase:'running'},async page=>{
+ const d=page.locator('.ni-dialog'),c=confirmation(page),open=()=>d.getByRole('button',{name:'关闭导入窗口',exact:true}).click()
+ await open();await page.evaluate(()=>(window as any).novelImportFixture.setSuspended(true));await d.waitFor({state:'hidden'});assert.equal(await c.count(),0)
+ await page.evaluate(()=>(window as any).novelImportFixture.setSuspended(false));await d.waitFor();assert.equal(await c.count(),0);assert.equal(await cancels(page),0)
+ await open();await page.evaluate(()=>(window as any).novelImportFixture.setOpen(false));await d.waitFor({state:'hidden'});await page.evaluate(()=>(window as any).novelImportFixture.setOpen(true));await d.waitFor();assert.equal(await c.count(),0)
+ await open();await fx(page).set({id:'7d2c0e5a-4a0f-4c1e-9d55-1f0b6c1e2a30'});await c.waitFor({state:'hidden'});assert.equal(await d.isVisible(),true);assert.equal(await cancels(page),0)
+}))
+
+test('NICC-B16: dismissing replace keeps the current active import without another warning',()=>fixture({phase:'running'},async page=>{
+ const d=page.locator('.ni-dialog');await page.locator('#fixture-import').evaluate((b:HTMLButtonElement)=>b.click());await d.getByRole('heading',{name:'开始新的导入？',exact:true}).waitFor()
+ await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await d.getByRole('heading',{name:'正在导入',exact:true}).waitFor();assert.equal(await confirmation(page).count(),0);assert.equal(await cancels(page),0)
 }))
 
 test('IA-B09: a deletion the user did not start is explained',()=>fixture({phase:'running'},async page=>{

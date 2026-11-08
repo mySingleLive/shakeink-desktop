@@ -523,3 +523,10 @@ body[data-platform="win32"] .dashboard-shell > nav[aria-label="创作工作区"]
   min-width:0!important; max-width:none!important; overflow:hidden;
 }
 .dashboard-shell[data-drawer-mode="narrow"] .workspace-content { display:block!important; min-width:0!important; max-width:none!important; width:100%; }
+/* Main-process prompts (510): shared dialog surface, above import and close-progress dialogs. */
+.desktop-dialog-overlay:has(~ .desktop-prompt){z-index:69}
+[data-slot="dialog-content"].desktop-prompt{z-index:70;width:min(440px,calc(100vw - 32px));max-width:none;gap:12px;padding:20px}
+.desktop-prompt [data-slot="dialog-title"]{font-size:16px;line-height:1.4;font-weight:600}
+.desktop-prompt [data-slot="dialog-description"]{line-height:1.7;color:var(--foreground)}
+.desktop-prompt-detail{margin:0;font-size:13px;line-height:1.7;color:var(--muted-foreground);white-space:pre-line;overflow-wrap:anywhere;max-height:40dvh;overflow:auto}
+.desktop-prompt [data-slot="dialog-footer"]{margin:8px -20px -20px;padding:14px 20px;flex-direction:row;justify-content:flex-end;flex-wrap:wrap}

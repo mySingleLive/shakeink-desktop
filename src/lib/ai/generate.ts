@@ -50,6 +50,21 @@ export interface GenerateResult {
   completionTokens: number
   cost: number
   finishReason?: string
+  /** Present only when the provider or SDK reported a cache split (docs/522 §1). */
+  cacheReadTokens?: number
+  noCacheTokens?: number
+  /** 'provider': DeepSeek metadata, undefined when unreported; 'sdk': SDK details, where 0 may mean unreported. */
+  cacheSource?: "provider" | "sdk"
+}
+
+const count = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+/** Single-step calls only: stream.usage equals totalUsage. Keys are added only with values. */
+function cacheSplit(usage: { inputTokenDetails?: { cacheReadTokens?: number; noCacheTokens?: number } }, metadata: unknown): Pick<GenerateResult, "cacheReadTokens" | "noCacheTokens" | "cacheSource"> {
+  const provider = metadata && typeof metadata === "object" ? (metadata as Record<string, unknown>).deepseek as Record<string, unknown> | undefined : undefined
+  if (provider && count(provider.promptCacheHitTokens) && count(provider.promptCacheMissTokens)) return { cacheReadTokens: provider.promptCacheHitTokens, noCacheTokens: provider.promptCacheMissTokens, cacheSource: "provider" }
+  const details = usage.inputTokenDetails
+  if (details && count(details.cacheReadTokens) && count(details.noCacheTokens)) return { cacheReadTokens: details.cacheReadTokens, noCacheTokens: details.noCacheTokens, cacheSource: "sdk" }
+  return {}
 }
 
 export interface GenerateJSONResult<T> {
@@ -99,7 +114,7 @@ async function generateTextInSlot(opts: GenerateOptions): Promise<GenerateResult
       raw += chunk.text
       if (Date.now() - previewAt >= 120) { previewAt = Date.now(); progress?.({ storyDraft: { text: storyDraftText(raw) } }) }
     } })
-    const [text, usage, finishReason] = await waitWithAbort(Promise.all([stream.text, stream.usage, stream.finishReason]), abortSignal).catch(error => {
+    const [text, usage, finishReason, providerMetadata] = await waitWithAbort(Promise.all([stream.text, stream.usage, stream.finishReason, stream.providerMetadata]), abortSignal).catch(error => {
       abortSignal.throwIfAborted()
       // SDK 的结果 promise 可能以 NoOutput 拒绝；保留 onError 已捕获的原供应商故障。
       throw streamError ?? error
@@ -107,7 +122,7 @@ async function generateTextInSlot(opts: GenerateOptions): Promise<GenerateResult
     abortSignal.throwIfAborted()
     if (streamError) throw streamError
     progress?.({ storyDraft: { text: storyDraftText(text) } })
-    return { text, usage, finishReason }
+    return { text, usage, finishReason, providerMetadata }
   }
   const result = await runWithNetworkRetry(callModel, {
     maxRetries: opts.maxNetworkRetries ?? execution?.networkRetry?.maxRetries ?? await getMaxNetworkRetries(),
@@ -130,7 +145,7 @@ async function generateTextInSlot(opts: GenerateOptions): Promise<GenerateResult
     completionTokens,
   })
 
-  return { text: result.text, promptTokens, completionTokens, cost, finishReason: result.finishReason }
+  return { text: result.text, promptTokens, completionTokens, cost, finishReason: result.finishReason, ...cacheSplit(result.usage, result.providerMetadata) }
 }
 
 /**

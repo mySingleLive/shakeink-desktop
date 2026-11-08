@@ -17,8 +17,10 @@ interface ImportUiState {
   source: ImportSourcePage | null
   previewReturn: 'source' | 'select'
   decisionDrafts: Record<string, ImportDecisionDraft>
+  /** Chosen sources are being read: the wizard opens at once with a waiting state. */
+  reading: boolean
 }
-export const useNovelImportStore = create<ImportUiState>(() => ({ view: null, open: false, screen: 'source', busy: 0, error: null, source: null, previewReturn: 'source', decisionDrafts: {} }))
+export const useNovelImportStore = create<ImportUiState>(() => ({ view: null, open: false, screen: 'source', busy: 0, error: null, source: null, previewReturn: 'source', decisionDrafts: {}, reading: false }))
 
 type Mutation = ImportAction extends infer A ? A extends { revision: number } ? Omit<A, 'id' | 'revision'> : never : never
 type Change = Mutation | ((view: ImportView) => Mutation)
@@ -86,6 +88,16 @@ export function mutateNovelImport(change: Change) {
 
 /** An unfinished import that has not started saving is deleted when it is interrupted. */
 export const abandonableImport = (view: ImportView | null) => !!view && !view.publication && !['completed', 'discarded', 'publishing'].includes(view.phase)
+const startedWizardSteps = ['import-struct','import-body','import-char','import-scene','import-item','import-world','worldline','narrative','outline','foreshadow','verify'] as const
+export function needsNovelImportCloseConfirmation(view: ImportView | null) {
+  if (!view || !abandonableImport(view)) return false
+  if (['recognizing', 'running', 'paused', 'conflicts'].includes(view.phase) || view.steps.length > 0) return true
+  const wizard = view.wizard
+  if (!wizard) return false
+  if (Object.values(wizard.stepState).includes('running')) return true
+  if (startedWizardSteps.some(step => { const state = wizard.stepState[step]; return !!state && ['running', 'done', 'waiting', 'failed'].includes(state) })) return true
+  return wizard.tasks.some(task => task.state !== 'waiting')
+}
 export async function requestNovelImport(mode?: 'files' | 'folder') {
   if (choosing) return choosing
   trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -122,7 +134,8 @@ function chooseSources(mode: 'files' | 'folder' | undefined, append: boolean, sh
   if (choosing) return choosing
   const result = Promise.resolve().then(() => call({ type: 'choose', ...(mode ? { mode } : {}), ...(append ? { append: true } : {}) }, show))
   choosing = result
-  void result.finally(() => { if (choosing === result) choosing = null })
+  // Cleared only after the response is adopted, so the waiting dialog hands over to the wizard without closing.
+  void result.finally(() => { if (choosing === result) choosing = null; useNovelImportStore.setState({ reading: false }) })
   return result
 }
 export async function readNovelImportSource(fileId: string, offset = 0) {
@@ -297,6 +310,7 @@ export function observeNovelImport() {
   if (subscriptions === 1 && window.desktop?.novelImport) {
     unsubscribe = window.desktop.subscribe(event => {
       if (event.type === 'novel-import') adopt({ view: event.view })
+      if (event.type === 'novel-import-reading' && (event.active || !choosing)) useNovelImportStore.setState({ reading: event.active })
     })
     void call({ type: 'current' })
   }

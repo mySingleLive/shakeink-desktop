@@ -21,12 +21,14 @@ export interface ImportWizardState {
  imageGrants:Partial<Record<'character'|'scene'|'item',WizardImageGrant>>
  tasks:WizardTask[]
  skipped:{taskId:string;label:string}[]
- dropped:{kind:'touch'|'materialRef'|'missingTarget'|'relationship'|'parent';label:string;reason:string}[]
+ dropped:{kind:'touch'|'materialRef'|'missingTarget'|'relationship'|'parent'|'settings'|'lines';label:string;reason:string}[]
  deferredConflicts:string[]
  checks?:WizardCheck[]
  /** Where "作品与目录" returns after a revise that only changed name or folder. */
  returnStep?:WizardStep;returnState?:WizardStepState;returnPhase?:'paused'|'select'|'running'|'conflicts'
  /** Step 20 batch proposals and the planned planning links (written at publish). */
+ /** docs/517 3R3-3: shape repairs kept per line step until the step is adopted. */
+ lineRepairs?:Partial<Record<'worldline'|'narrative'|'outline',{droppedEvidence:number;droppedLinks:number;droppedEntries?:number}>>
  touchStash?:{foreshadowKey:string;title:string;content:string;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string}}[]
  foreshadowRefs?:{target:'event'|'telling';targetId:string;foreshadowId:string;role:'plant'|'mention'|'payoff';note:string}[]
  /** Per-batch roster results kept until the recognition step finishes. */
@@ -44,7 +46,8 @@ const candidate=z.object({id:candidateId,kind:z.enum(['character','scene','item'
 const stepState=z.enum(['pending','running','waiting','done','skipped','failed'])
 const task=z.object({id:taskId,kind:z.enum(['entity','image','settings']),candidateId:candidateId.optional(),imageKind:z.enum(WIZARD_IMAGE_KINDS).optional(),settingsKind:z.enum(['theme','style','goldenFinger','trope']).optional(),dependsOn:taskId.optional(),state:z.enum(['waiting','running','done','failed','paused','skipped']),attempts:index.max(1000),error:text(400).optional(),resultSha256:z.string().regex(/^[0-9a-f]{64}$/u).optional(),image:z.object({mime:z.enum(['image/png','image/jpeg','image/webp']),bytes:index.max(WIZARD_LIMITS.imageBytes),prompt:text(8000)}).strict().optional()}).strict()
 const record=z.object({taskId,label:text(400)}).strict()
-const dropped=z.object({kind:z.enum(['touch','materialRef','missingTarget','relationship','parent']),label:text(400),reason:text(400)}).strict()
+const lineRepair=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000)}).strict()
+const dropped=z.object({kind:z.enum(['touch','materialRef','missingTarget','relationship','parent','settings','lines']),label:text(400),reason:text(400)}).strict()
 const structureItem=z.object({start:index,end:index,title:text(300).min(1),volume:text(300).optional()}).strict()
 export const importWizardStateSchema=z.object({
  version:z.literal(1),step:z.enum(WIZARD_STEPS),stepState:z.partialRecord(z.enum(WIZARD_STEPS),stepState),stepError:text(400).optional(),
@@ -60,6 +63,7 @@ export const importWizardStateSchema=z.object({
  deferredConflicts:z.array(text(200)).max(WIZARD_LIMITS.records),
  checks:z.array(z.object({key:text(80),ok:z.boolean(),detail:text(400)}).strict()).max(20).optional(),
  returnStep:z.enum(WIZARD_STEPS).optional(),returnState:stepState.optional(),returnPhase:z.enum(['paused','select','running','conflicts']).optional(),
+ lineRepairs:z.object({worldline:lineRepair.optional(),narrative:lineRepair.optional(),outline:lineRepair.extend({droppedEntries:z.number().int().nonnegative().max(1_000_000).optional()}).strict().optional()}).strict().optional(),
  touchStash:z.array(z.object({foreshadowKey:text(300).min(1),title:text(300).min(1),content:text(4000),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:index,summary:text(200),quote:text(200).min(1),eventId:text(200).optional(),narrativeId:text(200).optional()}).strict()}).strict()).max(50000).optional(),
  foreshadowRefs:z.array(z.object({target:z.enum(['event','telling']),targetId:text(200).min(1),foreshadowId:text(200).min(1),role:z.enum(['plant','mention','payoff']),note:text(500).min(1)}).strict()).max(50000).optional(),
  rosterStash:z.partialRecord(z.enum(['character','scene','item','world']),z.array(z.object({unitId:text(200).optional(),name:text(300).min(1),aliases:z.array(text(300)).max(50),roleType:z.enum(['PROTAGONIST','SUPPORTING','ANTAGONIST']).optional(),parent:text(300).optional(),itemType:text(100).optional(),important:z.boolean().optional(),category:z.enum(['item','character','place','organization','concept','other']).optional(),parallel:z.boolean().optional(),settings:z.array(z.object({settingType,name:text(300).min(1)}).strict()).max(50).optional()}).strict()).max(50000)).optional(),

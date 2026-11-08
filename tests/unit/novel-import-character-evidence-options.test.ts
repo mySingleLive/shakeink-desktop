@@ -8,7 +8,7 @@ import {fixture,source,rosterAi,entityResult,toImportChar,model} from '../helper
 const names=Array.from({length:30},(_,i)=>'真名'+String(i).padStart(2,'0')),alias=(i:number)=>'外号'+String(i).padStart(2,'0')
 async function optionsFixture(){
  const body=names.map((_,i)=>`第${i+1}章 篇${i}\n\n首😀${alias(i)}遇见${alias((i+1)%30)}。${i%2===0?alias(0)+'旁观。':''}${'合成填充资料。'.repeat(140)}\n\n`).join('')
- const f=await fixture([source(body,'正文.txt','f-body')],rosterAi({'roster:character':r=>({roster:r.units.flatMap(u=>names.flatMap((name,i)=>u.text.includes(alias(i))?[{name,aliases:[alias(i)],roleType:'SUPPORTING' as const,evidence:{unitId:u.id,quote:alias(i)}}]:[]))})})),base=f.handler()
+ const f=await fixture([source(body,'正文.txt','f-body')],rosterAi({'roster:character':r=>({roster:r.units.flatMap(u=>names.flatMap((name,i)=>u.text.includes(alias(i))?[{name,aliases:[alias(i)],roleType:'SUPPORTING' as const,evidence:{unitId:u.id,quote:alias(i)}}]:[]))})}),{promptLayout:'legacy'}),base=f.handler()
  f.setAi(async r=>r.intent==='entity'?entityResult(r,()=>({roleType:r.entityTarget!.roleType!})):base(r));return f
 }
 const options=(r:ImportAiRequest)=>(r.entityTarget as typeof r.entityTarget&{evidenceOptions?:ImportEvidence[]})?.evidenceOptions

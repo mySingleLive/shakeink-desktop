@@ -10,13 +10,17 @@ import {CloseCoordinator,type CloseServices} from '../../desktop/main/close-coor
 import {ApplicationMetadataGate} from '../../desktop/main/application-metadata-gate'
 import {ConversationDirectoryAuthorizations} from '../../desktop/main/conversation-directory-authorizations'
 import {nativeWindowAppearance} from '../../desktop/main/window-appearance'
+const nativeOrder:Record<string,string[]>={'仍有创作任务运行':['cancel','stop'],'作品锁修复交接尚未完成':['retry','cancel'],'尚不能关闭':['retry','export','cancel'],'修复异常退出锁':['cancel','repair'],'作品锁恢复结果':['ok'],'迁移应用数据':['cancel','migrate'],'修复导入保存目录的异常退出锁':['cancel','repair']}
+// Prompts now render in the workbench; route them through each test's former native stub (same response indexes).
+const promptsVia=(dialog:{showMessageBox:(...args:any[])=>any})=>({ask:async(options:any,extra:{signal?:AbortSignal}={})=>{const order=nativeOrder[options.title]??options.buttons.map((b:any)=>b.value),result=await dialog.showMessageBox({},{type:options.tone,title:options.title,message:options.message,detail:options.detail,buttons:order,signal:extra.signal});return order[result?.response]??options.cancelValue}})
+
 
 // Execute actual main callbacks. Native IO and worker responses are controlled;
 // no string assertions substitute for the side effects of the current source.
 const main=ts.createSourceFile('main.ts',readFileSync('desktop/main/index.ts','utf8'),ts.ScriptTarget.Latest,true)
 function declaration(name:string){const value=main.statements.find(item=>ts.isFunctionDeclaration(item)&&item.name?.text===name);assert.ok(value,`main ${name}`);return value.getText(main)}
 function expression(match:(node:ts.Node)=>node is ts.CallExpression){let found:ts.Expression|undefined;const visit=(node:ts.Node)=>{if(match(node))found=node.arguments[1];ts.forEachChild(node,visit)};visit(main);assert.ok(found);return found.getText(main)}
-function evaluate<T>(code:string,dependencies:Record<string,unknown>):T{const normal={applicationBlocked:()=>false,applicationHandoff:null,ordinaryWorkerExited:false,sessionFlushed:false,applicationRequests:null,draftJournal:{read:async()=>null},applicationMetadata:new ApplicationMetadataGate(),conversationDirectories:new ConversationDirectoryAuthorizations({choose:async()=>{throw Error('no normal-fixture native authority')},revoke(){}}),...dependencies};return new Function(...Object.keys(normal),transformSync(code,{loader:'ts'}).code)(...Object.values(normal)) as T}
+function evaluate<T>(code:string,dependencies:Record<string,unknown>):T{const normal={novelImport:null,novelImportRepairing:false,novelImportServiceLost:false,novelImportOwner:null,novelImportCloseIntent:null,novelImportSourcePicker:{cancel(){}},applicationBlocked:()=>false,applicationHandoff:null,ordinaryWorkerExited:false,sessionFlushed:false,applicationRequests:null,draftJournal:{read:async()=>null},applicationMetadata:new ApplicationMetadataGate(),conversationDirectories:new ConversationDirectoryAuthorizations({choose:async()=>{throw Error('no normal-fixture native authority')},revoke(){}}),...dependencies};return new Function(...Object.keys(normal),transformSync(code,{loader:'ts'}).code)(...Object.values(normal)) as T}
 function closeRig(overrides:Record<string,unknown>={}){
  let servicesCode='';const visit=(node:ts.Node)=>{if(ts.isNewExpression(node)&&node.expression.getText(main)==='CloseCoordinator')servicesCode=node.arguments![0].getText(main);ts.forEachChild(node,visit)};visit(main);assert.ok(servicesCode)
  const calls:string[]=[],gate=new BusinessGate(),owner={owner:71,id:randomUUID(),ready:true}
@@ -32,7 +36,7 @@ function closeRig(overrides:Record<string,unknown>={}){
  ${declaration('restoreBusiness')}\n${declaration('retryMigrationCancellation')}\n${declaration('beginClose')}
  const services=${servicesCode};const closeCoordinator=new CloseCoordinator(services);
  return{services,begin(intent){beginClose(intent);return closingFlow},retry:retryMigrationCancellation,state(){return{businessClosed,closeCommitted,quitting,closing:!!closingFlow}}}
- `,dependencies)
+ `,{...dependencies,appPrompts:(dependencies as any).appPrompts??promptsVia((dependencies as any).dialog)})
  return{...rig,calls,gate}
 }
 
@@ -145,7 +149,7 @@ async function reopenRig(overrides:Record<string,unknown>={}){
  const run=evaluate<()=>Promise<{closed:boolean;businessClosed:boolean}>>(`let window=null,businessClosed=true;
  ${declaration('restoreBusiness')}\n${declaration('createWindow')}
  return async()=>{await createWindow();return{closed:businessGate.closed,businessClosed}}
- `,{workLease:null,workRestore:null,workBackups:undefined,resumeWorkBackups:async()=>{},businessGate:gate,modelService:{resume(){}},repository:{read:async()=>({settings:{appearance:{theme:'paper',zoom:1}}})},nativeTheme:{shouldUseDarkColors:false},nativeWindowAppearance,BrowserWindow:Window,join:(...args:string[])=>args.join('/'),__dirname:'/bundle/main',refreshMenus(){},send(){},
+ `,{worker:{threadId:1},workLease:null,workRestore:null,workBackups:undefined,resumeWorkBackups:async()=>{},businessGate:gate,modelService:{resume(){}},repository:{read:async()=>({settings:{appearance:{theme:'paper',zoom:1}}})},nativeTheme:{shouldUseDarkColors:false},nativeWindowAppearance,BrowserWindow:Window,join:(...args:string[])=>args.join('/'),__dirname:'/bundle/main',refreshMenus(){},send(){},
   closeChannel:{cancel(){}},recoveryExports:{cancelWindow(){},flush:async()=>{}},fileExports:{cancelWindow(){},flush:async()=>{}},configurationFiles:{cancelWindow(){}},authority:{revokeOwner(){}},modelConfiguration:{cancelOwner(){}},avatarAssets:{cancelOwner(){}},responseOwners:new Map(),draftSession:null,closePermits:new WeakSet(),quitting:false,closingFlow:null,migrationHandoff:null,beginClose(){},draftJournal:{activate:()=>()=>{}},randomUUID,...overrides,
  })
  return{run,gate,counts:()=>({created,loads})}

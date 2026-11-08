@@ -11,6 +11,8 @@ import type {RootRelocationCommand,RootRelocationNotice} from '../shared/root-re
 import type {BrandFamily} from '../shared/brand-names'
 import {nativeWindowAppearance,syncNativeThemeSource} from './window-appearance'
 import {installWindowsCloseAccent} from './native-close-accent'
+import {RendererPrompts} from './renderer-prompts'
+import {promptReplySchema} from '../shared/prompt'
 
 export interface StartupRecoveryWindowInput{recoveryRoot:string;home:string;isolatedRoot:string|null;family:BrandFamily}
 
@@ -49,6 +51,8 @@ async function openRestrictedWindow(bootstrap:string,entry:{mode:'lost'|'blocked
  // subscription re-titles the still-hidden window before ready-to-show.
  current=new BrowserWindow({width:680,height:540,minWidth:360,minHeight:440,show:false,title:'定位原数据目录 · 玄印写作',backgroundColor:nativeAppearance.backgroundColor,titleBarStyle:'hidden',trafficLightPosition:{x:14,y:14},...(process.platform==='win32'?{titleBarOverlay:nativeAppearance.titleBarOverlay}:{}),webPreferences:{session:isolated,preload:join(__dirname,'../preload/root-relocation.cjs'),contextIsolation:true,sandbox:true,nodeIntegration:false,webSecurity:true}})
  const owned=current,owner=randomUUID(),contentsId=owned.webContents.id
+ // Confirmations render in this window's React screen, not as native message boxes.
+ const prompts=new RendererPrompts(list=>{if(!ownerAlive||owned.isDestroyed()||owned.webContents.isCrashed())return false;owned.webContents.send('desktop:relocation-prompt-event',list);return true})
  if(process.platform==='win32')installWindowsCloseAccent(owned,{BaseWindow,ImageView,nativeImage,screen},nativeAppearance.titleBarOverlay.symbolColor)
  const assertOwner=(nonce:string)=>{assertCold();if(nonce!==owner||!ownerAlive||current!==owned||owned.isDestroyed()||owned.webContents.id!==contentsId)throw Error('OWNER_EXPIRED')}
  const controller=new RootRelocationController({bootstrap:identity,mode:entry.mode,theme,sourcePath:entry.sourcePath,notice:entry.notice??undefined,...(entry.recovery?{defaultPath:entry.recovery.recoveryRoot,wipe:async()=>{
@@ -66,10 +70,10 @@ async function openRestrictedWindow(bootstrap:string,entry:{mode:'lost'|'blocked
   },
   confirm:async preview=>{
    assertOwner(owner)
-   const result=await dialog.showMessageBox(owned,{type:'question',title:'确认原数据目录',message:'使用找到的原数据目录并重新打开应用？',detail:`原目录：${preview.source.root.path}\n所选目录：${preview.target.path}\n\n仅接受同一原物理目录，不会复制、清理或恢复副本。\n保留 ${preview.unreadMigrationResults} 条未读迁移结果，重新打开后仍需明确确认。`,buttons:['使用原目录并重新打开','取消'],defaultId:1,cancelId:1,noLink:true})
+   const result=await prompts.ask({tone:'question',title:'确认原数据目录',message:'使用找到的原数据目录并重新打开应用？',detail:`原目录：${preview.source.root.path}\n所选目录：${preview.target.path}\n\n仅接受同一原物理目录，不会复制、清理或恢复副本。\n保留 ${preview.unreadMigrationResults} 条未读迁移结果，重新打开后仍需明确确认。`,buttons:[{value:'cancel',label:'取消',variant:'outline'},{value:'use',label:'使用原目录并重新打开',variant:'default'}],defaultValue:'cancel',cancelValue:'cancel'})
    assertOwner(owner)
-   if(result.response!==0&&result.response!==1)throw Error('INVALID_CONFIRMATION')
-   return result.response===0
+   if(result!=='use'&&result!=='cancel')throw Error('INVALID_CONFIRMATION')
+   return result==='use'
   },
   restart:async()=>{assertOwner(owner);exiting=true;app.relaunch();app.quit()},
   quit:async()=>{assertCold();exiting=true;app.quit()},
@@ -81,6 +85,8 @@ async function openRestrictedWindow(bootstrap:string,entry:{mode:'lost'|'blocked
  const state=()=>({...controller.state(),platform})
  let popup:ReturnType<typeof Menu.buildFromTemplate>|null=null
  ipcMain.handle('desktop:relocation-state',event=>{trusted(event);return state()})
+ ipcMain.handle('desktop:relocation-prompts',event=>{trusted(event);return prompts.list()})
+ ipcMain.handle('desktop:relocation-prompt-reply',(event,input:unknown)=>{trusted(event);const reply=promptReplySchema.parse(input);return prompts.reply(reply.id,reply.value)})
  ipcMain.handle('desktop:relocation-command',async(event,input:unknown)=>{
   trusted(event)
   if(typeof input!=='string'||!['choose','cancel','restart','quit','menu','reset','reset-confirm','reset-back'].includes(input))throw Error('INVALID_RELOCATION_COMMAND')
@@ -103,19 +109,19 @@ async function openRestrictedWindow(bootstrap:string,entry:{mode:'lost'|'blocked
   // supplies legacy isInPlace (including hydration replaceState). An explicit
   // new details value takes precedence; only strict true retains authority.
   const sameDocument=details.isSameDocument??isInPlace,mainFrame=details.isMainFrame??isMainFrame
-  if(loaded&&mainFrame!==false&&sameDocument!==true){ownerAlive=false;close()}
+  if(loaded&&mainFrame!==false&&sameDocument!==true){ownerAlive=false;prompts.cancelAll({force:true});close()}
  })
- owned.webContents.on('render-process-gone',()=>{ownerAlive=false;close()})
+ owned.webContents.on('render-process-gone',()=>{ownerAlive=false;prompts.cancelAll({force:true});close()})
  owned.on('close',event=>{if(!exiting){event.preventDefault();close()}})
  const unsubscribe=controller.subscribe(()=>{if(ownerAlive&&!owned.isDestroyed()){owned.setTitle(title());owned.webContents.send('desktop:relocation-event',state())}})
- owned.on('closed',()=>{ownerAlive=false;unsubscribe();current=null;if(!exiting)close()})
+ owned.on('closed',()=>{ownerAlive=false;prompts.cancelAll({force:true});unsubscribe();current=null;if(!exiting)close()})
  app.on('before-quit',event=>{if(!exiting){event.preventDefault();close()}})
  const focus=()=>{if(!exiting&&!owned.isDestroyed()){owned.show();owned.focus()}}
  app.on('second-instance',focus);app.on('activate',focus)
  const safe=(action:()=>void)=>()=>{try{assertOwner(owner);if(!exiting)action()}catch{/* Fixed native actions cannot transfer authority to another window. */}}
  const about=safe(()=>{
   if(platform==='darwin'){app.setAboutPanelOptions({applicationName:'玄印写作',applicationVersion:app.getVersion()});app.showAboutPanel()}
-  else void dialog.showMessageBox(owned,{type:'info',title:'关于玄印写作',message:'玄印写作',detail:`当前版本：${app.getVersion()}`,buttons:['关闭'],noLink:true}).catch(()=>{})
+  else void prompts.ask({tone:'info',title:'关于玄印写作',message:'玄印写作',detail:`当前版本：${app.getVersion()}`,buttons:[{value:'ok',label:'关闭',variant:'default'}],defaultValue:'ok',cancelValue:'ok'}).catch(()=>{})
  })
  // Native menu templates stay in main. No renderer template, command ID or
  // path is accepted, and quit/close both use the same physical-IO drain.

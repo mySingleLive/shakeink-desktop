@@ -6,7 +6,7 @@ export interface ImportBudgetProfile {contextWindow:number;characters:number;max
 export interface ImportExecutionBudget extends ImportBudgetProfile {version:1|2}
 export interface ImportBudgetPolicy {version:2;text:ImportBudgetProfile;review:ImportBudgetProfile;workingUnits:'adjacent-1000-v2'|'sentence-1000-v3'}
 export interface ImportLegacyBudget {version:1;text?:ImportBudgetProfile;review?:ImportBudgetProfile}
-export interface ImportBudgetState {budgetPolicy?:ImportBudgetPolicy;legacyBudget?:ImportLegacyBudget}
+export interface ImportBudgetState {budgetPolicy?:ImportBudgetPolicy;legacyBudget?:ImportLegacyBudget;promptLayout?:unknown;sceneFragmentLayout?:unknown}
 export class ImportBudgetPolicyError extends Error {constructor(){super('导入预算策略无效，请保留草稿并核对配置')}}
 const invalid=():never=>{throw new ImportBudgetPolicyError()}
 const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v)
@@ -34,6 +34,8 @@ export function validateImportLegacyBudget(value:unknown):ImportLegacyBudget{
  if(Object.hasOwn(value,'text'))validateProfile(value.text,1);if(Object.hasOwn(value,'review'))validateProfile(value.review,1);return value as unknown as ImportLegacyBudget
 }
 export function validateImportBudgetState(state:ImportBudgetState){
+ if(state.promptLayout!==undefined&&(state.promptLayout!=='shared-source-v1'||!state.budgetPolicy))return invalid()
+ if(state.sceneFragmentLayout!==undefined&&(state.sceneFragmentLayout!=='compact-v1'||!state.budgetPolicy))return invalid()
  if(state.budgetPolicy!==undefined){validateImportBudgetPolicy(state.budgetPolicy);if(state.legacyBudget!==undefined)return invalid()}
  if(state.legacyBudget!==undefined)validateImportLegacyBudget(state.legacyBudget)
 }

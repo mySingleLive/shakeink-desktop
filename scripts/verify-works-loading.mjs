@@ -67,18 +67,18 @@ try {
   const probePath = join(base, 'native-probe.json')
   await app.evaluate(({ app, dialog }, probePath) => {
     const fs = process.getBuiltinModule('node:fs'), probe = { confirmation: 0, notice: 0, relaunch: 0 }
-    const original = dialog.showMessageBox.bind(dialog)
-    dialog.showMessageBox = async (...args) => {
-      const options = args.at(-1)
-      if (options.title === '修复异常退出锁') { probe.confirmation++; return { response: 1, checkboxChecked: false } }
-      if (options.title === '作品锁恢复结果') { probe.notice++; return { response: 0, checkboxChecked: false } }
-      return original(...args)
-    }
+    globalThis.__worksProbe = probe
+    dialog.showMessageBox = async () => { throw Error('lease recovery must use the React prompts') }
     app.relaunch = () => { probe.relaunch++; fs.writeFileSync(probePath, JSON.stringify(probe)) }
   }, probePath)
   console.log('Works loading: actual main handoff and filesystem recovery with controlled fixture confirmation.')
   const closed = app.waitForEvent('close', { timeout: 45000 })
   await page.getByRole('button', { name: '修复作品锁', exact: true }).click()
+  // 510: the confirmation and result notice are the workbench's React prompts.
+  await page.getByRole('dialog', { name: '修复异常退出锁', exact: true }).getByRole('button', { name: '修复并重新启动', exact: true }).click({ timeout: 45000 })
+  await app.evaluate(() => { globalThis.__worksProbe.confirmation++ })
+  await page.getByRole('dialog', { name: '作品锁恢复结果', exact: true }).getByRole('button', { name: '重新启动', exact: true }).click({ timeout: 45000 })
+  await app.evaluate(() => { globalThis.__worksProbe.notice++ })
   await closed; app = undefined
   const probe = JSON.parse(await readFile(probePath, 'utf8')); assert.deepEqual(probe, { confirmation: 1, notice: 1, relaunch: 1 })
   check('real bridge start closes worker, confirms exact stale lease, recovers and requests one restart')

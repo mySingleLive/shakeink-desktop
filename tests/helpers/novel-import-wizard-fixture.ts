@@ -31,12 +31,12 @@ export function classifyF(r:ImportAiRequest):ImportAiResult{
  const heads=[...settingsF.matchAll(/^# (角色|世界观|场景|物品)$/gmu)].map(m=>({start:m.index!,kind:({角色:'character',世界观:'world',场景:'scene',物品:'item'} as const)[m[1] as '角色']}))
  return {classifications:r.units.map(u=>({unitId:u.id,kind:u.fileId==='f-body'?'body' as const:[...heads].reverse().find(h=>h.start<=u.start)?.kind??'world'}))}
 }
-export async function fixture(files:ImportFile[]=filesF(),ai?:Ai,over:{models?:{text?:ImportModel;review?:ImportModel}}={}){
+export async function fixture(files:ImportFile[]=filesF(),ai?:Ai,over:{models?:{text?:ImportModel;review?:ImportModel};promptLayout?:'legacy';sceneFragmentLayout?:'compact-v1'}={}){
  const root=await realpath(await mkdtemp(join(tmpdir(),'niw-engine-'))),target=await realpath(await mkdtemp(join(tmpdir(),'niw-target-'))),s=await stat(target,{bigint:true})
  const requests:ImportAiRequest[]=[];let published:ImportSession|undefined,models=over.models??{text:model,review},handler:Ai
  const fallback:Ai=async r=>r.intent==='structure'?allCuts(r):r.phase==='classify'?classifyF(r):r.phase==='review'?{conflicts:[]}:{notFound:true}
  handler=ai??fallback
- const options={wizard:true,root,choose:async()=>['/private/tmp/niw-synthetic'],chooseTarget:async()=>({path:target,device:String(s.dev),inode:String(s.ino)}),protectedDirectories:async()=>[],models:async()=>models,scan:async()=>structuredClone(files),verifySources:async()=>{},redecode:async(f:ImportFile)=>({...f,requiresEncodingConfirmation:false}),ai:async(r:ImportAiRequest)=>{requests.push(structuredClone(r));return handler(r)},cancelAi:async(_id:string)=>{},publish:async(input:ImportPublishInput):Promise<ImportReceipt>=>{published=structuredClone(input.session);return {requestId:input.session.publication!.requestId,workId:'work',novelId:'novel',importHash:input.importHash}}}
+ const options={wizard:true,...(over.promptLayout?{promptLayout:over.promptLayout}:{}),...(over.sceneFragmentLayout?{sceneFragmentLayout:over.sceneFragmentLayout}:{}),root,choose:async()=>['/private/tmp/niw-synthetic'],chooseTarget:async()=>({path:target,device:String(s.dev),inode:String(s.ino)}),protectedDirectories:async()=>[],models:async()=>models,scan:async()=>structuredClone(files),verifySources:async()=>{},redecode:async(f:ImportFile)=>({...f,requiresEncodingConfirmation:false}),ai:async(r:ImportAiRequest)=>{requests.push(structuredClone(r));return handler(r)},cancelAi:async(_id:string)=>{},publish:async(input:ImportPublishInput):Promise<ImportReceipt>=>{published=structuredClone(input.session);return {requestId:input.session.publication!.requestId,workId:'work',novelId:'novel',importHash:input.importHash}}}
  const controller=new NovelImportController(options);await controller.initialize()
  const view=async()=>(await controller.act({type:'current'})).view!
  async function act(type:string,extra:Record<string,unknown>={}){const v=type==='choose'?undefined:await view();return controller.act({type,...(v?{id:v.id,revision:v.revision}:{}),...extra})}
@@ -160,10 +160,18 @@ export async function toWorldImport(f:Awaited<ReturnType<typeof fixture>>){
 
 
 /** Valid worldline / narrative / outline results over the request's units. */
+/** docs/531 3R2-5: the wizard's outline instruction starts with `本批目标章：[{index,title}]`. */
+export function outlineTargets(r:Pick<ImportAiRequest,'instruction'>):number[]|undefined{
+ const line=r.instruction?.split('\n')[0];if(!line?.startsWith('本批目标章：'))return undefined
+ return (JSON.parse(line.slice('本批目标章：'.length)) as {index:number}[]).map(t=>t.index)
+}
 export function linesAi(base:Ai):Ai{return async r=>{
  if(r.phase==='analyze'&&!r.intent&&r.kind==='worldline'){const u=r.units[0];return {artifacts:[{id:'ev-'+u.id.replace(/[^0-9a-z]/giu,''),kind:'worldline',name:'事件'+u.start,text:'发生了一件事。',facts:{lineId:'main',lineName:'主线',timeKind:'unknown',people:'[]',reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(0,8)}],sourceUnitIds:[u.id],origin:'inferred'}]}}
  if(r.phase==='analyze'&&!r.intent&&r.kind==='narrative'){const u=r.units[0],event=r.entities?.find(e=>e.kind==='worldline'),chapter=r.chapters!.findIndex(c=>u.start>=c.start&&u.start<c.end);if(!event)return {notFound:true};return {artifacts:[{id:'nar-'+u.id.replace(/[^0-9a-z]/giu,''),kind:'narrative',name:'讲述'+u.start,text:'讲述。',facts:{chapterIndex:String(chapter),order:'0',refs:JSON.stringify([{eventId:event.id,reliability:'客观事实'}]),reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(0,8)}],sourceUnitIds:[u.id],origin:'inferred'}]}}
- if(r.phase==='analyze'&&!r.intent&&r.kind==='outline'){const indices=[...new Set(r.chapters!.map((c,i)=>r.units.some(u=>u.start<c.end&&u.end>c.start)?i:-1).filter(i=>i>=0))],u=r.units[0];return {artifacts:indices.map(i=>({id:'detailed-'+i,kind:'outline' as const,name:'章级细纲'+i,text:'第'+i+'章细纲',facts:{chapterIndex:String(i)},evidence:[{unitId:u.id,quote:u.text.slice(0,8)}],sourceUnitIds:[u.id],origin:'inferred' as const}))}}
+ if(r.phase==='analyze'&&!r.intent&&r.kind==='outline'){
+  // docs/532 R: wizard batches name their target chapters in the instruction; other flows fall back to every overlapped chapter.
+  const targets=outlineTargets(r),indices=targets??[...new Set(r.chapters!.map((c,i)=>r.units.some(u=>u.start<c.end&&u.end>c.start)?i:-1).filter(i=>i>=0))]
+  return {artifacts:indices.map(i=>{const c=r.chapters![i],u=r.units.find(u=>u.start<c.end&&u.end>c.start)!,from=Math.max(c.start,u.start)-u.start,quote=u.text.slice(from,from+Math.min(8,Math.min(c.end,u.end)-u.start-from));return {id:'detailed-'+i,kind:'outline' as const,name:'章级细纲'+i,text:'第'+i+'章细纲',facts:{chapterIndex:String(i)},evidence:[{unitId:u.id,quote}],sourceUnitIds:[u.id],origin:'inferred' as const}})}}
  return base(r)
 }}
 export async function toStep(f:Awaited<ReturnType<typeof fixture>>,target:string){

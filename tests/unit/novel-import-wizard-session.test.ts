@@ -21,6 +21,17 @@ test('NIW-C01: wizard sessions order files, work and kinds; step 3 requires a ti
   const v=await f.view();assert.equal(v.wizard?.step,'kinds');assert.equal(v.phase,'source')
  }finally{await f.dispose()}
 })
+test('NIW-C01b: reading is reported after the picker closes and cleared on success, failure and never on cancel',async()=>{
+ const f=await fixture();try{
+  const o=f.options as unknown as {reading?:(active:boolean)=>void;choose:()=>Promise<string[]|null>;scan:()=>Promise<ImportFile[]>},events:string[]=[],choose=o.choose,scan=o.scan
+  o.reading=active=>events.push(active?'on':'off')
+  o.choose=async()=>{events.push('picker');return null};assert.equal((await f.act('choose',{mode:'files'})).view,null);assert.deepEqual(events,['picker'])
+  events.length=0;o.choose=async()=>{events.push('picker');return choose()};o.scan=async()=>{events.push('scan');throw Error('隔离读取失败')}
+  await assert.rejects(f.act('choose',{mode:'files'}),/隔离读取失败/);assert.deepEqual(events,['picker','on','scan','off'])
+  events.length=0;o.scan=async()=>{events.push('scan');return scan()}
+  const v=(await f.act('choose',{mode:'files'})).view!;assert.equal(v.wizard?.step,'files');assert.deepEqual(events,['picker','on','scan','off'])
+ }finally{await f.dispose()}
+})
 test('NIW-C03: GB18030 sources pass step 2 without an encoding action',async()=>{
  const f=await fixture();try{
   await f.act('choose',{mode:'files'});const v=await f.view()
@@ -882,5 +893,14 @@ test('RF-01: the running count is the distinct names returned from the body; sou
   for(let i=0;i<2000;i++){const v=await f.view();if(v.wizard!.stepState['detect-char']==='running'&&(v.wizard!.rosterFound??0)>=39){found=v.wizard!.rosterFound!;break}await sleep(5)}
   assert.equal(found,39,'only body names are counted while running');hold=false
   const v=await f.settle(),names=v.wizard!.candidates.character!.map(c=>c.name);assert.equal(names.length,41);assert.ok(names.includes('资料独有人'))
+ }finally{await f.dispose()}
+})
+test('NIW-C69b: background roster broadcasts keep the default image model, so image options stay enabled',async()=>{
+ const f=await fixture(filesF(),rosterAi());const pushed:(ImportView|null)[]=[];(f.options as {changed?:(v:ImportView|null)=>void}).changed=v=>pushed.push(v);withImages(f)
+ try{
+  await toTree(f);await f.act('wizard-next',{consent:true});await f.settle()
+  const roster=pushed.filter((v):v is ImportView=>!!v?.wizard&&v.wizard.step==='detect-char');assert.ok(roster.length>0,'roster step was broadcast')
+  assert.ok(roster.every(v=>v.models.image?.id===imageModel.id),'every broadcast view names the image model')
+  f.setImageModel(undefined);assert.equal((await f.view()).models.image,undefined,'a removed image model disappears on the next request')
  }finally{await f.dispose()}
 })

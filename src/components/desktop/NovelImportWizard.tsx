@@ -13,7 +13,7 @@ import {getTabIcon} from '@/stores/tabs'
 import type {SettingType} from '@/generated/prisma/enums'
 
 /** The approved step-by-step import wizard (design/novel-import-wizard). Every value comes from view.wizard. */
-const STAGES=['准备','结构与正文','角色 · 场景 · 物品','世界观','线索','校验与完成']
+const STAGES=['准备','结构与正文','角色 · 场景 · 物品','世界观','剧情','校验与完成']
 const STAGE_OF:Record<WizardStep,number>={entry:0,files:0,work:0,kinds:0,'detect-struct':1,tree:1,'import-struct':1,'import-body':1,'detect-char':2,'import-char':2,'detect-scene':2,'import-scene':2,'detect-item':2,'import-item':2,'detect-world':3,'import-world':3,worldline:4,narrative:4,outline:4,foreshadow:4,verify:5,done:5}
 const ROSTER:Partial<Record<WizardStep,WizardEntityKind>>={'detect-char':'character','detect-scene':'scene','detect-item':'item','detect-world':'world'}
 const IMPORTS:Partial<Record<WizardStep,WizardEntityKind>>={'import-char':'character','import-scene':'scene','import-item':'item','import-world':'world'}
@@ -58,8 +58,7 @@ function FilesStep({view,busy,onStop}:Props){
   <input type="checkbox" aria-label={`纳入 ${file.name}`} checked={file.included} disabled={busy||!!file.error} onChange={event=>void act('include',{fileId:file.id,included:event.target.checked})}/>
   <div className="ni-file-meta"><strong>{file.name}</strong><span>{file.characters.toLocaleString()} 字符{file.encoding&&` · ${file.encoding.toUpperCase()}（自动识别）`}{file.encoding&&open!==file.id&&<> <button type="button" className="ni-source-link" onClick={()=>setOpen(file.id)}>编码不对？</button></>}</span>
    {open===file.id&&<label className="ni-check-line">改用<select aria-label={`${file.name} 编码`} defaultValue={file.encoding} onChange={event=>{setOpen(null);void act('set-encoding',{fileId:file.id,encoding:event.target.value})}}>{['utf-8','utf-16le','utf-16be','gb18030'].map(e=><option key={e} value={e}>{e.toUpperCase()}</option>)}</select></label>}
-   {file.error&&<span role="status" className="ni-error-text">{file.error}</span>}</div></div>)}</div>
-  <Notice title="正文逐字拷贝">来源文件不会被修改。编码按文件内容自动识别，无需确认；只有识别结果不对时才需要改。</Notice></div>
+   {file.error&&<span role="status" className="ni-error-text">{file.error}</span>}</div></div>)}</div></div>
   <Footer note={`${view.files.filter(f=>f.included).length} 个文件纳入导入`}><Button variant="ghost" onClick={onStop}>取消</Button><Button disabled={busy||!view.files.some(f=>f.included&&!f.error)} onClick={()=>void act('wizard-next')}>继续</Button></Footer></>
 }
 function WorkStep({view,busy}:Props){
@@ -111,7 +110,7 @@ function TreeStep({view,busy}:Props){
 }
 
 function RosterStep(props:Props&{kind:WizardEntityKind}){
- const {view,busy,kind,onRevise}=props,w=view.wizard,list=w.candidates[kind]??[],[query,setQuery]=useState(''),[details,setDetails]=useState<Set<string>>(new Set()),[editing,setEditing]=useState<string|null>(null),[merge,setMerge]=useState<string[]>([])
+ const {view,busy,kind,onRevise}=props,w=view.wizard,list=w.candidates[kind]??[],[query,setQuery]=useState(''),[details,setDetails]=useState<Set<string>>(new Set()),[editing,setEditing]=useState<string|null>(null)
  const state=w.stepState[w.step]
  if(state==='running')return <><div className="ni-body"><div className="ni-progress-hero"><LoaderCircle className="ni-spinner"/><h3>正在识别{WIZARD_ENTITY_LABELS[kind]}</h3><p>只返回名称清单，不在此步骤导入。</p><p className="ni-w-found" aria-live="polite">已识别 {w.rosterFound??0} 个{WIZARD_ENTITY_LABELS[kind]}</p></div></div><Footer><Button variant="ghost" onClick={props.onStop}>停止导入</Button><Button variant="ghost" onClick={onRevise}>返回修改选择</Button></Footer></>
  if(state==='failed')return <><div className="ni-body"><StepRail w={w}/><Notice alert title={<><CircleAlert/>{WIZARD_ENTITY_LABELS[kind]}识别失败</>}>{w.stepError}</Notice></div><Footer><Button variant="ghost" onClick={onRevise}>返回修改选择</Button><Button variant="outline" disabled={busy} onClick={()=>void act('wizard-next',{skip:true})}>跳过此步骤</Button><Button disabled={busy} onClick={()=>void act('wizard-redetect')}>重新识别</Button></Footer></>
@@ -125,10 +124,9 @@ function RosterStep(props:Props&{kind:WizardEntityKind}){
   {images.length>0&&<fieldset className="ni-w-genopts"><legend>导入后自动生成</legend>{images.map(k=>{const Icon=IMAGE_ICON[k];return <label key={k} className={imageModel?'':'ni-muted'}><input type="checkbox" checked={w.images[k]} disabled={busy||!imageModel} onChange={event=>void act('wizard-set-images',{[k]:event.target.checked})}/><Icon/>生成{WIZARD_IMAGE_LABELS[k]}</label>})}
    <small>{imageModel?`为每个导入成功的${WIZARD_ENTITY_LABELS[kind]}各生成一张。勾选并开始导入即允许把外观描述发送给图像模型 ${imageModel.name}；之后可在面板重新生成。`:'尚未配置图像模型。'}</small>{!imageModel&&<Button size="sm" variant="ghost" onClick={()=>window.dispatchEvent(new CustomEvent('desktop:settings-section',{detail:'models'}))}>配置模型</Button>}</fieldset>}
   <div className="ni-w-toolbar">{kind!=='world'&&<SearchBox value={query} onChange={setQuery} label="搜索名称或别名"/>}<Button size="sm" variant="outline" disabled={busy} onClick={()=>select(list.map(c=>c.id),true)}>全选</Button><Button size="sm" variant="outline" disabled={busy} onClick={()=>select(list.map(c=>c.id),false)}>全不选</Button>
-   {kind==='character'&&<Button size="sm" variant="ghost" disabled={busy||merge.length<2} onClick={()=>{void act('wizard-merge-candidates',{keepId:merge[0],mergeIds:merge.slice(1)});setMerge([])}}>合并为同一角色</Button>}<span className="ni-w-count" aria-live="polite">已选 {n} / {kind==='world'?list.filter(c=>c.kind==='world-setting'||!list.some(x=>x.parentId===c.id)).length:list.length}</span></div>
+   <span className="ni-w-count" aria-live="polite">已选 {n} / {kind==='world'?list.filter(c=>c.kind==='world-setting'||!list.some(x=>x.parentId===c.id)).length:list.length}</span></div>
   {kind==='world'?<WorldTree list={list} busy={busy} select={select}/>:<div className="ni-w-list">{visible.map(c=><div key={c.id}><div className={`ni-w-node ${kind==='scene'&&c.parentId?'ni-w-ch':''} ${c.selected?'':'ni-muted'}`}>
-   <input type="checkbox" aria-label={`选择 ${c.name}`} checked={c.selected} disabled={busy} onChange={event=>{select([c.id],event.target.checked);setMerge(m=>event.target.checked?m:m.filter(x=>x!==c.id))}}/>
-   {kind==='character'&&<input type="checkbox" className="ni-w-merge" aria-label={`合并 ${c.name}`} checked={merge.includes(c.id)} onChange={event=>setMerge(m=>event.target.checked?[...m,c.id]:m.filter(x=>x!==c.id))}/>}
+   <input type="checkbox" aria-label={`选择 ${c.name}`} checked={c.selected} disabled={busy} onChange={event=>select([c.id],event.target.checked)}/>
    <span>{c.name}</span>
    {kind==='character'&&c.roleType&&(editing===c.id?<select aria-label={`${c.name} 类型`} autoFocus defaultValue={c.roleType} onChange={event=>{setEditing(null);void act('wizard-set-role',{candidateId:c.id,roleType:event.target.value})}} onBlur={()=>setEditing(null)}>{Object.entries(ROLE_LABELS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:<button type="button" className="ni-w-tag" aria-label={`${c.name}：${ROLE_LABELS[c.roleType]}，点击修改类型`} onClick={()=>setEditing(c.id)}>{ROLE_LABELS[c.roleType]}</button>)}
    {kind==='item'&&c.itemType&&<span className="ni-w-tag">{c.itemType}</span>}
@@ -136,8 +134,14 @@ function RosterStep(props:Props&{kind:WizardEntityKind}){
    {sceneSummary&&c.sceneIdentityState&&<span className="ni-w-tag">{c.sceneIdentityState==='unresolved'?'待确认':c.sceneIdentityState==='source-scoped'?'来源限定':'具体地点'}</span>}
    {sceneSummary&&c.sceneExcluded&&<span className="ni-w-tag">非具体地点</span>}
    <button type="button" className="ni-source-link ni-w-ml" aria-expanded={details.has(c.id)} onClick={()=>setDetails(s=>{const x=new Set(s);if(x.has(c.id))x.delete(c.id);else x.add(c.id);return x})}>{details.has(c.id)?'收起':'详情'}</button></div>
-   {details.has(c.id)&&(sceneSummary?<SceneIdentityDetails view={view} identityId={c.id} busy={busy}/>:<div className="ni-w-detail">{[c.aliases.length?'别名：'+c.aliases.join('、'):'',`出场 ${c.chapterCount} 章`,'来源：'+c.sources.map(s=>s==='source'?'资料':'正文').join(' + ')].filter(Boolean).join(' · ')}</div>)}</div>)}</div>}
+   {details.has(c.id)&&(sceneSummary?<SceneIdentityDetails view={view} identityId={c.id} busy={busy}/>:<div className="ni-w-detail">{[c.aliases.length?'别名：'+c.aliases.join('、'):'',`出场 ${c.chapterCount} 章`,'来源：'+c.sources.map(s=>s==='source'?'资料':'正文').join(' + ')].filter(Boolean).join(' · ')}{kind==='character'&&list.length>1&&<MergeInto candidate={c} list={list} busy={busy}/>}</div>)}</div>)}</div>}
  </div><Footer note={unresolved?`${unresolved} 项归属待确认，不会导入，将在校验页列出；可在详情确认后再导入`:n?undefined:`未选择任何${WIZARD_ENTITY_LABELS[kind]}，将跳过导入`}><Button variant="ghost" onClick={onRevise}>返回修改选择</Button><Button disabled={busy} onClick={()=>void act('wizard-next',wanted.length&&ready?{imageConsent:true}:{})}>{skipScenes?'跳过导入场景':wizardImportButton(kind,ready||n,wanted)}</Button></Footer></>
+}
+/** Merges this character into another one; the chosen character keeps its name and gains this one as an alias. */
+function MergeInto({candidate,list,busy}:{candidate:WizardCandidate;list:WizardCandidate[];busy:boolean}){
+ const [target,setTarget]=useState('')
+ return <div className="ni-w-merge"><label>合并到<select aria-label={`将 ${candidate.name} 合并到`} value={target} disabled={busy} onChange={event=>setTarget(event.target.value)}><option value="">选择角色</option>{list.filter(x=>x.id!==candidate.id).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+  <Button size="xs" variant="outline" disabled={busy||!target} onClick={()=>{void act('wizard-merge-candidates',{keepId:target,mergeIds:[candidate.id]});setTarget('')}}>合并</Button></div>
 }
 function WorldTree({list,busy,select}:{list:WizardCandidate[];busy:boolean;select(ids:string[],selected:boolean):void}){
  const leaves=(id:string):WizardCandidate[]=>{const kids=list.filter(c=>c.parentId===id);return kids.length?kids.flatMap(k=>leaves(k.id)):list.filter(c=>c.id===id)}
@@ -184,16 +188,22 @@ function VerifyStep(props:Props){
    {!c.ok&&retry[c.key]&&<Button size="sm" variant="outline" disabled={busy} onClick={()=>void act('wizard-retry-kind',{kind:retry[c.key]})}><RotateCcw/>重试导入{WIZARD_ENTITY_LABELS[retry[c.key]!]}</Button>}</li>)}</ul>
   {!checks.length&&<div className="ni-progress-hero"><LoaderCircle className="ni-spinner"/><p>检查中</p></div>}
   {!!w.sceneIdentitySummary?.deferred?.length&&<Notice title={`归属待确认，未导入 ${w.sceneIdentitySummary.deferredTotal??w.sceneIdentitySummary.deferred.length} 项`}>{w.sceneIdentitySummary.deferred.map(d=>d.name).join('、')}{(w.sceneIdentitySummary.deferredTotal??0)>w.sceneIdentitySummary.deferred.length?' 等':''}。可返回识别场景，在详情确认归属后再导入。</Notice>}
-  {w.skipped.length>0&&<Notice title={`已跳过 ${w.skipped.length} 项`}>{w.skipped.map(s=>s.label).join('、')}。这些项不会保存，记入导入记录。</Notice>}</div>
+  {w.skipped.length>0&&<Notice title={`已跳过 ${w.skipped.length} 项`}>{w.skipped.map(s=>s.label).join('、')}。这些项不会保存，记入导入记录。</Notice>}
+  {(w.dropped??[]).some(d=>d.kind==='settings')&&<Notice title="部分设定条目已修正">{(w.dropped??[]).filter(d=>d.kind==='settings').map(d=>`${d.label}：${d.reason}`).join('；')}。</Notice>}
+  {(w.dropped??[]).some(d=>d.kind==='lines')&&<Notice title="部分剧情关联已修正">{(w.dropped??[]).filter(d=>d.kind==='lines').map(d=>`${d.label}：${d.reason}`).join('；')}。</Notice>}</div>
   <Footer note={checks.length?bad?'请先处理标出的问题':'全部通过':''}><Button variant="ghost" onClick={props.onRevise}>返回修改选择</Button><Button disabled={busy||!checks.length||bad} onClick={()=>void act('wizard-next')}>保存作品</Button></Footer></>
 }
 
-export function wizardTitle(view:Props['view']){return WIZARD_STEP_TITLES[view.wizard.step]}
-export function NovelImportWizardHeader({view}:{view:Props['view']}){
- const stage=STAGE_OF[view.wizard.step]
- return <><DialogTitle>{wizardTitle(view)}</DialogTitle><DialogDescription className="ni-w-sr">第 {wizardStepNumber(view.wizard.step)} 步，共 {WIZARD_STEPS.length} 步</DialogDescription>
+export function NovelImportWizardHeader({step}:{step:WizardStep}){
+ const stage=STAGE_OF[step]
+ return <><DialogTitle>{WIZARD_STEP_TITLES[step]}</DialogTitle><DialogDescription className="ni-w-sr">第 {wizardStepNumber(step)} 步，共 {WIZARD_STEPS.length} 步</DialogDescription>
   <ol className="ni-stage-list ni-w-stages" aria-label="导入阶段">{STAGES.map((label,k)=><li key={label} aria-current={k===stage?'step':undefined} data-done={k<stage}><span>{k+1}</span>{label}</li>)}</ol>
-  <div className="ni-w-stage-now">{wizardStageText(view.wizard.step,stage,STAGES[stage])}</div></>
+  <div className="ni-w-stage-now">{wizardStageText(step,stage,STAGES[stage])}</div></>
+}
+/** Shown from the moment the picker closes until the chosen files have been read. */
+export function NovelImportReading(){
+ return <><div className="ni-body"><div className="ni-progress-hero" role="status" aria-busy="true"><LoaderCircle className="ni-spinner"/><h3>正在读取文件</h3><p>读取完成后显示文件信息。</p></div></div>
+  <Footer><Button disabled>继续</Button></Footer></>
 }
 export function NovelImportWizard(props:Props){
  return <><ResumeConsent view={props.view}/><WizardStep {...props}/></>

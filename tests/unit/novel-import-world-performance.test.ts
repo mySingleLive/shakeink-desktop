@@ -12,7 +12,7 @@ const names=Array.from({length:64},(_,i)=>'合成设定'+String(i).padStart(2,'0
 type Fixture=Awaited<ReturnType<typeof fixture>>
 async function worldFixture(targets=['world']){
  const body=names.map((n,i)=>`第${i+1}章 篇${i}\n\n众人谈起${n}。${'风声。'.repeat(160)}\n\n`).join('')
- const f=await fixture([source(body,'正文.txt','f-body')],rosterAi({'roster:world':r=>({roster:r.units.flatMap(u=>{const own=names.filter(n=>u.text.includes(n));return own.length?[{name:'主世界',aliases:[],settings:own.map(name=>({settingType:(names.indexOf(name)%2?'SOCIETY':'CULTURE') as 'SOCIETY'|'CULTURE',name})),evidence:{unitId:u.id,quote:own[0]}}]:[]})})}))
+ const f=await fixture([source(body,'正文.txt','f-body')],rosterAi({'roster:world':r=>({roster:r.units.flatMap(u=>{const own=names.filter(n=>u.text.includes(n));return own.length?[{name:'主世界',aliases:[],settings:own.map(name=>({settingType:(names.indexOf(name)%2?'SOCIETY':'CULTURE') as 'SOCIETY'|'CULTURE',name})),evidence:{unitId:u.id,quote:own[0]}}]:[]})})}),{promptLayout:'legacy'})
  return {f,targets}
 }
 async function toWorldImport({f,targets}:{f:Fixture;targets:string[]}){
@@ -85,10 +85,10 @@ test('WP-07: a world entity gets one correction for an unfinished reply; the hin
   failed=new Set()
  }finally{await f.dispose()}
 })
-test('WP-03: world entities use the light policy and the import lane; settings batches use the lane only',async()=>{
+test('WP-03: world entities and (docs/514) settings batches use the light policy and the import lane',async()=>{
  const resolved={model:{},modelRecord:{},providerOptions:{deepseek:{thinking:{type:'enabled'}}}} as unknown as ResolvedModel,saved={provider:'deepseek',protocol:'openai',modelId:'synthetic',thinkingLevels:['low','high'],defaultThinking:'high'}
  const world={semanticVersion:1,phase:'analyze',intent:'entity',kind:'world'} as ImportAiRequest,theme={semanticVersion:1,phase:'analyze',kind:'theme',executionLane:'wizard-settings-v1'} as ImportAiRequest
- assert.notEqual(importGenerationModel(world,resolved,saved),resolved);assert.equal(importGenerationModel(theme,resolved,saved),resolved,'settings batches keep the saved thinking')
+ assert.notEqual(importGenerationModel(world,resolved,saved),resolved);assert.notEqual(importGenerationModel(theme,resolved,saved),resolved,'settings batches drop to the light policy (docs/514)')
  for(const r of [{...world,intent:undefined},{...world,phase:'review'},{...world,intent:'reconcile'}])assert.equal(importGenerationModel(r as ImportAiRequest,resolved,saved),resolved)
  const previous=longTaskQueue.limit,first=await acquireLongTask(undefined,2),second=await acquireLongTask(undefined,2),abort=new AbortController()
  try{
@@ -98,14 +98,14 @@ test('WP-03: world entities use the light policy and the import lane; settings b
  }finally{abort.abort();first();second();longTaskQueue.setLimit(previous)}
 })
 
-test('WP-11: other-setting batches hold at most 8 lanes; ready world entities still get the rest',async()=>{
+test('WP-11: other-setting batches hold at most 16 lanes while world entries remain; entries still get the rest',async()=>{
  const x=await worldFixture(['world','theme','style','goldenFinger','trope']),{f}=x,p=gated(f)
  try{
   await toWorldImport(x);await until(()=>p.pending.size>=1);await sleep(50)
-  assert.ok(p.settingsPeak<=8,'batches '+p.settingsPeak)
+  assert.ok(p.settingsPeak<=16,'batches '+p.settingsPeak)
   const main=[...p.pending.values()].find(e=>e.r.intent==='entity')!;main.resolve()
-  await until(()=>[...p.pending.values()].filter(e=>e.r.intent==='entity').length>=31-8);await sleep(50)
-  assert.ok([...p.pending.values()].filter(e=>e.r.intent==='entity').length>=31-8,'entities get the remaining lanes');assert.ok(p.peak<=31,String(p.peak))
+  await until(()=>[...p.pending.values()].filter(e=>e.r.intent==='entity').length>=31-16);await sleep(50)
+  assert.ok([...p.pending.values()].filter(e=>e.r.intent==='entity').length>=31-16,'entities get the remaining lanes');assert.ok(p.peak<=31,String(p.peak))
  }finally{p.releaseAll();await f.dispose()}
 })
 test('WP-12: after a global error no queued request is sent and the step ends',async()=>{

@@ -42,6 +42,8 @@ export function ShortcutSettings() {
   useEffect(() => {
     if (!draft) return
     const consumeRepeat = (event: KeyboardEvent) => {
+      // An app prompt over the settings window owns the keyboard.
+      if (document.querySelector(".desktop-prompt")) return
       if (event.repeat || event.isComposing || event.keyCode === 229 || event.key === "Dead") {
         event.preventDefault(); event.stopImmediatePropagation()
       } else if (recording && !pendingWrite.current && !conflicts.length) {

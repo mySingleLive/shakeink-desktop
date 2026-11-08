@@ -17,7 +17,7 @@ const names=Array.from({length:64},(_,i)=>'合成器物'+String(i).padStart(2,'0
 type Fixture=Awaited<ReturnType<typeof fixture>>
 async function itemFixture(){
  const body=names.map((n,i)=>`第${i+1}章 篇${i}\n\n他取出${n}。${i===0?names[1]+'也在桌上，旁边是'+alias+'。':''}${'风声。'.repeat(160)}\n\n`).join('')
- return fixture([source(body,'正文.txt','f-body')],rosterAi({'roster:item':r=>({roster:r.units.flatMap(u=>names.filter(n=>u.text.includes(n)).map(name=>({name,aliases:name===names[2]?[alias]:[],itemType:'器物',important:true,category:'item' as const,evidence:{unitId:u.id,quote:name}})))})}))
+ return fixture([source(body,'正文.txt','f-body')],rosterAi({'roster:item':r=>({roster:r.units.flatMap(u=>names.filter(n=>u.text.includes(n)).map(name=>({name,aliases:name===names[2]?[alias]:[],itemType:'器物',important:true,category:'item' as const,evidence:{unitId:u.id,quote:name}})))})}),{promptLayout:'legacy'})
 }
 async function until(check:()=>boolean|Promise<boolean>){const end=Date.now()+5000;while(!await check()){if(Date.now()>end)break;await sleep(5)}}
 const runtime=async(f:Fixture)=>JSON.parse(await readFile(join(f.root,'novel-imports',(await f.view()).id,'runtime.json'),'utf8'))

@@ -13,7 +13,7 @@ export function explicitTargetedRosterReply(prompt:string,expected:unknown,units
  if(start<0||end<0||start<prompt.lastIndexOf('</novel-import-data>'))return expected
  function unsupported():never{throw Error('TEST_FIXTURE_UNSUPPORTED_EXACT_CHOICE')}
  try{
-  const plan=JSON.parse(prompt.slice(start+open.length,end)) as {rows:{repairRef:string;slot:number}[];choices:{choiceRef:string;unitId?:string;quote?:string;sourceRef?:string;wholeUnit?:boolean;unitIndex?:number;start?:number;end?:number;literals?:string[];preserved?:boolean}[]},table=createSceneRosterFragmentTable(units),bindings=createSceneRosterRepairChoices(units,table)
+  const plan=JSON.parse(prompt.slice(start+open.length,end)) as {rows:{repairRef:string;slot:number}[];choices:{choiceRef:string;unitId?:string;quote?:string;sourceRef?:string;wholeUnit?:boolean;unitIndex?:number;start?:number;end?:number;literals?:string[];preserved?:boolean}[]},table=createSceneRosterFragmentTable(units,/"ef[0-9a-f]{12}"/u.test(prompt.slice(start,end))?12:16),bindings=createSceneRosterRepairChoices(units,table)
   plan.choices=expandChoiceDirectory(plan.choices)
   const check=(anchor:Anchor,literal?:string)=>{if(!sceneAnchorSchema.safeParse(anchor).success)unsupported();assertSceneRosterAnchor(anchor,units);if(literal!==undefined)validateSceneRosterRecords([{name:literal,aliases:[],mentions:[{literal,evidence:anchor}],context:[],links:[]}],units);return anchor}
   const source=(choice:typeof plan.choices[number]):Anchor=>{

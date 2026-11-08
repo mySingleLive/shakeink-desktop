@@ -53,7 +53,8 @@ const button=name=>page.getByRole('button',{name,exact:true})
 const click=async(name,why)=>{if(charactersOnly&&name==='允许分析并导入'&&roleStartedTick===undefined){roleStartedAt=new Date().toISOString();roleStartedTick=performance.now()}if(scenesOnly&&name==='允许分析并导入'&&sceneStartedTick===undefined){sceneStartedAt=new Date().toISOString();sceneStartedTick=performance.now()}await log('click',{button:name,why});await button(name).click()}
 const until=async(test,timeout=120000)=>{const end=Date.now()+timeout;for(;;){const v=await current();if(await test(v))return v;if(Date.now()>end)throw Error('timed out waiting for wizard state');await page.waitForTimeout(1000)}}
 async function close(){
- if((charactersOnly||scenesOnly)&&isolatedConfirmed)await app.evaluate(({dialog})=>{const original=dialog.showMessageBox.bind(dialog);dialog.showMessageBox=async(...args)=>{const options=args.at(-1);if(options?.message==='停止正在执行的任务后关闭？'&&options.buttons?.includes('停止任务并继续'))return {response:options.buttons.indexOf('停止任务并继续'),checkboxChecked:false};return original(...args)}})
+ // 510: the stop-tasks question is a React prompt; the isolated run answers it when closing.
+ if((charactersOnly||scenesOnly)&&isolatedConfirmed)void page.getByRole('dialog',{name:'仍有创作任务运行',exact:true}).getByRole('button',{name:'停止任务并继续',exact:true}).click({timeout:0}).catch(()=>undefined)
  const exited=new Promise(r=>app.process().once('exit',(code,signal)=>r({code,signal})));await app.evaluate(({app})=>app.quit());return exited
 }
 // Retry a failed entity task once through the wizard's own 重试 button; never skip.
