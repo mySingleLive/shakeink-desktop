@@ -111,6 +111,8 @@ body { margin: 0; overflow: hidden; }
   --icon-golden:var(--icon-gift); --icon-trope:var(--icon-emotion);
   --icon-content:var(--icon-manuscript); --icon-progress:var(--icon-workflow);
   --icon-foreshadow-character:var(--icon-foreshadow-role);
+  /* Faulted work titles: softened error red / warning yellow, contrast >= 4.5 on the sidebar. */
+  --fault-error-text:#a3463c; --fault-warning-text:#7e621c; --fault-badge-mark:#fcf8ee;
 }
 .ink {
   --nav-tab-selected-bg:#2a2826; --nav-tab-selected-border:#4b4640;
@@ -123,6 +125,7 @@ body { margin: 0; overflow: hidden; }
   --icon-conversations:#95b3d3; --icon-characters:#c6b098;
   --icon-protagonist:#d3b56f; --icon-supporting:#84b6ba;
   --icon-antagonist:#c990a0; --icon-foreshadow-role:#b098c7;
+  --fault-error-text:#e08a80; --fault-warning-text:#d9b45f; --fault-badge-mark:#171312;
 }
 .sidebar-navigation { min-width:0; overflow:hidden; }
 .nav-label { display:block; min-width:0; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:clip; flex:1 1 auto; }
@@ -158,6 +161,9 @@ body { margin: 0; overflow: hidden; }
 .nav-group-chevron { color:var(--muted-foreground); transition:transform .12s; }
 .nav-group-toggle[aria-expanded="true"] > .nav-group-chevron { transform:rotate(90deg); }
 .nav-group-body { min-width:0; }
+.sidebar-navigation [data-fault="error"] > .nav-label,.sidebar-navigation [data-fault="error"] .nav-label { color:var(--fault-error-text); }
+.sidebar-navigation [data-fault="warning"] > .nav-label,.sidebar-navigation [data-fault="warning"] .nav-label { color:var(--fault-warning-text); }
+.sidebar-navigation .fault-status { flex-shrink:0; border-radius:3px; padding:0 4px; font-size:10.5px; line-height:16px; color:var(--fault-warning-text); background:color-mix(in srgb,var(--warning) 12%,transparent); }
 .nav-group-body[hidden] { display:none; }
 .sidebar-navigation .account-footer { height:72px; display:flex; align-items:center; padding:0 10px; flex-shrink:0; border-top:1px solid var(--sidebar-border); }
 .sidebar-navigation .account-button { display:flex; align-items:center; width:100%; height:52px; padding:0 8px; gap:10px; border-radius:7px; min-width:0; text-align:left; }

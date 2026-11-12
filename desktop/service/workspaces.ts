@@ -21,6 +21,7 @@ import {assertDirectory,directoryIdentity,readMetadata,sameIdentity,within} from
 import {CURRENT_NAMES,BRAND_NAMES,type BrandNames} from "../shared/brand-names"
 import {readApplicationBrand,readWorkBrand,assertBrandControls,brandRootIdentity,type BrandObservation} from "../core/brand-names"
 import {WorkCreationReservations} from "./work-creation-reservations"
+import {markWorkFault} from "./work-unavailability"
 import type {RootIdentity} from "../core/data-root"
 
 const identitySchema = z.object({ device: z.string(), inode: z.string() }).strict()
@@ -53,8 +54,8 @@ export async function lockDirectory(path: string,names:Readonly<BrandNames>,asse
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
     if (!(await lstat(lock)).isDirectory() || (await lstat(lock)).isSymbolicLink()) throw new Error("作品目录锁无效")
     const previous = JSON.parse(await readFile(join(lock, "owner.json"), "utf8"))
-    if (previous.host !== hostname() || !Number.isSafeInteger(previous.pid) || previous.pid < 1) throw new Error("作品已在其他进程或设备打开")
-    try { process.kill(previous.pid, 0); throw new Error("作品已在其他进程打开") }
+    if (previous.host !== hostname() || !Number.isSafeInteger(previous.pid) || previous.pid < 1) throw markWorkFault(new Error("作品已在其他进程或设备打开"),"in-use")
+    try { process.kill(previous.pid, 0); throw markWorkFault(new Error("作品已在其他进程打开"),"in-use") }
     catch (cause) { if ((cause as NodeJS.ErrnoException).code !== "ESRCH") throw cause }
     // A pathname rename is not compare-and-swap: another process could have
     // replaced this stale lease. Recovery is a separate explicit operation
@@ -83,6 +84,8 @@ export class Workspaces {
   private readonly slots = new Map<string, Slot>()
   private readonly retiring = new Map<string, Promise<void>>()
   private readonly failedRetirements = new Map<string, Slot>()
+  /** Works removed from the index in this process; no new connection may start. */
+  private readonly forgotten = new Set<string>()
   private migrations: Migration[] = []
   private queue: Promise<unknown> = Promise.resolve()
   private closing = false
@@ -267,21 +270,55 @@ export class Workspaces {
         await this.run(previous.id, async () => { const { getDatabaseContext } = await import("./context"); await validate(getDatabaseContext().database) })
       } else {
         await this.retiring.get(record.id)
+        const stranded = this.failedRetirements.get(record.id)
+        if (stranded) { await this.disconnect(stranded); this.failedRetirements.delete(record.id) }
         assertRegistration()
         const connection = await this.connect(canonical, false,assertRegistration)
         try { await validate(connection.db) } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
       }
       assertRegistration()
       await this.catalog.update(before.revision, [...before.value.filter(row => row.id !== record.id), record],assertRegistration)
+      this.forgotten.delete(record.id)
       return record
     })
+  }
+  /** Removes one work from the index only. Never reads or writes its directory.
+   * The guard is set synchronously with the busy check so no request can open a
+   * new connection or register a conversation between cleanup and commit. */
+  async forget(id: string, beforeCommit: () => Promise<void>): Promise<WorkRecord> {
+    return this.serialize(async () => {
+      const before = await this.catalog.read()
+      const record = before.value.find(row => row.id === id)
+      if (!record || id === "inbox") throw new ContentError("WORK_NOT_FOUND", "作品不存在或已从列表中删除", 404)
+      await this.retiring.get(id)
+      if ((this.slots.get(id)?.active ?? 0) > 0) throw new ContentError("WORK_BUSY", "作品仍有任务在运行，请稍后重试", 409)
+      this.forgotten.add(id)
+      try {
+        const idle = this.slots.get(id)
+        if (idle) { this.slots.delete(id); await this.retire(id, idle) }
+        const stranded = this.failedRetirements.get(id)
+        if (stranded) await this.disconnect(stranded).then(() => { if (this.failedRetirements.get(id) === stranded) this.failedRetirements.delete(id) }, () => undefined)
+        await beforeCommit()
+        await this.catalog.update(before.revision, before.value.filter(row => row.id !== id))
+        return record
+      } catch (error) { this.forgotten.delete(id); throw error }
+    })
+  }
+  /** LRU-compatible retirement. A failed close is retained for close(); it never throws. */
+  private async retire(id: string, slot: Slot): Promise<boolean> {
+    const retiring = this.disconnect(slot); this.retiring.set(id, retiring)
+    try { await retiring; return true } catch { this.failedRetirements.set(id, slot); return false } finally { if (this.retiring.get(id) === retiring) this.retiring.delete(id) }
+  }
+  private retireForgotten(id: string, slot: Slot) {
+    if (!this.forgotten.has(id) || slot.active !== 0 || this.slots.get(id) !== slot) return Promise.resolve(true)
+    this.slots.delete(id); return this.retire(id, slot)
   }
   private async validateDatabase(path: string) {
     try {
       const info = await lstat(join(path, "database"))
       if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("invalid")
       await regularFile(join(path, "database", "PG_VERSION"))
-    } catch { throw new Error("作品数据库缺失或路径无效，原作品已保留") }
+    } catch { throw markWorkFault(new Error("作品数据库缺失或路径无效，原作品已保留"),"damaged") }
   }
   private async dataPath(path:string,assertOwner?:()=>Promise<void>){
     if(path===join(this.root,"inbox"))return path
@@ -329,6 +366,7 @@ export class Workspaces {
   async run<T>(id: string, run: () => Promise<T>): Promise<T> {
     if (this.closing) throw new Error("正在关闭本地数据库，请稍后重试")
     if (this.failedRetirements.has(id)) throw new Error("数据库关闭未完成，请重试关闭后重新打开作品")
+    if (this.forgotten.has(id)) throw new Error("作品不在本地目录索引中")
     let slot = this.slots.get(id)
     if (!slot) {
       const connection = (async () => {
@@ -363,10 +401,10 @@ export class Workspaces {
         }
         const row = (await this.list()).find(work => work.id === id)
         if (!row) throw new Error("作品不在本地目录索引中")
-        const info = await identity(row.path)
-        if (info.device !== row.identity.device || info.inode !== row.identity.inode || await realpath(row.path) !== row.path) throw new Error("作品目录发生变化，请重新关联")
-        const brand=await readWorkBrand(await directoryIdentity(row.path)),manifest=brand.value;brand.assertCurrent()
-        if (manifest.id !== row.id || manifest.novelId !== row.novelId || manifest.phase !== "ready") throw new Error("作品目录身份不匹配")
+        const info = await identity(row.path).catch(error => { throw ["ENOENT","ENOTDIR"].includes((error as NodeJS.ErrnoException)?.code ?? "") ? markWorkFault(error,"missing") : error })
+        if (info.device !== row.identity.device || info.inode !== row.identity.inode || await realpath(row.path) !== row.path) throw markWorkFault(new Error("作品目录发生变化，请重新关联"),"changed")
+        const brand=await readWorkBrand(await directoryIdentity(row.path)).catch(error => { throw error instanceof Error && /^BRAND_MARKER_(MISSING|CONFLICT)$/.test(error.message) ? markWorkFault(error,"changed") : error }),manifest=brand.value;brand.assertCurrent()
+        if (manifest.id !== row.id || manifest.novelId !== row.novelId || manifest.phase !== "ready") throw markWorkFault(new Error("作品目录身份不匹配"),"changed")
         return this.connect(row.path, false,()=>brand.assertCurrent())
       })()
       slot = { connection, active: 0, lastUsed: Date.now() }; this.slots.set(id, slot)
@@ -380,15 +418,16 @@ export class Workspaces {
       const retainedSlot = slot
       const retainTask = () => {
         connection.assertCurrent()
-        if (this.closing || this.slots.get(id) !== retainedSlot || retainedSlot.active === 0) throw new Error("任务不能借用已关闭的数据库")
+        if (this.closing || this.forgotten.has(id) || this.slots.get(id) !== retainedSlot || retainedSlot.active === 0) throw new Error("任务不能借用已关闭的数据库")
         retainedSlot.active++
         let released = false
-        return () => { if (!released) { released = true; retainedSlot.active--; retainedSlot.lastUsed = Date.now() } }
+        return () => { if (!released) { released = true; retainedSlot.active--; retainedSlot.lastUsed = Date.now(); void this.retireForgotten(id, retainedSlot) } }
       }
       return await runInDatabaseContext({ workspaceId: id, database: db, assets, retainTask }, run)
     }
     finally {
       slot.active--; slot.lastUsed = Date.now()
+      await this.retireForgotten(id, slot)
       // Active scopes retain their connection; only idle instances can leave the LRU.
       if (this.slots.size > 4) {
         const idle = [...this.slots.entries()].filter(([, value]) => value.active === 0).sort((a,b) => a[1].lastUsed-b[1].lastUsed)[0]

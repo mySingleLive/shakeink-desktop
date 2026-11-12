@@ -4845,6 +4845,80 @@
         "ol-r2 第21步一致性复核一次 no-match 失败，不在本次范围，未确认是否相关",
         "进度显示可能把落在共享边界单元里的短章提前计为完成（533 低5，仅显示）"
       ]
+    },
+    {
+      "id": "WN-01",
+      "requirement": "异常作品统一导航节点（用户 2026-11-10）：无法正常加载的作品以与正常作品相同的导航节点显示，图标为作品目录+感叹号合成图标，标题为柔和红（错误）/黄（警告）；右键与 … 菜单提供按异常类型的处理项（修复作品锁、重新加载作品）且始终有“删除”；任何作品都可删除（异常作品为仅从列表移除并删除关联对话，不改动目录文件）；正常作品菜单内容不变，增加右键入口",
+      "source": [
+        "docs/550-faulted-work-node-research.md",
+        "design/faulted-work-node/index.html",
+        "docs/551-faulted-work-node-plan.md",
+        "docs/551-faulted-work-node-plan-review.md",
+        "docs/552-faulted-work-node-cases.md",
+        "docs/552-faulted-work-node-cases-review.md",
+        "docs/553-faulted-work-node-code-review.md"
+      ],
+      "implementation": [
+        "desktop/shared/work-list.ts",
+        "desktop/service/work-unavailability.ts",
+        "desktop/service/workspaces.ts",
+        "desktop/service/dispatcher.ts",
+        "desktop/service/conversation-transfer.ts",
+        "src/lib/novel-list.ts",
+        "src/components/desktop/UnavailableWorks.tsx",
+        "src/components/desktop/FaultedWorkIcon.tsx",
+        "src/components/ui/context-menu.tsx",
+        "src/components/layout/sidebar-navigation-state.tsx",
+        "src/components/layout/SidebarHoverCard.tsx",
+        "src/components/layout/SidebarTree.tsx",
+        "src/app/desktop.css",
+        "src/components/desktop/DesktopCommandController.tsx"
+      ],
+      "testIds": [
+        "tests/unit/work-unavailability.test.ts WN-01'/02'",
+        "tests/integration/faulted-work-removal.test.ts WN-03..05,10..24,30..34,32a/b",
+        "tests/integration/works-loading.test.ts WL-01..04",
+        "tests/integration/desktop-worker.test.ts IPC-01 (WN-24)",
+        "tests/browser/works-loading.test.ts WN-40..60, WL-04..07",
+        "tests/browser/sidebar-navigation.test.ts SN-15 (WN-60), WN-41'",
+        "scripts/verify-faulted-work-nodes.mjs (真实目标系统)"
+      ],
+      "verificationKind": {
+        "单元": [
+          "WN-01'",
+          "WN-02'"
+        ],
+        "集成·真实库": [
+          "WN-03..23",
+          "WN-30..34"
+        ],
+        "集成·worker RPC": [
+          "WN-24"
+        ],
+        "界面·夹具": [
+          "WN-40..60"
+        ],
+        "真实目标系统（macOS）": [
+          "scripts/verify-faulted-work-nodes.mjs 19/19"
+        ],
+        "真实目标系统（Windows）": [
+          "待验收"
+        ]
+      },
+      "status": "implemented-verified-macos",
+      "evidence": [
+        "docs/faulted-work-node/evidence/real-target-report.json",
+        "docs/faulted-work-node/evidence/real-*.png",
+        "docs/faulted-work-node/evidence/browser-suite-comparison.txt",
+        "docs/faulted-work-node/evidence/unit-integration-comparison.txt"
+      ],
+      "verificationLimits": [
+        "界面用例使用 fetch 夹具，不代表 IPC/主进程/原生窗口已验证",
+        "WN-18′ ..%2F 由现有 requestSchema 提前拒绝，非 400（见 552 §G.4）",
+        "WN-15/34 的重新加入经服务层 works.open，未经原生“打开作品目录”选择器",
+        "Windows 原生验收未执行",
+        "真实目标系统为 macOS 开发构建（npm run build 后 electron .），非签名安装包；未断网运行，但应用默认无 HTTP 监听、无模型"
+      ]
     }
   ],
   "developmentRecordUpdated": "2026-10-09",

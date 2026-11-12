@@ -43,6 +43,9 @@ test("IPC-01: built worker executes original local handlers with no HTTP server 
     assert.equal(theme.status, 200); assert.equal(theme.data.theme.title, "真正的原组件数据")
     await assert.rejects(request("/api/novels/unknown-work/theme"), /未关联/)
     assert.deepEqual((await request("/api/chat/conversations")).data, { conversations: [] })
+    // WN-24: the worker reaches the index-only removal route through RPC and answers JSON.
+    const absent = await request(`/api/works/${randomUUID()}`, "DELETE")
+    assert.equal(absent.status, 404); assert.equal(absent.data.code, "WORK_NOT_FOUND")
     const globalPrompts = await request("/api/admin/prompts")
     const injected = await request(`/api/admin/prompts?novelId=${created.novel.id}`)
     assert.deepEqual(injected.data, globalPrompts.data, "unrelated workspace selectors cannot redirect global templates")

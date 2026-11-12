@@ -4,11 +4,13 @@ import type { Workspaces } from "./workspaces"
 import { prisma } from "../../src/lib/db"
 import { LOCAL_AUTHOR_ID } from "./context"
 import {ContentError} from '../../src/lib/content-errors'
+import { z } from "zod"
 import {conversationTransfersFor} from './conversation-runtime'
 import type {ConversationTransfers} from './conversation-transfer'
 import {getDatabaseContext} from './context'
 import { dispatchTemplateRequest } from "./template-dispatcher"
 import type { UnavailableWork } from "../shared/work-list"
+import { classifyUnavailableWork } from "./work-unavailability"
 export type RouteHandler = (request: Request, context: { params: Promise<Record<string, string>> }) => Promise<Response>
 export function matchRoute(path: string, method: string) {
   const segments = new URL(path, "https://local.invalid").pathname.split("/")
@@ -89,7 +91,7 @@ export class LocalDispatcher {
       const unavailableWorks: UnavailableWork[] = reads.flatMap((read, index) => {
         if (read.status === 'fulfilled') return []
         const row = records[index]
-        return [{ workId: row.id, novelId: row.novelId, title: row.title, reason: read.reason instanceof ContentError && read.reason.code === 'WORK_LEASE_STALE' ? 'stale-lease' : 'unavailable' }]
+        return [{ workId: row.id, novelId: row.novelId, title: row.title, reason: classifyUnavailableWork(read.reason) }]
       })
       return Response.json({ novels: novels.sort((a,b) => b.updatedAt.getTime() - a.updatedAt.getTime()), unavailableWorks })
     }
@@ -114,6 +116,8 @@ export class LocalDispatcher {
       }
       return Response.json({ conversations: conversations.sort((a,b) => b.updatedAt.getTime() - a.updatedAt.getTime()) })
     }
+    const workRoute = /^\/api\/works\/([^/]+)$/.exec(url.pathname)
+    if (workRoute && input.method === "DELETE") return this.removeWork(workRoute[1])
     // Global model mutations belong to the main-process vault, not this legacy route.
     if (url.pathname.startsWith("/api/admin/models")) return Response.json({ error: "请在桌面设置中管理模型" }, { status: 400 })
     const match = matchRoute(input.path, input.method)
@@ -131,5 +135,20 @@ export class LocalDispatcher {
     // Historical subagent/SOP tasks stay read-only in their original work.
     // They cannot inherit the new work's candidate/approval execution scope.
     return conversationId?this.transfers.bind(conversationId,invoke):invoke()
+  }
+  /** Removes any indexed work from the list. Files in its directory are never touched. */
+  private async removeWork(segment: string): Promise<Response> {
+    const parsed = z.uuid().safeParse(segment)
+    if (!parsed.success || parsed.data !== parsed.data.toLowerCase()) return Response.json({ error: "作品编号无效", code: "INVALID_WORK_ID" }, { status: 400 })
+    const id = parsed.data
+    if (!this.transfers) return Response.json({ error: "会话目录服务暂不可用，作品未删除，请稍后重试。", code: "CONVERSATION_LEDGER_UNAVAILABLE" }, { status: 503 })
+    try {
+      const transfers = this.transfers
+      const record = await this.works.forget(id, () => transfers.forgetWorkspace(id))
+      return Response.json({ ok: true, workId: record.id, novelId: record.novelId })
+    } catch (error) {
+      if (error instanceof ContentError) return Response.json({ error: error.message, code: error.code }, { status: error.status })
+      return Response.json({ error: "暂时无法删除作品，原数据已保留，请重试。", code: "WORK_REMOVE_FAILED" }, { status: 500 })
+    }
   }
 }

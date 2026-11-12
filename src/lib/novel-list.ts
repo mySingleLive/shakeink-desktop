@@ -1,7 +1,7 @@
 "use client"
 import { useQuery } from '@tanstack/react-query'
 import type { NovelSummary } from '@/components/content/types'
-import type { UnavailableWork } from '@desktop/shared/work-list'
+import { normalizeUnavailableReason, type UnavailableWork } from '@desktop/shared/work-list'
 
 export interface NovelList<T = NovelSummary> { novels: T[]; unavailableWorks: UnavailableWork[] }
 
@@ -11,7 +11,7 @@ export async function fetchNovelList<T = NovelSummary>(): Promise<NovelList<T>> 
   if (!response.ok) throw new Error('加载小说列表失败')
   const data = await response.json() as NovelList<T>
   if (!Array.isArray(data.novels) || (data.unavailableWorks !== undefined && !Array.isArray(data.unavailableWorks))) throw new Error('作品列表格式无效')
-  return { novels: data.novels, unavailableWorks: data.unavailableWorks ?? [] }
+  return { novels: data.novels, unavailableWorks: (data.unavailableWorks ?? []).map(work => ({ ...work, reason: normalizeUnavailableReason(work?.reason) })) }
 }
 
 export function useNovelList<T = NovelSummary>() {

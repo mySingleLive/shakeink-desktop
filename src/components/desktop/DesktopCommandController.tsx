@@ -64,7 +64,8 @@ export function DesktopCommandController(){
    if(event.key==="Escape"&&!event.metaKey&&!event.ctrlKey&&!event.altKey&&!event.shiftKey&&document.querySelector('.content-tabs-track .content-tab-drag-source')){dispatcher.reset();return}
    // Escape belongs to the top dialog/menu (including its nested widgets),
    // even when an ordinary input's cancel binding was removed or rebound.
-   if(document.querySelector(dialogSelector)&&event.key==="Escape"&&!event.metaKey&&!event.ctrlKey&&!event.altKey&&!event.shiftKey){dispatcher.reset();return}
+   // An open context menu may leave focus on its row, so check the open menu itself.
+   if(document.querySelector(dialogSelector+',[role="menu"][data-open]')&&event.key==="Escape"&&!event.metaKey&&!event.ctrlKey&&!event.altKey&&!event.shiftKey){dispatcher.reset();return}
    const currentScope=scope(target),commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[bootstrap.platform]
    const stroke=capturedKey({...event,key:event.key,code:event.code,metaKey:event.metaKey,ctrlKey:event.ctrlKey,altKey:event.altKey,shiftKey:event.shiftKey,isComposing:event.isComposing,repeat:false,keyCode:event.keyCode},bootstrap.platform)
    if(!stroke){if(!["Control","Shift","Alt","Meta","AltGraph"].includes(event.key))dispatcher.reset();return}

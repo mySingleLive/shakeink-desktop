@@ -54,6 +54,8 @@ export interface HoverCardData {
   roundImage?: boolean
   /** 无图时的回退图标（32px 圆底） */
   icon?: LucideIcon
+  /** Faulted-work card: icon badge and subtitle use the error/warning tone. */
+  tone?: "error" | "warning"
 }
 
 /* ------------------------------ 通用卡片 ------------------------------ */
@@ -77,7 +79,7 @@ export function SidebarHoverCard({ data }: { data: HoverCardData }) {
             />
           </span>
         ) : Icon ? (
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-selected-surface text-primary">
+          <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", data.tone === "error" ? "bg-destructive/12 text-destructive" : data.tone === "warning" ? "bg-warning/12 text-warning" : "bg-selected-surface text-primary")}>
             <Icon className="size-4" />
           </span>
         ) : null}
@@ -92,7 +94,7 @@ export function SidebarHoverCard({ data }: { data: HoverCardData }) {
             {data.title}
           </div>
           {data.subtitle && (
-            <div className="truncate text-[11px] text-muted-foreground">{data.subtitle}</div>
+            <div className={cn("truncate text-[11px]", data.tone === "error" ? "text-destructive" : data.tone === "warning" ? "text-warning" : "text-muted-foreground")}>{data.subtitle}</div>
           )}
         </div>
       </div>
@@ -128,6 +130,8 @@ export interface SidebarHoverCtxValue {
   scheduleHide: (owner: symbol) => void
   /** 立即隐藏（仅当当前卡片属于 owner；行点击/卸载用） */
   hideNow: (owner: symbol) => void
+  /** Hide any card regardless of owner (a menu now covers the row). */
+  hideAll: () => void
   /** 当前是否有卡片打开（不论归属） */
   isOpen: () => boolean
   /** 当前卡片是否属于本行（已展示自己的卡时不重复调度） */
@@ -186,6 +190,7 @@ export function SidebarHoverProvider({ children }: { children: React.ReactNode }
         cancelHide()
         if (stateRef.current?.owner === owner) setHover(null)
       },
+      hideAll: () => { cancelHide(); setHover(null) },
       isOpen: () => stateRef.current !== null,
       ownsCurrent: (owner) => stateRef.current?.owner === owner,
     }),

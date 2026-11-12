@@ -103,6 +103,19 @@ export class ConversationTransfers{
   if(current.workspaceId===target.workspaceId&&current.novelId===target.novelId)return current
   return this.transfer(await this.ledger.prepare({conversationId:id,operationId:input.operationId,requestHash:hash,source:current,target}))
  }
+ /** Index-only removal of an unreadable work: mark its live conversations
+  * deleted in the global ledger. Their rows stay in the work database until a
+  * later recovery can open it. Idempotent; moved or deleted locations stay. */
+ async forgetWorkspace(workspaceId:string):Promise<void>{
+  if(!workspaceId||workspaceId==='inbox')throw new ContentError('WORK_NOT_FOUND','作品不存在或已从列表中删除',404)
+  for(const initial of await this.ledger.locations()){
+   if(initial.deleted||initial.workspaceId!==workspaceId)continue
+   await this.gate.transfer(initial.conversationId,async()=>{
+    const location=await this.ledger.location(initial.conversationId)
+    if(location&&!location.deleted&&location.workspaceId===workspaceId)await this.ledger.remove(location)
+   })
+  }
+ }
  async remove(id:string):Promise<void>{return this.gate.transfer(id,async()=>{
   let location=await this.ledger.location(id)??await this.current(id)
   if(!location.deleted){

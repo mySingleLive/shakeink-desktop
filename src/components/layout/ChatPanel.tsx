@@ -155,7 +155,8 @@ interface NovelSummaryItem {
 }
 
 async function fetchConversations(): Promise<ConversationSummary[]> {
-  const res = await fetch("/api/chat/conversations")
+  // A rejected local request carries native paths and raw causes; never display it.
+  const res = await fetch("/api/chat/conversations").catch(() => { throw new Error("加载会话列表失败") })
   if (!res.ok) throw new Error("加载会话列表失败")
   const data = (await res.json()) as { conversations: ConversationSummary[] }
   return data.conversations

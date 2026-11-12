@@ -1,40 +1,61 @@
 "use client"
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import type { UnavailableWork } from '@desktop/shared/work-list'
-import { NavigationLabel } from '@/components/layout/NavigationLabel'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { LockOpen, RefreshCw, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import type { UnavailableWork, UnavailableWorkReason } from '@desktop/shared/work-list'
+import type { FaultTone } from './FaultedWorkIcon'
 
-/** A failed directory is an indexed work, never an empty or operable novel. */
-export function UnavailableWorks({ works, retrying, retry, scope = '', renderWork }: { works: UnavailableWork[]; retrying: boolean; retry(): void; scope?: string; renderWork?: (work: UnavailableWork, details: ReactNode) => ReactNode }) {
+export interface FaultInfo { tone: FaultTone; title: string; text: string; hint: string }
+/** User-facing copy only. Never includes paths or raw errors (design v3). */
+export const FAULT_INFO: Record<UnavailableWorkReason, FaultInfo> = {
+  missing: { tone: 'error', title: '作品目录不可用', text: '作品目录已被移动、改名或删除，内容无法读取。', hint: '恢复目录后重新加载，或从作品列表中删除。' },
+  'stale-lease': { tone: 'warning', title: '作品锁未释放', text: '上次异常退出留下了写入锁，作品内容已保留。', hint: '修复作品锁后即可正常打开。' },
+  'in-use': { tone: 'warning', title: '作品正在别处使用', text: '该作品正被其他进程或设备打开。', hint: '在另一处关闭作品后重新加载。' },
+  changed: { tone: 'error', title: '作品目录已变化', text: '目录身份与作品记录不一致，可能被替换或复制。', hint: '从作品列表删除后，用“打开作品目录”重新加入。' },
+  damaged: { tone: 'error', title: '作品数据无法读取', text: '作品数据库缺失或无法打开，目录中的文件已保留。', hint: '恢复备份后重新加载，或从作品列表中删除。' },
+  unavailable: { tone: 'error', title: '作品暂不可用', text: '作品暂时无法读取，原数据已保留。', hint: '稍后重新加载；仍无法打开时可从作品列表中删除。' },
+}
+export const faultInfo = (reason: UnavailableWorkReason) => FAULT_INFO[reason] ?? FAULT_INFO.unavailable
+
+export type RepairBusy = 'repairing' | 'pending' | 'restarting' | null
+export interface WorkLeaseRepair { busy: RepairBusy; workId: string | null; available: boolean; start(work: UnavailableWork): void }
+const BUSY_LABEL: Record<Exclude<RepairBusy, null>, string> = { repairing: '正在准备修复…', pending: '修复交接待完成', restarting: '正在重新启动…' }
+export const repairStatus = (busy: RepairBusy) => busy === 'repairing' ? '修复中' : busy ? '待重启' : null
+
+/** One instance per sidebar: survives menu unmounts and view changes; scope resets it. */
+export function useWorkLeaseRepair(scope: string): WorkLeaseRepair {
   const alive = useRef(false), flight = useRef(false)
   const currentScope = useRef(scope); currentScope.current = scope
-  const [busy, setBusy] = useState<'repairing' | 'pending' | 'restarting' | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState<RepairBusy>(null)
+  const [workId, setWorkId] = useState<string | null>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
-  useEffect(() => { setBusy(null); setError(null) }, [scope])
-  const repair = async (work: UnavailableWork) => {
+  useEffect(() => { setBusy(null); setWorkId(null); flight.current = false }, [scope])
+  const available = typeof window !== 'undefined' && !!window.desktop?.repairWorkLease
+  const start = useCallback((work: UnavailableWork) => {
     const bridge = window.desktop
     if (flight.current || busy || work.reason !== 'stale-lease' || !bridge?.repairWorkLease) return
-    flight.current = true; setBusy('repairing'); setError(null)
-    const requestScope = scope
-    try {
-      const result = await bridge.repairWorkLease({ type: 'start', workId: work.workId })
-      if (alive.current && currentScope.current === requestScope) setBusy(result === 'cancelled' ? null : result)
-    } catch {
-      if (alive.current && currentScope.current === requestScope) { setBusy(null); setError('暂时无法开始锁修复，原文件已保留，请重试。') }
-    } finally { flight.current = false }
-  }
-  if (!works.length) return null
-  const canRepair = typeof window !== 'undefined' && !!window.desktop?.repairWorkLease
-  return <div className={renderWork ? 'space-y-2 py-1' : 'space-y-2 px-2 py-3'} aria-label="暂不可用的作品">
-    {works.map(work => {
-      const details = <div className="px-3 py-2"><p className="flex items-start gap-2 text-xs text-muted-foreground"><AlertCircle className="size-4 shrink-0 text-destructive"/>{work.reason === 'stale-lease' ? '上次异常退出留下了写入锁，作品内容已保留。' : '作品目录暂不可用，请检查目录后重新加载。'}</p>
-        {work.reason === 'stale-lease' && canRepair && <Button variant="outline" size="sm" className="mt-2" disabled={!!busy || retrying} onClick={() => void repair(work)}>{busy === 'repairing' ? '正在准备修复…' : busy === 'restarting' ? '正在重新启动…' : busy === 'pending' ? '修复交接待完成' : '修复作品锁'}</Button>}
-      </div>
-      return <div key={work.workId}>{renderWork ? renderWork(work, details) : <div className="rounded-md border border-border py-2"><div className="flex items-center gap-2 px-3 text-sm font-medium"><AlertCircle className="size-4 shrink-0 text-destructive"/><NavigationLabel className="flex-1">{work.title}</NavigationLabel></div>{details}</div>}</div>
-    })}
-    {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
-    <Button variant="outline" size="sm" disabled={retrying || !!busy} onClick={retry}><RefreshCw className="size-3.5"/>{retrying ? '正在重新加载…' : '重新加载作品'}</Button>
-  </div>
+    flight.current = true; setBusy('repairing'); setWorkId(work.workId)
+    const requestScope = currentScope.current
+    void bridge.repairWorkLease({ type: 'start', workId: work.workId }).then(result => {
+      if (alive.current && currentScope.current === requestScope) { setBusy(result === 'cancelled' ? null : result); if (result === 'cancelled') setWorkId(null) }
+    }, () => {
+      if (alive.current && currentScope.current === requestScope) { setBusy(null); setWorkId(null); toast.error('暂时无法开始锁修复，原文件已保留，请重试。') }
+    }).finally(() => { if (currentScope.current === requestScope) flight.current = false })
+  }, [busy])
+  return { busy, workId, available, start }
+}
+
+/** Items for both the … menu and the right-click menu of a faulted work. */
+export function FaultedWorkMenuItems({ work, repair, reloading, removing, onReload, onRemove }: { work: UnavailableWork; repair: WorkLeaseRepair; reloading: boolean; removing: boolean; onReload(): void; onRemove(): void }) {
+  const info = faultInfo(work.reason), blocked = !!repair.busy || removing
+  return <>
+    <DropdownMenuGroup><DropdownMenuLabel>{info.title}</DropdownMenuLabel></DropdownMenuGroup>
+    {work.reason === 'stale-lease' && repair.available && (repair.busy && repair.workId === work.workId
+      ? <DropdownMenuItem disabled><LockOpen />{BUSY_LABEL[repair.busy]}</DropdownMenuItem>
+      : <DropdownMenuItem disabled={blocked || reloading} onClick={() => repair.start(work)}><LockOpen />{repair.busy ? BUSY_LABEL[repair.busy] : '修复作品锁'}</DropdownMenuItem>)}
+    <DropdownMenuItem disabled={blocked || reloading} onClick={onReload}><RefreshCw />{reloading ? '正在重新加载…' : '重新加载作品'}</DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem variant="destructive" disabled={blocked || reloading} onClick={onRemove}><Trash2 />删除</DropdownMenuItem>
+  </>
 }
