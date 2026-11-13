@@ -224,6 +224,11 @@ const WORLD_FACT_HINT='世界设定content须为JSON字符串且结构严格：F
 /** A skipped settings task stops sending its own queued batches; this ends that task only, never the step. */
 class SettingsTaskSkipped extends Error{constructor(){super('该项已跳过')}}
 const sleepMs=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms))
+/** Yielded by a sliced planner when its slice budget is spent; carries no request. */
+const PLAN_PAUSE=Symbol('plan-pause')
+/** A planning slice ends once this much synchronous time has passed (docs/565 3R-2). */
+const WIZARD_PLAN_SLICE_MS=8
+type ImportAiRequestDraft=Omit<ImportAiRequest,'operationId'|'models'>
 /** The candidate's own block inside a source artifact, as an offset range of `a.text`. */
 function wizardCandidateBlock(c:WizardCandidate,a:ImportArtifact,list:readonly WizardCandidate[]=[]):{start:number;end:number}{
  const names=new Set([c.name,...c.aliases].map(normalizeWizardName)),hit=(name:string)=>names.has(normalizeWizardName(name))
@@ -1057,7 +1062,18 @@ export class NovelImportController {
  private async importSettings(s:ImportSession,epoch:number,kind:typeof WIZARD_SETTINGS_KINDS[number],lane?:{acquire(batch?:boolean):Promise<void>;release(batch?:boolean):void},task?:WizardTask,halted:()=>boolean=()=>false):Promise<{artifacts:ImportArtifact[];repairs?:ImportSettingsRepairs;positionFailed?:true;positionChannelOnly?:true}>{
   const copied=s.selected.includes(kind)?sourceImportArtifacts(s).filter(a=>a.kind===kind):[]
   if(!this.wizardInfers(s,kind))return {artifacts:copied}
-  const profile=this.executionBudget(s,'analyze'),requests=[...this.stageRequests(s,workingImportUnits(s),profile,batch=>({phase:'analyze',kind,units:batch,artifacts:this.contextArtifacts(s,batch,profile.characters),workingRevision:s.workingRevision,...(lane?{executionLane:'wizard-settings-v1' as const}:{})}))]
+  const profile=this.executionBudget(s,'analyze'),requests:ImportAiRequestDraft[]=[]
+  // docs/565 3R: planning a long book takes tens of seconds of CPU. It runs in slices of about
+  // WIZARD_PLAN_SLICE_MS, one slice per event-loop iteration across all planners (planTurn), so input and
+  // IPC are handled between slices. It reads the artifacts present when planning starts, so the batches
+  // equal the unsliced plan however world entries commit meanwhile.
+  const plan=this.settingsPlan(s,kind,WIZARD_PLAN_SLICE_MS,s.artifacts,!!lane)
+  for(;;){
+   await this.planTurn();this.current(s,epoch)
+   if(halted()||(task?.state as string|undefined)==='skipped')throw new SettingsTaskSkipped()
+   const next=plan.next();if(next.done)break
+   if(next.value!==PLAN_PAUSE)requests.push(next.value as ImportAiRequestDraft)
+  }
   const run=async(request:typeof requests[number])=>{
    const result=await this.ai(s,epoch,request,true),found:ImportArtifact[]=[]
    for(const a of result.artifacts??[]){if(a.kind!==kind||a.origin!=='inferred'||a.id===IMPORT_THEME_PROFILE_ID)throw Error('推断结果含无效来源');validateImportEvidence(a,request.units);validateImportSemanticArtifact(a);found.push(a)}
@@ -2094,22 +2110,28 @@ export class NovelImportController {
   if(!model)throw Error('请重新允许发送本次导入范围')
   return importSessionBudget(s,role,model)
  }
- private requestSnapshot(s:ImportSession,request:Omit<ImportAiRequest,'operationId'|'models'>){
+ /** `catalog`: the entity catalogue already built from the current s.artifacts by the caller, so batch
+  * planning does not re-validate every artifact once per unit (the cause of the import-world freeze). */
+ private requestSnapshot(s:ImportSession,request:Omit<ImportAiRequest,'operationId'|'models'>,catalog?:ImportSemanticEntity[]){
   request=this.sceneRequest(s,request)
   const transportLocks=(s.semanticState?.locks??[]).flatMap(lock=>{const a=request.artifacts.find(a=>a.id===lock.artifactId);if(!a)return [];if(lock.field!=='text'&&!Object.hasOwn(a.facts,lock.field))return [];return [{...lock,value:lock.field==='text'?a.text:a.facts[lock.field]}]})
-  const entities=request.entities??(()=>{
+  const entities=request.entities??catalog?.map(e=>({...e,...(e.unitIds?{unitIds:[...e.unitIds]}:{})}))??this.entityCatalog(s)
+  const reviewProjection=s.semanticVersion===1&&request.phase==='review'?(request.reviewProjection??request.artifacts.map(a=>{const full=s.artifacts.find(v=>v.id===a.id);if(!full)throw Error('审核投影缺少完整设定');return createImportReviewProjection(full,a,a.text===full.text?{start:0,end:full.text.length}:undefined)})):undefined
+  if(reviewProjection){assertImportReviewProjection(request.artifacts,reviewProjection);for(const [i,p]of reviewProjection.entries()){const full=s.artifacts.find(a=>a.id===p.artifactId);if(!full||p.semanticHash!==importArtifactSemanticHash(full)||p.fullTextLength!==full.text.length||JSON.stringify(p.fullFactKeys)!==JSON.stringify(Object.keys(full.facts)))throw Error('审核投影完整设定版本无效');createImportReviewProjection(full,request.artifacts[i],p.textRange)}}
+  return {...request,units:importClassificationUnits({...request,semanticVersion:s.semanticVersion}),...(s.semanticVersion===1?{semanticVersion:1 as const,selectedTargets:s.targets,semanticLocks:request.intent==='reconcile'?request.semanticLocks??[]:transportLocks,...(reviewProjection?{reviewProjection}:{})} :{}),...(request.phase!=='classify'?{chapters:request.chapters??s.chapters.map(({id,title,start,end})=>({id,title,start,end})),entities}:{})}
+ }
+ /** `artifacts`: a frozen list to build from (step-16 settings planning); defaults to the live s.artifacts. */
+ private entityCatalog(s:ImportSession,artifacts:ImportArtifact[]=s.artifacts):ImportSemanticEntity[]{
+  return (()=>{
    // Parallel entity tasks supply the selected catalog. Their committed artifacts may still
    // reference a task in flight; the full set is checked by resolveWizardReferences at step end.
    // A committed world setting whose world is still running is left out of this catalog (docs/506 3R4,
    // 509 review 1); the full set is still checked by resolveWizardReferences at step end.
-   const worlds=new Set(s.artifacts.filter(a=>a.kind==='world'&&a.facts.entityType==='WORLD').map(a=>a.id))
-   const listed=s.wizard?s.artifacts.filter(a=>!(a.kind==='world'&&a.origin!=='source'&&a.facts.entityType==='SETTING'&&!worlds.has(a.facts.worldId))):s.artifacts
+   const worlds=new Set(artifacts.filter(a=>a.kind==='world'&&a.facts.entityType==='WORLD').map(a=>a.id))
+   const listed=s.wizard?artifacts.filter(a=>!(a.kind==='world'&&a.origin!=='source'&&a.facts.entityType==='SETTING'&&!worlds.has(a.facts.worldId))):artifacts
    const mapping=s.semanticVersion===1?importNativeMappings(listed):undefined
    return listed.map(a=>{const {id,kind,name,evidence,facts}=a,base={id,kind,name,unitIds:evidence.map(e=>e.unitId)};if(s.semanticVersion!==1)return {...base,parentId:facts.parentId};if(a.origin==='source'&&!mapping!.projectable.has(id))return base;return {...base,parentId:facts.parentId,entityType:facts.entityType as 'PLACE'|'WORLD'|'SETTING'|undefined,worldId:facts.worldId,settingType:facts.settingType as any}})
   })()
-  const reviewProjection=s.semanticVersion===1&&request.phase==='review'?(request.reviewProjection??request.artifacts.map(a=>{const full=s.artifacts.find(v=>v.id===a.id);if(!full)throw Error('审核投影缺少完整设定');return createImportReviewProjection(full,a,a.text===full.text?{start:0,end:full.text.length}:undefined)})):undefined
-  if(reviewProjection){assertImportReviewProjection(request.artifacts,reviewProjection);for(const [i,p]of reviewProjection.entries()){const full=s.artifacts.find(a=>a.id===p.artifactId);if(!full||p.semanticHash!==importArtifactSemanticHash(full)||p.fullTextLength!==full.text.length||JSON.stringify(p.fullFactKeys)!==JSON.stringify(Object.keys(full.facts)))throw Error('审核投影完整设定版本无效');createImportReviewProjection(full,request.artifacts[i],p.textRange)}}
-  return {...request,units:importClassificationUnits({...request,semanticVersion:s.semanticVersion}),...(s.semanticVersion===1?{semanticVersion:1 as const,selectedTargets:s.targets,semanticLocks:request.intent==='reconcile'?request.semanticLocks??[]:transportLocks,...(reviewProjection?{reviewProjection}:{})} :{}),...(request.phase!=='classify'?{chapters:request.chapters??s.chapters.map(({id,title,start,end})=>({id,title,start,end})),entities}:{})}
  }
  private requestFits(request:Omit<ImportAiRequest,'operationId'|'models'>,budget:ImportExecutionBudget,model?:ImportModel){
   if(request.units.length>budget.maxUnits||request.units.reduce((n,u)=>n+u.text.length,0)>budget.characters)return false
@@ -2123,19 +2145,47 @@ export class NovelImportController {
   }
   return true
  }
- private *stageRequests(s:ImportSession,units:ImportUnit[],budget:ImportExecutionBudget,build:(batch:ImportUnit[])=>Omit<ImportAiRequest,'operationId'|'models'>,fullMetadata=false){
-  if(!s.budgetPolicy&&!fullMetadata){for(const batch of splitImportBatches(units,budget.characters,budget.maxUnits))yield this.requestSnapshot(s,{...build(batch),executionBudget:budget});return}
-  const model=s.analysisGrant?.textModel,snapshot=(batch:ImportUnit[])=>this.requestSnapshot(s,{...build(batch),executionBudget:budget}),fits=(batch:ImportUnit[])=>this.requestFits(snapshot(batch),budget,model)
+ private *stageRequests(s:ImportSession,units:ImportUnit[],budget:ImportExecutionBudget,build:(batch:ImportUnit[])=>Omit<ImportAiRequest,'operationId'|'models'>,fullMetadata=false):Generator<ImportAiRequestDraft&{units:ImportUnit[]},void,unknown>{
+  for(const request of this.planRequests(s,units,budget,build,fullMetadata))if(request!==PLAN_PAUSE)yield request
+ }
+ /** Settings batch request of step 16 (and the non-lane settings analysis), over the given artifacts. */
+ private settingsBatchRequest(s:ImportSession,kind:typeof WIZARD_SETTINGS_KINDS[number],batch:ImportUnit[],characters:number,lane:boolean,artifacts:ImportArtifact[]):ImportAiRequestDraft{
+  return {phase:'analyze',kind,units:batch,artifacts:this.contextArtifacts(s,batch,characters,artifacts),workingRevision:s.workingRevision,...(lane?{executionLane:'wizard-settings-v1' as const}:{})}
+ }
+ /** One setting kind's batch plan over the frozen artifacts; with a finite sliceMs it yields PLAN_PAUSE
+  * whenever a slice's synchronous time is spent. The catalogue is built once, from the frozen artifacts. */
+ private *settingsPlan(s:ImportSession,kind:typeof WIZARD_SETTINGS_KINDS[number],sliceMs:number,frozen:ImportArtifact[]=s.artifacts,lane=true):Generator<ImportAiRequestDraft|typeof PLAN_PAUSE>{
+  const profile=this.executionBudget(s,'analyze');let catalog:ImportSemanticEntity[]|undefined
+  yield* this.planRequests(s,workingImportUnits(s),profile,batch=>this.settingsBatchRequest(s,kind,batch,profile.characters,lane,frozen),false,sliceMs,()=>catalog??=this.entityCatalog(s,frozen))
+ }
+ /** Hands out planning slices one per event-loop iteration, in arrival order, across all planners. A
+  * setImmediate queued from inside an immediate callback runs in the next iteration, so I/O, IPC and
+  * input are polled between any two slices (docs/565 3R-2). */
+ private planWaiters:(()=>void)[]=[];private planScheduled=false
+ private planTurn():Promise<void>{return new Promise(resolve=>{this.planWaiters.push(resolve);this.schedulePlanTurn()})}
+ private schedulePlanTurn(){if(this.planScheduled||!this.planWaiters.length)return;this.planScheduled=true;setImmediate(()=>{this.planScheduled=false;const next=this.planWaiters.shift();this.schedulePlanTurn();next?.()})}
+ private *planRequests(s:ImportSession,units:ImportUnit[],budget:ImportExecutionBudget,build:(batch:ImportUnit[])=>Omit<ImportAiRequest,'operationId'|'models'>,fullMetadata=false,sliceMs=Infinity,frozenCatalog?:()=>ImportSemanticEntity[]):Generator<ImportAiRequestDraft|typeof PLAN_PAUSE,void,unknown>{
+  if(!s.budgetPolicy&&!fullMetadata){for(const batch of splitImportBatches(units,budget.characters,budget.maxUnits))yield this.requestSnapshot(s,{...build(batch),executionBudget:budget},frozenCatalog?.());return}
+  // The entity catalogue depends only on s.artifacts, which cannot change while planning runs synchronously.
+  // It is built once per planning stretch and dropped at every yield, because the caller may commit results
+  // between requests. Rebuilding it for every trial batch validated every artifact once per unit and froze
+  // the main process for tens of seconds when the world step planned its setting batches. A frozen
+  // catalogue (step-16 settings) is kept for the whole plan.
+  let catalog:ImportSemanticEntity[]|undefined
+  const model=s.analysisGrant?.textModel,snapshot=(batch:ImportUnit[])=>{const request=build(batch);if(!request.entities&&request.phase!=='classify')catalog??=frozenCatalog?frozenCatalog():this.entityCatalog(s);return this.requestSnapshot(s,{...request,executionBudget:budget},catalog)},fits=(batch:ImportUnit[])=>this.requestFits(snapshot(batch),budget,model)
+  // Each resumption starts a new slice; the slice ends before the next trial once sliceMs is spent.
+  let sliceStart=performance.now()
   // The greedy plan equals the per-unit plan only when a request never shrinks as units are added:
   // true for roster and touch stages, which never carry context artifacts. Other stages choose
   // artifact context per batch and keep the per-unit plan.
   const sample=units.length?build(units.slice(0,1)):undefined,monotone=!!sample&&(sample.intent==='roster'||sample.intent==='touches')&&!sample.artifacts.length
-  if(monotone){for(const batch of importStageBatches(units,budget.characters,budget.maxUnits,fits))yield snapshot(batch);return}
+  if(monotone){for(const batch of importStageBatches(units,budget.characters,budget.maxUnits,fits)){yield snapshot(batch);catalog=undefined}return}
   let batch:ImportUnit[]=[],prepared:Omit<ImportAiRequest,'operationId'|'models'>|undefined
   for(const unit of units){
+   if(performance.now()-sliceStart>sliceMs){if(!frozenCatalog)catalog=undefined;yield PLAN_PAUSE;sliceStart=performance.now()}
    const candidate=[...batch,unit],request=snapshot(candidate)
    if(this.requestFits(request,budget,model)){batch=candidate;prepared=request;continue}
-   if(prepared)yield prepared
+   if(prepared){yield prepared;sliceStart=performance.now();if(!frozenCatalog)catalog=undefined}
    batch=[unit];prepared=snapshot(batch)
    if(!this.requestFits(prepared,budget,model))throw Error('单个导入任务及完整元数据超过模型预算，请核对设定后重试')
   }
@@ -2547,9 +2597,10 @@ export class NovelImportController {
   if(s.conflicts.some(c=>c.status==='pending')){await this.checkpoint(s,epoch,()=>{s.phase='conflicts'});return}
   this.projectOutlines(s);await this.checkpoint(s,epoch,()=>undefined);await this.publish(s,epoch)
  }
- private contextArtifacts(s:ImportSession,batch:ImportUnit[],budget:number):ImportArtifact[]{
+ /** `artifacts`: a frozen list to choose from (step-16 settings planning); defaults to the live s.artifacts. */
+ private contextArtifacts(s:ImportSession,batch:ImportUnit[],budget:number,artifacts:ImportArtifact[]=s.artifacts):ImportArtifact[]{
   const text=batch.map(u=>u.text).join(''),ledger=this.sceneLedger(s),sceneIds=new Set(ledger?sceneIdentityMemberships(ledger,batch,this.sceneSources(s)).map(m=>m.identityId):[]);let size=0;const chosen:ImportArtifact[]=[]
-  for(const a of s.artifacts){if(a.kind==='scene'&&ledger?!sceneIds.has(a.id):!text.includes(a.name)&&!['outline','world','theme'].includes(a.kind))continue;let slim={...a,text:a.text.length<500?a.text:'',evidence:[],sourceUnitIds:[]},length=JSON.stringify(slim).length;if(size+length>budget&&a.kind==='scene'&&ledger){slim={...slim,text:'',facts:{entityType:'PLACE',...(a.facts.parentId?{parentId:a.facts.parentId}:{})}};length=JSON.stringify(slim).length}if(size+length>budget)continue;size+=length;chosen.push(slim)}return chosen
+  for(const a of artifacts){if(a.kind==='scene'&&ledger?!sceneIds.has(a.id):!text.includes(a.name)&&!['outline','world','theme'].includes(a.kind))continue;let slim={...a,text:a.text.length<500?a.text:'',evidence:[],sourceUnitIds:[]},length=JSON.stringify(slim).length;if(size+length>budget&&a.kind==='scene'&&ledger){slim={...slim,text:'',facts:{entityType:'PLACE',...(a.facts.parentId?{parentId:a.facts.parentId}:{})}};length=JSON.stringify(slim).length}if(size+length>budget)continue;size+=length;chosen.push(slim)}return chosen
  }
  /** Keep a wave resident until all calls settle, then commit only current, valid results. */
  private async reviewWaves(s:ImportSession,epoch:number,packets:Iterable<ReviewPacket>,order:string[]){

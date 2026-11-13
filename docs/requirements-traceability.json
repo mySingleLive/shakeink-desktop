@@ -5201,6 +5201,35 @@
      "docs/560-import-stop-after-save-evidence/real-step22-stop-confirm.png",
      "docs/560-import-stop-after-save-evidence/real-step22-completed.png"
     ]
+  },
+  {
+    "id": "NI-20",
+    "requirement": "删除作品后重新导入同一小说，选择原来已清空的保存目录时不再报“保存目录不能与来源或应用目录重叠”（用户 2026-11-11）；导入或新建作品时，所选目录为空或不含本项目作品存储文件，即使以前用过/导入过，也允许继续使用",
+    "source": [
+      "docs/567-reused-empty-import-target-plan.md",
+      "docs/567-reused-empty-import-target-plan-review.md",
+      "docs/568-reused-empty-import-target-cases.md",
+      "docs/568-reused-empty-import-target-cases-review.md",
+      "docs/569-reused-empty-import-target-code-review.md"
+    ],
+    "implementation": [
+      "desktop/service/workspaces.ts"
+    ],
+    "testIds": [
+      "568-RT-01..RT-13",
+      "tests/unit/reused-import-target.test.ts",
+      "568-RT-R1/RT-R2（真实目标）"
+    ],
+    "verificationKind": "NOVEL_IMPORT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-pending",
+    "evidence": [
+      "tests/unit/reused-import-target.test.ts 12/12 通过（修复前 5 项失败，RT-11 复现原报错）",
+      "/private/tmp/shakeink-reuse-567/full-1.txt（全量 npm test）"
+    ],
+    "verificationLimits": [
+      "目录预留记录不删除；只调整受保护目录的判定",
+      "BR-S01（backup-removal-service）在修复前已失败（importJobs is not defined），与本项无关"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",
