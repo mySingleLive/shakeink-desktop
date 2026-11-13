@@ -45,6 +45,15 @@ export class WorkCreationReservations{
    });assertCurrent();return result
   });assertCurrent();return result
  }
+ /** docs/560: the pending reservation of one request, if any. */
+ async find(requestId:string){return this.withGlobal(async database=>{const row=await database.systemConfig.findUnique({where:{key:key(requestId)}});if(!row)return null;const value=reservationSchema.parse(row.value);if(value.requestId!==requestId)throw new ContentError('REQUEST_CONFLICT','建书请求目录记录不匹配');return value})}
+ /** docs/560: drop a pending reservation after its half-created folder was cleaned or replaced. */
+ async release(value:Input,assertCurrent:()=>void){const input=inputSchema.parse(value);assertCurrent();return this.withGlobal(database=>database.$transaction(async tx=>{
+  assertCurrent();await lockContentOperation(tx,'local-author',`novel-create:${input.requestId}`);assertCurrent()
+  const old=await tx.systemConfig.findUnique({where:{key:key(input.requestId)}});if(!old)return
+  const previous=reservationSchema.parse(old.value);assertSame(previous,input);if(previous.phase!=='pending')throw new ContentError('REQUEST_CONFLICT','作品已创建完成，不能删除目录预留')
+  await tx.systemConfig.delete({where:{key:key(input.requestId)}});assertCurrent()
+ }))}
  async directories(){return this.withGlobal(async database=>(await database.systemConfig.findMany({where:{key:{startsWith:'desktop:work-creation-reservation:'}}})).map(row=>reservationSchema.parse(row.value).selection.path))}
  async requireExisting(value:Input){const input=inputSchema.parse(value);return this.withGlobal(async database=>{const row=await database.systemConfig.findUnique({where:{key:key(input.requestId)}});if(!row)throw Error('原导入目录预留记录缺失');const previous=reservationSchema.parse(row.value);assertSame(previous,input);return previous})}
  async assertNoPendingCreation(requestId:string){return this.withGlobal(async database=>{

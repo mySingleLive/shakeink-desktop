@@ -165,13 +165,13 @@ test('SP-11/SP-12: one dropped record per adopted kind; failure, notFound and re
   await toStep16(x);let v=await f.settle(),j=await f.journal()
   const task=(k:string)=>j.wizard!.tasks.find(t=>t.settingsKind===k)!
   assert.equal(task('theme').state,'failed');assert.equal(task('style').state,'done')
-  const records=j.wizard!.dropped.filter(d=>d.kind==='settings')
+  const records=j.wizard!.dropped.filter(d=>d.kind==='settings'&&d.label!=='主题定位'/* docs/542 position note */)
   assert.deepEqual(records.map(d=>d.label).sort(),['爽点/泪点','金手指'].sort(),'failed theme and notFound style leave no record')
   const golden=records.find(d=>d.label==='金手指')!,batches=f.requests.filter(r=>r.kind==='goldenFinger').length
   assert.equal(golden.reason,`丢弃 ${2*batches} 条无法定位的原文引文，丢弃 ${batches} 项不合规条目`)
   assert.equal(records.find(d=>d.label==='爽点/泪点')!.reason,`${f.requests.filter(r=>r.kind==='trope').length} 项取消可靠性标注`)
   failTheme=false;await f.act('wizard-task',{taskId:task('theme').id,op:'retry'});v=await f.settle();j=await f.journal()
-  assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings'&&d.label==='主题').length,1,'a successful retry adds exactly one record')
+  assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings'&&d.label!=='主题定位'/* docs/542 position note */&&d.label==='主题').length,1,'a successful retry adds exactly one record')
   void v
  }finally{await f.dispose()}
 })
@@ -183,8 +183,8 @@ test('SP-14/SP-15: a batch failing after its correction is rerun once on its lan
    if(key===target&&(mode==='server'||mode==='rerun-fails'||n===1))throw mode==='server'?Error('Server Error'):Error('模型证据无法定位（no-match）')
    return {artifacts:[settingArtifact(r)],...(key===target?{settingsRepairs:{droppedEvidence:1,droppedArtifacts:0,clearedReliability:0}}:{})}}).releaseAll()
   try{
-   await toStep16(x);await f.settle();const j=await f.journal(),task=j.wizard!.tasks.find(t=>t.settingsKind==='theme')!,ops=f.requests.filter(r=>r.kind==='theme'&&r.units[0].id===target)
-   if(mode==='rerun-ok'){assert.equal(task.state,'done');assert.equal(ops.length,2);assert.notEqual(ops[0].operationId,ops[1].operationId);assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings').length,1);assert.equal(j.wizard!.dropped.find(d=>d.kind==='settings')!.reason,'丢弃 1 条无法定位的原文引文')}
+   await toStep16(x);await f.settle();const j=await f.journal(),task=j.wizard!.tasks.find(t=>t.settingsKind==='theme')!,ops=f.requests.filter(r=>r.kind==='theme'&&!r.themeProfile&&r.units[0].id===target)
+   if(mode==='rerun-ok'){assert.equal(task.state,'done');assert.equal(ops.length,2);assert.notEqual(ops[0].operationId,ops[1].operationId);assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings'&&d.label!=='主题定位'/* docs/542 position note */).length,1);assert.equal(j.wizard!.dropped.find(d=>d.kind==='settings'&&d.label!=='主题定位'/* docs/542 position note */)!.reason,'丢弃 1 条无法定位的原文引文')}
    else{assert.equal(task.state,'failed',mode);assert.equal(ops.length,mode==='server'?1:2,mode)}
   }finally{await f.dispose()}
  }
@@ -223,15 +223,15 @@ test('SP-12b: retryKind(world) and an author skip leave no settings record',asyn
  const x=await settingsFixture(['world','theme'],4),{f}=x
  gated(f,r=>({artifacts:[settingArtifact(r)],settingsRepairs:repairs})).releaseAll()
  try{
-  await toStep16(x);await f.settle();let j=await f.journal();assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings').length,1)
+  await toStep16(x);await f.settle();let j=await f.journal();assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings'&&d.label!=='主题定位'/* docs/542 position note */).length,1)
   const c=f.controller as unknown as {session:import('../../desktop/shared/novel-import').ImportSession;retryKind:(s:unknown,k:string)=>void}
-  c.session.wizard!.step='verify';c.retryKind(c.session,'world');assert.equal(c.session.wizard!.dropped.filter(d=>d.kind==='settings').length,0)
+  c.session.wizard!.step='verify';c.retryKind(c.session,'world');assert.equal(c.session.wizard!.dropped.filter(d=>d.kind==='settings'&&d.label!=='主题定位'/* docs/542 position note */).length,0)
  }finally{await f.dispose()}
  const y=await settingsFixture(['theme'],4),g=y.f,p=gated(g,r=>({artifacts:[settingArtifact(r)],settingsRepairs:repairs}))
  try{
   await toStep16(y);await until(()=>p.pending.size>=1);const task=(await g.view()).wizard!.tasks.find(t=>t.settingsKind==='theme')!
   await g.act('wizard-task',{taskId:task.id,op:'skip'});p.releaseAll();await g.settle();const j=await g.journal()
-  assert.equal(j.wizard!.tasks.find(t=>t.settingsKind==='theme')!.state,'skipped');assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings').length,0)
+  assert.equal(j.wizard!.tasks.find(t=>t.settingsKind==='theme')!.state,'skipped');assert.equal(j.wizard!.dropped.filter(d=>d.kind==='settings'&&d.label!=='主题定位'/* docs/542 position note */).length,0)
  }finally{p.releaseAll();await g.dispose()}
 })
 

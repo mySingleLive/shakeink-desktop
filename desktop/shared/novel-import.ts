@@ -75,6 +75,7 @@ export const importActionSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('wizard-set-images'),...mutable,avatar:z.boolean().optional(),portrait:z.boolean().optional(),exterior:z.boolean().optional(),interior:z.boolean().optional(),icon:z.boolean().optional()}).strict(),
  z.object({type:z.literal('wizard-read-image'),id:z.uuid(),taskId:z.string().regex(/^[a-z0-9-]{1,80}$/u)}).strict(),
  z.object({type:z.literal('wizard-revise'),...mutable,to:z.enum(['files','work','kinds','tree','detect-char','detect-scene','detect-item','detect-world'])}).strict(),
+ z.object({type:z.literal('wizard-verify-repair'),...mutable}).strict(),
  z.object({type:z.literal('wizard-retry-kind'),...mutable,kind:z.enum(['character','scene','item','world'])}).strict(),
  z.object({type:z.literal('wizard-task'),...mutable,taskId:z.string().regex(/^[a-z0-9-]{1,80}$/u).optional(),op:z.enum(['retry','skip','skip-failed'])}).strict().refine(a=>a.op==='skip-failed'?a.taskId===undefined:a.taskId!==undefined,'导入任务参数无效'),
 ])
@@ -114,7 +115,10 @@ export interface ImportEvidence {unitId:string;quote:string}
 /** schema:2 marks wizard entity results; it selects the extended native field table. */
 export interface ImportArtifact {id:string;kind:ImportTarget;name:string;text:string;facts:Record<string,string>;evidence:ImportEvidence[];sourceUnitIds:string[];origin:'source'|'inferred'|'confirmed';schema?:2}
 export interface ImportAlternative {text:string;value:string;artifactId?:string;unitId?:string}
-export interface ImportConflict {id:string;type:'setting-body'|'source-source'|'body-body';kind:ImportKind;entity:string;field:string;source:ImportAlternative;candidate:ImportAlternative;evidence:ImportEvidence[];status:'pending'|'resolved';resolution?:string;explanation?:string;hash:string}
+export interface ImportConflict {id:string;type:'setting-body'|'source-source'|'body-body';kind:ImportKind;entity:string;field:string;source:ImportAlternative;candidate:ImportAlternative;evidence:ImportEvidence[];status:'pending'|'resolved';resolution?:string;explanation?:string;hash:string;/** docs/557: one sentence from the review model on what differs (untrusted, ≤300). */reason?:string}
+/** docs/557: step-21 decision options; the controller accepts exactly the available ones. */
+export interface ImportConflictChoice {choice:'inferred'|'source'|'merge';available:boolean;reason?:string}
+export interface ImportConflictDetail {conflictId:string;index:number;total:number;entity:string;kindLabel:string;fieldLabel:string;reason?:string;current:string;proposed:string;mergeDefault:string;evidence:{quote:string;location:string}[];choices:ImportConflictChoice[]}
 export interface ImportPatch {id:string;start:number;end:number;before:string;after:string;reason:string;workingRevision:number;conflictId:string}
 export interface ImportChapter {id:string;title:string;start:number;end:number;content:string;outline?:string;volume?:string}
 export interface ImportStep {key:string;label:string;state:'pending'|'running'|'done'|'skipped'|'failed'|'waiting';completed:number;total?:number}
@@ -147,7 +151,7 @@ export interface ImportSession {
 export interface ImportFileView {id:string;name:string;format:ImportFormat|'unsupported';bytes:number;hash:string;included:boolean;error?:string;encoding?:string;requiresEncodingConfirmation?:boolean;characters:number;unitCount:number;unknownCount:number;pdfInspection?:ImportPdfInspectionView;pdfPageDecisions?:ImportPdfPageDecisionView[];pdfPreviewFailures?:ImportPdfPreviewFailure[];pdfReady?:boolean;pdfPendingPages?:number;pdfSourceInvalidated?:boolean}
 export interface ImportView {
  id:string;revision:number;phase:ImportPhase;title:string;files:ImportFileView[];found:Record<ImportKind,number>
- selected:ImportKind[];targets:ImportTarget[];infer:boolean;steps:ImportStep[];conflicts:ImportConflict[];patches:ImportPatch[]
+ selected:ImportKind[];targets:ImportTarget[];infer:boolean;steps:ImportStep[];conflicts:ImportConflict[];patches:ImportPatch[];conflictDetail?:ImportConflictDetail
  models:{text?:ImportModel;review?:ImportModel;image?:{id:string;name:string}};targetLabel?:string;targetReady:boolean;sourceReady:boolean;error?:string
  chapters:{id:string;title:string;start:number;end:number;volume?:string}[];notFound:ImportTarget[];modified:boolean
  publication?:{requestId:string;workId?:string;novelId?:string};summary?:{source:number;inferred:number;decisions:number;modified:number}
@@ -166,16 +170,18 @@ export interface ImportSceneIdentityDetail {
  relationTotal?:number
 }
 export interface ImportSceneIdentitySource {ledgerHash:string;memberKey:string;neighbor:-1|0|1;unitId?:string;offset:number;total:number;text:string;nextOffset?:number}
-export type ImportWizardView=Omit<ImportWizardState,'rosterStash'|'touchStash'|'foreshadowRefs'|'structure'|'structureDecision'|'structureHash'|'materializedVolumes'|'selectionHash'|'imageGrants'|'tasks'|'sceneIdentity'|'sceneCleanup'>&{sceneIdentitySummary?:ImportSceneIdentitySummary;rosterFound?:number;structure?:{title:string;volume?:string}[];imageGrants:Partial<Record<'character'|'scene'|'item',{model:{id:string;name:string}}|undefined>>;tasks:(Omit<ImportWizardState['tasks'][number],'resultSha256'|'image'>&{image?:{mime:string;bytes:number}})[];lineProgress?:{done:number;total:number}}
+export type ImportWizardView=Omit<ImportWizardState,'rosterStash'|'touchStash'|'foreshadowRefs'|'structure'|'structureDecision'|'structureHash'|'materializedVolumes'|'selectionHash'|'imageGrants'|'tasks'|'sceneIdentity'|'sceneCleanup'>&{sceneIdentitySummary?:ImportSceneIdentitySummary;rosterFound?:number;foreshadowFound?:number;structure?:{title:string;volume?:string}[];imageGrants:Partial<Record<'character'|'scene'|'item',{model:{id:string;name:string}}|undefined>>;tasks:(Omit<ImportWizardState['tasks'][number],'resultSha256'|'image'>&{image?:{mime:string;bytes:number}})[];lineProgress?:{done:number;total:number}}
 export interface ImportSourcePage {fileId:string;offset:number;total:number;text:string;units:{id:string;start:number;end:number;kind:UnitKind;part?:string}[]}
-export interface ImportResponse {view:ImportView|null;source?:ImportSourcePage;sceneIdentityDetail?:ImportSceneIdentityDetail;sceneIdentitySource?:ImportSceneIdentitySource;pdfPage?:ImportPdfPageResponse;image?:{mime:string;bytes:Uint8Array}}
+export interface ImportResponse {view:ImportView|null;/** docs/560: the import was deleted but its target folder kept unfinished files. */retained?:string;/** docs/563: the save finished while stopping; the work was kept. */saved?:string;source?:ImportSourcePage;sceneIdentityDetail?:ImportSceneIdentityDetail;sceneIdentitySource?:ImportSceneIdentitySource;pdfPage?:ImportPdfPageResponse;image?:{mime:string;bytes:Uint8Array}}
 export interface ImportBridge {novelImport(action:ImportAction):Promise<ImportResponse>}
-export interface ImportAiRequest extends ImportSemanticRequestFields {sceneFragmentRefs?:{version:1;width:12};sharedSource?:{version:1;windows:{index:number;unitIds:string[]}[];extraUnitIds:string[]};executionBudget?:ImportExecutionBudget;executionLane?:'scene-review-wave-v1'|'wizard-settings-v1'|'wizard-lines-v1';chapters?:{id:string;title:string;start:number;end:number}[];entities?:ImportSemanticEntity[];operationId:string;phase:'classify'|'analyze'|'review'|'patch';kind?:ImportTarget;units:ImportUnit[];artifacts:ImportArtifact[];models:{text:ImportModel;review?:ImportModel};instruction?:string;conflict?:ImportConflict;workingRevision?:number}
-export interface ImportAiResult extends ImportSemanticResult {classifications?:{unitId:string;kind:UnitKind}[];artifacts?:ImportArtifact[];conflicts?:ImportConflict[];patches?:ImportPatch[];chapterCuts?:{start:number;title:string;volume?:string;candidateId?:string}[];ignoredStarts?:number[];notFound?:boolean;settingsRepairs?:ImportSettingsRepairs;linesRepairs?:ImportLinesRepairs}
+export interface ImportAiRequest extends ImportSemanticRequestFields {sceneFragmentRefs?:{version:1;width:12};sharedSource?:{version:1;windows:{index:number;unitIds:string[]}[];extraUnitIds:string[]};executionBudget?:ImportExecutionBudget;executionLane?:'scene-review-wave-v1'|'wizard-settings-v1'|'wizard-lines-v1'|'wizard-review-v1';/** docs/542: the wizard theme task's single book-level position request (settings lane, kind theme). */themeProfile?:true;chapters?:{id:string;title:string;start:number;end:number}[];entities?:ImportSemanticEntity[];operationId:string;phase:'classify'|'analyze'|'review'|'patch';kind?:ImportTarget;units:ImportUnit[];artifacts:ImportArtifact[];models:{text:ImportModel;review?:ImportModel};instruction?:string;conflict?:ImportConflict;workingRevision?:number}
+export interface ImportAiResult extends ImportSemanticResult {classifications?:{unitId:string;kind:UnitKind}[];artifacts?:ImportArtifact[];conflicts?:ImportConflict[];patches?:ImportPatch[];chapterCuts?:{start:number;title:string;volume?:string;candidateId?:string}[];ignoredStarts?:number[];notFound?:boolean;settingsRepairs?:ImportSettingsRepairs;linesRepairs?:ImportLinesRepairs;reviewRepairs?:ImportReviewRepairs}
 /** docs/514: repair counts of a wizard other-setting batch (unlocatable quotes, dropped items, cleared reliability). */
-export interface ImportSettingsRepairs {droppedEvidence:number;droppedArtifacts:number;clearedReliability:number}
+export interface ImportSettingsRepairs {droppedEvidence:number;droppedArtifacts:number;clearedReliability:number;/** docs/542: theme position fields cleared by repair. */clearedPosition?:number}
 /** docs/517 3R3-3: shape repairs of one wizard lines-lane reply; reported to the author. */
 export interface ImportLinesRepairs {droppedEvidence:number;droppedLinks:number;droppedEntries?:number}
+/** docs/539: review-lane conflicts dropped as unusable (no artifact kind or no locatable quote). */
+export interface ImportReviewRepairs {droppedConflicts:number}
 /** Staged wizard images travel with the publish request; the worker re-checks every digest. */
 export interface ImportPublishImage {taskId:string;mime:'image/png'|'image/jpeg'|'image/webp';sha256:string;bytes:Uint8Array}
 export interface ImportPublishInput {session:ImportSession;selection:{path:string;device:string;inode:string};importHash:string;images?:ImportPublishImage[]}

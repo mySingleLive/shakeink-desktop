@@ -6,6 +6,8 @@ import type {generateJSON as GenerateImportJSON,GenerateUsage} from '../../src/l
 import {LOCAL_AUTHOR_ID} from './context'
 import type {ResolvedModel} from '../../src/lib/ai/provider'
 import {z} from 'zod'
+import {POSITION_CHANNELS,tagAllowed} from '../../src/lib/creation-wizard/position'
+import {genresForChannel} from '../../src/lib/creation-wizard/filter'
 import {buildThinkingProviderOptions} from '../../src/lib/ai/thinking-effort'
 import {providerFamily} from '../../src/lib/ai/provider-family'
 import {IMPORT_SCENE_LINK_FEEDBACK,IMPORT_SCENE_FACT_GUIDANCE} from '../shared/novel-import-scene-links'
@@ -22,18 +24,18 @@ import {sceneRosterBoundNativeSchema,sceneRosterKeyedInlineSchema,sceneRosterBou
 import {IMPORT_FIXED_PROMPT_RESERVE_BYTES,importRequestBudget,type ImportExecutionBudget} from '../core/novel-import-budget-policy'
 import {sceneRosterNativeSchema,assertSceneRosterNativeBudget,assertSceneRosterKeyedInlineBudget} from '../core/novel-import-scene-roster-native'
 import {serializeImportAiPayload,assertImportPayloadBudget,importAiPrompt,assertImportFixedPromptReserve,assertImportReconcileContextBudget,IMPORT_JSON_WRAPPER_RESERVE_BYTES,IMPORT_SCENE_OWNERSHIP_CONTRACT,IMPORT_SCENE_ROSTER_ROOT_GUIDANCE} from '../core/novel-import-ai-payload'
-import {IMPORT_KINDS,IMPORT_TARGETS,type ImportSettingsRepairs,type ImportLinesRepairs,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportModel,type ImportUnit} from '../shared/novel-import'
+import {IMPORT_KINDS,IMPORT_TARGETS,type ImportSettingsRepairs,type ImportLinesRepairs,type ImportReviewRepairs,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportModel,type ImportUnit} from '../shared/novel-import'
 import {importHash,safeImportBoundary,validateImportEvidence,validateImportReferences} from '../core/novel-import'
 import {importStructureCandidateMetadata,importStructureResult} from '../core/novel-import-structure'
 import {sceneParentCycleIds,applySceneParentProposals} from '../core/novel-import-wizard-roster'
 import {supportsStructuredScene,createStructuredSceneContract,structuredSceneModel,supportsStructuredSceneRoster,structuredSceneRosterModel} from './novel-import-structured-scene'
 export {supportsStructuredScene,createStructuredSceneContract,structuredSceneModel,supportsStructuredSceneRoster,structuredSceneRosterModel} from './novel-import-structured-scene'
-import {IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,IMPORT_SEMANTIC_FACT_FIELDS,importFactFields,importArtifactEditSchema,importArtifactSemanticHash,validateImportSemanticArtifact,importWorldContentIssues,applyImportArtifactFieldEdits,importReviewProjectionSchema,assertImportReviewProjection,assertImportMissingProjection,type ImportSemanticAiRequest,type ImportSemanticAiResult,type ImportSemanticEntity,type ImportSemanticLock,type ImportMissingTarget} from '../core/novel-import-semantics'
+import {stripImportKnowledgeAnnotations,IMPORT_KNOWLEDGE_ANNOTATION,IMPORT_THEME_PROFILE_ID,IMPORT_THEME_PROFILE_NAME,IMPORT_THEME_PROFILE_LIMITS,IMPORT_THEME_PROFILE_REQUEST_SYNOPSIS,importThemeSynopsisFallback,IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,IMPORT_SEMANTIC_FACT_FIELDS,importFactFields,importArtifactEditSchema,importArtifactSemanticHash,validateImportSemanticArtifact,importWorldContentIssues,applyImportArtifactFieldEdits,importReviewProjectionSchema,assertImportReviewProjection,assertImportMissingProjection,type ImportSemanticAiRequest,type ImportSemanticAiResult,type ImportSemanticEntity,type ImportSemanticLock,type ImportMissingTarget} from '../core/novel-import-semantics'
 
 const evidence=z.object({unitId:z.string().min(1),quote:z.string().min(1)}).strict()
 const artifact=z.object({id:z.string().min(1),kind:z.enum(IMPORT_TARGETS as [typeof IMPORT_TARGETS[number],...typeof IMPORT_TARGETS]),name:z.string().min(1).max(300),text:z.string().min(1),facts:z.record(z.string(),z.string()),evidence:z.array(evidence).min(1),sourceUnitIds:z.array(z.string()),origin:z.enum(['source','inferred','confirmed'])}).strict()
 const alternative=z.object({text:z.string(),value:z.string(),artifactId:z.string().optional(),unitId:z.string().optional()}).strict()
-const conflict=z.object({id:z.string().min(1),type:z.enum(['setting-body','source-source','body-body']),kind:z.enum(IMPORT_KINDS),entity:z.string(),field:z.string(),source:alternative,candidate:alternative,evidence:z.array(evidence).min(1),status:z.literal('pending'),hash:z.string()}).strict()
+const conflict=z.object({id:z.string().min(1),type:z.enum(['setting-body','source-source','body-body']),kind:z.enum(IMPORT_KINDS),entity:z.string(),field:z.string(),source:alternative,candidate:alternative,evidence:z.array(evidence).min(1),status:z.literal('pending'),hash:z.string(),reason:z.string().max(300).optional()}).strict()
 const patch=z.object({id:z.string(),start:z.number().int().nonnegative(),end:z.number().int().nonnegative(),before:z.string(),after:z.string(),reason:z.string(),workingRevision:z.number().int().nonnegative(),conflictId:z.string()}).strict()
 const schema=z.object({classifications:z.array(z.object({unitId:z.string(),kind:z.enum([...IMPORT_KINDS,'unknown'])}).strict()).optional(),artifacts:z.array(artifact).optional(),conflicts:z.array(conflict).optional(),patches:z.array(patch).optional(),notFound:z.boolean().optional()}).strict()
 const target=z.enum(IMPORT_TARGETS as [typeof IMPORT_TARGETS[number],...typeof IMPORT_TARGETS]),nonempty=z.string().refine(value=>!!value.trim()),uniqueIds=z.array(nonempty).refine(values=>new Set(values).size===values.length)
@@ -370,13 +372,17 @@ const rosterEntrySchemas={
  item:z.object({name:rosterName,aliases:rosterAliases,itemType:z.string().trim().max(100).default(''),important:z.boolean(),category:z.enum(['item','character','place','organization','concept','other']).nullable().optional(),evidence:rosterEvidence.optional()}).strict().transform(entry=>{if(entry.category!==null)return entry;const {category:_category,...rest}=entry;return rest}),
  world:z.object({name:rosterName,aliases:rosterAliases,parent:rosterName.optional(),parallel:z.boolean().optional(),settings:z.array(z.object({settingType:z.enum(IMPORT_WORLD_SETTING_TYPES),name:rosterName}).strict()).max(50),evidence:rosterEvidence.optional()}).strict(),
 }
-const touchSchema=z.object({foreshadowKey:rosterName,title:rosterName,content:z.string().max(4000).default(''),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:z.number().int().nonnegative(),summary:z.string().max(200),quote:z.string().min(1).max(200),eventId:z.string().min(1).optional(),narrativeId:z.string().min(1).optional()}).strict(),evidence:rosterEvidence}).strict()
+/** docs/535 3R-5: an over-long summary or content is cut by code points to at most `max` UTF-16 units, so no lone surrogate remains. Shape fix only. */
+export function trimWellFormed(value:string,max:number){if(value.length<=max)return value;let out='';for(const ch of value){if(out.length+ch.length>max)break;out+=ch}return out}
+const touchSchema=z.object({foreshadowKey:rosterName,title:rosterName,content:z.string().default('').transform(v=>trimWellFormed(v,4000)),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:z.number().int().nonnegative(),summary:z.string().transform(v=>trimWellFormed(v,200)),quote:z.string().min(1).max(200),eventId:z.string().min(1).optional(),narrativeId:z.string().min(1).optional()}).strict(),evidence:rosterEvidence}).strict()
 const structureSchema=z.object({chapterCuts:z.array(z.object({start:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),title:structureTitle,volume:structureTitle.optional(),candidateId:z.string().min(1).max(512).optional()}).strict()).max(5000),ignoredStarts:z.array(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)).max(20000)}).strict()
 function characterEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&request.kind==='character'}
 // Items share the verified quote-option protocol since docs/500.
 function indexedEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item')}
 /** Item extraction fills the schema 2 panel fields but keeps the plain evidence and source-unit protocol (docs/497). */
 function itemEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&request.kind==='item'}
+/** docs/545 §6 H2: fixed correction text for the position request; a specific gap is put in front of it. */
+export const IMPORT_THEME_PROFILE_GUIDANCE='主题定位facts必填channel、genre、sellingPoints、targetAudience、synopsis，tags可为空数组：channel只能为男频或女频；genre必须是该频道的一个具体题材；tags为候选标签的JSON字符串数组(最多20个，可为[])；sellingPoints与targetAudience非空，各不超过2000字；synopsis非空，最多15行、300字，只概括世界观、主角与开篇'
 const IMPORT_ITEM_FACT_GUIDANCE='物品facts仅允许reliability,attribution,temporalScope,characterId,sceneId,itemId,appearance,acquisition,effects,aliases,tags；每值为字符串；effects为[{name,description}]的JSON字符串且description非空，aliases与tags为字符串数组的JSON字符串；不写itemType等其它字段，未知省略，保留有据内容'
 const IMPORT_WORLD_FACT_GUIDANCE='world facts须符合目录项：WORLD仅entityType与可选parentId；SETTING须entityType、worldId、settingType与content(JSON字符串)。LEVEL_SYSTEM的content={scope,form,description,rules,levels,pathways}；CONCEPT={concepts:[{term,explanation}]}；FACTION={factions:[{name,description,relations}]}，每项三个值都是字符串，relations无内容时为空字符串；其余类型content={text}，text为非空字符串。不自增字段，未知省略，保留有据内容'
 /** A text-type world setting whose content is missing or has a blank text, while artifact.text is not blank, gets content={text}, the same
@@ -402,7 +408,23 @@ function worldTextContentFromText(value:unknown):unknown{
 /** Annotate an existing rejection without changing the trusted catalog or acceptance gate. */
 class SceneLinkValidationError extends Error{constructor(readonly field:keyof typeof IMPORT_SCENE_LINK_FEEDBACK,message:string){super(message)}}
 /** The wizard owns the panel version; provider values remain unmodified. */
-function semanticResultArtifact(request:ImportSemanticAiRequest,item:ImportArtifact):ImportArtifact{return indexedEntityRequest(request)&&item.kind===request.kind?{...item,schema:2}:item}
+function semanticResultArtifact(request:ImportSemanticAiRequest,item:ImportArtifact):ImportArtifact{return (indexedEntityRequest(request)||themeProfileRequest(request))&&item.kind===request.kind?{...item,schema:2}:item}
+/** docs/542: one book-level theme position request on the wizard settings lane. */
+export function themeProfileRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'executionLane'|'themeProfile'>){return request.themeProfile===true&&request.semanticVersion===1&&request.phase==='analyze'&&request.intent===undefined&&request.kind==='theme'&&request.executionLane==='wizard-settings-v1'}
+const THEME_PROFILE_GAP_PREFIX='主题定位缺少'
+/** docs/545: the fields a requested position must fill; fixed labels only, never model text. */
+export function themeProfileGaps(facts:Record<string,unknown>):string[]{
+ const text=(key:string)=>typeof facts[key]==='string'&&!!(facts[key] as string).trim()
+ const channel=typeof facts.channel==='string'?facts.channel.trim():'',genre=typeof facts.genre==='string'?facts.genre.trim():''
+ const gaps:string[]=[]
+ if(channel!=='男频'&&channel!=='女频')gaps.push('频道(男频或女频)')
+ if(!genre||genre==='全部')gaps.push('题材(具体题材)')
+ if(!text('sellingPoints'))gaps.push('核心卖点')
+ if(!text('targetAudience'))gaps.push('目标受众')
+ if(!text('synopsis'))gaps.push('简介')
+ else if((facts.synopsis as string).split('\n').filter(l=>l.trim()).length>IMPORT_THEME_PROFILE_REQUEST_SYNOPSIS.lines||Array.from((facts.synopsis as string).trim()).length>IMPORT_THEME_PROFILE_REQUEST_SYNOPSIS.characters)gaps.push('简介(最多15行、300字)')
+ return gaps
+}
 /** Only an independently verified complete cyclic PLACE catalog may use this wire protocol. */
 function sceneParentRequestEntities(request:ImportSemanticAiRequest):ImportSemanticEntity[]{
  if(request.semanticVersion!==1||request.phase!=='analyze'||request.intent!=='roster'||request.kind!=='scene'||!sceneParentTargetIdsSchema.safeParse(request.sceneParentTargets).success||!Array.isArray(request.artifacts)||request.artifacts.length||request.entityTarget!==undefined||request.reconcile!==undefined||request.reviewProjection!==undefined||request.conflict!==undefined||request.semanticLocks?.length||!request.units.length)throw Error('场景上级纠错只能用于完整场景清单识别阶段')
@@ -550,6 +572,12 @@ export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodTyp
    // Feedback is cut at 250 characters (src/lib/ai/generate.ts), so the specific failure goes first.
    ctx.addIssue({code:'custom',path:['facts'],message:(detail||reason?'未通过：'+(detail||reason)+'。':'')+IMPORT_WORLD_FACT_GUIDANCE})
   }
+ }):themeProfileRequest(request)?indexedArtifact.superRefine((item,ctx)=>{
+  if(ctx.issues.length)return
+  if(item.id!==IMPORT_THEME_PROFILE_ID||item.name!==IMPORT_THEME_PROFILE_NAME){ctx.addIssue({code:'custom',path:['id'],message:'主题定位artifact的id必须为'+IMPORT_THEME_PROFILE_ID+'，name必须为'+IMPORT_THEME_PROFILE_NAME});return}
+  try{validateImportSemanticArtifact(semanticResultArtifact(request,item))}catch{ctx.addIssue({code:'custom',path:['facts'],message:IMPORT_THEME_PROFILE_GUIDANCE});return}
+  // docs/545 §6 H1: completeness is reported last and on its own, so the correction names exactly what is missing.
+  const gaps=themeProfileGaps(item.facts);if(gaps.length)ctx.addIssue({code:'custom',path:['facts'],message:THEME_PROFILE_GAP_PREFIX+gaps.join('、')+'。'+IMPORT_THEME_PROFILE_GUIDANCE})
  }):indexedArtifact
  const checkedArtifact=kind==='worldline'?requestedArtifact.superRefine((item,ctx)=>{
   // Reuse the final native validator without transforming provider values.
@@ -635,7 +663,7 @@ function reportAnchorDiagnostics(request:ImportSemanticAiRequest,candidate:Ancho
 /** docs/528 M2: counts only (no ref values or text), written when import debugging is on. */
 function sceneRosterCounter(kind:'ref-invalid'|'span'){if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('scene-roster-'+kind+' {"count":1}')}
 type ImportTextGeneration=NonNullable<Parameters<typeof GenerateImportJSON>[1]>['generateText']
-const USAGE_ENUMS={phase:['classify','analyze','review','patch'],intent:['reconcile','structure','roster','entity','touches'],kind:[...IMPORT_TARGETS],mode:['roster','links','cleanup','ownership'],lane:['scene-review-wave-v1','wizard-settings-v1','wizard-lines-v1'],finishReason:['stop','length','content-filter','tool-calls','error','other','unknown']} as const
+const USAGE_ENUMS={phase:['classify','analyze','review','patch'],intent:['reconcile','structure','roster','entity','touches'],kind:[...IMPORT_TARGETS],mode:['roster','links','cleanup','ownership'],lane:['scene-review-wave-v1','wizard-settings-v1','wizard-lines-v1','wizard-review-v1'],finishReason:['stop','length','content-filter','tool-calls','error','other','unknown']} as const
 const usageEnum=(list:readonly string[],value:unknown)=>value===undefined||value===null?null:typeof value==='string'&&list.includes(value)?value:'?'
 const usageCount=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null
 /** docs/522 §1: wraps the raw text generation and writes one counts-only line per returned generation,
@@ -656,7 +684,7 @@ export function observeImportUsage(request:Pick<ImportAiRequest,'phase'|'kind'|'
 export async function generateImportAiJson(request:ImportSemanticAiRequest,context:{userId:string;resolvedModel:ResolvedModel;structuredScene?:boolean;structuredSceneRoster?:boolean}&ImportAiGenerationOptions,signal:AbortSignal,prompt:string,deps?:Parameters<typeof GenerateImportJSON>[1]):Promise<ImportSemanticAiResult>{
  const {generateJSON,generateText,StructuredGenerationError,parseJsonOutput}=await import('../../src/lib/ai/generate')
  const role=context.role??(request.phase==='review'?'review':'text'),ordinary=request.semanticVersion===1&&request.phase==='analyze'&&request.intent!=='reconcile',anchorFeedback=importEvidenceFeedback(request)
- let evidenceReason:ImportEvidenceAnchorReason|undefined,diagnosticCandidate:AnchorDiagnosticCandidate|undefined,settingsRepairs:ImportSettingsRepairs|undefined,linesRepairs:ImportLinesRepairs|undefined
+ let evidenceReason:ImportEvidenceAnchorReason|undefined,diagnosticCandidate:AnchorDiagnosticCandidate|undefined,settingsRepairs:ImportSettingsRepairs|undefined,linesRepairs:ImportLinesRepairs|undefined,reviewRepairs:ImportReviewRepairs|undefined
  // Observe all local issues, not generateJSON's first six display diagnostics.
  // Each parse and generation clears provenance; an aborting structural issue
  // skips the final check and therefore cannot inherit an earlier reason.
@@ -713,7 +741,8 @@ export async function generateImportAiJson(request:ImportSemanticAiRequest,conte
  })():undefined
  const responseSchema=structured?structured.wireSchema.pipe(schema as z.ZodType<ImportSemanticAiResult,ImportAiResult>):schema
  const usageDebug=process.env.SHAKEINK_IMPORT_DEBUG==='1',baseGeneration=deps?.generateText??generateText,rawGeneration=usageDebug?observeImportUsage(request,baseGeneration):baseGeneration
- const generation=ordinary?{generateText:(async(options:Parameters<typeof generateText>[0])=>{evidenceReason=undefined;diagnosticCandidate=undefined
+ const reviewLane=wizardReviewLaneRequest(request)
+ const generation=reviewLane?{generateText:(async(options:Parameters<typeof generateText>[0])=>{reviewRepairs=undefined;const raw=await rawGeneration(options);if(raw.finishReason!=='stop')return raw;const normalized=normalizeReviewReply(request,raw.text,parseJsonOutput);if(!normalized)return raw;reviewRepairs=normalized.counts;return {...raw,text:normalized.text}})}:ordinary?{generateText:(async(options:Parameters<typeof generateText>[0])=>{evidenceReason=undefined;diagnosticCandidate=undefined
   const raw=await rawGeneration(options),settingsLane=wizardSettingsLaneRequest(request);if(settingsLane)settingsRepairs=undefined;if(wizardLinesLaneRequest(request))linesRepairs=undefined
   // docs/514 3R2: wizard other-setting batches repair or drop single bad items before the strict schema sees them.
   const result=settingsLane&&raw.finishReason==='stop'?(()=>{const repaired=repairSettingsReply(request,raw.text,parseJsonOutput);if(!repaired)return raw;settingsRepairs=repaired.counts;return {...raw,text:repaired.text}})():wizardLinesLaneRequest(request)&&raw.finishReason==='stop'?(()=>{const normalized=normalizeLinesReply(request,raw.text,parseJsonOutput);if(!normalized)return raw;linesRepairs=normalized.counts;return {...raw,text:normalized.text}})():raw;if(rosterContract&&result.finishReason!=='stop'){const error=new StructuredGenerationError('incomplete'),finish=result.finishReason==='length'||result.finishReason==='content-filter'||result.finishReason==='tool-calls'||result.finishReason==='error'||result.finishReason==='other'?result.finishReason:'unknown';try{Object.defineProperty(error,'finishReason',{value:finish,enumerable:false})}catch{}throw error}return result})}:usageDebug?{...deps,generateText:rawGeneration}:deps
@@ -790,7 +819,7 @@ export async function generateImportAiJson(request:ImportSemanticAiRequest,conte
   if(staged){staged.activate();frozenRosterRepair={text,data:current.data,boundData:current.boundData,boundSchema:current.boundSchema}}
   return nativeRoster?{correction:next,jsonOutputSchema:structuredClone(current.boundSchema)}:next
  }:undefined
- try{const data=(await generateJSON({userId:context.userId,role,action:'novel.import.'+request.phase,prompt:structured?.prompt??prompt,schema:responseSchema,...(repair?{repair,maxGenerations:4}:{}),...(nativeRoster?{jsonOutputSchema:nativeRoster.first}:{}),...(structured?{jsonOutputSchema:structured.jsonSchema,...('maxOutputTokens' in structured?{maxOutputTokens:structured.maxOutputTokens}:{})}:{}),resolvedModel:context.resolvedModel,abortSignal:signal,usage:context.usage,maxNetworkRetries:context.maxNetworkRetries},generation)).data;return settingsRepairs?{...data,settingsRepairs}:linesRepairs?{...data,linesRepairs}:data}catch(error){
+ try{const data=(await generateJSON({userId:context.userId,role,action:'novel.import.'+request.phase,prompt:structured?.prompt??prompt,schema:responseSchema,...(repair?{repair,maxGenerations:4}:{}),...(nativeRoster?{jsonOutputSchema:nativeRoster.first}:{}),...(structured?{jsonOutputSchema:structured.jsonSchema,...('maxOutputTokens' in structured?{maxOutputTokens:structured.maxOutputTokens}:{})}:{}),resolvedModel:context.resolvedModel,abortSignal:signal,usage:context.usage,maxNetworkRetries:context.maxNetworkRetries},generation)).data;return settingsRepairs?{...data,settingsRepairs}:linesRepairs?{...data,linesRepairs}:reviewRepairs?{...data,reviewRepairs}:data}catch(error){
   if(structured&&!(error instanceof StructuredGenerationError)){
    if(signal.aborted)signal.throwIfAborted()
    if(error instanceof Error&&error.name==='AbortError')throw error
@@ -889,7 +918,8 @@ function validateSemanticRequest(request:ImportSemanticAiRequest){
  // docs/528 M7: compact scene fragment refs only on concrete scene roster packets; exact shape.
  if(request.sceneFragmentRefs!==undefined){const v=request.sceneFragmentRefs as unknown as Record<string,unknown>;if(!v||typeof v!=='object'||Object.keys(v).length!==2||v.version!==1||v.width!==12||!sceneRosterFragmentRequest(request)||request.sceneParentTargets!==undefined)throw Error('场景片段布局无效')}
  validateSceneIdentityRequest(request)
- if(request.executionLane!==undefined&&!(sceneReviewWaveRequest(request)||wizardSettingsLaneRequest(request)||wizardLinesLaneRequest(request)))throw Error('导入调度通道无效')
+ if(request.themeProfile!==undefined&&!themeProfileRequest(request))throw Error('主题定位请求无效')
+ if(request.executionLane!==undefined&&!(sceneReviewWaveRequest(request)||wizardSettingsLaneRequest(request)||wizardLinesLaneRequest(request)||wizardReviewLaneRequest(request)))throw Error('导入调度通道无效')
  if(request.semanticVersion===undefined){if(request.intent!==undefined||request.sceneIdentity!==undefined||request.sceneParentTargets!==undefined||request.reconcile!==undefined||request.semanticLocks!==undefined||request.selectedTargets!==undefined||request.reviewProjection!==undefined)throw Error('缺少语义版本，不能使用语义阶段上下文');return}
  if(!semanticContextSchema.safeParse({semanticVersion:request.semanticVersion,intent:request.intent,entityTarget:request.entityTarget,sceneIdentity:request.sceneIdentity,sceneParentTargets:request.sceneParentTargets,reconcile:request.reconcile,semanticLocks:request.semanticLocks,selectedTargets:request.selectedTargets,reviewProjection:request.reviewProjection}).success)throw Error('导入语义版本或上下文结构无效')
  if(request.sceneParentTargets!==undefined)sceneParentRequestEntities(request)
@@ -906,7 +936,7 @@ function validateSemanticRequest(request:ImportSemanticAiRequest){
  if(new Set(fragments.map(f=>f.artifactId)).size!==fragments.length)throw Error('设定修订分片目标重复')
  for(const fragment of fragments){const a=request.artifacts.find(a=>a.id===fragment.artifactId);if(!a||!request.reconcile!.targetIds.includes(a.id)||fragment.end-fragment.start!==a.text.length||!a.text.isWellFormed()||fragment.fields.some(field=>!IMPORT_SEMANTIC_FACT_FIELDS[a.kind].includes(field)))throw Error('设定修订分片范围或字段无效')}
  const values=new Map<string,string>()
- for(const lock of semanticLocks(request)){const a=request.artifacts.find(a=>a.id===lock.artifactId),key=lock.artifactId+'\0'+lock.field;if(!a||lock.field!=='text'&&!IMPORT_SEMANTIC_FACT_FIELDS[a.kind].includes(lock.field)||(lock.field==='text'?a.text:a.facts[lock.field])!==lock.value||values.has(key)&&values.get(key)!==lock.value)throw Error('语义锁定字段或基础版本无效');values.set(key,lock.value)}
+ for(const lock of semanticLocks(request)){const a=request.artifacts.find(a=>a.id===lock.artifactId),key=lock.artifactId+'\0'+lock.field;if(!a||lock.field!=='text'&&!importFactFields(a.kind,a.schema).includes(lock.field)||(lock.field==='text'?a.text:a.facts[lock.field])!==lock.value||values.has(key)&&values.get(key)!==lock.value)throw Error('语义锁定字段或基础版本无效');values.set(key,lock.value)}
 }
 function validateSemanticStage(request:ImportSemanticAiRequest,result:ImportSemanticAiResult){
  const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneIdentity?.mode==='cleanup'?'sceneCleanup':request.sceneParentTargets!==undefined?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'?(request.intent==='reconcile'?'reconcile':request.intent==='roster'?'roster':request.intent==='touches'?'touches':'analyze'):request.phase,allowed:Record<string,string[]>={classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:request.sceneIdentity?.mode==='roster'?['roster','sceneRosterRecords']:['roster'],sceneLinks:['sceneIdentityDecisions'],sceneCleanup:['sceneCleanup'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']}
@@ -1062,9 +1092,12 @@ const defaults:ImportAiDependencies={
 const WIZARD_SETTINGS_KINDS_LANE=new Set(['theme','style','goldenFinger','trope'])
 function wizardSettingsLaneRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'executionLane'>){return request.executionLane==='wizard-settings-v1'&&request.semanticVersion===1&&request.phase==='analyze'&&request.intent===undefined&&WIZARD_SETTINGS_KINDS_LANE.has(request.kind??'')}
 /** docs/517 3R2-1 / docs/531: wizard worldline, narrative and chapter-outline batches skip the chat long-task slots and use the light extraction policy (user choice 2026-11-06). */
+/** docs/539 §2.1: wizard step-21 chapter review packets run in parallel with the light policy (user choice 2026-11-09). */
+export function wizardReviewLaneRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'executionLane'>){return request.executionLane==='wizard-review-v1'&&request.semanticVersion===1&&request.phase==='review'&&request.intent===undefined}
 export function wizardLinesLaneRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'executionLane'>){return request.executionLane==='wizard-lines-v1'&&request.semanticVersion===1&&request.phase==='analyze'&&request.intent===undefined&&(request.kind==='worldline'||request.kind==='narrative'||request.kind==='outline')}
 type ImportGenerationScope=Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'|'selectedTargets'|'conflict'|'executionLane'>
-const lightImportGeneration=(request:ImportGenerationScope)=>request.semanticVersion===1&&request.phase==='analyze'&&(request.intent==='roster'||request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item'||request.kind==='world'))||wizardSettingsLaneRequest(request)||wizardLinesLaneRequest(request)
+// docs/535 3R: foreshadow touches are short lists too (user choice 2026-11-08: thinking off).
+const lightImportGeneration=(request:ImportGenerationScope)=>wizardReviewLaneRequest(request)||request.semanticVersion===1&&request.phase==='analyze'&&(request.intent==='roster'||request.intent==='touches'||request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item'||request.kind==='world'))||wizardSettingsLaneRequest(request)||wizardLinesLaneRequest(request)
 export function importGenerationModel(request:ImportGenerationScope,resolved:ResolvedModel,model:Parameters<typeof importRosterModel>[1]){return lightImportGeneration(request)?importRosterModel(resolved,model):resolved}
 export async function runImportGenerationLane<T>(request:ImportGenerationScope,work:()=>Promise<T>):Promise<T>{
  if(!lightImportGeneration(request)&&!sceneReviewWaveRequest(request)&&!wizardSettingsLaneRequest(request)&&!wizardLinesLaneRequest(request))return work()
@@ -1104,9 +1137,13 @@ export async function runImportAi(request:ImportSemanticAiRequest&{executionBudg
  assertSceneRosterNativeBudget(request,model,budget,payload,prompt,'first')
  await deps.assert(model);signal.throwIfAborted()
  const generated=await deps.generate(request,model,signal,prompt,options);signal.throwIfAborted()
- const {raw:settingsRaw,repairs}=takeSettingsRepairs(request,generated),{raw,repairs:lineRepairs}=takeLinesRepairs(request,settingsRaw)
+ const {raw:settingsRaw,repairs}=takeSettingsRepairs(request,generated),{raw:linesRaw,repairs:lineRepairs}=takeLinesRepairs(request,settingsRaw),{raw,repairs:reviewRepairs}=takeReviewRepairs(request,linesRaw)
  const parsed=responseSchema.safeParse(raw);if(!parsed.success)throw Error('模型返回结构或类别无效，请重试')
  const result=parsed.data as ImportSemanticAiResult,ids=new Set(request.units.map(u=>u.id))
+ // docs/542: knowledge notes a model writes into prose are removed before any check; facts keep the knowledge.
+ if(request.semanticVersion===1)for(const item of result.artifacts??[])stripArtifactAnnotations(item)
+ // docs/544 M2: reconcile edits carry model prose too; only their new values change, never ranges or the original text.
+ if(request.semanticVersion===1)for(const edit of result.artifactEdits??[]){for(const range of edit.textEdits??[])range.after=stripImportKnowledgeAnnotations(range.after);if(edit.setFacts)for(const [key,value] of Object.entries(edit.setFacts))if(!ANNOTATION_KEPT_FACTS.has(key))edit.setFacts[key]=ANNOTATION_JSON_FACTS.has(key)?(()=>{try{return JSON.stringify(stripJsonStrings(JSON.parse(value)))}catch{return value}})():stripImportKnowledgeAnnotations(value)}
  if(request.semanticVersion===1)validateSemanticStage(request,result)
  validateSceneOwnershipResult(request,result)
  if(request.sceneParentTargets!==undefined){
@@ -1167,11 +1204,66 @@ export async function runImportAi(request:ImportSemanticAiRequest&{executionBudg
  }
  if(request.phase==='patch'&&!result.patches?.length)throw Error('未生成可核对的正文修改')
  await deps.assert(model);const current=await deps.resolve(role,pinned.id);signal.throwIfAborted();if(!equalSnapshot(current,pinned))throw Error('模型配置或授权已变化，未采用返回结果')
- return repairs?{...result,settingsRepairs:repairs}:lineRepairs?{...result,linesRepairs:lineRepairs}:result
+ if(themeProfileRequest(request))result.artifacts=result.artifacts?.map(item=>({...item,schema:2}))
+ return repairs?{...result,settingsRepairs:repairs}:lineRepairs?{...result,linesRepairs:lineRepairs}:reviewRepairs?{...result,reviewRepairs}:result
 }
+/** Prose fields only: text, descriptive facts and world content strings. Structural/JSON facts and knowledge fields are kept. */
+const ANNOTATION_KEPT_FACTS=new Set(['reliability','attribution','temporalScope','entityType','settingType','worldId','parentId','chapterIndex','order','refs','people','narrator','status','characterId','sceneId','itemId','eventId','lineId','lineName','timeKind','timeValue','timeEnd','tropeKind','roleType','aliases','tags','personalityTags','bigFive','coordinates','channel','genre'])
+/** JSON facts whose string values are prose (docs/544 M2); ids and enums inside them never match a note. */
+const ANNOTATION_JSON_FACTS=new Set(['content','relationships','effects','motivations','beliefs','arcStages','touches'])
+export function stripArtifactAnnotations(item:ImportArtifact){
+ item.text=stripImportKnowledgeAnnotations(item.text)
+ const facts={...item.facts}
+ for(const [key,value] of Object.entries(facts)){
+  if(typeof value!=='string'||!IMPORT_KNOWLEDGE_ANNOTATION.test(value))continue
+  if(ANNOTATION_JSON_FACTS.has(key)){try{facts[key]=JSON.stringify(stripJsonStrings(JSON.parse(value)))}catch{/* Invalid JSON is rejected by the native decoder. */}continue}
+  if(!ANNOTATION_KEPT_FACTS.has(key))facts[key]=stripImportKnowledgeAnnotations(value)
+ }
+ item.facts=facts
+}
+function stripJsonStrings(value:unknown):unknown{return typeof value==='string'?stripImportKnowledgeAnnotations(value):Array.isArray(value)?value.map(stripJsonStrings):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,stripJsonStrings(v)])):value}
 /** docs/514 3R2: counts of the accepted generation's item repairs; only wizard other-setting batches may carry them. */
-const settingsRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedArtifacts:z.number().int().nonnegative().max(1_000_000),clearedReliability:z.number().int().nonnegative().max(1_000_000)}).strict().refine(c=>c.droppedEvidence+c.droppedArtifacts+c.clearedReliability>0)
+const settingsRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedArtifacts:z.number().int().nonnegative().max(1_000_000),clearedReliability:z.number().int().nonnegative().max(1_000_000),clearedPosition:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>(c.clearedPosition??0)+c.droppedEvidence+c.droppedArtifacts+c.clearedReliability>0)
 const linesRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000),droppedEntries:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>c.droppedEvidence+c.droppedLinks+(c.droppedEntries??0)>0)
+const reviewRepairsSchema=z.object({droppedConflicts:z.number().int().positive().max(1_000_000)}).strict()
+function takeReviewRepairs(request:ImportSemanticAiRequest,generated:unknown):{raw:unknown;repairs?:ImportReviewRepairs}{
+ if(!generated||typeof generated!=='object'||Array.isArray(generated)||!Object.hasOwn(generated,'reviewRepairs'))return {raw:generated}
+ const {reviewRepairs,...raw}=generated as Record<string,unknown>
+ if(!wizardReviewLaneRequest(request))throw Error('当前语义阶段返回了越权内容')
+ const parsed=reviewRepairsSchema.safeParse(reviewRepairs);if(!parsed.success)throw Error('模型返回结构或类别无效，请重试')
+ return {raw,repairs:parsed.data}
+}
+/** docs/539 §2.1: wizard review-lane replies (light policy) often name a conflict kind or type outside the contract, which the
+ * strict schema rejects for the whole packet. Only shape changes: the root keeps conflicts; an invalid kind takes the cited
+ * artifact's kind; an invalid type becomes setting-body when an artifact is cited; a missing field is text; source/candidate
+ * text and value fill each other; unlocatable quotes are removed; id/hash/status get placeholders (the adapter recomputes id
+ * and hash); unknown keys go. A conflict that still has no artifact kind or no locatable quote is dropped and counted.
+ * A reply that needs no change returns undefined. */
+export function normalizeReviewReply(request:ImportSemanticAiRequest,text:string,parse:<T>(text:string,schema:z.ZodType<T>)=>T):{text:string;counts?:ImportReviewRepairs}|undefined{
+ let value:unknown;try{value=parse(text,z.unknown())}catch{return undefined}
+ if(!value||typeof value!=='object'||Array.isArray(value))return undefined
+ const root=value as Record<string,unknown>,list=Array.isArray(root.conflicts)?root.conflicts:undefined
+ // docs/541-4: a reply without a conflicts array is left for the strict schema (correction, retry), never read as "no conflicts".
+ if(!list)return undefined
+ const kinds=new Map(request.artifacts.map(a=>[a.id,a.kind])),str=(v:unknown)=>typeof v==='string'?v:undefined
+ // The same locator as the adapter's final gate (layout-tolerant), so a quote it would accept is never dropped here.
+ const locatable=(e:unknown)=>{if(!e||typeof e!=='object')return false;const {unitId,quote}=e as {unitId?:unknown;quote?:unknown};if(typeof unitId!=='string'||typeof quote!=='string'||!quote)return false;try{anchorEvidence([{unitId,quote}],request.units);return true}catch{return false}}
+ let dropped=0
+ const side=(v:unknown)=>{const o=v&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{},t=str(o.text),val=str(o.value);const artifactId=str(o.artifactId),unitId=str(o.unitId);return {text:t??val??'',value:val??t??'',...(artifactId&&kinds.has(artifactId)?{artifactId}:{}),...(unitId&&request.units.some(u=>u.id===unitId)?{unitId}:{})}}
+ const conflicts=list.flatMap(entry=>{
+  if(!entry||typeof entry!=='object'||Array.isArray(entry)){dropped++;return []}
+  const c=entry as Record<string,unknown>,cited=c.source&&typeof c.source==='object'?str((c.source as Record<string,unknown>).artifactId):undefined,source=side(c.source),candidate=side(c.candidate),own=source.artifactId?kinds.get(source.artifactId):undefined
+  const kind=IMPORT_KINDS.includes(c.kind as never)&&(!source.artifactId||own===c.kind)?c.kind as string:own
+  const type=['setting-body','source-source','body-body'].includes(c.type as string)?c.type as string:source.artifactId?'setting-body':undefined
+  const evidence=Array.isArray(c.evidence)?c.evidence.filter(locatable).map(e=>({unitId:(e as {unitId:string}).unitId,quote:(e as {quote:string}).quote})):[]
+  if(!kind||!type||!evidence.length||cited&&!own){dropped++;return []}
+  const reason=str(c.reason)?.trim().slice(0,300)
+  return [{id:str(c.id)||'conflict',type,kind,entity:str(c.entity)??'',field:str(c.field)||'text',source,candidate,evidence,status:'pending',hash:str(c.hash)||'pending',...(reason?{reason}:{})}]
+ })
+ const next=JSON.stringify({conflicts})
+ if(next===JSON.stringify(root))return undefined
+ return {text:next,...(dropped?{counts:{droppedConflicts:dropped}}:{})}
+}
 function takeLinesRepairs(request:ImportSemanticAiRequest,generated:unknown):{raw:unknown;repairs?:ImportLinesRepairs}{
  if(!generated||typeof generated!=='object'||Array.isArray(generated)||!Object.hasOwn(generated,'linesRepairs'))return {raw:generated}
  const {linesRepairs,...raw}=generated as Record<string,unknown>
@@ -1191,30 +1283,48 @@ function takeSettingsRepairs(request:ImportSemanticAiRequest,generated:unknown):
  * no item would remain, or the root is not a plain artifacts object, the reply is returned unchanged (undefined) so
  * the ordinary strict schema, correction and error text apply exactly as before. */
 export function repairSettingsReply(request:ImportSemanticAiRequest,text:string,parse:<T>(text:string,schema:z.ZodType<T>)=>T):{text:string;counts?:ImportSettingsRepairs}|undefined{
+ const themeProfile=themeProfileRequest(request)
  let value:unknown;try{value=parse(text,z.unknown())}catch{return undefined}
  if(!value||typeof value!=='object'||Array.isArray(value))return undefined
- const root=value as Record<string,unknown>;if(Object.keys(root).some(key=>key!=='artifacts'&&key!=='notFound')||!Array.isArray(root.artifacts)||!root.artifacts.length)return undefined
- const ids=new Set(request.units.map(u=>u.id)),single=importAiResponseSchema(request),seen=new Set<string>(),kept:unknown[]=[],counts={droppedEvidence:0,droppedArtifacts:0,clearedReliability:0}
+ let root=value as Record<string,unknown>
+ // docs/542 (q-r4): a position reply may come as one bare artifact or with a stray notFound/extra key; keep only the first artifact.
+ if(themeProfileRequest(request)){const list=Array.isArray(root.artifacts)?root.artifacts:root.id!==undefined||root.facts!==undefined?[root]:[];root={artifacts:list.slice(0,1)}}
+ if(Object.keys(root).some(key=>key!=='artifacts'&&key!=='notFound')||!Array.isArray(root.artifacts)||!root.artifacts.length)return undefined
+ const ids=new Set(request.units.map(u=>u.id)),single=importAiResponseSchema(request),seen=new Set<string>(),kept:unknown[]=[],counts:ImportSettingsRepairs={droppedEvidence:0,droppedArtifacts:0,clearedReliability:0}
  // Quote and reliability repairs count only for items that are kept; a dropped item counts once.
  for(const entry of root.artifacts){
-  const own={droppedEvidence:0,droppedArtifacts:0,clearedReliability:0},item=repairSettingsItem(entry,request.units,ids,own)
+  const own:ImportSettingsRepairs={droppedEvidence:0,droppedArtifacts:0,clearedReliability:0},item=repairSettingsItem(entry,request.units,ids,own,themeProfile,request.artifacts)
   const id=(item as {id?:unknown}|undefined)?.id
   if(!item||typeof id!=='string'||seen.has(id)||!settingsItemValid(request,single,item)){counts.droppedArtifacts++;continue}
-  counts.droppedEvidence+=own.droppedEvidence;counts.clearedReliability+=own.clearedReliability
+  counts.droppedEvidence+=own.droppedEvidence;counts.clearedReliability+=own.clearedReliability;if(own.clearedPosition)counts.clearedPosition=(counts.clearedPosition??0)+own.clearedPosition
   seen.add(id);kept.push(item)
  }
+ // Debug lines name field keys, value types, lengths and the decoder's fixed reason only; no model text.
+ if(themeProfile&&process.env.SHAKEINK_IMPORT_DEBUG==='1'){const first=(root.artifacts as unknown[])[0] as Record<string,unknown>|undefined,f=first?.facts as Record<string,unknown>|undefined;let reason='';try{const own:ImportSettingsRepairs={droppedEvidence:0,droppedArtifacts:0,clearedReliability:0},item=repairSettingsItem(first,request.units,ids,own,true,request.artifacts);if(item){const parsed=single.safeParse({artifacts:[item]});if(!parsed.success)reason='schema:'+parsed.error.issues.slice(0,3).map(i=>i.path.join('.')+':'+i.code).join(',');else{const a=parsed.data.artifacts![0];try{validateImportEvidence(a,request.units)}catch{reason='evidence'}if(!reason)try{validateImportSemanticArtifact(semanticResultArtifact(request,a))}catch(e){reason='decode:'+(e instanceof Error?e.message.slice(0,40):'')}if(!reason)try{validateSemanticLinks(request,[a])}catch(e){reason='links:'+(e instanceof Error?e.message.slice(0,40):'')}}}else reason='item-dropped'}catch(error){reason=error instanceof Error?error.message.slice(0,60):'other'}console.error('theme-profile-shape '+JSON.stringify({kept:kept.length,keys:f?Object.keys(f).slice(0,20):null,types:f?Object.fromEntries(Object.entries(f).slice(0,20).map(([k,v])=>[k,typeof v==='string'?'string:'+Array.from(v).length:Array.isArray(v)?'array:'+v.length:typeof v])):null,evidence:Array.isArray(first?.evidence)?first!.evidence.length:typeof first?.evidence,reason}))}
  if(!kept.length)return undefined
- const next=JSON.stringify({...root,artifacts:kept}),counted=counts.droppedEvidence+counts.droppedArtifacts+counts.clearedReliability>0
+ const next=JSON.stringify({...root,artifacts:kept}),counted=counts.droppedEvidence+counts.droppedArtifacts+counts.clearedReliability+(counts.clearedPosition??0)>0
  // Trimming sourceUnitIds to this batch is mechanical and uncounted; an unchanged reply goes through as is.
- if(!counted&&next===JSON.stringify(root))return undefined
+ // docs/545 §6 H1: a position reply always goes on repaired, so a correction sees the repaired item.
+ if(!counted&&!themeProfile&&next===JSON.stringify(root))return undefined
  return {text:next,...(counted?{counts}:{})}
 }
-function repairSettingsItem(entry:unknown,units:ImportUnit[],ids:Set<string>,counts:ImportSettingsRepairs):Record<string,unknown>|undefined{
+function repairSettingsItem(entry:unknown,units:ImportUnit[],ids:Set<string>,counts:ImportSettingsRepairs,themeProfile=false,requestArtifacts:ImportArtifact[]=[]):Record<string,unknown>|undefined{
  if(!entry||typeof entry!=='object'||Array.isArray(entry))return undefined
  const item={...entry as Record<string,unknown>}
+ // docs/542 (q-r4): the single position item gets its fixed identity and string facts mechanically; values are not changed.
+ if(themeProfile){
+  Object.assign(item,{id:IMPORT_THEME_PROFILE_ID,name:IMPORT_THEME_PROFILE_NAME,kind:'theme',origin:'inferred'})
+  if(typeof item.text!=='string'||!item.text.trim())item.text='作品定位'
+  const allowed=new Set(importFactFields('theme',2))
+  if(item.facts&&typeof item.facts==='object'&&!Array.isArray(item.facts))item.facts=Object.fromEntries(Object.entries(item.facts as Record<string,unknown>).filter(([k,v])=>allowed.has(k)&&v!==null&&v!==undefined).map(([k,v])=>[k,typeof v==='string'?v:typeof v==='number'||typeof v==='boolean'?String(v):JSON.stringify(v)]))
+  else item.facts={}
+ }
  if(Array.isArray(item.evidence)){
   const located:ImportEvidence[]=[]
   for(const e of item.evidence){const parsed=evidence.safeParse(e);if(!parsed.success){counts.droppedEvidence++;continue}try{located.push(rebindEvidence(parsed.data,units))}catch{counts.droppedEvidence++}}
+  // docs/542 (q-r7): a position is inferred from the imported themes; when none of its own quotes can be located it
+  // keeps the themes' verified quotes from this request instead of being dropped.
+  if(!located.length&&themeProfile)for(const a of requestArtifacts)for(const e of a.evidence)if(located.length<3)try{located.push(rebindEvidence(e,units))}catch{/* Not in this request. */}
   if(!located.length)return undefined
   item.evidence=located
   const own=Array.isArray(item.sourceUnitIds)?item.sourceUnitIds.filter((id):id is string=>typeof id==='string'&&ids.has(id)):[]
@@ -1228,14 +1338,46 @@ function repairSettingsItem(entry:unknown,units:ImportUnit[],ids:Set<string>,cou
   }
   item.facts=facts
  }
+ if(themeProfile)repairThemePosition(item,counts)
  return item
 }
+/** docs/542: an invalid channel drops channel/genre/tags; a genre outside the channel drops genre and tags; a known
+ * tag outside the position's candidates is dropped. Free tags stay, as in the theme panel. Each change counts once. */
+function repairThemePosition(item:Record<string,unknown>,counts:ImportSettingsRepairs){
+ if(!item.facts||typeof item.facts!=='object'||Array.isArray(item.facts))return
+ const facts={...item.facts as Record<string,unknown>},count=()=>{counts.clearedPosition=(counts.clearedPosition??0)+1},clear=(...keys:string[])=>{let changed=false;for(const key of keys)if(facts[key]!==undefined){delete facts[key];changed=true}if(changed)count()}
+ let tags:string[]=[]
+ if(facts.tags!==undefined){try{const parsed:unknown=typeof facts.tags==='string'?JSON.parse(facts.tags):facts.tags;tags=Array.isArray(parsed)?parsed.filter((t):t is string=>typeof t==='string').map(t=>t.trim()).filter(t=>t&&[...t].length<=30):[]}catch{tags=[]}}
+ // docs/545 §6 M5: first, a missing, 不限 or invalid channel is taken from a genre that belongs to one channel only.
+ if(typeof facts.genre==='string')facts.genre=facts.genre.trim();if(typeof facts.channel==='string')facts.channel=facts.channel.trim()
+ const genre0=typeof facts.genre==='string'?facts.genre:'',owners=(['男频','女频'] as const).filter(c=>genresForChannel(c).includes(genre0))
+ let channel=typeof facts.channel==='string'?facts.channel.trim():''
+ if(channel!=='男频'&&channel!=='女频'&&owners.length===1){facts.channel=channel=owners[0];count()}
+ // 不限 is no longer a valid position channel; a genre of both channels keeps its genre while the channel is asked for.
+ if(channel&&channel!=='男频'&&channel!=='女频'){clear('channel','tags');channel=''}
+ if(channel){
+  const genre=genre0||'全部'
+  if(genre!=='全部'&&!genresForChannel(channel).includes(genre))clear('genre','tags')
+  else{const kept=[...new Set(tags.filter(tag=>tagAllowed({channel,genre},tag)))].slice(0,20);if(facts.tags!==undefined&&JSON.stringify(kept)!==facts.tags){if(kept.length<tags.length)count();facts.tags=JSON.stringify(kept)}}
+ }else clear('tags')
+ // q-r8: over-long prose is cut instead of losing the whole position; docs/545 §6 M3: the synopsis keeps whole sentences.
+ for(const key of ['sellingPoints','targetAudience'] as const){const v=facts[key];if(typeof v!=='string')continue;const limit=IMPORT_THEME_PROFILE_LIMITS[key],chars=Array.from(v.trim());if(chars.length>limit){facts[key]=chars.slice(0,limit).join('');count()}}
+ if(typeof facts.synopsis==='string'){const cut=importThemeSynopsisFallback(facts.synopsis.trim());if(cut!==facts.synopsis.trim()){facts.synopsis=cut;count()}}
+ // Still invalid as a whole: only the tags are dropped (docs/545 §6 H1); genre and channel stay for the correction.
+ const valid=()=>{try{validateImportSemanticArtifact({...(item as unknown as ImportArtifact),facts:facts as Record<string,string>,schema:2});return true}catch{return false}}
+ if(!valid())clear('tags')
+ item.facts=facts
+}
 function settingsItemValid(request:ImportSemanticAiRequest,single:z.ZodType<ImportSemanticAiResult>,item:Record<string,unknown>){
- const parsed=single.safeParse({artifacts:[item]});if(!parsed.success)return false
- const artifact=parsed.data.artifacts![0]
+ const parsed=single.safeParse({artifacts:[item]})
+ // docs/545 §6 H1: a position that only misses required fields is kept (its gap issue is added only after every other
+ // field check passed); the strict schema then asks for them in the correction round.
+ const gapOnly=!parsed.success&&themeProfileRequest(request)&&parsed.error.issues.length>0&&parsed.error.issues.every(i=>i.code==='custom'&&i.message.startsWith(THEME_PROFILE_GAP_PREFIX))
+ if(!parsed.success&&!gapOnly)return false
+ const artifact=parsed.success?parsed.data.artifacts![0]:item as unknown as ImportArtifact
  try{
   if(artifact.kind==='trope'&&!['SATISFACTION','TEAR'].includes(artifact.facts.tropeKind??''))return false
-  validateImportEvidence(artifact,request.units);validateImportSemanticArtifact(artifact);validateSemanticLinks(request,[artifact])
+  validateImportEvidence(artifact,request.units);validateImportSemanticArtifact(semanticResultArtifact(request,artifact));validateSemanticLinks(request,[artifact])
  }catch{return false}
  return true
 }

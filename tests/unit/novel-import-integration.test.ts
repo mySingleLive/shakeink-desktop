@@ -122,10 +122,10 @@ test('NI-L02: actual import IPC enforces trusted frame, ready owner, strict acti
 
 function workerRig(){
  const callback=(nodes(worker,n=>ts.isNewExpression(n)&&n.expression.getText(worker)==='RpcPeer')[0] as ts.NewExpression).arguments![1].getText(worker)
- const importJobs=new ImportAiJobs(),publications=new Map(),calls:string[]=[],publish=Promise.withResolvers<any>();let releaseAi=()=>{}
- const deps={ready:Promise.resolve(),responses:new Map(),starting:new Map(),pendingStarts:new Set(),localAttemptCount:()=>0,abortAllLocalAttempts(){},cancel:async()=>{},delay:async()=>{},z,importJobs,importPublications:publications,runImportAi:async(_request:unknown,signal:AbortSignal)=>new Promise((_resolve,reject)=>{signal.addEventListener('abort',()=>{calls.push('abort');releaseAi=()=>reject(Error('aborted'))},{once:true})}),publishNovelImport:async()=>{calls.push('publish');return publish.promise},works:{runWithGlobal:async(_id:unknown,run:()=>Promise<unknown>)=>run(),close:async()=>{calls.push('close')}},importLeaseTarget:async()=>({}),randomUUID}
+ const importJobs=new ImportAiJobs(),publications=new Map(),calls:string[]=[],publish=Promise.withResolvers<any>(),discard=Promise.withResolvers<any>();let releaseAi=()=>{}
+ const deps={ready:Promise.resolve(),responses:new Map(),starting:new Map(),pendingStarts:new Set(),localAttemptCount:()=>0,abortAllLocalAttempts(){},cancel:async()=>{},delay:async()=>{},z,importJobs,importPublications:publications,runImportAi:async(_request:unknown,signal:AbortSignal)=>new Promise((_resolve,reject)=>{signal.addEventListener('abort',()=>{calls.push('abort');releaseAi=()=>reject(Error('aborted'))},{once:true})}),publishNovelImport:async()=>{calls.push('publish');return publish.promise},works:{runWithGlobal:async(_id:unknown,run:()=>Promise<unknown>)=>run(),close:async()=>{calls.push('close')}},importLeaseTarget:async()=>({}),discardNovelImport:async()=>{calls.push('discard');return discard.promise},randomUUID}
  const run=evaluate('(()=>{let closing=false,closedForMaintenance=false,stoppingImports=false;return '+callback+'})()',deps) as (method:string,input?:unknown)=>Promise<any>
- return{run,calls,importJobs,publish,releaseAi:()=>releaseAi()}
+ return{run,calls,importJobs,publish,discard,releaseAi:()=>releaseAi()}
 }
 
 test('NI-L03: actual worker counts import AI jobs, cancels only matching operation, and awaits done before closing DB',async()=>{
@@ -157,4 +157,20 @@ test('NI-L04: publication stays active until definite receipt; main stops/checkp
  await assert.rejects(evaluate(named('repairNovelImportTarget'),{...maintenanceDeps,worker:lostWorker,service:{call:async(method:string)=>{if(method==='novel-import-lease-target'){lostWorker.threadId=-1;throw Error('worker disconnected')}return method==='task-status'?{active:0}:true}},businessGate:{close:async()=>{lost.push('gate-close')},reopen:()=>lost.push('gate-open')},send:(event:{type:string})=>lost.push(event.type)})({title:'合成作品',target:proof,publication:{hash:'hash'}}),/disconnected/)
  assert.ok(lost.includes('service-disconnected'));assert.ok(!lost.includes('gate-open'))
  await assert.rejects(evaluate(named('restoreBusiness'),{workLease:null,novelImportServiceLost:true,ordinaryWorkerExited:false,worker:{threadId:2},businessGate:{closed:true,close:async()=>{},reopen:()=>lost.push('gate-open')},modelService:{resume(){}},send(){}})(),/重新启动/);assert.ok(!lost.includes('gate-open'))
+})
+
+// docs/560 R3: discarding a save is admitted, counted and drained like a save.
+test('SD-31: novel-import-discard is counted, drained by stop-tasks and close, and refused while stopping',async()=>{
+ const r=workerRig(),id=randomUUID(),discarding=r.run('novel-import-discard',{requestId:id});await turn()
+ assert.equal((await r.run('task-status')).active,1);await assert.rejects(r.run('novel-import-discard',{requestId:id}),/正在删除/);await assert.rejects(r.run('novel-import-publish',{session:{id}}),/正在删除/)
+ const stopping=r.run('stop-tasks');await turn();await assert.rejects(r.run('novel-import-discard',{requestId:randomUUID()}),/停止/)
+ r.discard.resolve({state:'cleaned'});assert.deepEqual(await discarding,{state:'cleaned'});await stopping;assert.equal((await r.run('task-status')).active,0)
+ const c=workerRig(),pending=c.run('novel-import-discard',{requestId:randomUUID()});await turn();const closing=c.run('close');await turn();assert.ok(!c.calls.includes('close'));await assert.rejects(c.run('novel-import-discard',{requestId:randomUUID()}),/关闭/)
+ c.discard.resolve({state:'none'});await pending;await closing;assert.equal(c.calls.at(-1),'close')
+})
+test('SD-35: main wires discardPublication through the business gate to novel-import-discard',()=>{
+ const n=nodes(main,n=>ts.isNewExpression(n)&&n.expression.getText(main)==='NovelImportController')[0] as ts.NewExpression,options=n.arguments![0] as ts.ObjectLiteralExpression
+ const wired=(options.properties.find(p=>p.name?.getText(main)==='discardPublication') as ts.PropertyAssignment).initializer.getText(main)
+ const calls:unknown[]=[];const run=evaluate(wired,{businessGate:{run:(work:()=>unknown)=>{calls.push('gate');return work()}},service:{call:async(method:string,input:unknown)=>{calls.push([method,input]);return {state:'none'}}}}) as (input:unknown)=>Promise<unknown>
+ return run({requestId:'r'}).then(result=>{assert.deepEqual(result,{state:'none'});assert.deepEqual(calls,['gate',['novel-import-discard',{requestId:'r'}]])})
 })

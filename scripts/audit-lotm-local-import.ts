@@ -9,7 +9,7 @@ import {importHash,importPlanHash,importBudgetAudit,sourceBody,validateImportCov
 import {validateImportBudgetState} from '../desktop/core/novel-import-budget-policy'
 import {importSemanticAudit,importSemanticInputHash,importSemanticDecisionHash,importSemanticResultHash,importNativeMappings,validateImportSemanticState} from '../desktop/core/novel-import-semantic-state'
 import {importReviewTaskKeys} from '../desktop/core/novel-import-review-tasks'
-import {qualifyImportKnowledgeText,IMPORT_WORLD_SETTING_TYPES} from '../desktop/core/novel-import-semantics'
+import {stripImportKnowledgeAnnotations,IMPORT_WORLD_SETTING_TYPES,importLengthClass,importThemeSynopsisFallback} from '../desktop/core/novel-import-semantics'
 import {validateDetailedOutlines} from '../desktop/core/novel-import-outline'
 import {loadMigrations} from '../desktop/service/database/migrations'
 import {validatePlanning} from '../src/lib/planning/domain'
@@ -182,11 +182,13 @@ export function verifyLocalNativeRows(s:ImportSession,r:any,p:LocalAuditPrepared
  const novelId=s.publication?.novelId,assertions:{name:string;passed:boolean}[]=[]
  requireAudit(!!novelId&&r.novels.length===1&&r.novels[0].id===novelId&&r.novels[0].userId==='local-author'&&r.novels[0].title===s.title&&r.novels[0].currentStage==='WRITING','NATIVE_NOVEL_BINDING_MISMATCH')
  requireAudit(r.themes.length===1&&r.themes[0].novelId===novelId&&typeof r.themes[0].id==='string'&&!!r.themes[0].id&&Number.isFinite(time(r.themes[0].createdAt))&&Number.isFinite(time(r.themes[0].updatedAt)),'NATIVE_THEME_ROW_MISMATCH')
- const theme=r.themes[0],expectedTheme={title:s.title,synopsis:'',referenceCases:'',channel:'',genre:'',length:'',authorPosition:null,tags:[],sellingPoints:'',targetAudience:'',version:1}
+ const theme=r.themes[0],expectedTheme={title:s.title,synopsis:'',referenceCases:'',channel:'',genre:'',length:'' as string,authorPosition:null,tags:[],sellingPoints:'',targetAudience:'',version:1}
  let mapping:ReturnType<typeof importNativeMappings>
  try{mapping=importNativeMappings(s)}catch{throw new LotmLocalAuditFailure('NATIVE_MAPPING_INVALID')}
- const projected=s.artifacts.filter(a=>mapping.projectable.has(a.id)),qualified=(a:ImportArtifact)=>qualifyImportKnowledgeText(a.text,mapping.decoded.get(a.id)!.knowledge),joined=(kind:ImportArtifact['kind'])=>projected.filter(a=>a.kind===kind).map(qualified).join('\n\n')
- expectedTheme.synopsis=joined('theme')
+ const projected=s.artifacts.filter(a=>mapping.projectable.has(a.id)),qualified=(a:ImportArtifact)=>stripImportKnowledgeAnnotations(a.text),joined=(kind:ImportArtifact['kind'])=>projected.filter(a=>a.kind===kind).map(qualified).join('\n\n')
+ expectedTheme.synopsis=importThemeSynopsisFallback(joined('theme'))
+ // docs/542: the imported body length class is written with the theme row.
+ if(s.chapters.length)expectedTheme.length=importLengthClass(s.chapters.reduce((n,c)=>n+Array.from(c.content).length,0))
  requireAudit(equal(field(theme,['title','synopsis','referenceCases','channel','genre','length','authorPosition','tags','sellingPoints','targetAudience','version']),expectedTheme),'NATIVE_THEME_ROW_MISMATCH')
  requireAudit(!r.settings.some((x:any)=>x.type==='GOLD_FINGER'),'UNEXPECTED_GOLD_FINGER')
  const styles=r.settings.filter((x:any)=>x.type==='STYLE')

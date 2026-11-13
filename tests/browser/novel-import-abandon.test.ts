@@ -94,14 +94,14 @@ test('IA-B08: when deletion keeps unknown files the dialog still closes with the
  await page.getByText('导入草稿目录含未知文件，已保留：60103f7f-b69b-4d56-a228-417c8b7b6053',{exact:true}).waitFor();assert.equal(await interrupted(page).count(),0)
 }))
 
-test('IA-B08b: deletion refused because saving started keeps the dialog open with the reason',()=>fixture({phase:'select',cancelMode:'publication'},async page=>{
- const d=page.getByRole('dialog');await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await d.getByRole('alert').getByText('保存已开始，不能删除这次导入，请重试保存',{exact:true}).waitFor();assert.equal(await d.isVisible(),true)
+test('IA-B08b/SD-45: a delete that keeps target files closes the dialog and reports the kept folder',()=>fixture({phase:'select',cancelMode:'retained'},async page=>{
+ const d=page.getByRole('dialog');await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await d.waitFor({state:'hidden'})
+ await page.getByText('导入已删除；目标目录 /合成/目录 留有未完成的文件：作品目录正在使用',{exact:true}).waitFor();assert.equal(await interrupted(page).count(),0)
 }))
 
-test('NICC-B13: a refused confirmed deletion returns to the import and unlocks closing',()=>fixture({phase:'running',cancelMode:'publication'},async page=>{
+test('NICC-B13/SD-45: a confirmed delete that keeps target files closes and unlocks closing',()=>fixture({phase:'running',cancelMode:'retained'},async page=>{
  const d=page.locator('.ni-dialog'),c=confirmation(page);await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await c.getByRole('button',{name:'确认关闭并删除',exact:true}).click()
- await c.waitFor({state:'hidden'});await d.getByRole('alert').getByText('保存已开始，不能删除这次导入，请重试保存',{exact:true}).waitFor();assert.equal(await d.isVisible(),true);assert.equal(await fx(page).eval('window.novelImportFixture.state().busy'),0)
- await d.getByRole('button',{name:'关闭导入窗口',exact:true}).click();await c.waitFor();assert.equal(await cancels(page),1)
+ await c.waitFor({state:'hidden'});await d.waitFor({state:'hidden'});await page.getByText('导入已删除；目标目录 /合成/目录 留有未完成的文件：作品目录正在使用',{exact:true}).waitFor();assert.equal(await fx(page).eval('window.novelImportFixture.state().busy'),0);assert.equal(await cancels(page),1)
 }))
 
 test('NICC-B14: a confirmed deletion with retained unknown files leaves no stale warning',()=>fixture({phase:'running',cancelMode:'unknown-files'},async page=>{

@@ -49,7 +49,8 @@ export function importNativeMappings(value:ImportArtifact[]|Pick<ImportSession,'
    value={native:null,knowledge:{},inferred:false,mappingWarnings:[{artifactId:a.id,fields:Object.keys(a.facts),reason:'原资料结构或知识限定映射未确认；完整材料保留'}]};decoded.set(a.id,value);continue
   }
   decoded.set(a.id,value);let ready=!['character','scene','world'].includes(a.kind)||!!value.native
-  if(value.native?.kind==='world'&&value.native.entityType==='SETTING')try{assertImportWorldContentProjectionBudget(value.native.content,a.origin==='source'&&a.facts.content===undefined?{}:value.knowledge,projectionLimits)}catch(error){if(a.origin!=='source')throw error;ready=false;value.native=null;value.mappingWarnings.push({artifactId:a.id,fields:['content','reliability','attribution','temporalScope'],reason:'原资料原生投影超过容量；完整原资料保留，结构映射未确认'})}
+  // docs/542: world content is published as is (no knowledge prefix), so only the content itself is counted.
+  if(value.native?.kind==='world'&&value.native.entityType==='SETTING')try{assertImportWorldContentProjectionBudget(value.native.content,{},projectionLimits)}catch(error){if(a.origin!=='source')throw error;ready=false;value.native=null;value.mappingWarnings.push({artifactId:a.id,fields:['content','reliability','attribution','temporalScope'],reason:'原资料原生投影超过容量；完整原资料保留，结构映射未确认'})}
   if(a.origin==='source'&&['worldline','narrative','trope'].includes(a.kind))try{validateImportSemanticArtifact({...a,origin:'confirmed'})}catch{ready=false;value.mappingWarnings.push({artifactId:a.id,fields:a.kind==='trope'?['tropeKind']:['reliability','references'],reason:'导入时结构映射未确认；完整材料保留'})}
   if(ready)projectable.add(a.id)
  }

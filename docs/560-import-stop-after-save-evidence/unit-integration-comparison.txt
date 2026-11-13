@@ -1,0 +1,22 @@
+# unit+integration (full run 2): ℹ tests 4806 ℹ pass 4761 ℹ fail 45 
+# serial per-file comparison, change vs pre-change baseline copy
+tests/integration/database-seed-recovery.test.ts # pass 1 # fail 0   ||  BASE: tests/integration/database-seed-recovery.test.ts # pass 0 # fail 1 
+tests/integration/novel-import-wizard-publish.test.ts # pass 1 # fail 1   ||  BASE: tests/integration/novel-import-wizard-publish.test.ts # pass 0 # fail 2 
+tests/integration/root-startup.test.ts # pass 8 # fail 0   ||  BASE: tests/integration/root-startup.test.ts # pass 1 # fail 7 
+tests/unit/application-metadata-main.test.ts # pass 0 # fail 1   ||  BASE: tests/unit/application-metadata-main.test.ts # pass 0 # fail 1 
+tests/unit/backup-removal-service.test.ts # pass 6 # fail 1   ||  BASE: tests/unit/backup-removal-service.test.ts # pass 6 # fail 1 
+tests/unit/byok-catalog.test.ts # pass 10 # fail 2   ||  BASE: tests/unit/byok-catalog.test.ts # pass 10 # fail 2 
+tests/unit/close-task-timeout-review.test.ts # pass 1 # fail 2   ||  BASE: tests/unit/close-task-timeout-review.test.ts # pass 1 # fail 2 
+tests/unit/closed-work-lease-review.test.ts # pass 3 # fail 2   ||  BASE: tests/unit/closed-work-lease-review.test.ts # pass 3 # fail 2 
+tests/unit/closed-work-lease-worker.test.ts # pass 0 # fail 2   ||  BASE: tests/unit/closed-work-lease-worker.test.ts # pass 0 # fail 2 
+tests/unit/desktop-backup-removal-ui.test.ts # pass 6 # fail 2   ||  BASE: tests/unit/desktop-backup-removal-ui.test.ts # pass 6 # fail 2 
+tests/unit/file-export-main-review.test.ts # pass 1 # fail 2   ||  BASE: tests/unit/file-export-main-review.test.ts # pass 1 # fail 2 
+tests/unit/lotm-import-audit.test.ts # pass 0 # fail 11   ||  BASE: tests/unit/lotm-import-audit.test.ts # pass 0 # fail 11 
+tests/unit/lotm-local-import-audit.test.ts # pass 24 # fail 1   ||  BASE: tests/unit/lotm-local-import-audit.test.ts # pass 0 # fail 16 
+tests/unit/novel-import-character-performance.test.ts # pass 3 # fail 1   ||  BASE: tests/unit/novel-import-character-performance.test.ts # pass 3 # fail 1 
+tests/unit/novel-import-classification.test.ts # pass 9 # fail 2   ||  BASE: tests/unit/novel-import-classification.test.ts # pass 9 # fail 2 
+tests/unit/novel-import-scene-roster-eligible-budget.test.ts # pass 1 # fail 3   ||  BASE: tests/unit/novel-import-scene-roster-eligible-budget.test.ts # pass 1 # fail 3 
+tests/unit/novel-import-scene.test.ts # pass 4 # fail 3   ||  BASE: tests/unit/novel-import-scene.test.ts # pass 4 # fail 3 
+tests/unit/recovery-export-main.test.ts # pass 4 # fail 1   ||  BASE: tests/unit/recovery-export-main.test.ts # pass 4 # fail 1 
+tests/unit/release-optimization.test.ts # pass 3 # fail 4   ||  BASE: tests/unit/release-optimization.test.ts # pass 3 # fail 4 
+# LP-30 / NI-LB07 (failed only in parallel full run 2): isolated rerun passes in both trees

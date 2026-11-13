@@ -160,3 +160,27 @@ test('NI-U12: same-source reselection preserves the draft, exposes failures and 
   assert.equal(await d.getByRole('button',{name:/^重新选择 /}).count(),0)
  }))
 })
+/* docs/558 CC-30..CC-35: the wizard step-21 conflict screen. */
+test('CC-30..CC-35: the step-21 conflict states what differs, offers three decisions and submits without a model review',()=>fixture({phase:'running'},async page=>{
+ await page.evaluate(()=>(window as any).novelImportFixture.wizardConflict());const d=page.getByRole('dialog');
+ await d.getByText('第 1 / 2 处矛盾',{exact:true}).waitFor()
+ assert.match(await d.getByRole('heading',{level:3}).innerText(),/「灰雾空间」（金手指）的「触发条件」与正文说法不一致/)
+ assert.match(await d.innerText(),/矛盾点：资料写需默念咒文，原文只写逆走四步/)
+ assert.equal(await d.getByRole('heading',{name:'现在的设定',exact:true}).count(),1);assert.equal(await d.getByRole('heading',{name:'按正文应为',exact:true}).count(),1)
+ assert.equal(await d.locator('del').first().innerText(),'并默念咒文')
+ assert.match(await d.innerText(),/第一部 小丑 · 第一章 起/);assert.doesNotMatch(await d.innerText(),/working-|trigger|正文片段 A/)
+ assert.equal(await d.locator('input[name="ni-decision"]:checked').count(),0)
+ const confirm=d.getByRole('button',{name:'确认并处理下一处',exact:true});assert.equal(await confirm.isDisabled(),true)
+ for(const name of ['以正文为准','保留现在的设定','自己填写这一项'])assert.equal(await d.getByRole('radio',{name:new RegExp(name)}).count(),1)
+ await d.getByRole('radio',{name:/自己填写这一项/}).check();const box=d.getByLabel('填写这一项',{exact:true});assert.equal(await box.inputValue(),'逆走四步并默念咒文')
+ await box.fill('');assert.equal(await confirm.isDisabled(),true);await box.fill('逆走四步');assert.equal(await confirm.isDisabled(),false)
+ await d.getByRole('radio',{name:/保留现在的设定/}).check();await confirm.click()
+ const last=(await calls(page)).at(-1);assert.equal(last.type,'resolve');assert.equal(last.choice,'source');assert.equal(last.explanation,undefined);assert.equal('mergedText' in last,false)
+ assert.equal(await d.getByText('正在复核这项决定，请稍候。').count(),0)
+ // CC-32: an unavailable decision is disabled with its reason.
+ await page.evaluate(()=>(window as any).novelImportFixture.wizardConflict({total:1,choices:[{choice:'inferred',available:false,reason:'正文给出的值不是有效的角色类型'},{choice:'source',available:true},{choice:'merge',available:false,reason:'这一项有固定格式，不能直接填写'}]}))
+ await d.getByRole('button',{name:'确认',exact:true}).waitFor()
+ assert.equal(await d.getByRole('radio',{name:/以正文为准/}).isDisabled(),true);assert.match(await d.innerText(),/正文给出的值不是有效的角色类型/)
+ // CC-35: back to the checks.
+ await d.getByRole('button',{name:'返回校验',exact:true}).click();assert.equal(await d.getByText('第 1 / 1 处矛盾').count(),0)
+}))

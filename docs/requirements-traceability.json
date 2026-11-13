@@ -4847,6 +4847,151 @@
       ]
     },
     {
+      "id": "NI-16",
+      "requirement": "第20步“导入伏笔”提速：导入《诡秘之主》第一卷时伏笔时长 ≤2 分钟，导入界面显示“已处理 N 个伏笔”（用户 2026-11-08 确认伏笔请求关闭思考）",
+      "source": [
+        "docs/535-foreshadow-import-performance-plan.md",
+        "docs/535-foreshadow-import-performance-plan-review.md",
+        "docs/536-foreshadow-import-performance-cases.md",
+        "docs/536-foreshadow-import-performance-cases-review.md",
+        "docs/537-foreshadow-import-performance-code-review.md",
+        "docs/538-foreshadow-import-performance-verification.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "desktop/core/novel-import.ts",
+        "desktop/shared/novel-import.ts",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "536-FP-01..FP-17",
+        "tests/unit/novel-import-foreshadow-performance.test.ts",
+        "tests/browser/novel-import-wizard.test.ts（FP-15）",
+        "scripts/capture-novel-import-prompt-golden.ts --check",
+        "scripts/capture-novel-import-request-trace.ts --check",
+        "536-FP-REAL"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-met",
+      "evidence": [
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r1/（基线：1528108 ms，130 伏笔，RESOLVED 28）",
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r2/foreshadow-import-completed.json（41680 ms，初版构建，含界面文案采样与截图）",
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r4/foreshadow-import-completed.json（94501 ms，最终构建首次运行，判定依据）",
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r5/foreshadow-import-completed.json（66462 ms，复跑参考）",
+        "docs/538-foreshadow-import-performance-verification.md"
+      ],
+      "verificationLimits": [
+        "伏笔请求关闭思考（用户 2026-11-08 选择）；质量以 RESOLVED、多触点、跨≥4章、伏笔数与丢弃率硬指标对比基线衡量，未逐条人工核对",
+        "伏笔数约为基线 3 倍，可能含跨批命名不同而拆开的同一伏笔；跨≥4章伏笔 12–17，低于基线 20",
+        "时长 42–95 s 波动，取决于模型尾部延迟与拆分重跑；fs-r5 受跨轮前缀缓存影响",
+        "全量 npm test 在 537 修订前运行：43 项失败中 42 项为改动前既有失败，NI-LB07 为负载下超时，单独运行通过；修订后未重跑全量"
+      ]
+    },
+    {
+      "id": "NI-17",
+      "requirement": "第21步“校验”：修复一致性复核失败（conflicts.0.kind），《诡秘之主》第一卷校验 ≤2 分钟；错误自动修复 3 次，仍失败的项显示[修复]可无限次手动修复；校验完成后无论有无错误[保存作品]均可点击，保存的作品与导入成功的内容一致（用户 2026-11-09 选择复核关闭思考、矛盾以正文为准）",
+      "source": [
+        "docs/539-import-verify-save-plan.md",
+        "docs/540-import-verify-save-cases.md",
+        "docs/541-import-verify-save-code-review.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "desktop/core/novel-import-wizard-checks.ts",
+        "desktop/core/novel-import-outline.ts",
+        "desktop/shared/novel-import.ts",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "540-VS-01..VS-44",
+        "tests/unit/novel-import-verify-review.test.ts",
+        "tests/unit/novel-import-verify-session.test.ts",
+        "tests/unit/novel-import-wizard-session.test.ts（NIW-C55/C60/C19/C62b 按新规则修订）",
+        "tests/unit/novel-import-scene-identity-closure.test.ts（CI-C02/13 通道断言修订）",
+        "tests/browser/novel-import-wizard.test.ts（VS-44）",
+        "scripts/capture-novel-import-prompt-golden.ts --check",
+        "540-VS-50..VS-53"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-met",
+      "evidence": [
+        "/private/tmp/shakeink-verify-539/full-1.txt（全量 npm test：4606 通过、45 失败；与 535 基线相比新增 3 项，LP-29、OPT-M06 单独运行通过，CI-C02/13 已修订）",
+        "/private/tmp/shakeink-verify-539/build-1.txt（npm run build exit 0）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r1/verify-completed.json（真实 E2E：校验 17617 ms，41 次复核调用 p50 4.6 s；1 包因 DeepSeek HTTP 402 三次失败，显示[修复]）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r1/work-readback.json 与 work-readback-2.json（保存后读回：角色130、场景460、物品121、世界1/设定277、伏笔478、爽点泪点81、世界线事件112、讲述卡680、213章正文与细纲逐章一致）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r1/014-verify-completed.png、016-nav-work-expanded.png",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r3/verify-completed.json（541 修订后真实 E2E：校验 15338 ms，37 次复核调用 p50 4.3 s，8 项检查全部通过）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r3/work-readback.json 与 work-readback-2.json（保存后读回：角色149、场景315、物品144、世界2/设定265、伏笔416、爽点泪点46、世界线事件148、讲述卡551、213章正文与细纲逐章一致）"
+      ],
+      "verificationLimits": [
+        "向导会话不再执行全资料分片复核（reviewFactPackets），一致性由按章复核覆盖；复核请求关闭思考",
+        "保存时未自动修复的矛盾按导入结果保留并记入决定；缺细纲的章以空细纲保存",
+        "方案与用例的独立子代理审核因额度不足未完成（2026-11-09 API 403）",
+        "真实运行中复核未报告矛盾，自动修复与真实[修复]点击未在真实模型上触发，仅由单元测试覆盖",
+        "541 修订后 vf-r2 因 DeepSeek HTTP 402 在第9步终止；充值后 vf-r3 完成真实 E2E（见 evidence）。vf-r3 第18步叙事线一次 artifacts.N.kind 结构失败，经界面[重试]后完成，属既有叙事线问题，非本任务范围",
+        "541 修订后未重跑全量 npm test；受影响套件 96 项通过、2 项失败（NIW-S06 为 535 基线既有失败，VS-15 为用例消息问题已修订并单独通过）"
+      ]
+    },
+    {
+      "id": "NI-18",
+      "requirement": "导入成功后的作品质量（用户 2026-11-10）：去除导入推导文案中全部“（可靠性：…；信息来源：…；适用时间范围：…）”批注并防止复现；右侧内容面板打开大量（约 50 个以上）tab 时不再卡顿；主题的频道、题材、篇幅、核心卖点、目标受众等基本信息可被推导；用《诡秘之主》第一卷做真实导入测试",
+      "source": [
+        "docs/542-import-result-quality-plan.md",
+        "docs/542-import-result-quality-plan-review.md",
+        "docs/543-import-result-quality-cases.md",
+        "docs/543-import-result-quality-cases-review.md",
+        "docs/544-import-result-quality-code-review.md"
+      ],
+      "implementation": [
+        "desktop/core/novel-import-semantics.ts",
+        "desktop/core/novel-import-semantic-state.ts",
+        "desktop/core/novel-import-outline.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/service/novel-import-publish.ts",
+        "desktop/main/novel-import.ts",
+        "desktop/shared/novel-import.ts",
+        "src/components/layout/ContentTabs.tsx",
+        "scripts/audit-real-novel-import.ts",
+        "scripts/real-novel-semantic-assertions.ts",
+        "scripts/audit-lotm-local-import.ts",
+        "scripts/audit-lotm-import.ts",
+        "scripts/verify-lotm-scenes-persistence.mjs"
+      ],
+      "testIds": [
+        "543-IQ-01..IQ-51b",
+        "tests/unit/novel-import-result-quality.test.ts",
+        "tests/integration/novel-import-result-quality-publish.test.ts",
+        "tests/browser/content-tabs-render.test.ts",
+        "tests/unit/novel-import-semantic.test.ts（NI-SEM04 按新规则修订）",
+        "tests/integration/novel-import-semantic-publish.test.ts（NI-SEM-P02 按新规则修订）",
+        "tests/unit/lotm-local-import-audit.test.ts（主题篇幅与 ref.source 修订）",
+        "tests/unit/novel-import-settings-performance.test.ts（SP-12b/SP-14 计数排除定位请求）",
+        "543-IQ-25/IQ-51..IQ-53（真实目标）"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-met",
+      "evidence": [
+        "/private/tmp/shakeink-quality-542/evidence/q-r10/quality-readback.json（《诡秘之主》第一卷真实导入并保存后读回：全部作者可见文本批注命中 0；主题 男频/玄幻/长篇、8 个合法标签、卖点/受众/简介非空，authorPosition 为 null）",
+        "/private/tmp/shakeink-quality-542/evidence/q-r10/theme-panel.png、theme-panel-3.png（主题面板截图）",
+        "/private/tmp/shakeink-quality-542/evidence/q-r3/quality-readback.json、q-r8、q-r9（此前三次保存的作品，批注命中均为 0）",
+        "/private/tmp/shakeink-tabs-542/evidence/e2e-ch120/result.json（保存后的作品打开 120 个 tab：打开均值 79–86 ms、切换均值 88 ms，不随 tab 数增长；基线 baseline-ch60 为打开 150–267 ms、切换 200–252 ms）",
+        "/private/tmp/shakeink-tabs-542/full-3.txt（全量 npm test，与 539 基线按测试名比较）",
+        "/private/tmp/shakeink-tabs-542/browser-2.txt（ContentTabs 与导入向导浏览器用例）"
+      ],
+      "verificationLimits": [
+        "已保存的旧作品不做迁移，需重新导入或手动编辑（待用户确认是否需要修复工具）",
+        "ContentTabs 浏览器用例替换了 registry/StagedSaveSurface，只验证 TabPanelHost 层隔离；react-query 失效引起的面板内重渲染未单独优化",
+        "主题定位为导入推断，不写 authorPosition；篇幅按已导入章节计算，不推测全书"
+      ]
+    },
+    {
       "id": "WN-01",
       "requirement": "异常作品统一导航节点（用户 2026-11-10）：无法正常加载的作品以与正常作品相同的导航节点显示，图标为作品目录+感叹号合成图标，标题为柔和红（错误）/黄（警告）；右键与 … 菜单提供按异常类型的处理项（修复作品锁、重新加载作品）且始终有“删除”；任何作品都可删除（异常作品为仅从列表移除并删除关联对话，不改动目录文件）；正常作品菜单内容不变，增加右键入口",
       "source": [
@@ -4919,7 +5064,144 @@
         "Windows 原生验收未执行",
         "真实目标系统为 macOS 开发构建（npm run build 后 electron .），非签名安装包；未断网运行，但应用默认无 HTTP 监听、无模型"
       ]
-    }
+    },
+    {
+      "id": "NIC-01",
+      "requirement": "导入向导第21步核对冲突（用户 2026-11-12）：清楚展示冲突点（资料名、类别、中文字段名、矛盾说明、现在的设定与按正文应为的差异、卷章位置），给出以正文为准/保留现在的设定/自己填写这一项三种方案；可选的任一方案提交即解决该冲突、不调用模型、一致性复核通过，并能保存作品；不能保存的方案置灰并说明原因",
+      "source": [
+        "docs/557-import-conflict-choices-plan.md",
+        "docs/557-import-conflict-choices-plan-review.md",
+        "docs/558-import-conflict-choices-cases.md",
+        "docs/558-import-conflict-choices-cases-review.md",
+        "docs/559-import-conflict-choices-code-review.md"
+      ],
+      "implementation": [
+        "desktop/core/novel-import-conflict-choices.ts",
+        "desktop/shared/novel-import-field-labels.ts",
+        "desktop/shared/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/main/novel-import.ts",
+        "src/components/desktop/NovelImportDialog.tsx",
+        "src/components/desktop/novel-import.css"
+      ],
+      "testIds": [
+        "tests/unit/novel-import-conflict-choices.test.ts CC-01..CC-33",
+        "tests/unit/novel-import-verify-review.test.ts CC-21..CC-24",
+        "tests/integration/novel-import-verify-publish.test.ts CC-06..08 real publish",
+        "tests/browser/novel-import.test.ts CC-30..CC-35, NI-U06 (CC-36)",
+        "tests/fixtures/novel-import-prompt-golden.json wizard-review-v1"
+      ],
+      "status": "implemented-verified-synthetic",
+      "verificationKind": {
+        "单元·控制器夹具": [
+          "CC-01..CC-33"
+        ],
+        "单元·适配层": [
+          "CC-21..CC-24"
+        ],
+        "集成·真实发布 PGlite": [
+          "CC-06..08 real publish ×3"
+        ],
+        "界面·夹具": [
+          "CC-30..CC-35",
+          "NI-U06"
+        ],
+        "真实目标系统（macOS）": [
+          "CC-40/41 未执行"
+        ]
+      },
+      "evidence": [
+        "node --test tests/unit/novel-import-conflict-choices.test.ts 25/25",
+        "tests/integration/novel-import-verify-publish.test.ts 9/9",
+        "tests/browser/novel-import.test.ts 16/16",
+        "tests/browser/novel-import-wizard.test.ts 45/45",
+        "相关导入套件 148/148",
+        "全量 npm test 4717/4761，44 项失败与既有基线一致（ROOT11-07 单独重跑通过）",
+        "CC-12 撤回 R2 修复时失败、恢复后通过"
+      ],
+      "verificationLimits": [
+        "控制器用例的模型为合成桩，复核结论不代表真实模型输出",
+        "CC-40/41（《诡秘之主》第一卷开发构建真实运行、截图与读回）未执行，需要可用模型账户"
+      ]
+    },
+  {
+    "id": "SD-01",
+    "requirement": "导入作品在任何条件和进度下都允许停止导入并删除这次导入（用户 2026-11-12，附截图：第 22 步已暂停，无法保存、停止或删除）；保存已开始时，作品已写入则只删导入草稿、保留作品，保存未完成则清理本次导入在目标目录写入的半成品；第 22 步继续保存不再索取发送正文授权；.DS_Store 不使目录视为非空",
+    "source": [
+     "docs/560-import-stop-after-save-plan.md",
+     "docs/560-import-stop-after-save-plan-review.md",
+     "docs/561-import-stop-after-save-cases.md",
+     "docs/562-import-stop-after-save-cases-review.md",
+     "docs/563-import-stop-after-save-code-review.md",
+     "docs/564-import-stop-after-save-summary.md"
+    ],
+    "implementation": [
+     "desktop/main/novel-import.ts",
+     "desktop/main/index.ts",
+     "desktop/shared/novel-import.ts",
+     "desktop/service/workspaces.ts",
+     "desktop/service/work-creation-reservations.ts",
+     "desktop/service/novel-import-discard.ts",
+     "desktop/service/index.ts",
+     "src/lib/desktop/novel-import.ts",
+     "src/components/desktop/NovelImportWizard.tsx",
+     "src/components/desktop/NovelImportDialog.tsx"
+    ],
+    "testIds": [
+     "tests/unit/novel-import-stop-after-save.test.ts SD-01..SD-19b, SD-50u, SD-50e",
+     "tests/integration/novel-import-discard.test.ts SD-20..SD-33b",
+     "tests/unit/novel-import-integration.test.ts SD-31, SD-35",
+     "tests/unit/novel-import-close-confirmation.test.ts SD-34, NICC-02",
+     "tests/unit/novel-import-abandon.test.ts IA-12a",
+     "tests/browser/novel-import-wizard.test.ts SD-40..SD-47c",
+     "tests/browser/novel-import-abandon.test.ts IA-B08b, NICC-B13",
+     "scripts/verify-import-stop-after-save.mjs SD-13r, SD-43r, SD-50..SD-52b"
+    ],
+    "status": "implemented-verified-real-target-macos",
+    "verificationKind": {
+     "单元·控制器夹具": [
+      "SD-01..SD-19b",
+      "SD-50u",
+      "SD-50e",
+      "SD-34"
+     ],
+     "集成·真实 Workspaces/PGlite": [
+      "SD-20..SD-33b"
+     ],
+     "单元·worker 真实回调与主进程接线": [
+      "SD-31",
+      "SD-35（接线以 AST 抽取验证，非端到端）"
+     ],
+     "界面·夹具": [
+      "SD-40..SD-47c",
+      "IA-B08b",
+      "NICC-B13"
+     ],
+     "真实目标系统（macOS 构建版，隔离数据根，仅拷贝、无模型）": [
+      "SD-13r",
+      "SD-50u",
+      "SD-50a",
+      "SD-50",
+      "SD-43r",
+      "SD-51",
+      "SD-52a",
+      "SD-52",
+      "SD-52b"
+     ],
+     "未执行": [
+      "Windows 原生验收",
+      "签名安装包",
+      "用户真实草稿（未改动，仅只读核对）"
+     ]
+    },
+    "evidence": [
+     "docs/560-import-stop-after-save-evidence/real-target-report.json",
+     "docs/560-import-stop-after-save-evidence/real-step22-paused.png",
+     "docs/560-import-stop-after-save-evidence/real-step22-stop-confirm.png",
+     "docs/560-import-stop-after-save-evidence/real-step22-completed.png"
+    ]
+  }
   ],
   "developmentRecordUpdated": "2026-10-09",
   "acceptanceNote": "正式桌面与业务531项仍not-run；development与正式验收status/evidence分开，不能由单元、浏览器、模拟OS、受控picker或部分native脚本推断整条通过。",

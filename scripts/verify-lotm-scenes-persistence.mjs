@@ -7,7 +7,7 @@ import {isDeepStrictEqual} from 'node:util'
 import {readFile,writeFile,mkdir,realpath} from 'node:fs/promises'
 import {resolve,join,dirname,relative,isAbsolute} from 'node:path'
 import {importNativeMappings} from '../desktop/core/novel-import-semantic-state.ts'
-import {qualifyImportKnowledgeText} from '../desktop/core/novel-import-semantics.ts'
+import {stripImportKnowledgeAnnotations} from '../desktop/core/novel-import-semantics.ts'
 import {importVolumeGroups} from '../desktop/core/novel-import-chapters.ts'
 import {sceneForestFingerprint} from './lib/scene-import-persistence.mjs'
 import {quitElectronNormally} from './lib/electron-normal-quit.mjs'
@@ -38,7 +38,7 @@ try{
  const {scenes:rows}=await get(`/api/novels/${s.publication.novelId}/scenes`)
  assert.equal(rows.length,expected.length);assert.equal(new Set(rows.map(r=>r.id)).size,rows.length)
  const businessFields=['name','description','coordinates','exteriorDescription','interiorDescription','backstory','entryMethod']
- const expectedRows=expected.map(a=>{const decoded=mapping.decoded.get(a.id),native=decoded.native;assert.equal(native.kind,'scene');const profile=decoded.profile?.kind==='scene'?decoded.profile.value:{};return {id:a.id,parentId:a.facts.parentId??null,name:a.name,description:a.origin==='source'?native.description:qualifyImportKnowledgeText(native.description,decoded.knowledge),coordinates:native.coordinates,...Object.fromEntries(businessFields.slice(3).map(k=>[k,profile[k]??'']))}})
+ const expectedRows=expected.map(a=>{const decoded=mapping.decoded.get(a.id),native=decoded.native;assert.equal(native.kind,'scene');const profile=decoded.profile?.kind==='scene'?decoded.profile.value:{};return {id:a.id,parentId:a.facts.parentId??null,name:a.name,description:a.origin==='source'?native.description:stripImportKnowledgeAnnotations(native.description),coordinates:native.coordinates,...Object.fromEntries(businessFields.slice(3).map(k=>[k,profile[k]??'']))}})
  const fields=row=>Object.fromEntries(businessFields.map(k=>[k,row[k]]))
  assert.ok(JSON.stringify(sceneForestFingerprint(rows,fields))===JSON.stringify(sceneForestFingerprint(expectedRows,fields)),'persisted complete scene fields, multiplicities or actual parent bindings differ')
  const parents=expectedRows.filter(r=>r.parentId).length,fieldsCount=rows.reduce((count,r)=>count+businessFields.slice(3).filter(k=>!!r[k]).length,0)

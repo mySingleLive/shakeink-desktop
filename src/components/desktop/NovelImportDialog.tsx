@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { diffChars } from 'diff'
 import { ArrowDown, ArrowUp, Check, File, FolderOpen, LoaderCircle, Sparkles, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { buildTabId, useTabsStore } from '@/stores/tabs'
-import { IMPORT_KINDS, IMPORT_LABELS, IMPORT_TARGETS, type ImportFileView, type ImportKind, type ImportModel, type ImportTarget, type ImportView, type UnitKind } from '@desktop/shared/novel-import'
-import { abandonNovelImport, abandonableImport, appendNovelImport, emptyImportDecision, hideNovelImport, inspectNovelImportSource, mutateNovelImport, needsNovelImportCloseConfirmation, novelImportFinalFocus, observeNovelImport, readNovelImportSource, keepCurrentNovelImport, reopenNovelImport, replaceNovelImport, setImportDecisionDraft, setNovelImportScreen, useNovelImportStore, type ImportScreen } from '@/lib/desktop/novel-import'
+import { IMPORT_KINDS, IMPORT_LABELS, IMPORT_TARGETS, type ImportFileView, type ImportKind, type ImportModel, type ImportTarget, type ImportView, type ImportConflictDetail, type UnitKind } from '@desktop/shared/novel-import'
+import { abandonNovelImport, abandonableImport, appendNovelImport, deletableImport, emptyImportDecision, hideNovelImport, inspectNovelImportSource, mutateNovelImport, needsNovelImportCloseConfirmation, novelImportFinalFocus, observeNovelImport, readNovelImportSource, keepCurrentNovelImport, reopenNovelImport, replaceNovelImport, setImportDecisionDraft, setNovelImportScreen, useNovelImportStore, type ImportScreen } from '@/lib/desktop/novel-import'
 import { NovelImportRecord } from './NovelImportRecord'
 import {PdfPageReview} from './PdfPageReview'
 import {NovelImportReading,NovelImportWizard,NovelImportWizardHeader} from './NovelImportWizard'
@@ -97,7 +98,7 @@ function SelectionScreen({ view, busy }: { view: ImportView; busy: boolean }) {
     </div><footer className="ni-footer"><Button variant="outline" onClick={() => setNovelImportScreen('source')}>返回来源</Button><Button disabled={busy || !view.selected.length || !view.sourceReady} onClick={() => setNovelImportScreen('confirm')}>继续</Button></footer></>
 }
 
-function ConfirmScreen({ view, busy }: { view: ImportView; busy: boolean }) {
+function ConfirmScreen({ view, busy, onDelete }: { view: ImportView; busy: boolean; onDelete(): void }) {
   const [title, setTitle] = useState(view.title)
   useEffect(() => setTitle(view.title), [view.id, view.title])
   const infer = view.infer && view.selected.includes('body') && view.targets.length > 0
@@ -108,15 +109,59 @@ function ConfirmScreen({ view, busy }: { view: ImportView; busy: boolean }) {
   const start = async () => { if (!await commitTitle()) return; const result = await mutateNovelImport({ type: 'start', consent: infer && !retryPublication }); if (result?.view) setNovelImportScreen(result.view.phase === 'conflicts' && result.view.patches.length ? 'patches' : result.view.phase) }
   return <><div className="ni-body"><label className="ni-field">作品名称<input aria-label="作品名称" disabled={busy || retryPublication} value={title} maxLength={100} onChange={event => setTitle(event.target.value)} /></label><div className="ni-row ni-target-directory"><div><h3>导入到新的空目录</h3><p>{view.targetLabel ?? '请选择用来保存新作品的空目录。'}</p>{!view.targetReady && view.targetLabel && <span className="ni-error-text">目录需重新授权或修复。</span>}</div><Button variant="outline" disabled={busy} onClick={() => void chooseTarget()}><FolderOpen />选择目录</Button></div><h3>导入计划</h3><ol className="ni-plan"><li><strong>导入正文</strong><span>{joinKinds(view.selected)}</span></li>{infer && <><li><strong>补全设定</strong><span>{joinKinds(view.targets.filter(kind => kind !== 'worldline' && kind !== 'narrative'))}</span></li>{view.targets.includes('worldline') && <li><strong>推断世界线</strong><span>结合正文、大纲及设定，整理事件发生顺序。</span></li>}{view.targets.includes('narrative') && <li><strong>推断叙事线</strong><span>结合正文与设定，整理讲述顺序。</span></li>}<li><strong>检查一致性</strong><span>存在冲突时等待你决定，再继续导入。</span></li></>}<li><strong>保存并完成</strong><span>保存到所选空目录，记录原始材料及所有决定。</span></li></ol>
       {retryPublication ? <div className="ni-notice"><strong>恢复原保存请求</strong><p>导入计划已冻结。重新授权原保存目录后，将继续保存已确认的内容，不重新发送正文或创建另一本作品。</p></div> : infer ? <><div className="ni-notice"><strong>第二次发送：分析、补全与复核</strong><p>将发送所选正文及设定，补全{joinKinds(view.targets)}。文件原文、推断结果和你确认的决定会一并用于一致性检查。正文只会在逐处预览并二次确认后修改导入副本。</p>{excludedSources.length > 0 && <p>{joinKinds(excludedSources)}：不导入源设定，仅从正文分析。</p>}<p>已关闭的补全：{joinKinds(IMPORT_TARGETS.filter(kind => !view.targets.includes(kind)))}。</p></div><ModelInfo label="文本模型" model={view.models.text} /><ModelInfo label="审核模型" model={view.models.review} /><Button variant="outline" onClick={configureModels}>配置模型</Button>{(!view.models.text || !view.models.review) && <p className="ni-error-text">请先配置文本模型与审核模型。</p>}</> : <div className="ni-notice">本次仅拷贝所选原文，不向模型发送内容，未分析全书。</div>}
-    </div><footer className="ni-footer">{retryPublication ? <Button variant="outline" onClick={hideNovelImport}>收起</Button> : <Button variant="outline" onClick={() => setNovelImportScreen(view.phase === 'conflicts' ? 'conflicts' : 'select')}>{view.phase === 'conflicts' ? '返回冲突' : '返回选择'}</Button>}<Button disabled={busy || !title.trim() || !view.targetReady || !view.sourceReady || (infer && !retryPublication && (!view.models.text || !view.models.review))} onClick={() => void start()}>{retryPublication ? '继续保存原作品' : infer ? '允许分析并导入' : '开始导入'}</Button></footer></>
+    </div><footer className="ni-footer">{retryPublication ? <><Button variant="ghost" disabled={busy} onClick={onDelete}>删除导入</Button><Button variant="outline" onClick={hideNovelImport}>收起</Button></> : <Button variant="outline" onClick={() => setNovelImportScreen(view.phase === 'conflicts' ? 'conflicts' : 'select')}>{view.phase === 'conflicts' ? '返回冲突' : '返回选择'}</Button>}<Button disabled={busy || !title.trim() || !view.targetReady || !view.sourceReady || (infer && !retryPublication && (!view.models.text || !view.models.review))} onClick={() => void start()}>{retryPublication ? '继续保存原作品' : infer ? '允许分析并导入' : '开始导入'}</Button></footer></>
 }
 
 function ProgressScreen({ view, busy, cancel }: { view: ImportView; busy: boolean; cancel: () => void }) {
   const recognizing = view.phase === 'recognizing', publishing = view.phase === 'publishing'
-  return <><div className="ni-body"><div className="ni-progress-hero" aria-busy={recognizing || view.phase === 'running' || publishing}><LoaderCircle className={view.phase === 'paused' || view.phase === 'failed' ? '' : 'ni-spinner'} /><h3>{recognizing ? '正在用 AI 识别文件中的不同内容' : publishing ? '正在将作品保存到所选目录' : view.phase === 'paused' ? '已保留导入进度' : view.phase === 'failed' ? '请处理问题后重试' : '从正文开始，逐步整理整书设定'}</h3><p>{recognizing ? `正在识别 ${view.files.filter(file => file.included).length} 个文件，完成后进入内容选择。识别需要等待时间。` : publishing ? '保存完成后即可在现有工作台中打开作品。' : '请等待导入完成。关闭窗口或取消导入会删除这次导入，原始文件不会更改。'}</p></div>{view.steps.length > 0 && <ol className="ni-steps">{view.steps.map(step => <li key={step.key} data-state={step.state}><span className="ni-step-mark">{step.state === 'done' ? <Check /> : step.state === 'running' ? <LoaderCircle className="ni-spinner" /> : '·'}</span><strong>{step.key === 'body' ? '导入正文' : step.label}</strong><span>{step.state === 'done' ? '完成' : step.state === 'skipped' ? '已跳过' : step.state === 'running' ? '处理中' : step.state === 'failed' ? '失败' : step.state === 'waiting' ? '等待确认' : '等待'}{step.total !== undefined && ` · ${step.completed}/${step.total}`}</span></li>)}</ol>}</div><footer className="ni-footer">{abandonableImport(view) ? <Button variant="ghost" disabled={busy} onClick={cancel}>取消导入</Button> : <span />}<div className="ni-actions">{!abandonableImport(view) && <Button variant="outline" onClick={hideNovelImport}>收起</Button>}{view.phase === 'paused' && <Button disabled={busy} onClick={() => void mutateNovelImport({ type: 'resume' })}>继续导入</Button>}{view.phase === 'failed' && <>{!view.publication && <Button variant="outline" disabled={busy} onClick={() => setNovelImportScreen('source')}>返回核对来源</Button>}<Button variant="outline" disabled={busy} onClick={() => void mutateNovelImport({ type: 'repair-target' })}>修复保存目录</Button><Button disabled={busy} onClick={() => void mutateNovelImport({ type: 'retry' })}>重试导入</Button></>}{(view.phase === 'running' || recognizing) && <Button variant="outline" disabled={busy} onClick={() => void mutateNovelImport({ type: 'pause' })}>暂停</Button>}</div></footer></>
+  return <><div className="ni-body"><div className="ni-progress-hero" aria-busy={recognizing || view.phase === 'running' || publishing}><LoaderCircle className={view.phase === 'paused' || view.phase === 'failed' ? '' : 'ni-spinner'} /><h3>{recognizing ? '正在用 AI 识别文件中的不同内容' : publishing ? '正在将作品保存到所选目录' : view.phase === 'paused' ? '已保留导入进度' : view.phase === 'failed' ? '请处理问题后重试' : '从正文开始，逐步整理整书设定'}</h3><p>{recognizing ? `正在识别 ${view.files.filter(file => file.included).length} 个文件，完成后进入内容选择。识别需要等待时间。` : publishing ? '保存完成后即可在现有工作台中打开作品。' : '请等待导入完成。关闭窗口或取消导入会删除这次导入，原始文件不会更改。'}</p></div>{view.steps.length > 0 && <ol className="ni-steps">{view.steps.map(step => <li key={step.key} data-state={step.state}><span className="ni-step-mark">{step.state === 'done' ? <Check /> : step.state === 'running' ? <LoaderCircle className="ni-spinner" /> : '·'}</span><strong>{step.key === 'body' ? '导入正文' : step.label}</strong><span>{step.state === 'done' ? '完成' : step.state === 'skipped' ? '已跳过' : step.state === 'running' ? '处理中' : step.state === 'failed' ? '失败' : step.state === 'waiting' ? '等待确认' : '等待'}{step.total !== undefined && ` · ${step.completed}/${step.total}`}</span></li>)}</ol>}</div><footer className="ni-footer">{deletableImport(view) ? <Button variant="ghost" disabled={busy} onClick={cancel}>{abandonableImport(view) ? '取消导入' : '删除导入'}</Button> : <span />}<div className="ni-actions">{!abandonableImport(view) && <Button variant="outline" onClick={hideNovelImport}>收起</Button>}{view.phase === 'paused' && <Button disabled={busy} onClick={() => void mutateNovelImport({ type: 'resume' })}>继续导入</Button>}{view.phase === 'failed' && <>{!view.publication && <Button variant="outline" disabled={busy} onClick={() => setNovelImportScreen('source')}>返回核对来源</Button>}<Button variant="outline" disabled={busy} onClick={() => void mutateNovelImport({ type: 'repair-target' })}>修复保存目录</Button><Button disabled={busy} onClick={() => void mutateNovelImport({ type: 'retry' })}>重试导入</Button></>}{(view.phase === 'running' || recognizing) && <Button variant="outline" disabled={busy} onClick={() => void mutateNovelImport({ type: 'pause' })}>暂停</Button>}</div></footer></>
 }
 
+const CHOICE_TEXT: Record<ImportConflictDetail['choices'][number]['choice'], [string, string]> = {
+  inferred: ['以正文为准', '把这项设定改成上面「按正文应为」的说法。'],
+  source: ['保留现在的设定', '这项设定不改动，按现在的内容导入。'],
+  merge: ['自己填写这一项', '在下方写出你认为正确的内容，导入时使用你填写的版本。'],
+}
+/** docs/557 §5: two values with the removed and added characters marked. */
+// docs/559-2: diffed once per value pair (not per keystroke), bounded in size and time; longer pairs show plain text.
+const DIFF_LIMIT = 4000
+function useDiff(from: string, to: string) {
+  return useMemo(() => from.length + to.length > DIFF_LIMIT ? undefined : diffChars(from, to, { timeout: 50 }) ?? undefined, [from, to])
+}
+const DiffText = memo(function DiffText({ parts, text, side }: { parts?: ReturnType<typeof diffChars>; text: string; side: 'from' | 'to' }) {
+  if (!parts) return <pre>{text}</pre>
+  return <pre>{parts.map((part, k) => part.added ? side === 'to' ? <ins key={k}>{part.value}</ins> : null : part.removed ? side === 'from' ? <del key={k}>{part.value}</del> : null : <span key={k}>{part.value}</span>)}</pre>
+})
+/** docs/557: wizard step 21. States what differs, offers the decisions the controller accepts, and returns to the checks. */
+function WizardConflictScreen({ view, busy, detail }: { view: ImportView; busy: boolean; detail: ImportConflictDetail }) {
+  const draftKey = `${view.id}:${detail.conflictId}:wizard`
+  const draft = useNovelImportStore(state => state.decisionDrafts[draftKey])
+  const { choice, explanation, mergedText } = draft ?? { ...emptyImportDecision, mergedText: detail.mergeDefault }
+  const set = (change: Partial<typeof emptyImportDecision>) => setImportDecisionDraft(draftKey, useNovelImportStore.getState().decisionDrafts[draftKey] ? change : { mergedText: detail.mergeDefault, ...change })
+  const selected = detail.choices.find(option => option.choice === choice && option.available)
+  const diff = useDiff(detail.current, detail.proposed)
+  const ready = !!selected && (choice !== 'merge' || !!mergedText.trim())
+  const last = detail.total <= 1
+  const submit = async () => {
+    if (!selected) return
+    await mutateNovelImport({ type: 'resolve', conflictId: detail.conflictId, choice: selected.choice, explanation: explanation.trim() || undefined, ...(selected.choice === 'merge' ? { mergedText: mergedText.trim() } : {}) })
+  }
+  return <><div className="ni-body ni-conflict">
+    <p className="ni-eyebrow">第 {detail.index} / {detail.total} 处矛盾</p>
+    <h3>「{detail.entity}」{detail.kindLabel && <span className="ni-conflict-kind">（{detail.kindLabel}）</span>}的「{detail.fieldLabel}」与正文说法不一致</h3>
+    {detail.reason && <p className="ni-conflict-reason"><strong>矛盾点：</strong>{detail.reason}</p>}
+    <div className="ni-conflict-columns"><section><h4>现在的设定</h4><DiffText parts={diff} text={detail.current} side="from" /></section><section><h4>按正文应为</h4>{detail.proposed ? <DiffText parts={diff} text={detail.proposed} side="to" /> : <p className="ni-conflict-empty">正文没有给出具体说法</p>}</section></div>
+    {detail.evidence.length > 0 && <><h4>正文依据</h4>{detail.evidence.map((evidence, index) => <blockquote key={index}>{evidence.quote}<small>{evidence.location}</small></blockquote>)}</>}
+    <fieldset className="ni-decisions"><legend>选择处理方式（任选一种都可以继续导入）</legend>{detail.choices.map(option => <label key={option.choice} data-disabled={!option.available || undefined}><input type="radio" name="ni-decision" value={option.choice} disabled={!option.available || busy} checked={choice === option.choice && option.available} onChange={() => set({ choice: option.choice })} /><span><strong>{CHOICE_TEXT[option.choice][0]}</strong><small>{option.available ? CHOICE_TEXT[option.choice][1] : option.reason}</small></span></label>)}</fieldset>
+    {selected?.choice === 'merge' && <label className="ni-field">填写这一项<textarea aria-label="填写这一项" disabled={busy} value={mergedText} onChange={event => set({ mergedText: event.target.value })} maxLength={100000} /></label>}
+    <label className="ni-field">备注（选填，会记入导入记录）<textarea aria-label="备注" disabled={busy} value={explanation} onChange={event => set({ explanation: event.target.value })} maxLength={16000} /></label>
+  </div><footer className="ni-footer"><Button variant="ghost" disabled={busy} onClick={() => setNovelImportScreen('select')}>返回校验</Button><Button disabled={busy || !ready} onClick={() => void submit()}>{last ? '确认' : '确认并处理下一处'}</Button></footer></>
+}
 function ConflictScreen({ view, busy }: { view: ImportView; busy: boolean }) {
+  if (view.conflictDetail) return <WizardConflictScreen key={view.conflictDetail.conflictId} view={view} busy={busy} detail={view.conflictDetail} />
+  return <LegacyConflictScreen view={view} busy={busy} />
+}
+function LegacyConflictScreen({ view, busy }: { view: ImportView; busy: boolean }) {
   const conflict = view.conflicts.find(item => item.status === 'pending')
   const draftKey = `${view.id}:${conflict?.id}:${conflict?.hash}:${conflict?.type}`
   const { choice, explanation, mergedText, confirmInference } = useNovelImportStore(state => state.decisionDrafts[draftKey] ?? emptyImportDecision)
@@ -174,13 +219,18 @@ export function NovelImportDialog({ suspended = false }: { suspended?: boolean }
   if (reading && (!open || !view || view.phase === 'completed')) return <><Dialog open onOpenChange={() => undefined}><DialogContent className="ni-dialog chatpane" showCloseButton={false} finalFocus={() => novelImportFinalFocus() ?? true}><header className="ni-header"><div><div className="ni-eyebrow">导入作品</div><NovelImportWizardHeader step="files" /></div></header><NovelImportReading /></DialogContent></Dialog></>
   if (!view) return null
   const cancel = () => void abandonNovelImport()
+  // docs/560: a started save is deleted only after the author confirms; closing the window only hides it.
+  const stop = () => { if (view.publication) { if (!closeConfirmBusyRef.current) setCloseConfirmOpen(true) } else cancel() }
+  const savingStarted = !!view.publication
   const close = () => {
     if (screen === 'replace') keepCurrentNovelImport()
     else if (needsNovelImportCloseConfirmation(view)) { if (!closeConfirmBusyRef.current) setCloseConfirmOpen(true) }
     else if (abandonableImport(view)) cancel()
     else hideNovelImport()
   }
-  const dismissCloseConfirmation = () => { if (!closeConfirmBusyRef.current) setCloseConfirmOpen(false) }
+  // docs/563: while a delete waits for a save, the author may hide the window; deleting continues in the background.
+  const waitingForSave = closeConfirmBusy && view.phase === 'publishing'
+  const dismissCloseConfirmation = () => { if (!closeConfirmBusyRef.current) setCloseConfirmOpen(false); else if (view.phase === 'publishing') { setCloseConfirmOpen(false); hideNovelImport() } }
   const confirmClose = async () => {
     if (closeConfirmBusyRef.current) return
     const id = view.id
@@ -200,23 +250,24 @@ export function NovelImportDialog({ suspended = false }: { suspended?: boolean }
   let content
   const props = { view, busy: !!busy }
   const wizard = view.wizard && !['conflicts', 'patches', 'completed', 'replace'].includes(screen) && view.phase !== 'completed' ? view.wizard : undefined
+  const wizardConflicts = screen === 'conflicts' && !!view.conflictDetail
   if (wizard && reviseOpen) content = <ReviseDialog view={view} busy={!!busy} onClose={() => setReviseOpen(false)} />
-  else if (wizard) content = <NovelImportWizard view={view as ImportView & { wizard: NonNullable<ImportView['wizard']> }} busy={!!busy} onStop={cancel} onRevise={() => setReviseOpen(true)} />
+  else if (wizard) content = <NovelImportWizard view={view as ImportView & { wizard: NonNullable<ImportView['wizard']> }} busy={!!busy} onStop={stop} onRevise={() => setReviseOpen(true)} />
   else if (screen === 'source') content = <SourceScreen {...props} onReviewPdf={file=>setPdfFileId(file.id)} />
   else if (screen === 'preview') content = <PreviewScreen {...props} />
   else if (screen === 'chapters') content = <ChaptersScreen {...props} />
   else if (screen === 'consent') content = <RecognitionConsent {...props} />
   else if (screen === 'select') content = <SelectionScreen {...props} />
-  else if (screen === 'confirm') content = <ConfirmScreen {...props} />
+  else if (screen === 'confirm') content = <ConfirmScreen {...props} onDelete={stop} />
   else if (screen === 'conflicts') content = <ConflictScreen {...props} />
   else if (screen === 'patches') content = <PatchesScreen {...props} />
   else if (screen === 'replace') content = <><div className="ni-body"><h3>开始新的导入？</h3><p>当前导入《{view.title || '未命名作品'}》尚未完成。开始新的导入会停止并删除它，原始文件不会更改。</p></div><footer className="ni-footer"><Button variant="outline" disabled={!!busy} onClick={keepCurrentNovelImport}>返回当前导入</Button><Button variant="destructive" disabled={!!busy} onClick={() => void replaceNovelImport()}>删除并重新选择</Button></footer></>
   else if (screen === 'completed') content = <><div className="ni-body"><div className="ni-progress-hero"><Check /><h3>{view.title}</h3><p>作品已导入，可以在工作台继续编辑。</p></div>{view.summary && <div className="ni-summary"><div><strong>{view.summary.source}</strong><span>原文设定</span></div><div><strong>{view.summary.inferred}</strong><span>推断设定</span></div><div><strong>{view.summary.decisions}</strong><span>已确认决定</span></div><div><strong>{view.summary.modified}</strong><span>正文修改</span></div></div>}{view.notFound.length > 0 && <div className="ni-notice">未找到可支持的内容：{joinKinds(view.notFound)}。这些项目保留为空。</div>}</div><footer className="ni-footer"><Button variant="ghost" onClick={hideNovelImport}>关闭</Button><Button variant="outline" disabled={!view.publication?.novelId} onClick={() => setRecordOpen(true)}>查看导入记录</Button><Button disabled={!view.publication?.novelId} onClick={openWork}>打开作品</Button></footer></>
-  else content = <ProgressScreen {...props} cancel={cancel} />
+  else content = <ProgressScreen {...props} cancel={stop} />
   const pdfFile=pdfFileId ? view.files.find(file=>file.id===pdfFileId) : undefined
   const closePdf=()=>{const id=pdfFileId;setPdfFileId(null);requestAnimationFrame(()=>{if(id)document.querySelector<HTMLButtonElement>(`[data-pdf-review-file-id="${CSS.escape(id)}"]`)?.focus()})}
   const step = ['source', 'consent', 'recognizing', 'preview', 'chapters'].includes(screen) ? 0 : ['select', 'confirm'].includes(screen) ? 1 : 2
-  return <><Dialog open={open && !suspended && !recordOpen && !pdfFile} onOpenChange={value => { if (!value) close() }}><DialogContent className="ni-dialog chatpane" showCloseButton={false} finalFocus={() => novelImportFinalFocus() ?? true}><header className="ni-header"><div><div className="ni-eyebrow">导入作品</div>{wizard ? <NovelImportWizardHeader step={wizard.step} /> : <><DialogTitle>{screenTitles[screen] ?? '导入作品'}</DialogTitle><DialogDescription>核对来源、选择内容，再确认导入。</DialogDescription></>}</div><Button variant="ghost" size="icon-sm" aria-label={abandonableImport(view) ? '关闭导入窗口' : '收起导入窗口'} onClick={close}><X /></Button></header>{!wizard && <ol className="ni-stage-list" aria-label="导入步骤">{['核对来源', '选择内容', '导入'].map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined} data-done={step > index}><span>{index + 1}</span>{label}</li>)}</ol>}{(error || view.error) && <div className="ni-alert" role="alert">{error || view.error}</div>}{content}</DialogContent><Dialog open={closeConfirmOpen && open && !suspended && !recordOpen && !pdfFile} onOpenChange={value => { if (!value) dismissCloseConfirmation() }}><DialogContent className="ni-close-confirm" showCloseButton={false}><DialogHeader><DialogTitle>关闭导入？</DialogTitle><DialogDescription>当前导入尚未完成，已导入的内容会被删除，且无法恢复。原始文件不会更改。确定要关闭吗？</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={closeConfirmBusy} onClick={dismissCloseConfirmation}>继续导入</Button><Button variant="destructive" disabled={closeConfirmBusy} onClick={() => void confirmClose()}>确认关闭并删除</Button></DialogFooter></DialogContent></Dialog></Dialog>{open && !suspended && pdfFile && <PdfPageReview key={`${view.id}:${pdfFile.id}`} view={view} file={pdfFile} onClose={closePdf}/>} {view.publication?.novelId && recordOpen && <NovelImportRecord novelId={view.publication.novelId} open={recordOpen} onOpenChange={setRecordOpen} hideTrigger />}</>
+  return <><Dialog open={open && !suspended && !recordOpen && !pdfFile} onOpenChange={value => { if (!value) close() }}><DialogContent className="ni-dialog chatpane" showCloseButton={false} finalFocus={() => novelImportFinalFocus() ?? true}><header className="ni-header"><div><div className="ni-eyebrow">导入作品</div>{wizard ? <NovelImportWizardHeader step={wizard.step} /> : wizardConflicts ? <><DialogTitle>处理校验中的矛盾</DialogTitle><DialogDescription>逐处选择处理方式；处理完后回到校验，可以直接保存作品。</DialogDescription></> : <><DialogTitle>{screenTitles[screen] ?? '导入作品'}</DialogTitle><DialogDescription>核对来源、选择内容，再确认导入。</DialogDescription></>}</div><Button variant="ghost" size="icon-sm" aria-label={abandonableImport(view) ? '关闭导入窗口' : '收起导入窗口'} onClick={close}><X /></Button></header>{!wizard && !wizardConflicts && <ol className="ni-stage-list" aria-label="导入步骤">{['核对来源', '选择内容', '导入'].map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined} data-done={step > index}><span>{index + 1}</span>{label}</li>)}</ol>}{(error || view.error) && <div className="ni-alert" role="alert">{error || view.error}</div>}{content}</DialogContent><Dialog open={closeConfirmOpen && open && !suspended && !recordOpen && !pdfFile} onOpenChange={value => { if (!value) dismissCloseConfirmation() }}><DialogContent className="ni-close-confirm" showCloseButton={false}><DialogHeader>{savingStarted ? <><DialogTitle>停止并删除这次导入？</DialogTitle><DialogDescription>作品尚未保存完成。删除后，导入进度和目标目录中未完成的文件都会删除，且无法恢复；原始文件不会更改。{view.phase === 'publishing' && '当前保存结束后才会删除。'}</DialogDescription></> : <><DialogTitle>关闭导入？</DialogTitle><DialogDescription>当前导入尚未完成，已导入的内容会被删除，且无法恢复。原始文件不会更改。确定要关闭吗？</DialogDescription></>}</DialogHeader><DialogFooter>{waitingForSave ? <Button variant="outline" onClick={dismissCloseConfirmation}>收起</Button> : <Button variant="outline" disabled={closeConfirmBusy} onClick={dismissCloseConfirmation}>继续导入</Button>}<Button variant="destructive" disabled={closeConfirmBusy} onClick={() => void confirmClose()}>{waitingForSave ? '正在等待保存结束…' : savingStarted ? '停止并删除' : '确认关闭并删除'}</Button></DialogFooter></DialogContent></Dialog></Dialog>{open && !suspended && pdfFile && <PdfPageReview key={`${view.id}:${pdfFile.id}`} view={view} file={pdfFile} onClose={closePdf}/>} {view.publication?.novelId && recordOpen && <NovelImportRecord novelId={view.publication.novelId} open={recordOpen} onOpenChange={setRecordOpen} hideTrigger />}</>
 }
 
 const REVISE_STEPS:WizardStep[]=['files','work','kinds','tree','detect-char','detect-scene','detect-item','detect-world']

@@ -1,0 +1,65 @@
+{
+ "scope": "macOS arm64 built Electron (npm run build), isolated SHAKEINK_TEST_ROOT, copy-only, no model",
+ "finishedAt": "2026-11-12T16:35:33.577Z",
+ "results": [
+  {
+   "id": "SD-13r choosing a non-empty folder is refused at once",
+   "ok": true,
+   "refused": "请选择空目录，用于保存导入的作品"
+  },
+  {
+   "id": "SD-50u a folder that gained files fails the save with a clear reason",
+   "ok": true,
+   "error": "保存目录已不是空目录，请移走其中的文件或重新选择目录后继续保存",
+   "publication": false
+  },
+  {
+   "id": "SD-50a a started save that fails stays at step 22 with a save-specific reason",
+   "ok": true,
+   "error": "保存作品失败，请检查保存目录是否可写后继续保存"
+  },
+  {
+   "id": "SD-50 step 22 shows save page with three actions and no send consent",
+   "ok": true,
+   "shot": "real-step22-paused.png"
+  },
+  {
+   "id": "SD-43r Esc hides a started save and keeps the draft",
+   "ok": true
+  },
+  {
+   "id": "SD-51 resumed save completes into the original folder; .DS_Store kept",
+   "ok": true,
+   "entries": [
+    ".DS_Store",
+    ".shakeink-lock",
+    "assets",
+    "database",
+    "shakeink-work.json"
+   ]
+  },
+  {
+   "id": "SD-52a seeded a real half-created work in the draft target",
+   "ok": true,
+   "halfCreated": [
+    ".DS_Store",
+    "assets",
+    "database",
+    "shakeink-work.json",
+    "作者笔记.txt"
+   ]
+  },
+  {
+   "id": "SD-52 stop at step 22 deletes the draft and cleans only this import's files",
+   "ok": true,
+   "after": [
+    ".DS_Store",
+    "作者笔记.txt"
+   ]
+  },
+  {
+   "id": "SD-52b cleaned folder still exists for reuse",
+   "ok": true
+  }
+ ]
+}

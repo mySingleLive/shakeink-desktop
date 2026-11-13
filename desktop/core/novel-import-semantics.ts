@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {positionError} from '../../src/lib/creation-wizard/position'
 import {normalizeContent,type SettingContent,type LevelNode,type LevelPathway} from '../../src/components/content/setting-content'
 import {importHash,safeImportBoundary,validateImportEvidence} from './novel-import'
 import {IMPORT_TARGETS,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportTarget,type ImportUnit} from '../shared/novel-import'
@@ -27,7 +28,9 @@ export interface ImportCharacterProfile {height:string;weight:string;build:strin
 export interface ImportArcStage {id:string;name:string;chapterIndex:number|null;description:string;tags:string[];markers:{kind:'age'|'event'|'custom';text:string}[];changes:{dimension:string;before:string;after:string}[];isDebut:boolean}
 export interface ImportSceneProfile {exteriorDescription:string;interiorDescription:string;backstory:string;entryMethod:string}
 export interface ImportItemProfile {appearance:string;acquisition:string;effects:{name:string;description:string}[];aliases:string[];tags:string[]}
-export type ImportNativeProfile={kind:'character';value:ImportCharacterProfile}|{kind:'scene';value:ImportSceneProfile}|{kind:'item';value:ImportItemProfile}
+/** docs/542: book position inferred from the imported themes; written to the Theme row, never as the author's position. */
+export interface ImportThemeProfile {channel:string;genre:string;tags:string[];sellingPoints:string;targetAudience:string;synopsis:string}
+export type ImportNativeProfile={kind:'character';value:ImportCharacterProfile}|{kind:'scene';value:ImportSceneProfile}|{kind:'item';value:ImportItemProfile}|{kind:'theme';value:ImportThemeProfile}
 export interface ImportSemanticArtifact {native:ImportNativeProjection|null;knowledge:ImportKnowledge;mappingWarnings:ImportMappingWarning[];inferred:boolean;profile?:ImportNativeProfile}
 export interface ImportArtifactTextEdit {start:number;end:number;before:string;after:string}
 export interface ImportArtifactEdit {artifactId:string;baseHash:string;textEdits?:ImportArtifactTextEdit[];setFacts?:Record<string,string>;unsetFacts?:string[];reason:string;evidence:ImportEvidence[]}
@@ -56,12 +59,36 @@ export const IMPORT_SEMANTIC_FACT_FIELDS:Record<ImportTarget,readonly string[]>=
  outline:['chapterIndex',...knowledgeFields],theme:[...knowledgeFields],style:[...knowledgeFields],item:[...knowledgeFields],
  foreshadow:['setup','payoff',...knowledgeFields],goldenFinger:['trigger','limitation',...knowledgeFields],trope:['tropeKind',...knowledgeFields],
 }
+export const IMPORT_THEME_PROFILE_ID='import-theme-profile',IMPORT_THEME_PROFILE_NAME='作品主题定位（导入推断）'
+export const IMPORT_THEME_PROFILE_FIELDS=['channel','genre','tags','sellingPoints','targetAudience','synopsis'] as const
+/** Length class of the imported body, same bands as the theme panel (WIZARD_LENGTH_META). */
+export function importLengthClass(characters:number):'微型'|'短篇'|'中篇'|'长篇'{return characters<10000?'微型':characters<50000?'短篇':characters<300000?'中篇':'长篇'}
+export const IMPORT_THEME_PROFILE_LIMITS={sellingPoints:2000,targetAudience:2000,synopsis:500,tags:20,tag:30} as const
+/** docs/545: a requested synopsis is at most 15 non-empty lines and 300 characters (saved positions still decode up to 500). */
+export const IMPORT_THEME_PROFILE_REQUEST_SYNOPSIS={lines:15,characters:300} as const
+/** docs/545 §6 H4/M3: keeps whole sentences within 15 non-empty lines and 300 characters; without a sentence end the
+ * text is cut at a character boundary. Used for over-long position synopses and for joined themes without a position. */
+export function importThemeSynopsisFallback(text:string):string{
+ const {lines:maxLines,characters:max}=IMPORT_THEME_PROFILE_REQUEST_SYNOPSIS,trimmed=text.trim()
+ // 547 L1: a synopsis already within both limits is returned as written (blank lines kept).
+ if(Array.from(trimmed).length<=max&&trimmed.split('\n').filter(l=>l.trim()).length<=maxLines)return trimmed
+ const head=Array.from(text.split('\n').map(l=>l.trimEnd()).filter(l=>l.trim()).slice(0,maxLines).join('\n')).slice(0,max)
+ // 547 L3: a sentence end keeps the closing quotes or brackets right after it.
+ for(let i=head.length-1;i>=0;i--)if('。！？!?'.includes(head[i])){let end=i+1;while(end<head.length&&'”’」』）)】》'.includes(head[end]))end++;return head.slice(0,end).join('')}
+ return head.join('')
+}
+/** docs/545 §7: the theme synopsis without a position: copied source themes verbatim first, then the inferred themes cut by the fallback. */
+export function importThemeSynopsis(themes:readonly {origin:string;text:string}[]):string{
+ // 547 M1: the theme row holds at most 5000 characters (src/lib/services/theme.ts); the cut keeps a character boundary.
+ return Array.from([themes.filter(t=>t.origin==='source').map(t=>t.text).join('\n\n'),importThemeSynopsisFallback(themes.filter(t=>t.origin!=='source').map(t=>t.text).join('\n\n'))].filter(Boolean).join('\n\n')).slice(0,5000).join('')
+}
 /** Wizard entity results (artifact.schema===2) may fill every native panel field. */
 export const IMPORT_SEMANTIC_V2_FIELDS:Partial<Record<ImportTarget,readonly string[]>>={
  character:['height','weight','build','faceShape','tastes','habits','dialogueStyle','sampleDialogue','personalityTags','motivations','desires','fears','beliefs','bigFive','abilities','backstory','arcStages'],
  scene:IMPORT_SCENE_PROFILE_TEXT_FIELDS,
  item:['appearance','acquisition','effects','aliases','tags'],
  foreshadow:['status','touches'],
+ theme:IMPORT_THEME_PROFILE_FIELDS,
 }
 /** Field table for one artifact; legacy artifacts keep the exact v1 table. */
 export function importFactFields(kind:ImportTarget,schema?:2):readonly string[]{return schema===2?[...IMPORT_SEMANTIC_FACT_FIELDS[kind],...(IMPORT_SEMANTIC_V2_FIELDS[kind]??[])]:IMPORT_SEMANTIC_FACT_FIELDS[kind]}
@@ -185,8 +212,20 @@ function importNativeProfile(a:ImportArtifact):ImportNativeProfile|undefined{
   const trimmed=(values:string[],count:number,length:number)=>values.map(v=>v.trim()).filter(Boolean).map(v=>[...v].slice(0,length).join('')).slice(0,count)
   return {kind:'item',value:{appearance:v2Text(f,'appearance'),acquisition:v2Text(f,'acquisition'),effects:v2Json(f,'effects',z.array(z.object({name:z.string().max(100),description:z.string().trim().min(1).max(2000)}).strict()).max(20),[]),aliases:trimmed(v2Json(f,'aliases',z.array(z.string()).max(100),[]),10,50),tags:trimmed(v2Json(f,'tags',z.array(z.string()).max(100),[]),8,20)}}
  }
+ if(a.kind==='theme'){
+  if(a.id!==IMPORT_THEME_PROFILE_ID||a.name!==IMPORT_THEME_PROFILE_NAME)return fail('主题定位产物标识无效')
+  const text=(key:'sellingPoints'|'targetAudience'|'synopsis')=>{const v=v2Text(f,key).trim();if([...v].length>IMPORT_THEME_PROFILE_LIMITS[key])return fail('主题定位字段过长');return v}
+  const tags=v2Json(f,'tags',z.array(z.string().trim().min(1).max(IMPORT_THEME_PROFILE_LIMITS.tag)).max(IMPORT_THEME_PROFILE_LIMITS.tags),[])
+  const channel=v2Text(f,'channel'),genre=v2Text(f,'genre')
+  // docs/545: a genre of both channels may wait for its channel (the request asks for it); tags still need one.
+  if(!channel&&(tags.length||genre&&!themePositionValid({channel:'不限',genre,tags:[]})))return fail('主题定位缺少频道')
+  if(channel&&!themePositionValid({channel,genre:genre||'全部',tags}))return fail('主题定位的频道、题材或标签无效')
+  return {kind:'theme',value:{channel,genre:channel?genre||'全部':'',tags:[...new Set(tags)],sellingPoints:text('sellingPoints'),targetAudience:text('targetAudience'),synopsis:text('synopsis')}}
+ }
  return undefined
 }
+/** Same rules as the theme panel for a new position (src/lib/creation-wizard/position.ts). */
+function themePositionValid(p:{channel:string;genre:string;tags:string[]}){return positionError({...p,length:''})===null}
 function validateImportSemanticArtifactV1(a:ImportArtifact,mode:ImportSemanticMode):ImportSemanticArtifact{
  validateShape(a);if(mode!=='strict'&&mode!=='source-copy')return fail('导入语义映射模式无效')
  if(mode==='source-copy'&&a.origin!=='source')return fail('原资料复制模式不能用于推断或确认产物')
@@ -273,10 +312,49 @@ export function validateImportSemanticReferences(artifacts:ImportArtifact[],sour
  const visit=(id:string)=>{if(active.has(id))return fail('导入父引用存在循环或自引用');if(complete.has(id))return;active.add(id);const parent=parents.get(id);if(parent)visit(parent);active.delete(id);complete.add(id)}
  for(const id of parents.keys())visit(id)
 }
-export function qualifyImportKnowledgeText(text:string,value:ImportKnowledge){
- const labels=[value.reliability?`可靠性：${value.reliability}`:'',value.attribution?`信息来源：${value.attribution}`:'',value.temporalScope?`适用时间范围：${value.temporalScope}`:''].filter(Boolean)
- return labels.length?`（${labels.join('；')}）\n${text}`:text
+/** docs/542: knowledge (reliability, attribution, time scope) stays structured in facts, the import record and the
+ * native telling/ref reliability; author-visible prose never carries a "（可靠性：…；信息来源：…）" note. */
+export const IMPORT_KNOWLEDGE_LABELS=['可靠性','信息来源','信息归属','适用时间范围','适用时段'] as const
+const annotationLabel=IMPORT_KNOWLEDGE_LABELS.join('|')
+// Detection and removal share one definition (docs/544 H2): an opening bracket, spaces/tabs only, a fixed label and a colon.
+const annotationHead=new RegExp(`^[ \\t]*(?:${annotationLabel})[ \\t]*[：:]`,'u')
+export const IMPORT_KNOWLEDGE_ANNOTATION=new RegExp(`[（(][ \\t]*(?:${annotationLabel})[ \\t]*[：:]`,'u')
+const ANNOTATION_MAX=2000
+/** One linear pass (docs/544 H1). A block is removed only when it opens with a fixed label, closes on the same line
+ * within ANNOTATION_MAX characters with balanced brackets, and every ；/; separated part is "label：value". Anything
+ * else (unclosed, ordinary bracketed prose) is kept verbatim (docs/544 M1). A line left blank by removal is dropped. */
+export function stripImportKnowledgeAnnotations(text:string):string{
+ if(!IMPORT_KNOWLEDGE_ANNOTATION.test(text))return text
+ const lines=text.split('\n'),out:string[]=[]
+ for(const line of lines){const next=stripLine(line);if(next===line||next.trim())out.push(next)}
+ return out.join('\n')
 }
+function stripLine(line:string):string{
+ let result='',i=0
+ while(i<line.length){
+  const c=line[i]
+  if((c==='（'||c==='(')&&annotationHead.test(line.slice(i+1,i+1+40))){
+   const end=closingBracket(line,i)
+   if(end>0&&annotationBodyValid(line.slice(i+1,end))){result=result.replace(/[ \t]+$/u,'');i=end+1;while(i<line.length&&(line[i]===' '||line[i]==='\t'))i++;continue}
+  }
+  result+=c;i++
+ }
+ return result
+}
+function closingBracket(line:string,start:number):number{
+ let depth=0
+ for(let i=start;i<line.length&&i-start<=ANNOTATION_MAX;i++){const c=line[i];if(c==='（'||c==='(')depth++;else if(c==='）'||c===')'){depth--;if(depth===0)return i}}
+ return -1
+}
+function annotationBodyValid(body:string):boolean{
+ // Split on top-level ；/; only; nested brackets belong to a value.
+ const parts:string[]=[];let depth=0,from=0
+ for(let i=0;i<body.length;i++){const c=body[i];if(c==='（'||c==='(')depth++;else if(c==='）'||c===')')depth--;else if(depth===0&&(c==='；'||c===';')){parts.push(body.slice(from,i));from=i+1}}
+ parts.push(body.slice(from))
+ return parts.every(part=>!part.trim()||annotationHead.test(part))
+}
+/** Kept as an identity projection for callers and old audits; knowledge is never written into prose (docs/542). */
+export function qualifyImportKnowledgeText(text:string,_value:ImportKnowledge){return text}
 /** Called after strict decode/normalization. Preserve native identities and
  * structure, and attach only supplied knowledge to descriptive editor fields. */
 export interface ImportWorldProjectionLimits {maxBytes?:number;maxFields?:number}
@@ -288,8 +366,8 @@ export function assertImportWorldContentProjectionBudget(content:SettingContent,
  if(!Number.isSafeInteger(maxBytes)||maxBytes<1||maxBytes>MAX_WORLD_PROJECTION_BYTES||!Number.isSafeInteger(maxFields)||maxFields<1||maxFields>MAX_WORLD_PROJECTION_FIELDS)overflow()
  const add=(a:number,b:number)=>{const result=a+b;if(!Number.isSafeInteger(result)||result>maxBytes)overflow();return result}
  const escaped=(text:string,quoted=true)=>{let bytes=quoted?2:0;for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);let n:number;if(c===34||c===92||[8,9,10,12,13].includes(c))n=2;else if(c<32)n=6;else if(c<128)n=1;else if(c<2048)n=2;else if(c>=0xd800&&c<=0xdbff){const next=text.charCodeAt(i+1);if(next>=0xdc00&&next<=0xdfff){n=4;i++}else n=6}else n=c>=0xdc00&&c<=0xdfff?6:3;bytes=add(bytes,n)}return bytes}
- const parts:string[]=[];for(const [label,text]of [['可靠性',value.reliability],['信息来源',value.attribution],['适用时间范围',value.temporalScope]])if(text){if(parts.length)parts.push('；');parts.push(label!,'：',text)}
- const prefix=parts.length?['（',...parts,'）\n']:[],prefixBytes=prefix.reduce((n,p)=>add(n,escaped(p,false)),0)
+ // docs/542: published content carries no knowledge prefix, so the knowledge value adds no bytes.
+ void value;const prefixBytes=0
  let fields=0,nodes=0;const field=(text:string,always=false)=>{if(always||text.trim()){if(++fields>maxFields)overflow()}},node=(depth:number)=>{if(depth>MAX_WORLD_STRUCTURE_DEPTH||++nodes>MAX_WORLD_STRUCTURE_NODES)overflow()}
  const level=(l:LevelNode,depth:number)=>{node(depth);field(l.description);field(l.condition);for(const a of l.abilities){node(depth+1);field(a.description)}for(const child of l.children)level(child,depth+1)}
  if('text'in content)field(content.text,true)
@@ -305,16 +383,23 @@ export function assertImportWorldContentProjectionBudget(content:SettingContent,
  const increment=fields*prefixBytes;if(!Number.isSafeInteger(increment)||increment>maxBytes)overflow()
  return {bytes:add(jsonBytes(content,0),increment),fields}
 }
-export function qualifyImportWorldContent(content:SettingContent,value:ImportKnowledge,limits?:ImportWorldProjectionLimits):SettingContent{
- assertImportWorldContentProjectionBudget(content,value,limits)
- const result=structuredClone(content),qualify=(text:string)=>qualifyImportKnowledgeText(text,value),nonempty=(text:string)=>text.trim()?qualify(text):text
- const level=(node:LevelNode)=>{node.description=nonempty(node.description);node.condition=nonempty(node.condition);for(const ability of node.abilities)ability.description=nonempty(ability.description);node.children.forEach(level)}
- if('text' in result)result.text=qualify(result.text)
- else if('concepts' in result)for(const c of result.concepts)c.explanation=qualify(c.explanation)
- else if('factions' in result)for(const f of result.factions){f.description=qualify(f.description);f.relations=nonempty(f.relations)}
- else if('scope' in result){result.description=qualify(result.description);result.rules=nonempty(result.rules);result.levels.forEach(level);for(const p of result.pathways){p.description=nonempty(p.description);p.levels.forEach(level)}}
+/** World content is published as decoded (docs/542): a clone within the same capacity gate, without knowledge notes. */
+export function qualifyImportWorldContent(content:SettingContent,_value:ImportKnowledge,limits?:ImportWorldProjectionLimits):SettingContent{
+ assertImportWorldContentProjectionBudget(content,{},limits)
+ return mapImportWorldContentText(content,text=>text)
+}
+/** Applies one text transform to every prose field of a world setting content, keeping its structure. */
+export function mapImportWorldContentText(content:SettingContent,map:(text:string)=>string):SettingContent{
+ const result=structuredClone(content)
+ const level=(node:LevelNode)=>{node.description=map(node.description);node.condition=map(node.condition);for(const ability of node.abilities)ability.description=map(ability.description);node.children.forEach(level)}
+ if('text' in result)result.text=map(result.text)
+ else if('concepts' in result)for(const c of result.concepts)c.explanation=map(c.explanation)
+ else if('factions' in result)for(const f of result.factions){f.description=map(f.description);f.relations=map(f.relations)}
+ else if('scope' in result){result.description=map(result.description);result.rules=map(result.rules);result.levels.forEach(level);for(const p of result.pathways){p.description=map(p.description);p.levels.forEach(level)}}
  return result
 }
+/** Every author-visible prose value of a world setting content (for the publish gate). */
+export function importWorldContentTexts(content:SettingContent):string[]{const out:string[]=[];mapImportWorldContentText(content,text=>{out.push(text);return text});return out}
 export const importArtifactSemanticHash=(a:ImportArtifact)=>importHash(a)
 const evidenceSchema=z.object({unitId:nonempty,quote:nonempty}).strict()
 const textEditSchema=z.object({start:z.number().int().nonnegative(),end:z.number().int().nonnegative(),before:string,after:string}).strict()

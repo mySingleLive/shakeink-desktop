@@ -4,7 +4,7 @@
  */
 import {isDeepStrictEqual} from 'node:util'
 import {IMPORT_TARGETS,type ImportArtifact,type ImportSession} from '../desktop/shared/novel-import'
-import {validateImportSemanticArtifact,qualifyImportKnowledgeText,IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,type ImportSemanticArtifact,type ImportNativeProjection,type ImportNarrativeReference,type ImportMappingWarning} from '../desktop/core/novel-import-semantics'
+import {validateImportSemanticArtifact,stripImportKnowledgeAnnotations,IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,type ImportSemanticArtifact,type ImportNativeProjection,type ImportNarrativeReference,type ImportMappingWarning} from '../desktop/core/novel-import-semantics'
 import {validatePlanning} from '../src/lib/planning/domain'
 import type {LevelNode} from '../src/components/content/setting-content'
 
@@ -57,7 +57,7 @@ function treeMapping<T extends {id:string;name:string;parentId:string|null}>(exp
  * prefix and comparing their complete concatenation to the source artifact.
  * This checks the persisted protocol; it does not call/reproduce a publisher. */
 function qualifiedFragments(text:string,fragments:readonly string[],knowledge:ImportSemanticArtifact['knowledge']){
- const prefix=qualifyImportKnowledgeText('',knowledge)
+ void knowledge;const prefix=''/* docs/542: no knowledge prefix */
  if(!fragments.length)return false
  const raw:string[]=[]
  for(const [index,fragment]of fragments.entries()){
@@ -76,7 +76,7 @@ function qualifiedFragments(text:string,fragments:readonly string[],knowledge:Im
 function expectedSettingContent(entry:Decoded,sourceCopy:boolean){
  const native=entry.value.native as Extract<ImportNativeProjection,{kind:'world';entityType:'SETTING'}>
  if(sourceCopy&&entry.artifact.facts.content===undefined)return native.content
- const content=structuredClone(native.content),qualified=(text:string)=>qualifyImportKnowledgeText(text,entry.value.knowledge),nonempty=(text:string)=>text.trim().length?qualified(text):text
+ const content=structuredClone(native.content),qualified=(text:string)=>stripImportKnowledgeAnnotations(text)/* docs/542 */,nonempty=(text:string)=>text.trim().length?qualified(text):text
  if('text' in content)content.text=qualified(content.text)
  else if('concepts' in content)for(const concept of content.concepts)concept.explanation=qualified(concept.explanation)
  else if('factions' in content)for(const faction of content.factions){faction.description=qualified(faction.description);faction.relations=nonempty(faction.relations)}
@@ -115,7 +115,7 @@ export function realNovelSemanticAssertions(session:SemanticSession,rows:RealNov
  check('semantic-full-selected-targets-not-satisfied-by-unmapped-source-materials',!session.infer||!session.selected.includes('body')||!session.workingProse||session.targets.every(kind=>projected.some(entry=>entry.artifact.kind===kind)?!session.notFound.includes(kind):!artifacts.some(artifact=>artifact.kind===kind)&&session.notFound.includes(kind)))
  check('semantic-projectable-native-materials-have-decodable-shapes',projected.every(entry=>{if(['character','scene','world'].includes(entry.artifact.kind))return entry.value.native!==null;if(['worldline','narrative'].includes(entry.artifact.kind))try{validateImportSemanticArtifact({...entry.artifact,origin:'confirmed'});return true}catch{return false}return true}))
  check('semantic-source-copy-decoder-mapping-warnings-preserved',decoded.filter(entry=>sourceCopyIds.has(entry.artifact.id)).every(entry=>entry.value.mappingWarnings.every(expected=>session.mappingWarnings?.some(warning=>warning.artifactId===entry.artifact.id&&Array.isArray(warning.fields)&&expected.fields.every(field=>warning.fields.includes(field))&&typeof warning.reason==='string'&&!!warning.reason.trim()))))
- const readableText=(entry:Decoded)=>sourceCopyIds.has(entry.artifact.id)?entry.artifact.text:qualifyImportKnowledgeText(entry.artifact.text,entry.value.knowledge)
+ const readableText=(entry:Decoded)=>sourceCopyIds.has(entry.artifact.id)?entry.artifact.text:stripImportKnowledgeAnnotations(entry.artifact.text)
  const characters=projected.filter(entry=>entry.value.native?.kind==='character'),characterMap=new Map<string,string>();let characterIdentity=rows.characters.length===characters.length&&unique(rows.characters.map(row=>row.id))
  for(const entry of characters){const matches=rows.characters.filter(row=>object(row.extra)?.importArtifactId===entry.artifact.id);if(matches.length===1)characterMap.set(entry.artifact.id,matches[0].id);else characterIdentity=false}
  characterIdentity&&=characterMap.size===characters.length&&unique([...characterMap.values()])
@@ -199,7 +199,7 @@ export function realNovelSemanticAssertions(session:SemanticSession,rows:RealNov
    for(const telling of card.tellings){narrativeStructure&&=telling.id==='import-narrative-telling-'+artifact.id+'-'+part&&telling.character===narrator&&telling.narrator===(artifact.facts.narrator||'待定')&&telling.reliability===value.knowledge.reliability&&telling.source===(artifact.origin==='source'?'导入原设定':'根据正文分析')
     references&&=telling.refs.length===refs.length
     for(const [index,ref]of refs.entries()){const actual=telling.refs[index],event=eventByArtifact.get(ref.eventId),person=ref.character?characterMap.get(ref.character):null
-     references&&=!!actual&&!!event&&(!ref.character||!!person)&&actual.line===event?.line&&actual.event===event?.id&&actual.reliability===ref.reliability&&(absent(actual.character)?null:actual.character)===person&&actual.reveal===telling.intent&&actual.source==='导入语义关系：'+(ref.kind??'happen')+'；'+qualifyImportKnowledgeText('',ref)
+     references&&=!!actual&&!!event&&(!ref.character||!!person)&&actual.line===event?.line&&actual.event===event?.id&&actual.reliability===ref.reliability&&(absent(actual.character)?null:actual.character)===person&&actual.reveal===telling.intent&&actual.source==='导入语义关系：'+(ref.kind??'happen')/* docs/542 */
     }
    }
   }

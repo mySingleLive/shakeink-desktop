@@ -399,6 +399,7 @@ async function launch() {
     protectedDirectories:async()=>[bootstrapPath,...await service.call<string[]>('protected-directories')],models:novelImportModels,
     ai:request=>businessGate.run(()=>service.call('novel-import-ai',request)),cancelAi:async operationId=>{await service.call('novel-import-cancel',operationId)},
     publish:input=>businessGate.run(()=>service.call('novel-import-publish',input)),repairTarget:repairNovelImportTarget,
+    discardPublication:input=>businessGate.run(()=>service.call('novel-import-discard',input)),
     changed:view=>send({type:'novel-import',view}),reading:active=>send({type:'novel-import-reading',active}),assertCurrent:()=>{if(dataRoot!==importRoot||businessClosed)throw Error('导入数据根已关闭或变化')},
   })
   await novelImport.initialize()

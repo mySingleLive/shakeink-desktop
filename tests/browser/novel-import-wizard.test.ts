@@ -197,6 +197,11 @@ test('NIW-B10: verify lists checks, blocks saving on problems and shows skipped 
  const d=dialog(page);assert.equal(await d.locator('.ni-w-checks li').count(),8);await d.getByRole('button',{name:'重试导入角色'}).waitFor()
  assert.equal(await d.getByRole('button',{name:'保存作品'}).isDisabled(),true);assert.match(await d.innerText(),/已跳过 2 项/);assert.match(await d.innerText(),/林舟的头像/)
 }))
+test('VS-44: a chapter-review verify offers [修复] on a failed consistency row and keeps 保存作品 clickable',()=>mount({step:'verify',verifyRepair:true},async page=>{
+ const d=dialog(page),row=d.locator('.ni-w-checks li',{hasText:'一致性复核'});await row.getByRole('button',{name:'修复'}).waitFor()
+ assert.equal(await d.getByRole('button',{name:'保存作品'}).isDisabled(),false);const text=await d.innerText()
+ assert.match(text,/仍有未通过项，保存时只保留已成功导入的内容/);assert.match(text,/已自动修复 1 处设定/);assert.match(text,/沈砚·内容/);assert.match(text,/复核丢弃 2 条格式无效的矛盾/)
+}))
 test('SU-01: verify shows other-setting repairs only when recorded (docs/515)',async()=>{
  await mount({step:'verify',linesDropped:true},async page=>{const text=await dialog(page).innerText();assert.match(text,/部分剧情关联已修正/);assert.match(text,/叙事线：丢弃 3 个无法对应已导入实体的关联/);assert.doesNotMatch(text,/部分设定条目已修正/)})
  await mount({step:'verify',settingsDropped:true},async page=>{const text=await dialog(page).innerText();assert.match(text,/部分设定条目已修正/);assert.match(text,/主题：丢弃 2 条无法定位的原文引文/);assert.doesNotMatch(text,/南巷：/)})
@@ -273,8 +278,49 @@ test('NIW-B21: prototype sample values do not appear in product code',()=>{
  assert.equal(found.trim(),'',found)
 })
 
+test('FP-15: step 20 shows the processed foreshadow count with chapter progress; failures hide it',async()=>{
+ await mount({step:'foreshadow',phase:'running',foreshadowFound:7,lineProgress:{done:12,total:64}},async page=>{const hero=dialog(page).locator('.ni-progress-hero');const line=hero.getByText('已处理 7 个伏笔',{exact:true});await line.waitFor();assert.equal(await line.getAttribute('aria-live'),'polite');assert.equal(await line.getAttribute('class'),'ni-w-found');await hero.getByText('已完成 12 / 64 章').first().waitFor()})
+ await mount({step:'foreshadow',phase:'paused',foreshadowFound:3},async page=>{const d=dialog(page);await d.getByText('已暂停').first().waitFor();await d.getByText('已处理 3 个伏笔',{exact:true}).waitFor()})
+ await mount({step:'foreshadow',phase:'running'},async page=>{const d=dialog(page);await d.locator('.ni-progress-hero').waitFor();assert.equal(await d.getByText(/已处理 \d+ 个伏笔/u).count(),0)})
+ await mount({step:'foreshadow',phase:'running',recognitionFailed:true,foreshadowFound:4},async page=>{const d=dialog(page);await d.getByText('导入伏笔失败').waitFor();assert.equal(await d.getByText('已处理 4 个伏笔').count(),0)})
+})
 test('RB-01/RB-02/RB-03: recognition shows a live found count',async()=>{
  await mount({step:'detect-char',phase:'running',rosterFound:12},async page=>{const d=dialog(page);await d.getByRole('heading',{name:'正在识别角色'}).waitFor();const line=d.getByText('已识别 12 个角色',{exact:true});await line.waitFor();assert.equal(await line.getAttribute('aria-live'),'polite')})
  await mount({step:'detect-char',phase:'running'},async page=>{await dialog(page).getByText('已识别 0 个角色',{exact:true}).waitFor()})
  await mount({step:'detect-scene',phase:'running',rosterFound:3},async page=>{await dialog(page).getByText('已识别 3 个场景',{exact:true}).waitFor()})
 })
+
+// docs/560-561: step 22 saves without a send grant and the import can always be stopped.
+const stopConfirmation=(page:Page)=>page.getByRole('dialog',{name:'停止并删除这次导入？',exact:true})
+test('SD-40/SD-41: step 22 shows the save folder and actions, never the model send notice',()=>mount({step:'done',phase:'paused',publication:true,targetNeedsAuthorization:true},async page=>{
+ const d=dialog(page);await d.getByRole('heading',{name:'保存作品'}).waitFor()
+ const text=await d.innerText();assert.doesNotMatch(text,/允许并继续导入|发送给文本模型|继续导入即允许/u);assert.match(text,/作品目录/);assert.match(text,/需要重新选择并授权保存目录/)
+ assert.equal(await d.getByRole('button',{name:'继续保存'}).isDisabled(),true)
+ await d.getByRole('button',{name:'选择目录'}).click();await waitAction(page,'choose-target');await idle(page)
+ await d.getByRole('button',{name:'继续保存'}).click();await waitAction(page,'resume');const resume=(await calls(page)).find(c=>c.type==='resume')!;assert.equal(resume.consent,false)
+}))
+test('SD-40b: a failed save at step 22 shows its reason',()=>mount({step:'done',phase:'failed',publication:true,error:'创建作品需要空目录，现有作品请使用打开'},async page=>{
+ const d=dialog(page);await d.getByRole('alert').getByText('创建作品需要空目录，现有作品请使用打开',{exact:true}).waitFor();assert.equal(await d.getByRole('button',{name:'继续保存'}).isDisabled(),false)
+}))
+test('SD-42: stopping at step 22 asks once, then deletes',()=>mount({step:'done',phase:'paused',publication:true},async page=>{
+ const d=dialog(page);await d.getByRole('button',{name:'停止导入'}).click();const c=stopConfirmation(page);await c.waitFor()
+ assert.match(await c.innerText(),/目标目录中未完成的文件/);assert.equal((await businessCalls(page)).some(x=>x.type==='cancel'),false)
+ await c.getByRole('button',{name:'停止并删除',exact:true}).click();await d.waitFor({state:'hidden'});assert.equal((await calls(page)).filter(x=>x.type==='cancel').length,1)
+}))
+test('SD-43/SD-47b: closing a started save only hides it and the task button stays',()=>mount({step:'done',phase:'paused',publication:true},async page=>{
+ const d=dialog(page);await page.keyboard.press('Escape');await d.waitFor({state:'hidden'});assert.equal((await calls(page)).some(x=>x.type==='cancel'),false)
+ await page.locator('.ni-task-button').click();await d.waitFor();await d.getByRole('button',{name:'收起导入窗口'}).click();await d.waitFor({state:'hidden'});assert.equal(await page.locator('.ni-task-button').count(),1)
+}))
+test('SD-44: stopping while saving says it waits for the save to end',()=>mount({step:'done',phase:'publishing',publication:true,deferredCancel:true},async page=>{
+ const d=dialog(page);await d.getByText('正在将作品保存到所选目录').waitFor();await d.getByRole('button',{name:'停止导入'}).click();const c=stopConfirmation(page)
+ assert.match(await c.innerText(),/当前保存结束后才会删除/);await c.getByRole('button',{name:'停止并删除',exact:true}).click()
+ await c.getByRole('button',{name:'正在等待保存结束…',exact:true}).waitFor();await page.evaluate(()=>window.wizardFixture.releaseCancel());await d.waitFor({state:'hidden'})
+}))
+test('SD-44b: while the delete waits for the save the window can be hidden and deleting continues',()=>mount({step:'done',phase:'publishing',publication:true,deferredCancel:true},async page=>{
+ const d=dialog(page);await d.getByRole('button',{name:'停止导入'}).click();const c=stopConfirmation(page);await c.getByRole('button',{name:'停止并删除',exact:true}).click()
+ await c.getByRole('button',{name:'正在等待保存结束…',exact:true}).waitFor();await c.getByRole('button',{name:'收起',exact:true}).click();await c.waitFor({state:'hidden'});await d.waitFor({state:'hidden'})
+ await page.evaluate(()=>window.wizardFixture.releaseCancel());await page.waitForFunction(()=>window.wizardFixture.state().busy===0);assert.equal((await calls(page)).filter(x=>x.type==='cancel').length,1)
+}))
+test('SD-47c: the completed page has no stop button',()=>mount({step:'done',phase:'completed',publication:true},async page=>{
+ const d=dialog(page);await d.getByText('作品已导入，可以在工作台继续编辑。').waitFor();assert.equal(await d.getByRole('button',{name:'停止导入'}).count(),0)
+}))

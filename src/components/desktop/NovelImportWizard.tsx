@@ -177,21 +177,27 @@ function ImportStep(props:Props&{kind:WizardEntityKind}){
 }
 function LineStep(props:Props){
  const {view}=props,w=view.wizard,failed=w.stepState[w.step]==='failed'
- return <><div className="ni-body"><StepRail w={w}/><h3>{WIZARD_STEP_TITLES[w.step]}</h3>{failed?<Notice alert title={<><CircleAlert/>{WIZARD_STEP_TITLES[w.step]}失败</>}>{w.stepError}</Notice>:<div className="ni-progress-hero"><LoaderCircle className="ni-spinner"/><p>{view.phase==='paused'?'已暂停':'正在处理所选章节'}</p>{w.lineProgress&&<Progress done={w.lineProgress.done} total={w.lineProgress.total} label={`已完成 ${w.lineProgress.done} / ${w.lineProgress.total} 章`}/>}</div>}</div>
+ return <><div className="ni-body"><StepRail w={w}/><h3>{WIZARD_STEP_TITLES[w.step]}</h3>{failed?<Notice alert title={<><CircleAlert/>{WIZARD_STEP_TITLES[w.step]}失败</>}>{w.stepError}</Notice>:<div className="ni-progress-hero"><LoaderCircle className="ni-spinner"/><p>{view.phase==='paused'?'已暂停':'正在处理所选章节'}</p>{w.lineProgress&&<Progress done={w.lineProgress.done} total={w.lineProgress.total} label={`已完成 ${w.lineProgress.done} / ${w.lineProgress.total} 章`}/>}{w.foreshadowFound!==undefined&&<p className="ni-w-found" aria-live="polite">已处理 {w.foreshadowFound} 个伏笔</p>}</div>}</div>
   {failed?<Footer><Button variant="ghost" onClick={props.onRevise}>返回修改选择</Button><Button onClick={()=>void act('wizard-redetect')}>重试</Button></Footer>:<RunningFooter {...props}/>}</>
 }
 function VerifyStep(props:Props){
- const {view,busy}=props,w=view.wizard,checks=w.checks??[],bad=checks.some(c=>!c.ok)
+ const {view,busy}=props,w=view.wizard,checks=w.checks??[],bad=checks.some(c=>!c.ok),running=w.stepState.verify==='running',v=w.verify
+ // docs/539: chapter-review sessions record w.verify; a failed consistency or outline row can be repaired again without limit.
+ const repair=(key:string)=>!!v?.repairable&&!running&&(key==='consistency'||key==='outlines')
  const retry:Record<string,WizardEntityKind|undefined>={relationships:'character',worlds:'world'}
  return <><div className="ni-body"><ul className="ni-w-checks">{checks.map(c=><li key={c.key}>{c.ok?<CircleCheck className="ni-w-good"/>:<AlertTriangle className="ni-w-bad"/>}<span>{({chapters:'卷章与正文完整',scope:'所选范围一致',relationships:'角色关系引用',worlds:'世界观归属',lines:'世界线与叙事线引用',outlines:'细纲覆盖',touches:'伏笔触点',consistency:'一致性复核'} as Record<string,string>)[c.key]}<span className="ni-w-sr">{c.ok?'，通过':'，有问题'}</span></span><span className="ni-w-sub">{c.detail}</span>
-   {!c.ok&&c.key==='consistency'&&view.phase==='conflicts'&&<Button size="sm" variant="outline" onClick={()=>window.dispatchEvent(new CustomEvent('novel-import:conflicts'))}>处理矛盾</Button>}
+   {!c.ok&&repair(c.key)&&<Button size="sm" variant="outline" disabled={busy} onClick={()=>void act('wizard-verify-repair')}><RotateCcw/>修复</Button>}
+   {!c.ok&&c.key==='consistency'&&view.conflicts.some(x=>x.status==='pending')&&<Button size="sm" variant="outline" disabled={running} onClick={()=>window.dispatchEvent(new CustomEvent('novel-import:conflicts'))}>处理矛盾</Button>}
    {!c.ok&&retry[c.key]&&<Button size="sm" variant="outline" disabled={busy} onClick={()=>void act('wizard-retry-kind',{kind:retry[c.key]})}><RotateCcw/>重试导入{WIZARD_ENTITY_LABELS[retry[c.key]!]}</Button>}</li>)}</ul>
-  {!checks.length&&<div className="ni-progress-hero"><LoaderCircle className="ni-spinner"/><p>检查中</p></div>}
+  {(!checks.length||running)&&<div className="ni-progress-hero"><LoaderCircle className="ni-spinner"/><p>{checks.length?'正在复核与修复':'检查中'}</p></div>}
+  {!!v?.fixed.length&&<Notice title={`已自动修复 ${v.fixed.length} 处设定`}>{v.fixed.slice(0,30).map(f=>`${f.label}·${f.field}`).join('、')}{v.fixed.length>30?' 等':''}。以正文为准修改。</Notice>}
+  {!!v?.droppedConflicts&&<Notice title={`复核丢弃 ${v.droppedConflicts} 条格式无效的矛盾`}>这些条目无法对应已导入的资料或原文。</Notice>}
+  {(w.dropped??[]).some(d=>d.kind==='verify')&&<Notice title="部分结构引用已修正">{(w.dropped??[]).filter(d=>d.kind==='verify').map(d=>`${d.label}：${d.reason}`).join('；')}。</Notice>}
   {!!w.sceneIdentitySummary?.deferred?.length&&<Notice title={`归属待确认，未导入 ${w.sceneIdentitySummary.deferredTotal??w.sceneIdentitySummary.deferred.length} 项`}>{w.sceneIdentitySummary.deferred.map(d=>d.name).join('、')}{(w.sceneIdentitySummary.deferredTotal??0)>w.sceneIdentitySummary.deferred.length?' 等':''}。可返回识别场景，在详情确认归属后再导入。</Notice>}
   {w.skipped.length>0&&<Notice title={`已跳过 ${w.skipped.length} 项`}>{w.skipped.map(s=>s.label).join('、')}。这些项不会保存，记入导入记录。</Notice>}
   {(w.dropped??[]).some(d=>d.kind==='settings')&&<Notice title="部分设定条目已修正">{(w.dropped??[]).filter(d=>d.kind==='settings').map(d=>`${d.label}：${d.reason}`).join('；')}。</Notice>}
   {(w.dropped??[]).some(d=>d.kind==='lines')&&<Notice title="部分剧情关联已修正">{(w.dropped??[]).filter(d=>d.kind==='lines').map(d=>`${d.label}：${d.reason}`).join('；')}。</Notice>}</div>
-  <Footer note={checks.length?bad?'请先处理标出的问题':'全部通过':''}><Button variant="ghost" onClick={props.onRevise}>返回修改选择</Button><Button disabled={busy||!checks.length||bad} onClick={()=>void act('wizard-next')}>保存作品</Button></Footer></>
+  <Footer note={checks.length&&!running?bad?v?'仍有未通过项，保存时只保留已成功导入的内容':'请先处理标出的问题':'全部通过':''}><Button variant="ghost" onClick={props.onRevise}>返回修改选择</Button><Button disabled={busy||running||!checks.length||bad&&!v} onClick={()=>void act('wizard-next')}>保存作品</Button></Footer></>
 }
 
 export function NovelImportWizardHeader({step}:{step:WizardStep}){
@@ -206,10 +212,22 @@ export function NovelImportReading(){
   <Footer><Button disabled>继续</Button></Footer></>
 }
 export function NovelImportWizard(props:Props){
- return <><ResumeConsent view={props.view}/><WizardStep {...props}/></>
+ // Step 22 only saves; nothing is sent to a model, so no send permission is shown (docs/560).
+ return <>{props.view.wizard.step!=='done'&&<ResumeConsent view={props.view}/>}<WizardStep {...props}/></>
+}
+/** docs/560 step 22: save to the chosen folder; the folder can be authorized again and the import stopped at any time. */
+function SaveStep({view,busy,onStop}:Props){
+ const saving=view.phase==='running'||view.phase==='publishing'
+ if(saving)return <><div className="ni-body"><StepRail w={view.wizard}/><h3>保存作品</h3><div className="ni-progress-hero" role="status" aria-busy="true"><LoaderCircle className="ni-spinner"/><p>正在将作品保存到所选目录</p></div></div>
+  <Footer note="停止导入会在当前保存结束后删除这次导入"><Button variant="ghost" disabled={busy} onClick={onStop}>停止导入</Button></Footer></>
+ return <><div className="ni-body"><StepRail w={view.wizard}/><h3>保存作品</h3>
+  <div className="ni-row ni-target-directory"><div><h4>保存目录</h4><p>{view.targetLabel??'尚未选择保存目录'}</p>{!view.targetReady&&<span className="ni-error-text">需要重新选择并授权保存目录。</span>}</div><Button variant="outline" disabled={busy} onClick={()=>void act('choose-target')}><FolderOpen/>选择目录</Button></div>
+  <p>保存只写入所选目录，不再向模型发送内容。</p></div>
+  <Footer note="停止导入会删除这次导入，已写入目录的未完成文件一并清理"><Button variant="ghost" disabled={busy} onClick={onStop}>停止导入</Button><Button disabled={busy||!view.targetReady} onClick={()=>void act('resume',{consent:false})}><Play/>继续保存</Button></Footer></>
 }
 function WizardStep(props:Props){
  const step=props.view.wizard.step
+ if(step==='done')return <SaveStep {...props}/>
  if(step==='files')return <FilesStep {...props}/>
  if(step==='work')return <WorkStep {...props}/>
  if(step==='kinds')return <KindsStep {...props}/>

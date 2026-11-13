@@ -11,7 +11,7 @@ import { useTabsStore } from '../../src/stores/tabs'
 import { IMPORT_KINDS, IMPORT_TARGETS, type ImportAction, type ImportView } from '../../desktop/shared/novel-import'
 
 // Controlled public bridge: real React, never native/DB/provider acceptance.
-declare global { interface Window { mountNovelImport(options?:{chooseError?:boolean;deferredChoose?:boolean;platform?:'darwin'|'win32';phase?:ImportView['phase'];noModels?:boolean;noBody?:boolean;theme?:string;deferredPatch?:boolean;longRecord?:boolean;deferredTitle?:boolean;reselectMode?:'cancel'|'error'|'deferred';cancelMode?:'unknown-files'|'publication';publication?:boolean}):void; novelImportFixture:any } }
+declare global { interface Window { mountNovelImport(options?:{chooseError?:boolean;deferredChoose?:boolean;platform?:'darwin'|'win32';phase?:ImportView['phase'];noModels?:boolean;noBody?:boolean;theme?:string;deferredPatch?:boolean;longRecord?:boolean;deferredTitle?:boolean;reselectMode?:'cancel'|'error'|'deferred';cancelMode?:'unknown-files'|'retained';publication?:boolean}):void; novelImportFixture:any } }
 window.mountNovelImport=(options={})=>{
  useDesktopStore.setState({bootstrap:{platform:options.platform??'darwin'} as NonNullable<ReturnType<typeof useDesktopStore.getState>['bootstrap']>})
  const model={id:'text-fixture',name:'隔离文本模型',modelId:'fixture-model',endpoint:'https://fixture.invalid/v1',authRevision:1,contextWindow:32000}
@@ -41,8 +41,8 @@ window.mountNovelImport=(options={})=>{
   if(action.type==='choose'){await chooseWait;chosen=true}
   if(action.type==='current'&&!chosen)return {view:null}
   if(action.type==='cancel'||action.type==='discard'){
-   if(options.cancelMode==='publication')throw Error('保存已开始，不能删除这次导入，请重试保存')
    deleted=true
+   if(options.cancelMode==='retained')return {view:null,retained:'导入已删除；目标目录 /合成/目录 留有未完成的文件：作品目录正在使用'}
    if(options.cancelMode==='unknown-files')throw Error('导入草稿目录含未知文件，已保留：'+view.id)
    return {view:null}
   }
@@ -68,6 +68,7 @@ window.mountNovelImport=(options={})=>{
   if(action.type==='resume'||action.type==='retry')view.phase='running'
   if(action.type==='resolve'){
    if(action.choice==='rewrite'){if(!options.deferredPatch)view.patches=[{id:'patch-1',start:3,end:9,before:'林舟十七岁',after:'林舟十九岁',reason:'采用原角色设定',workingRevision:0,conflictId:'conflict-1'}]}
+   else if(view.conflictDetail){view.conflicts=view.conflicts.filter(c=>c.id!==action.conflictId);view.conflictDetail=undefined;view.phase=view.conflicts.length?'conflicts':'select'}
    else {view.conflicts=[];view.phase='running'}
   }
   if(action.type==='apply-patches'){view.patches=[];view.conflicts=[];view.modified=true;view.phase='confirm'}
@@ -88,6 +89,7 @@ window.mountNovelImport=(options={})=>{
  useNovelImportStore.setState({view:null,open:false,screen:'source',busy:0,error:null,source:null})
  const root=createRoot(document.getElementById('app')!)
  flushSync(()=>root.render(<QueryClientProvider client={query}><button id="fixture-import" onClick={()=>{void requestNovelImport()}}>导入作品</button><NovelImportTaskButton/><SuspendableDialog register={fn=>{renderSuspended=fn}}/><Toaster/><NovelImportRecord novelId="isolated-novel"/></QueryClientProvider>))
- window.novelImportFixture={settings,setOpen:(open:boolean)=>useNovelImportStore.setState({open}),deleted:()=>deleted,setSuspended:(value:boolean)=>renderSuspended(value),pushView:(next:ImportView|null)=>{if(!next)deleted=true;listeners.forEach(listener=>listener({type:'novel-import',view:next}))},calls,requests,releaseChoose:()=>releaseChoose(),novelsInvalidated:()=>query.getQueryState(['novels'])?.isInvalidated,releaseTitle:()=>releaseTitle(),releaseReselect:()=>releaseReselect(),state:()=>useNovelImportStore.getState(),tabs:()=>useTabsStore.getState().tabs,view:copy,set:(changes:Partial<ImportView>)=>{view={...view,...changes,revision:view.revision+1};publish()},completePatches:()=>{view.patches=[{id:'patch-1',start:3,end:9,before:'林舟十七岁',after:'林舟十九岁',reason:'采用原角色设定',workingRevision:0,conflictId:'conflict-1'}];view.revision++;publish()},completeRecognition:()=>{view.phase='select';view.revision++;publish()},conflict:(type?:'setting-body'|'source-source'|'body-body')=>{view.phase='conflicts';view.conflicts=[conflict(type)];view.revision++;publish()},complete:()=>{view.phase='completed';view.summary={source:4,inferred:3,decisions:1,modified:0};view.publication={requestId:'import-1',workId:'work-1',novelId:'isolated-novel'};view.revision++;publish()},unmount:()=>root.unmount()}
+ window.novelImportFixture={settings,setOpen:(open:boolean)=>useNovelImportStore.setState({open}),deleted:()=>deleted,setSuspended:(value:boolean)=>renderSuspended(value),pushView:(next:ImportView|null)=>{if(!next)deleted=true;listeners.forEach(listener=>listener({type:'novel-import',view:next}))},calls,requests,releaseChoose:()=>releaseChoose(),novelsInvalidated:()=>query.getQueryState(['novels'])?.isInvalidated,releaseTitle:()=>releaseTitle(),releaseReselect:()=>releaseReselect(),state:()=>useNovelImportStore.getState(),tabs:()=>useTabsStore.getState().tabs,view:copy,set:(changes:Partial<ImportView>)=>{view={...view,...changes,revision:view.revision+1};publish()},completePatches:()=>{view.patches=[{id:'patch-1',start:3,end:9,before:'林舟十七岁',after:'林舟十九岁',reason:'采用原角色设定',workingRevision:0,conflictId:'conflict-1'}];view.revision++;publish()},completeRecognition:()=>{view.phase='select';view.revision++;publish()},conflict:(type?:'setting-body'|'source-source'|'body-body')=>{view.phase='conflicts';view.conflicts=[conflict(type)];view.revision++;publish()},
+ wizardConflict:(over:Record<string,unknown>={})=>{view.phase='conflicts';view.conflicts=[conflict('setting-body'),{...conflict('setting-body'),id:'conflict-2',hash:'h2'}];view.conflictDetail={conflictId:'conflict-1',index:1,total:2,entity:'灰雾空间',kindLabel:'金手指',fieldLabel:'触发条件',reason:'资料写需默念咒文，原文只写逆走四步',current:'逆走四步并默念咒文',proposed:'逆走四步',mergeDefault:'逆走四步并默念咒文',evidence:[{quote:'逆时针走了四步。',location:'第一部 小丑 · 第一章 起'}],choices:[{choice:'inferred',available:true},{choice:'source',available:true},{choice:'merge',available:true}],...over} as never;view.revision++;publish()},complete:()=>{view.phase='completed';view.summary={source:4,inferred:3,decisions:1,modified:0};view.publication={requestId:'import-1',workId:'work-1',novelId:'isolated-novel'};view.revision++;publish()},unmount:()=>root.unmount()}
 }
 function SuspendableDialog({register}:{register(fn:(value:boolean)=>void):void}){const [suspended,setSuspended]=React.useState(false);React.useEffect(()=>register(setSuspended),[register]);return <NovelImportDialog suspended={suspended}/>}

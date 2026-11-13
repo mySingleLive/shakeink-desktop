@@ -170,7 +170,7 @@
  "legacy-scene:analyze/touches////": [
   {
    "payload": "633ca3bfdef57a6716494fe0af168c12ef023a78431ba5e71855f0ac1701efe2",
-   "prompt": "799439825901c735d1f2bbb2280b56190ed3d9591a3fbfa97215fbda5be6faec"
+   "prompt": "59d929a84e2f67b0b31c544acf4b3dd16108f8c6b3ebba162d3ec8ab4dcf6419"
   }
  ],
  "legacy-scene:classify/////": [
@@ -185,14 +185,10 @@
    "prompt": "dd11351abdd91eaaf1e2d9a10b65fd3d63784d26f73dc9634a1e8ad60d688f0a"
   }
  ],
- "legacy-scene:review/////": [
+ "legacy-scene:review////wizard-review-v1/": [
   {
-   "payload": "d2a48c9e377c7be6975d7048f973794620097f50c15b935877d8b6294aa2a2e4",
-   "prompt": "77e7892d3435a2dd05a0c048ee7a535c0fa158c65a949451cdfe56e1eb326fd3"
-  },
-  {
-   "payload": "69d38af3c801f28edf02bc4b790213cba363e6ada41a31086a3453baa0f1c835",
-   "prompt": "c59298350bcfa5d59dca27ac2350ad1ac0c04b3e3fac5bcc6f33323cd9564d3a"
+   "payload": "c5b800a68bd0fb6ba1393518e398ac7ed8752543978f1ddeb5eb6e6c55d72f1a",
+   "prompt": "77a68545ab6b9493f81e76c0814c3a395dbb5f3ce517f492ac6ddd85006e0d00"
   }
  ]
 }

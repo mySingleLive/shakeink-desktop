@@ -17,7 +17,7 @@ import {validateImportBudgetState} from '../desktop/core/novel-import-budget-pol
 import {pdfReviewAudit} from '../desktop/core/novel-import-pdf'
 import {importNativeMappings,importSemanticAudit,importSemanticDecisionHash,importSemanticInputHash,importSemanticResultHash,validateImportSemanticState} from '../desktop/core/novel-import-semantic-state'
 import {realNovelSemanticAssertions} from './real-novel-semantic-assertions'
-import {qualifyImportKnowledgeText} from '../desktop/core/novel-import-semantics'
+import {stripImportKnowledgeAnnotations,IMPORT_THEME_PROFILE_ID,IMPORT_KNOWLEDGE_ANNOTATION,importThemeSynopsis} from '../desktop/core/novel-import-semantics'
 
 const CORPUS='/Users/dt_flys/Documents/拆书/真实小说导入测试-20261026'
 const APP_ROOT='/Users/dt_flys/.shakeink'
@@ -138,7 +138,8 @@ async function main(){
  requireAudit(rows.novels.every(row=>row.id===novelId)&&[...rows.themes,...rows.volumes,...rows.characters,...rows.scenes,...rows.items,...rows.worlds,...rows.settings,...rows.foreshadows,...rows.tropes,...rows.planning,...rows.mutations].every(row=>row.novelId===novelId)&&rows.chapters.every(ch=>rows.volumes.some(v=>v.id===ch.volumeId))&&rows.versions.every(v=>v.targetType==='NOVEL_IMPORT'&&v.targetId===novelId),'OUT_OF_SCOPE_RECORD_REJECTED')
  const assertions:{name:string;passed:boolean}[]=[],check=(name:string,condition:unknown)=>assertions.push({name,passed:!!condition}),sorted=(values:unknown[])=>values.map(v=>importHash(v)).sort(),byKind=(kind:ImportArtifact['kind'])=>s.artifacts.filter(a=>a.kind===kind)
  const publishedByKind=(kind:ImportArtifact['kind'])=>byKind(kind).filter(a=>!semanticMapping||semanticMapping.projectable.has(a.id))
- const publishedText=(a:ImportArtifact,value=a.text)=>s.semanticVersion===1&&a.origin!=='source'?qualifyImportKnowledgeText(value,semanticMapping!.decoded.get(a.id)!.knowledge):value
+ // docs/542: inferred prose is published as is, cleaned of knowledge notes.
+ const publishedText=(a:ImportArtifact,value=a.text)=>a.origin!=='source'?stripImportKnowledgeAnnotations(value):value
  const publishedOptionalFact=(a:ImportArtifact,field:string)=>{const value=a.facts[field]??'';return value.trim().length?publishedText(a,value):value}
  for(const name of ['frozen-original-source-sha256-unchanged','frozen-oracle-and-independent-body-hashes-valid','completed-checkpoint-plan-and-receipt-bound','all-twelve-analysis-targets-covered','full-source-and-all-deterministic-fact-tasks-reviewed','all-exported-records-belong-to-own-novel'])check(name,true)
  check('not-found-target-classification-consistent',s.targets.every(kind=>byKind(kind).length?!s.notFound.includes(kind):s.notFound.includes(kind)))
@@ -156,7 +157,10 @@ async function main(){
  if(s.semanticVersion!==1)check('characters-artifact-identity-and-complete-biographies',rows.characters.length===byKind('character').length&&rows.characters.every(c=>byKind('character').some(a=>(c.extra as any)?.importArtifactId===a.id&&c.name===a.name&&c.bio===a.text&&c.age===(a.facts.age??''))))
  check('foreshadow-complete-name-text-multiset',equal(sorted(rows.foreshadows.map(a=>({name:a.title,text:a.content}))),sorted(publishedByKind('foreshadow').map(a=>({name:a.name,text:publishedText(a)})))))
  check('trope-complete-kind-name-text-multiset',equal(sorted(rows.tropes.map(a=>({name:a.category,text:a.content,kind:a.kind}))),sorted(publishedByKind('trope').map(a=>({name:a.name,text:publishedText(a),kind:a.facts.tropeKind})))))
- check('theme-full-text',rows.themes.length===1&&rows.themes[0].synopsis===publishedByKind('theme').map(a=>publishedText(a)).join('\n\n'))
+ // docs/542/545: the synopsis is the inferred position's synopsis when present, else the joined themes cut by importThemeSynopsisFallback.
+ {const position=s.artifacts.find(a=>a.id===IMPORT_THEME_PROFILE_ID),joinedThemes=importThemeSynopsis(publishedByKind('theme').filter(a=>a.id!==IMPORT_THEME_PROFILE_ID).map(a=>({origin:a.origin,text:publishedText(a)})))
+  check('theme-full-text',rows.themes.length===1&&rows.themes[0].synopsis===(position?.facts.synopsis?stripImportKnowledgeAnnotations(position.facts.synopsis):joinedThemes))
+  check('theme-no-annotation',rows.themes.length===1&&!['synopsis','sellingPoints','targetAudience'].some(k=>IMPORT_KNOWLEDGE_ANNOTATION.test(rows.themes[0][k]??'')))}
  check('outline-full-text',rows.volumes.length===1&&rows.volumes[0].summary===publishedByKind('outline').map(a=>publishedText(a)).join('\n\n'))
  check('style-full-text',equal(sorted(rows.settings.filter(a=>a.type==='STYLE').map(a=>a.content)),sorted(publishedByKind('style').length?[{style:publishedByKind('style').map(a=>publishedText(a)).join('\n\n'),referenceCases:'',dialogueMark:'DOUBLE_QUOTE',innerDialogueMark:'NONE'}]:[])))
  check('golden-finger-full-text-and-fields',equal(sorted(rows.settings.filter(a=>a.type==='GOLD_FINGER').map(a=>({name:a.name,content:a.content}))),sorted(publishedByKind('goldenFinger').map(a=>({name:a.name,content:{trigger:publishedOptionalFact(a,'trigger'),ability:publishedText(a),limitation:publishedOptionalFact(a,'limitation')}})))))

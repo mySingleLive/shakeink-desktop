@@ -183,9 +183,11 @@ export async function toStep(f:Awaited<ReturnType<typeof fixture>>,target:string
 /** Touches: one PLANT in chapter 0 linked to the first event and its narrative, one unlocatable. */
 export function touchesAi(base:Ai):Ai{return async r=>{
  if(r.intent!=='touches')return base(r)
+ // docs/536 3R: touches come only from the batch holding chapter 0, so parallel batches keep one PLANT.
  const events=r.entities?.filter(e=>e.kind==='worldline')??[],u=r.units.find(u=>u.text.includes('青铜钥匙'))
  if(!u||!events.length)return {touches:[]}
  const chapter=r.chapters!.findIndex(c=>u.start>=c.start&&u.start<c.end)
+ if(chapter!==0)return {touches:[]}
  const narrative=JSON.parse(r.instruction!.slice(r.instruction!.indexOf('[')) ) as {id:string;chapterIndex:number;eventIds:string[]}[]
  const nar=narrative.find(n=>n.chapterIndex===chapter&&n.eventIds.includes(events[0].id))
  return {touches:[

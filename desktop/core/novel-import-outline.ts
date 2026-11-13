@@ -1,5 +1,5 @@
 import {importNativeMappings} from './novel-import-semantic-state'
-import {qualifyImportKnowledgeText} from './novel-import-semantics'
+import {stripImportKnowledgeAnnotations} from './novel-import-semantics'
 import type {ImportArtifact,ImportSession} from '../shared/novel-import'
 
 function assignments(s:ImportSession){
@@ -13,7 +13,10 @@ function assignments(s:ImportSession){
  }
  return result
 }
-function text(a:ImportArtifact,mapping:ReturnType<typeof importNativeMappings>){return a.origin==='source'?a.text:qualifyImportKnowledgeText(a.text,mapping.decoded.get(a.id)!.knowledge)}
+// docs/542: the chapter outline is the artifact text as is; knowledge stays in facts.
+function text(a:ImportArtifact,_mapping:ReturnType<typeof importNativeMappings>){return a.text}
+/** A session saved before docs/542 may hold the old annotated projection; it still validates and is cleaned on publish. */
+function sameOutline(outline:string|undefined,a:ImportArtifact,mapping:ReturnType<typeof importNativeMappings>){const value=text(a,mapping);return outline===value||a.origin!=='source'&&!!outline&&outline!==value&&stripImportKnowledgeAnnotations(outline)===value}
 export function validateDetailedOutlineAssignments(s:ImportSession,requireComplete=false){
  const mapped=assignments(s)
  if(requireComplete&&s.infer&&s.selected.includes('body')&&s.targets.includes('outline')){const missing=s.chapters.flatMap((_,index)=>!mapped.has(index)?[index]:[]);if(missing.length)throw Error('仍有章节缺少细纲：'+missing.join(','))}
@@ -34,11 +37,13 @@ export function projectDetailedOutlines(s:ImportSession){
 }
 export function validateDetailedOutlines(s:ImportSession){
  if(!s.infer||!s.selected.includes('body')||!s.targets.includes('outline'))return
- const mapped=validateDetailedOutlineAssignments(s,true),mapping=importNativeMappings(s.artifacts),ids=s.detailedOutlineIds
- if(!ids||Object.keys(ids).length!==s.chapters.length)throw Error('章级细纲映射不完整或含陈旧归属')
+ // docs/539 §2.4: a wizard session may save chapters that have no chapter outline; they stay empty and unmapped.
+ const partial=s.wizardVersion===1,mapped=validateDetailedOutlineAssignments(s,!partial),mapping=importNativeMappings(s.artifacts),ids=s.detailedOutlineIds
+ if(!ids||Object.keys(ids).length!==(partial?mapped.size:s.chapters.length))throw Error('章级细纲映射不完整或含陈旧归属')
  for(const [index,chapter]of s.chapters.entries()){
   const a=mapped.get(index)
+  if(partial&&!a){if(chapter.outline||ids[index]!==undefined)throw Error('章级细纲映射不完整或含陈旧归属');continue}
   if(!a||!mapping.projectable.has(a.id)||ids[index]!==a.id)throw Error('章级细纲与最终原生映射不一致')
-  if(chapter.outline!==text(a,mapping))throw Error('章级细纲与最终复核结果不一致')
+  if(!sameOutline(chapter.outline,a,mapping))throw Error('章级细纲与最终复核结果不一致')
  }
 }

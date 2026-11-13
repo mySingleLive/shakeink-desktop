@@ -118,13 +118,13 @@ test('IA-11: symbolic and hard links make deletion refuse and keep all data',asy
  }finally{await f.dispose()}
 })
 
-test('IA-12/IA-13: a draft whose save started is kept, survives restart and retries with the same request',async()=>{
+// docs/560: deleting a started save is now allowed (SD-01..SD-19); IA-12a keeps the restart-and-retry half.
+test('IA-12a/IA-13: a draft whose save started survives restart and retries with the same request',async()=>{
  const f=await fixture();let first=true;const publish=f.options.publish
  f.options.publish=async(input:any)=>{if(first){first=false;throw Error('保存回执丢失')}return publish(input)}
  try{
   await ready(f);await f.act('start',{consent:false});for(let i=0;i<300&&f.controller.active;i++)await tick()
   const failed=(await f.current())!;assert.equal(failed.phase,'failed');assert.ok(failed.publication)
-  await assert.rejects(f.act('cancel'),/保存已开始/);assert.equal(await exists(f.dir(failed.id)),true)
   assert.equal((await f.act('choose',{mode:'files'})).view!.id,failed.id);assert.equal(f.picked,1)
   await f.controller.close();assert.equal(await exists(f.dir(failed.id)),true)
   const g=new NovelImportController(f.options);await g.initialize();const restored=(await f.current(g))!;assert.equal(restored.id,failed.id)

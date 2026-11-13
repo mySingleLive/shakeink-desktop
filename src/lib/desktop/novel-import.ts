@@ -32,7 +32,9 @@ let unsubscribe: (() => void) | undefined
 const discarded = new Set<string>()
 let abandoning: string | null = null
 let replaceReturn: ImportScreen = 'source'
-const phaseScreen = (view: ImportView | null): ImportScreen => view?.phase === 'conflicts' && view.patches.length ? 'patches' : view?.phase ?? 'source'
+// docs/539 §2.3 / 542 E2E (q-r4): a wizard at step 21 keeps its verify page on pending conflicts; the author opens them
+// with [处理矛盾] there, and [保存作品] stays reachable.
+const phaseScreen = (view: ImportView | null): ImportScreen => view?.phase === 'conflicts' && view.patches.length ? 'patches' : view?.phase === 'conflicts' && view.wizard?.step === 'verify' ? 'select' : view?.phase ?? 'source'
 
 function adopt(response: ImportResponse, show = false) {
   const previous = useNovelImportStore.getState()
@@ -88,6 +90,8 @@ export function mutateNovelImport(change: Change) {
 
 /** An unfinished import that has not started saving is deleted when it is interrupted. */
 export const abandonableImport = (view: ImportView | null) => !!view && !view.publication && !['completed', 'discarded', 'publishing'].includes(view.phase)
+/** docs/560: the author can stop and delete an import at any progress, including after its save started. */
+export const deletableImport = (view: ImportView | null) => !!view && !['completed', 'discarded'].includes(view.phase)
 const startedWizardSteps = ['import-struct','import-body','import-char','import-scene','import-item','import-world','worldline','narrative','outline','foreshadow','verify'] as const
 export function needsNovelImportCloseConfirmation(view: ImportView | null) {
   if (!view || !abandonableImport(view)) return false
@@ -114,7 +118,7 @@ export async function abandonNovelImport() {
   abandoning = view.id
   try {
     const response = await mutateNovelImport({ type: 'cancel' })
-    if (response) { hideNovelImport(); return true }
+    if (response) { hideNovelImport(); if (response.retained) toast.warning(response.retained); if (response.saved) toast.info(response.saved); return true }
     const state = useNovelImportStore.getState()
     if (!state.view || state.view.id !== view.id) { if (state.error) toast.error(state.error); hideNovelImport(); return false }
     return false

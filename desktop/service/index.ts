@@ -22,6 +22,7 @@ import {getDatabaseContext,runInDatabaseContext} from './context'
 import {loadDatabaseSeed} from './database/seed'
 import {ImportAiJobs,runImportAi} from './novel-import-ai'
 import {publishNovelImport,importLeaseTarget} from './novel-import-publish'
+import {discardNovelImport} from './novel-import-discard'
 import type {ImportAiRequest,ImportPublishInput,ImportReceipt} from '../shared/novel-import'
 import {z} from 'zod'
 
@@ -36,7 +37,8 @@ const responses = new Map<string, ActiveResponse>()
 const starting = new Map<string, AbortController>()
 const pendingStarts = new Set<Promise<void>>()
 const importJobs=new ImportAiJobs()
-const importPublications=new Map<string,Promise<ImportReceipt>>()
+/** Saves and discards (key `discard:<id>`) in flight: counted by task-status, awaited by stop-tasks and close. */
+const importPublications=new Map<string,Promise<unknown>>()
 let closing = false
 let closedForMaintenance = false
 let stoppingImports=false
@@ -117,7 +119,7 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
   if(method==='novel-import-lease-target')return importLeaseTarget(works,data as ImportPublishInput,()=>{
     if(!closedForMaintenance||closing||responses.size||starting.size||pendingStarts.size||localAttemptCount()||importJobs.active||importPublications.size)throw Error('本地数据尚未关闭')
   })
-  if(["start","image-asset","create-work","open-work","novel-import-ai","novel-import-publish"].includes(method)){
+  if(["start","image-asset","create-work","open-work","novel-import-ai","novel-import-publish","novel-import-discard"].includes(method)){
     if(closing)throw Error("本地服务正在关闭")
     if(stoppingImports&&method.startsWith('novel-import-'))throw Error('导入任务正在停止')
     closedForMaintenance=false
@@ -130,8 +132,16 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
   if(method==='novel-import-publish'){
     const input=data as ImportPublishInput,id=z.uuid().parse(input?.session?.id)
     if(importPublications.has(id))throw Error('导入正在保存，请等待原请求完成')
+    if(importPublications.has('discard:'+id))throw Error('正在删除这次导入')
     const done=Promise.resolve().then(()=>publishNovelImport(works,input,()=>{if(closedForMaintenance)throw Error('本地数据已关闭')})).finally(()=>{importPublications.delete(id)})
     importPublications.set(id,done);return done
+  }
+  if(method==='novel-import-discard'){
+    const id=z.uuid().parse((data as {requestId?:unknown})?.requestId),key='discard:'+id
+    if(importPublications.has(id))throw Error('导入正在保存，请等待原请求完成')
+    if(importPublications.has(key))throw Error('正在删除这次导入')
+    const done=Promise.resolve().then(()=>discardNovelImport(works,data,()=>{if(closedForMaintenance)throw Error('本地数据已关闭')})).finally(()=>{importPublications.delete(key)})
+    importPublications.set(key,done);return done
   }
   if(method==="protected-directories")return works.protectedDirectories()
   if(method==="image-asset"){

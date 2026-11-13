@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {needsNovelImportCloseConfirmation} from '../../src/lib/desktop/novel-import'
+import {abandonableImport,deletableImport,needsNovelImportCloseConfirmation} from '../../src/lib/desktop/novel-import'
 import {WIZARD_STEPS,type WizardStep,type WizardTask} from '../../desktop/shared/novel-import-wizard'
 import {IMPORT_KINDS,type ImportPhase,type ImportView} from '../../desktop/shared/novel-import'
 
@@ -51,4 +51,14 @@ for(const step of monitored)for(const state of ['pending','skipped'] as const)te
 test('NICC-08: task progress independently marks a partial import',()=>{
  for(const state of ['running','done','failed','paused','skipped'] as const){const current=wizardView();current.wizard!.tasks=[{id:'e-0000000000000001',kind:'entity',candidateId:'c-0000000000000001',state,attempts:1} as WizardTask];assert.equal(needsNovelImportCloseConfirmation(current),true,state)}
  const current=wizardView();current.wizard!.tasks=[{id:'e-0000000000000001',kind:'entity',candidateId:'c-0000000000000001',state:'waiting',attempts:0} as WizardTask];assert.equal(needsNovelImportCloseConfirmation(current),false)
+})
+
+// docs/560 R1: deleting is always offered; automatic deletion on interruption keeps its old rule.
+test('SD-34: deletableImport is true until completion; abandonableImport is unchanged',()=>{
+ assert.equal(deletableImport(null),false);assert.equal(abandonableImport(null),false)
+ for(const phase of ['source','recognizing','select','confirm','running','paused','conflicts','failed','publishing','completed','discarded'] as const)for(const publication of [false,true]){
+  const current=view(phase);if(publication)current.publication={requestId:current.id}
+  assert.equal(deletableImport(current),!['completed','discarded'].includes(phase),`${phase} ${publication}`)
+  assert.equal(abandonableImport(current),!publication&&!['completed','discarded','publishing'].includes(phase),`${phase} ${publication}`)
+ }
 })

@@ -32,6 +32,17 @@ export interface WorkImportInitializer { importHash:string; initialize(novelId:s
 interface Connection { engine: PGlite; db: PrismaClient; assets:WorkspaceAssets; unlock: () => Promise<void>; assertCurrent():void; assertLease():Promise<void>; storagePath:string }
 interface Slot { connection: Promise<Connection>; active: number; lastUsed: number }
 async function identity(path: string) { const info = await stat(path, { bigint: true }); return { device: String(info.dev), inode: String(info.ino) } }
+function alive(pid:number){try{process.kill(pid,0);return true}catch(error){return (error as NodeJS.ErrnoException).code!=="ESRCH"}}
+/** Remove a directory tree without following symbolic links. */
+async function removeTree(path:string):Promise<void>{
+  const info=await lstat(path,{bigint:true})
+  if(info.isSymbolicLink()||!info.isDirectory()){await unlink(path);return}
+  const names=await readdir(path),again=await lstat(path,{bigint:true})
+  // The directory must not be swapped (e.g. for a link) between the check and the listing.
+  if(again.isSymbolicLink()||again.dev!==info.dev||again.ino!==info.ino)throw Error("作品目录内容已变化，已停止删除")
+  for(const name of names)await removeTree(join(path,name))
+  await rmdir(path)
+}
 async function regularFile(path: string) { const info = await lstat(path); if (!info.isFile() || info.isSymbolicLink()) throw new Error("作品元数据或数据库路径无效") }
 function assertAliasDirectory(path:string,root:RootIdentity){
   const info=lstatSync(path,{bigint:true})
@@ -194,7 +205,8 @@ export class Workspaces {
         return previous
       }
       let manifest: z.infer<typeof manifestSchema>,names:Readonly<BrandNames>=CURRENT_NAMES
-      const contents = await readdir(canonical)
+      // Finder writes .DS_Store as soon as a folder is shown; it is not work content (docs/560).
+      const contents = (await readdir(canonical)).filter(name => name !== ".DS_Store")
       assertRegistration()
       if (contents.length) {
         if (!BRAND_NAMES.some(names=>contents.includes(names.workManifest))) throw new Error("创建作品需要空目录，现有作品请使用打开")
@@ -242,6 +254,56 @@ export class Workspaces {
         assertRegistration()
         return record
       } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
+    })
+  }
+  /** docs/560: undo what an unfinished import save wrote in its reserved folder. Only entries this request
+   * created are removed, the manifest last; anything unexpected keeps the folder and is reported. */
+  async discardImportCreation(input:{requestId:string;title:string;importHash:string},assertCurrent:()=>void):Promise<{state:'none'|'work'|'cleaned'|'kept';reason?:string}>{
+    if(!/^[a-f0-9]{64}$/.test(input.importHash))throw Error('导入指纹无效')
+    const fingerprint=requestHash({title:input.title,importHash:input.importHash})
+    const kept=(reason:string)=>({state:'kept' as const,reason})
+    return this.serialize(async()=>{try{
+      assertCurrent()
+      if((await this.catalog.read()).value.some(row=>row.requestId===input.requestId))return {state:'work' as const}
+      const reservation=await this.creationReservations.find(input.requestId);assertCurrent()
+      if(!reservation)return {state:'none' as const}
+      if(reservation.requestHash!==fingerprint)return {state:'kept' as const,reason:'目录预留属于其他导入请求'}
+      const release=async()=>{await this.creationReservations.release({requestId:reservation.requestId,requestHash:reservation.requestHash,selection:reservation.selection},assertCurrent)}
+      let root:RootIdentity
+      // Only a folder that is really gone releases its reservation; any other read error keeps it (docs/563).
+      try{root=await directoryIdentity(await realpath(reservation.selection.path))}
+      catch(error){const code=(error as NodeJS.ErrnoException).code;if(code==='ENOENT'||code==='ENOTDIR'){await release();return {state:'none' as const}}return kept('无法读取目标目录')}
+      if(root.path!==reservation.selection.path||root.device!==reservation.selection.device||root.inode!==reservation.selection.inode){await release();return {state:'none' as const}}
+        const entries=await readdir(root.path),found=BRAND_NAMES.filter(n=>entries.includes(n.workManifest))
+        if(found.length>1)return kept('目录中同时有新旧两种作品清单，无法确认归属')
+        const names=found[0]
+        if(!names){await release();return {state:'none' as const}}
+        const manifestPath=join(root.path,names.workManifest),manifestInfo=await lstat(manifestPath)
+        if(!manifestInfo.isFile()||manifestInfo.isSymbolicLink())return kept('作品清单路径无效')
+        const manifest=manifestSchema.safeParse(await readMetadata(manifestPath,64*1024))
+        if(!manifest.success||manifest.data.requestId!==input.requestId||manifest.data.requestHash!==fingerprint)return kept('目录已属于其他作品')
+        if(manifest.data.phase==='ready')return kept('目录中的作品已完成建库，尚未登记到作品列表；请用“打开作品目录”找回')
+        const temporary=/^\.[0-9a-f-]{36}\.tmp$/u
+        const known=new Set([names.workManifest,'database','assets',names.storage,names.storageRequired,names.lock])
+        const ours=entries.filter(name=>known.has(name)||temporary.test(name))
+        const foreign=entries.filter(name=>!ours.includes(name))
+        if(foreign.some(name=>name.startsWith('.shakeink')||name.startsWith('.xuanxiang')||name===names.restores||name===names.preserved))return kept('目录中有无法确认来源的作品数据')
+        for(const name of ours){const info=await lstat(join(root.path,name));if(info.isSymbolicLink())return kept('目录中有符号链接，无法确认归属')}
+        const lock=join(root.path,names.lock)
+        if(ours.includes(names.lock)){
+          // A lock is removed only when it holds exactly a readable owner.json from this host whose process is gone or is this one.
+          const lockEntries=await readdir(lock),owner=lockEntries.length===1&&lockEntries[0]==='owner.json'?await readMetadata(join(lock,'owner.json'),4096).catch(()=>null) as {pid?:unknown;host?:unknown}|null:null
+          if(!owner||owner.host!==hostname()||typeof owner.pid!=='number'||owner.pid!==process.pid&&alive(owner.pid))return kept('作品目录正在使用或目录锁无法确认')
+        }
+        const guard=async()=>{assertCurrent();await assertDirectory(root)}
+        for(const name of ours.filter(name=>temporary.test(name))){await guard();await unlink(join(root.path,name))}
+        for(const name of ['assets','database']){if(!ours.includes(name))continue;await guard();await removeTree(join(root.path,name))}
+        for(const name of [names.storage,names.storageRequired]){if(!ours.includes(name))continue;await guard();await unlink(join(root.path,name))}
+        if(ours.includes(names.lock)){await guard();await removeTree(lock)}
+        await guard();await unlink(manifestPath)
+        await release()
+        return {state:'cleaned' as const}
+      }catch(error){return kept(error instanceof Error&&/^[\u4e00-\u9fa5]/u.test(error.message)&&error.message.length<=200?error.message:'目录内容无法删除')}
     })
   }
   async open(selection: DirectoryProof): Promise<WorkRecord> {

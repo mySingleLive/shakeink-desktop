@@ -335,26 +335,27 @@ test('NIW-C61: all eight checks pass and step 21 moves on to publishing',async()
   await f.act('wizard-next');const done=await f.settle();assert.equal(done.phase,'completed');assert.ok(f.published)
  }finally{await f.dispose()}
 })
-test('NIW-C55/C62: a broken relationship fails its check, blocks saving, and retry-kind returns to that import',async()=>{
+// docs/539 (user 2026-11-09): verify fixes a dangling relationship itself and saving is always allowed; retry-kind still works.
+test('NIW-C55/C62: a broken relationship is fixed by verify, saving stays allowed, and retry-kind returns to that import',async()=>{
  const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(fullAi(f))
  try{
   await toVerify(f)
   const c=await injectJournalEdit(f,j=>{const a=j.artifacts.find(a=>a.kind==='character')!;a.facts.relationships=JSON.stringify([{target:'无名',description:'旧识',characterId:'c-ffffffffffffffff'}])})
   try{
    const v=await verifyAgain(c),rel=v.wizard!.checks!.find(x=>x.key==='relationships')!
-   assert.equal(rel.ok,false);assert.ok(rel.detail.length>0)
-   await assert.rejects(c.act({type:'wizard-next',id:v.id,revision:v.revision}),/处理/)
+   assert.equal(rel.ok,true,rel.detail);assert.ok(v.wizard!.dropped.some(d=>d.kind==='verify'&&/关系指向未导入的角色/.test(d.reason)))
    await c.act({type:'wizard-retry-kind',id:v.id,revision:v.revision,kind:'character'})
    const w=(await c.act({type:'current'})).view!;assert.equal(w.wizard!.step,'import-char');assert.ok(w.wizard!.candidates.character!.every(x=>x.selected))
   }finally{await c.close()}
  }finally{await rm(f.root,{recursive:true,force:true});await rm(f.target,{recursive:true,force:true})}
 })
 test('NIW-C60/C63: a review conflict opens the decision flow without rerunning the whole book',async()=>{
- const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false
- f.setAi(async r=>{if(r.phase==='review'&&!conflicted){const a=r.artifacts.find(a=>a.kind==='character');const u=r.units.find(u=>a&&u.text.includes(a.name));if(a&&u){conflicted=true;return {conflicts:[{id:'cf-1',type:'setting-body',kind:'character',entity:a.name,field:'text',source:{text:a.text,value:a.text,artifactId:a.id},candidate:{text:'另一种说法',value:'另一种说法'},evidence:[{unitId:u.id,quote:a.name}],status:'pending',hash:'h'}]}}}return ai(r)})
+ const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false,held:string|undefined
+ f.setAi(async r=>{if(r.phase==='review'&&(!conflicted||held&&r.artifacts.length===1&&r.artifacts[0].id===held)){const a=r.artifacts.find(a=>a.kind==='character');const u=r.units.find(u=>a&&u.text.includes(a.name));if(a&&u){conflicted=true;held=a.id;return {conflicts:[{id:'cf-1',type:'setting-body',kind:'character',entity:a.name,field:'text',source:{text:a.text,value:a.text,artifactId:a.id},candidate:{text:'另一种说法',value:'另一种说法'},evidence:[{unitId:u.id,quote:a.name}],status:'pending',hash:'h'}]}}}return ai(r)})
  try{
   const v=await toVerify(f);assert.equal(v.phase,'conflicts');assert.equal(v.wizard!.checks!.find(c=>c.key==='consistency')!.ok,false)
   const before=f.requests.length
+  held=undefined
   await f.act('resolve',{conflictId:v.conflicts.find(c=>c.status==='pending')!.id,choice:'source',explanation:'以资料为准'});const after=await f.settle()
   const resent=f.requests.slice(before);assert.ok(!resent.some(r=>r.phase==='analyze'&&!r.intent&&['character','scene','item','world','worldline','narrative','outline'].includes(r.kind!)),'no whole-book reanalysis')
   assert.equal(after.wizard!.step,'verify');assert.ok(after.wizard!.checks!.every(c=>c.ok))
@@ -524,14 +525,15 @@ test('NIW-C67b/F7: turning inference back on at step 4 clears the skip markers i
  }finally{await f.dispose()}
 })
 test('NIW-C19/F2: accepting a body patch shifts chapters, keeps the scope and lists, and imports again from step 9',async()=>{
- const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false
+ const f=await legacySceneFixture(filesF(),rosterAi());const ai=fullAi(f);let conflicted=false,held:string|undefined
  f.setAi(async r=>{
-  if(r.phase==='review'&&!conflicted){const a=r.artifacts.find(a=>a.kind==='character');const u=r.units.find(u=>a&&u.text.includes(a.name));if(a&&u){conflicted=true;return {conflicts:[{id:'cf-1',type:'setting-body',kind:'character',entity:a.name,field:'text',source:{text:a.text,value:a.text,artifactId:a.id},candidate:{text:'另一种说法',value:'另一种说法'},evidence:[{unitId:u.id,quote:a.name}],status:'pending',hash:'h'}]}}}
+  if(r.phase==='review'&&(!conflicted||held&&r.artifacts.length===1&&r.artifacts[0].id===held)){const a=r.artifacts.find(a=>a.kind==='character');const u=r.units.find(u=>a&&u.text.includes(a.name));if(a&&u){conflicted=true;held=a.id;return {conflicts:[{id:'cf-1',type:'setting-body',kind:'character',entity:a.name,field:'text',source:{text:a.text,value:a.text,artifactId:a.id},candidate:{text:'另一种说法',value:'另一种说法'},evidence:[{unitId:u.id,quote:a.name}],status:'pending',hash:'h'}]}}}
   if(r.phase==='patch'){const u=r.units.find(u=>u.text.includes('之夜'))!,at=u.start+u.text.indexOf('之夜');return {patches:[{id:'p-1',conflictId:r.conflict!.id,workingRevision:r.workingRevision!,start:at,end:at+2,before:'之夜',after:'之晨',reason:'与资料一致'}]}}
   return ai(r)})
  try{
   let v=await toVerify(f);assert.equal(v.phase,'conflicts')
   const before=await f.journal(),deselected=before.wizard!.candidates.character!.find(c=>!c.selected)?.id
+  held=undefined
   await f.act('resolve',{conflictId:v.conflicts.find(c=>c.status==='pending')!.id,choice:'rewrite'});v=await f.settle()
   assert.equal(v.patches.length,1,v.error)
   const j0=await f.journal();const p=j0.patches[0]
@@ -620,7 +622,8 @@ test('NIW-C62b/F10: retry-kind recomputes lines and keeps foreshadows; a failed 
   const j=await f.journal();assert.equal(j.artifacts.filter(a=>a.kind==='foreshadow').length,foreshadows,'foreshadows rebuilt');assert.ok(v.wizard!.checks!.every(c=>c.ok),JSON.stringify(v.wizard!.checks))
   failReview=true;await f.act('wizard-retry-kind',{kind:'item'});for(let i=0;i<30;i++){v=await f.settle();if(v.wizard!.step==='verify')break;await f.act('wizard-next')}
   assert.equal(v.wizard!.step,'verify');assert.equal(v.wizard!.checks!.find(c=>c.key==='consistency')!.ok,false)
-  failReview=false;await f.act('wizard-redetect');v=await f.settle()
+  // docs/539: a review that keeps failing is recorded; [修复] (wizard-verify-repair) retries it.
+  failReview=false;await f.act('wizard-verify-repair');v=await f.settle()
   assert.ok(v.wizard!.checks!.every(c=>c.ok),JSON.stringify(v.wizard!.checks));await f.act('wizard-next');assert.equal((await f.settle()).phase,'completed')
  }finally{await f.dispose()}
 })

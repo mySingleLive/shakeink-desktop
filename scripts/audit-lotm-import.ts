@@ -9,7 +9,7 @@ import {importHash,importPlanHash,importBudgetAudit,sourceBody,validateImportCov
 import {validateImportBudgetState} from '../desktop/core/novel-import-budget-policy'
 import {importSemanticAudit,importSemanticInputHash,importSemanticDecisionHash,importSemanticResultHash,importNativeMappings,validateImportSemanticState} from '../desktop/core/novel-import-semantic-state'
 import {importReviewTaskKeys} from '../desktop/core/novel-import-review-tasks'
-import {qualifyImportKnowledgeText} from '../desktop/core/novel-import-semantics'
+import {stripImportKnowledgeAnnotations} from '../desktop/core/novel-import-semantics'
 import {loadMigrations} from '../desktop/service/database/migrations'
 import {validatePlanning} from '../src/lib/planning/domain'
 import {realNovelSemanticAssertions} from './real-novel-semantic-assertions'
@@ -122,7 +122,7 @@ export function verifyNativeRows(s:ImportSession,r:any,p:AuditPrepared):AuditRes
   check('1394-native-chapters-source-order',r.chapters.length===1394&&r.chapters.every((c:any,i:number)=>{const e=p.chapters[i];return c.volumeId===r.volumes[e.volume-1]?.id&&c.index===e.positionInVolume&&c.title===e.title&&c.content===p.body.slice(e.start,e.end)&&sha(c.content)===e.expectedUtf8Sha256&&c.status==='WRITTEN'&&c.wordCount===[...c.content].length}))
   check('native-prepared-body-byte-equality',r.chapters.map((c:any)=>c.content).join('')===p.body)
   check('native-original-body-after-exact-header-removal',r.chapters.map((c:any,i:number)=>{const expected=p.chapters[i];if(!expected)return '';const n=expected.insertedHeaderCharacters;if(n&&c.content.slice(0,n)!==p.headers[expected.volume-1].text)return '\0INVALID_HEADER';return c.content.slice(n)}).join('')===p.main)
-  const mapping=importNativeMappings(s),artifacts=s.artifacts.filter(a=>mapping.projectable.has(a.id)),qualified=(a:ImportArtifact)=>a.origin==='source'?a.text:qualifyImportKnowledgeText(a.text,mapping.decoded.get(a.id)!.knowledge)
+  const mapping=importNativeMappings(s),artifacts=s.artifacts.filter(a=>mapping.projectable.has(a.id)),qualified=(a:ImportArtifact)=>a.origin==='source'?a.text:stripImportKnowledgeAnnotations(a.text)
   check('outline-full-source-text-first-volume',r.volumes[0]?.summary===artifacts.filter(a=>a.kind==='outline').map(qualified).join('\n\n')&&r.volumes.slice(1).every((v:any)=>v.summary===''))
   const multi=(values:unknown[])=>values.map(importHash).sort()
   check('items-exact-complete-name-text-multiset',equal(multi(r.items.map((x:any)=>({name:x.name,text:x.description}))),multi(artifacts.filter(a=>a.kind==='item').map(a=>({name:a.name,text:qualified(a)})))))
