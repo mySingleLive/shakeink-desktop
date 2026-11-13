@@ -1,7 +1,7 @@
 import {createHash,randomUUID} from "node:crypto"
 import {constants} from "node:fs"
-import {open,lstat,realpath,stat} from "node:fs/promises"
-import {join} from "node:path"
+import {open,lstat,realpath,stat,unlink} from "node:fs/promises"
+import {dirname,join} from "node:path"
 import {z} from "zod"
 import {draftSnapshotSchema,type DraftSnapshot,type DraftReceipt} from "../shared/drafts"
 import {atomicWrite,CommitDurabilityError,type StoreOptions} from "../core/versioned-store"
@@ -98,6 +98,16 @@ export class DraftJournal {
    if(JSON.stringify(committed)!==JSON.stringify(next))throw new Error("草稿文件已变化，落盘尚未确认")
    this.uncertain=null;captured!.sequence=snapshot.revision
    return{revision:next.revision,digest:next.digest,clientRevision:snapshot.revision}
+  })
+ }
+ /** Force close without saving: remove the retained recovery record. Only an
+  * owned regular file is removed; a missing file is already discarded. */
+ async discard():Promise<void>{
+  return this.enqueue(async()=>{
+   const path=await this.path();await this.fileSafe(path)
+   try{await unlink(path)}catch(error){if((error as NodeJS.ErrnoException).code!=="ENOENT")throw error}
+   const handle=await open(dirname(path),"r");try{await handle.sync()}catch(error){if(process.platform!=="win32")throw error}finally{await handle.close()}
+   this.uncertain=null
   })
  }
  async read():Promise<DraftSnapshot|null>{return this.enqueue(async()=>structuredClone((await this.readDisk())?.snapshot??null))}

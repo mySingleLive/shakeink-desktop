@@ -10,8 +10,10 @@ export interface CloseServices {
  /** A previous handoff may have switched storage. Never flush its old renderer again. */
  closedHandoffPending?(): boolean
  afterClose?(): Promise<void>
- failed(): Promise<"retry" | "export" | "cancel">
+ failed(): Promise<"retry" | "export" | "discard" | "cancel">
  exportDraft(owner: CloseOwner): Promise<void>
+ /** User chose to close without saving: delete retained recovery drafts after data is closed. */
+ discardDrafts?(): Promise<void>
  commit(intent: CloseIntent): void | Promise<void>
  release(): void | Promise<void>
 }
@@ -36,14 +38,16 @@ export class CloseCoordinator {
    let dataClosed=this.services.closedHandoffPending?.()??false
    if (!dataClosed && await this.services.busy() && !await this.services.confirmStop()) return false
    if (!current()) return false
-   let retry = false, stopped = false
+   let retry = false, stopped = false, discard = false, discarded = false
    for (;;) {
     try {
      if (!dataClosed && !stopped) { await this.services.stopTasks(); stopped = true }
      if (!current()) return false
-     if (!dataClosed && owner) await this.services.flush(owner, retry)
+     if (!dataClosed && owner && !discard) await this.services.flush(owner, retry)
      if (!current()) return false
      if (!dataClosed) {await this.services.closeData();dataClosed=true}
+     if (discard && !discarded) { await this.services.discardDrafts?.(); discarded = true }
+     if (!current()) return false
      await this.services.afterClose?.()
      if (!current()) return false
      const committedIntent=this.intent
@@ -62,6 +66,8 @@ export class CloseCoordinator {
       const choice = await this.services.failed()
       if (!current() || choice === "cancel") return false
       if (choice === "retry") { retry = true; break }
+      // Explicit force close: skip the failed save; data still closes normally.
+      if (choice === "discard") { discard = true; break }
       if (owner) { try { await this.services.exportDraft(owner) } catch { /* Retain the failed close and offer retry/export/cancel again. */ } }
      }
     }
