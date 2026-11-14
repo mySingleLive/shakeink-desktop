@@ -8094,5 +8094,65 @@
       "publicationVerified": false,
       "reopenVerified": false
     }
+  },
+  "novelImportRosterFaultIsolation20261113": {
+    "date": "2026-11-13",
+    "requirements": [
+      "单个角色或单个正文片段识别失败不得升级为整体角色识别失败并阻塞导入",
+      "使用《诡秘之主》第一卷进行真实导入测试",
+      "截图中的来源误报必须修复，同时保留真实来源内容变更拦截"
+    ],
+    "status": "implemented-and-real-roster-verified",
+    "actualFailure": "失败会话 d9d8646f-9233-41cb-9062-b9e68dd159ed 的源 SHA-256、device/inode/size/mtime 均不变，仅 ctime 改变；修复后 verifyNovelSources 已通过并仅刷新 proof.ctime。",
+    "implementation": [
+      "desktop/main/novel-import-files.ts",
+      "desktop/service/novel-import-ai.ts",
+      "desktop/main/novel-import.ts",
+      "desktop/core/novel-import.ts",
+      "desktop/core/novel-import-wizard-state.ts",
+      "desktop/shared/novel-import.ts",
+      "src/components/desktop/NovelImportWizard.tsx"
+    ],
+    "reviews": "独立技术方案审核、独立测试矩阵审核、独立代码审核均完成；驱动审核提出的独立第一卷正文 hash 与空清单假通过风险已修复。",
+    "testIds": [
+      "NI-F07b",
+      "NI-F07c",
+      "CP-F03-grant-ctime",
+      "RA-06",
+      "RA-06b",
+      "WR-M05",
+      "RS-08",
+      "RS-09",
+      "RS-10",
+      "NIW-U36b",
+      "NIW-U36c",
+      "NIW-B14b"
+    ],
+    "results": {
+      "typecheck": "passed on Node v24.18.0",
+      "desktopBuild": "passed on Node v24.18.0",
+      "relatedRegression": "Final related unit files 201/201 passed; legacy scene-identity UI 19/19 passed; SI-06 1/1 passed. The separate wizard-publish integration remains blocked by assertSceneRosterCanonical / 模型返回的场景清单与完整提及资料不一致；单独重跑仍失败，未修改该无关协议。",
+      "browserRegression": "53/53 passed; final NIW-B14/B14b rerun after warning assertions 2/2 passed",
+      "fullSuite": "4842 tests, 4782 passed, 59 failed, 1 cancelled (798.3s). Nineteen legacy-view failures caused by missing dropped fixtures and the old SI-06 whole-packet rejection assertion were fixed after this run and rerun green (19/19 and 1/1). Remaining failures span unmodified scene identity, backup/root migration, model lifecycle and release tests; full-suite green is not claimed."
+    },
+    "realFirstVolume": {
+      "driver": "scripts/run-lotm-wizard-import.mjs with LOTM_ROSTER_ONLY=1 and LOTM_FIRST_VOLUME_ONLY=1",
+      "evidence": "/private/tmp/shakeink-lotm-first-volume-20261113/run-r4/evidence/roster-r4/roster-timing.json",
+      "screenshot": "/private/tmp/shakeink-lotm-first-volume-20261113/run-r4/evidence/roster-r4/005-detect-char-done.png",
+      "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+      "chapters": 213,
+      "grantedIndices": [0, 212],
+      "workingUnits": 760,
+      "coveredUnits": 760,
+      "modelCallsFulfilled": 19,
+      "candidates": 136,
+      "incomplete": 0,
+      "droppedInvalid": 0,
+      "droppedUnlocatable": 1,
+      "retry": "not-exercised; deterministic RS-08 covers retry isolation",
+      "driverElapsedMs": 15991,
+      "sourceStableIdentityAndHashUnchanged": true,
+      "scope": "仅执行到识别角色，不宣称角色实体导入、后续步骤或发布已验收"
+    }
   }
 }

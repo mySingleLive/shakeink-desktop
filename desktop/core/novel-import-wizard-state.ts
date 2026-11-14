@@ -22,7 +22,7 @@ export interface ImportWizardState {
  imageGrants:Partial<Record<'character'|'scene'|'item',WizardImageGrant>>
  tasks:WizardTask[]
  skipped:{taskId:string;label:string}[]
- dropped:{kind:'touch'|'materialRef'|'missingTarget'|'relationship'|'parent'|'settings'|'lines'|'verify';label:string;reason:string}[]
+ dropped:{kind:'touch'|'materialRef'|'missingTarget'|'relationship'|'parent'|'settings'|'lines'|'verify'|'roster';label:string;reason:string;rosterKind?:'character'|'scene'|'item'|'world';invalid?:number;unlocatable?:number;unfinishedUnits?:number}[]
  /** docs/539: step-21 review packets that still failed after 3 attempts, conflict repair attempts, automatic fixes. */
  verify?:WizardVerifyState
  deferredConflicts:string[]
@@ -38,6 +38,12 @@ export interface ImportWizardState {
  rosterStash?:Partial<Record<'character'|'scene'|'item'|'world',{unitId?:string;name:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';parent?:string;itemType?:string;important?:boolean;category?:'item'|'character'|'place'|'organization'|'concept'|'other';parallel?:boolean;settings?:{settingType:'LEVEL_SYSTEM'|'POWER_SYSTEM'|'CONCEPT'|'MAP'|'FACTION'|'SOCIETY'|'CULTURE'|'GEOGRAPHY'|'WORLD_HISTORY';name:string}[]}[]>>
 }
 export function emptyWizardState():ImportWizardState{return {version:1,sceneIdentityVersion:1,step:'files',stepState:{entry:'done',files:'waiting'},candidates:{},images:{avatar:false,portrait:false,exterior:false,interior:false,icon:false},imageGrants:{},tasks:[],skipped:[],dropped:[],deferredConflicts:[]}}
+export function recordWizardRosterDropped(w:ImportWizardState,kind:'character'|'scene'|'item'|'world',counts:{droppedInvalid?:number;droppedUnlocatable?:number}={},unfinishedUnits?:number){
+ const previous=w.dropped.find(d=>d.kind==='roster'&&d.rosterKind===kind),invalid=(previous?.invalid??0)+(counts.droppedInvalid??0),unlocatable=(previous?.unlocatable??0)+(counts.droppedUnlocatable??0),unfinished=unfinishedUnits??previous?.unfinishedUnits
+ if(!previous&&!invalid&&!unlocatable&&unfinished===undefined)return
+ const reasons=[invalid?`${invalid} 项结构无效`:'',unlocatable?`${unlocatable} 项无法在原文定位`:'',unfinished!==undefined?`${unfinished} 个正文片段未完成识别`:''].filter(Boolean),label={character:'角色识别',scene:'场景识别',item:'物品识别',world:'世界观识别'}[kind]
+ w.dropped=[...w.dropped.filter(d=>d!==previous),{kind:'roster',rosterKind:kind,label,reason:'已跳过：'+reasons.join('、'),invalid,unlocatable,...(unfinished!==undefined?{unfinishedUnits:unfinished}:{})}]
+}
 
 const text=(max:number)=>z.string().max(max).refine(v=>v.isWellFormed(),'字符无效')
 const candidateId=z.string().regex(/^[a-z]{1,2}-[0-9a-f]{16}$/u)
@@ -50,7 +56,7 @@ const stepState=z.enum(['pending','running','waiting','done','skipped','failed']
 const task=z.object({id:taskId,kind:z.enum(['entity','image','settings']),candidateId:candidateId.optional(),imageKind:z.enum(WIZARD_IMAGE_KINDS).optional(),settingsKind:z.enum(['theme','style','goldenFinger','trope']).optional(),dependsOn:taskId.optional(),state:z.enum(['waiting','running','done','failed','paused','skipped']),attempts:index.max(1000),error:text(400).optional(),resultSha256:z.string().regex(/^[0-9a-f]{64}$/u).optional(),image:z.object({mime:z.enum(['image/png','image/jpeg','image/webp']),bytes:index.max(WIZARD_LIMITS.imageBytes),prompt:text(8000)}).strict().optional()}).strict()
 const record=z.object({taskId,label:text(400)}).strict()
 const lineRepair=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000)}).strict()
-const dropped=z.object({kind:z.enum(['touch','materialRef','missingTarget','relationship','parent','settings','lines','verify']),label:text(400),reason:text(400)}).strict()
+const dropped=z.object({kind:z.enum(['touch','materialRef','missingTarget','relationship','parent','settings','lines','verify','roster']),label:text(400),reason:text(400),rosterKind:z.enum(['character','scene','item','world']).optional(),invalid:index.max(1_000_000).optional(),unlocatable:index.max(1_000_000).optional(),unfinishedUnits:index.max(1_000_000).optional()}).strict().refine(d=>d.kind==='roster'?!!d.rosterKind:!d.rosterKind&&d.invalid===undefined&&d.unlocatable===undefined&&d.unfinishedUnits===undefined)
 const structureItem=z.object({start:index,end:index,title:text(300).min(1),volume:text(300).optional()}).strict()
 export const importWizardStateSchema=z.object({
  version:z.literal(1),step:z.enum(WIZARD_STEPS),stepState:z.partialRecord(z.enum(WIZARD_STEPS),stepState),stepError:text(400).optional(),

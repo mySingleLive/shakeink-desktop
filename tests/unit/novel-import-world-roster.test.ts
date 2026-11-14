@@ -46,11 +46,11 @@ test('WR-S01: a world named nowhere is located by one of its settings',async()=>
  assert.deepEqual(out.roster,[{name:'主世界',aliases:[],settings:[{settingType:'FACTION',name:'甲会'}],evidence:{unitId:'u1',quote:'甲会'}}])
 })
 test('WR-S02: a world whose name and settings are all absent is dropped',async()=>{
- assert.deepEqual((await run({roster:[{name:'主世界',aliases:[],settings:[{settingType:'FACTION',name:'无此会'}]}]})).roster,[])
+ const out=await run({roster:[{name:'主世界',aliases:[],settings:[{settingType:'FACTION',name:'无此会'}]}]});assert.deepEqual(out.roster,[]);assert.deepEqual(out.rosterRepairs,{droppedInvalid:0,droppedUnlocatable:1})
 })
-test('WR-S03: parallel is an optional boolean',async()=>{
+test('WR-S03: parallel is an optional boolean and one bad value drops only its entry',async()=>{
  assert.equal((await run({roster:[{name:'乙界',aliases:[],parallel:true,settings:[]}]})).roster![0].parallel,true)
- await assert.rejects(run({roster:[{name:'乙界',aliases:[],parallel:'yes',settings:[]}]}))
+ const out=await run({roster:[{name:'乙界',aliases:[],parallel:'yes',settings:[]},{name:'乙界',aliases:[],parallel:true,settings:[]}]});assert.equal(out.roster!.length,1);assert.deepEqual(out.rosterRepairs,{droppedInvalid:1,droppedUnlocatable:0})
 })
 test('WR-S04: a located world name keeps its own evidence',async()=>{
  assert.deepEqual((await run({roster:[{name:'乙界',aliases:[],settings:[{settingType:'FACTION',name:'甲会'}]}]})).roster![0].evidence,{unitId:'u2',quote:'乙界'})
@@ -149,11 +149,16 @@ test('WR-M04: an unfinished roster reply is re-run on the same units and the ste
   assert.equal(v.wizard!.stepState['detect-char'],'waiting',v.wizard!.stepError);assert.equal(v.wizard!.candidates.character!.length,3)
  }finally{await f.dispose()}
 })
-test('WR-M05: a unit that keeps failing ends the step after bounded attempts',async()=>{
- let calls=0
- const f=await fixture(filesF(),rosterAi({'roster:character':()=>{calls++;throw Error('模型输出未完整结束')}}));try{
-  await toTree(f);await f.act('wizard-next',{consent:true});const v=await f.settle()
-  assert.equal(v.wizard!.stepState['detect-char'],'failed');assert.equal(v.wizard!.stepError,'模型输出未完整结束');assert.ok(calls>1&&calls<=f.requests.filter(r=>r.intent==='roster'&&r.kind==='character').length,String(calls))
+test('WR-M05: exhausted unit failures stay incomplete without blocking retry or other results',async()=>{
+ let fail=true,calls=0
+ const f=await fixture(filesF(),rosterAi({'roster:character':()=>{if(fail){calls++;throw Error('模型输出未完整结束')}return undefined}}));try{
+  await toTree(f);await f.act('wizard-next',{consent:true});let v=await f.settle(),j=await f.journal(),units=j.workingUnits??[]
+  assert.equal(v.wizard!.stepState['detect-char'],'waiting');assert.equal(v.wizard!.stepError,undefined);assert.equal(v.error,undefined);assert.equal(v.wizard!.rosterIncomplete,units.length);assert.equal(j.coverage['roster:character']?.length??0,0)
+  const attempts=new Map<string,number>();for(const r of f.requests.filter(r=>r.intent==='roster'&&r.kind==='character'&&r.units.length===1))attempts.set(r.units[0].id,(attempts.get(r.units[0].id)??0)+1)
+  assert.equal(attempts.size,units.length);for(const [id,count] of attempts)assert.equal(count,3,id);assert.ok(calls>0)
+  const before=f.requests.length,covered=new Set(j.coverage['roster:character']??[]),uncovered=units.filter(u=>!covered.has(u.id)).map(u=>u.id).sort();fail=false;await f.act('wizard-redetect');v=await f.settle();j=await f.journal()
+  const resent=f.requests.slice(before).filter(r=>r.intent==='roster'&&r.kind==='character');assert.deepEqual([...new Set(resent.flatMap(r=>r.units.map(u=>u.id)))].sort(),uncovered)
+  assert.equal(v.wizard!.stepState['detect-char'],'waiting');assert.equal(v.wizard!.candidates.character!.length,3);assert.equal(v.wizard!.rosterIncomplete??0,0);assert.equal(j.wizard!.rosterStash?.character,undefined)
  }finally{await f.dispose()}
 })
 test('WR-B14: country, era and concept names that are also settings never name the main world',()=>{
@@ -217,6 +222,9 @@ test('WR-M06: a non-retryable roster error ends the step at once',async()=>{
   const v=await toWorldRoster(f)
   assert.equal(v.wizard!.stepState['detect-world'],'failed');assert.equal(calls,f.requests.filter(r=>r.intent==='roster'&&r.kind==='world').length)
  }finally{await f.dispose()}
+})
+test('WR-M06b: a local transport failure remains a global step failure',async()=>{
+ const f=await fixture(filesF(),unnamed(()=>{throw Error('本地服务已断开')}));try{const v=await toWorldRoster(f);assert.equal(v.wizard!.stepState['detect-world'],'failed');assert.equal(v.wizard!.stepError,'导入处理失败，请核对来源、模型配置后重试')}finally{await f.dispose()}
 })
 test('WR-M07: a malformed world reply is re-sent; every unit ends covered and the step succeeds',async()=>{
  let first=true

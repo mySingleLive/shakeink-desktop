@@ -100,7 +100,7 @@ test('SI-06: only a scene roster null optional parent means no parent; content a
  const result=await runImportAi(r,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>structuredClone(raw)})
  assert.deepEqual(result.roster,[canonical.roster[0],{...canonical.roster[1],evidence:{unitId:'u',quote:'南巷'}}]);assert.deepEqual(raw.roster[0].parent,null)
  for(const parent of ['',123,{},[],false,'x'.repeat(301)])assert.equal(importAiResponseSchema(r).safeParse({roster:[{name:'北城',aliases:[],parent}]}).success,false)
- assert.equal(importAiResponseSchema({...r,kind:'world'}).safeParse({roster:[{name:'北城',aliases:[],settings:[],parent:null}]}).success,false)
+ const invalidWorld=importAiResponseSchema({...r,kind:'world'}).safeParse({roster:[{name:'北城',aliases:[],settings:[],parent:null}]});assert.equal(invalidWorld.success,true);assert.deepEqual(invalidWorld.data,{roster:[]})
  for(const invalid of [{name:null,aliases:[],parent:null},{name:'北城',aliases:null,parent:null},{name:'北城',aliases:[],parent:null,unknown:'private'}])assert.equal(importAiResponseSchema(r).safeParse({roster:[invalid]}).success,false)
  const rows=buildWizardCandidates('scene',[{name:'北城',aliases:[]},{name:'南巷',aliases:[],parent:'北城'},...importAiResponseSchema(r).parse({roster:[{name:'南巷',aliases:['小巷'],parent:null}]}).roster!],[],[])
  assert.equal(rows.find(c=>c.name==='南巷')!.parentId,rows.find(c=>c.name==='北城')!.id);assert.ok(rows.find(c=>c.name==='南巷')!.aliases.includes('小巷'))

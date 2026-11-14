@@ -234,8 +234,8 @@ test('NIW-U16: copied source settings are natively projectable and keep the orig
 })
 
 import {readFileSync} from 'node:fs'
-import {importScopeHash,importPlanHash,wizardSelectionHash} from '../../desktop/core/novel-import'
-import {emptyWizardState,validateImportWizardState,ImportWizardStateError,type ImportWizardState} from '../../desktop/core/novel-import-wizard-state'
+import {importScopeHash,importPlanHash,wizardSelectionHash,toImportView} from '../../desktop/core/novel-import'
+import {emptyWizardState,validateImportWizardState,ImportWizardStateError,importWizardStateSchema,type ImportWizardState} from '../../desktop/core/novel-import-wizard-state'
 import type {ImportSession} from '../../desktop/shared/novel-import'
 const legacy=JSON.parse(readFileSync('tests/fixtures/novel-import-wizard/legacy-hash.json','utf8')) as {session:ImportSession;classify:string;analyze:string;plan:string}
 function wizardSession(change:(w:ImportWizardState)=>void=()=>{}):ImportSession{
@@ -270,6 +270,22 @@ test('NIW-U36: wizard journal state is validated strictly',()=>{
   ['unknown step',wizardSession(w=>{(w as {step:string}).step='confirm'})],
  ]
  for(const [label,s] of bad)assert.throws(()=>validateImportWizardState(s),ImportWizardStateError,label)
+})
+
+test('NIW-U36b: roster repair audits are strict and legacy dropped records remain valid',()=>{
+ const base=wizardSession().wizard!
+ assert.equal(importWizardStateSchema.safeParse({...base,dropped:[{kind:'touch',label:'伏笔',reason:'原记录'}]}).success,true)
+ const valid={kind:'roster',rosterKind:'character',label:'角色识别',reason:'部分结果未采用',invalid:0,unlocatable:1,unfinishedUnits:2}
+ assert.equal(importWizardStateSchema.safeParse({...base,dropped:[valid]}).success,true)
+ const invalid=[{...valid,rosterKind:undefined},{...valid,kind:'settings'},{...valid,invalid:-1},{...valid,unlocatable:0.5},{...valid,unfinishedUnits:'2'},{kind:'touch',label:'伏笔',reason:'旧记录',rosterKind:'character'}]
+ for(const dropped of invalid)assert.equal(importWizardStateSchema.safeParse({...base,dropped:[dropped]}).success,false,JSON.stringify(dropped))
+})
+test('NIW-U36c: rosterIncomplete derives only current ordinary waiting inference gaps without mutating the session',()=>{
+ const s=wizardSession(w=>{w.step='detect-char';w.stepState['detect-char']='waiting'});s.workingProse=s.originalProse='甲乙丙丁戊己庚辛壬癸';s.workingUnits=[0,1].map(i=>({id:`working-0:${i*5}:${i*5+5}`,fileId:'working-0',start:i*5,end:i*5+5,text:s.workingProse.slice(i*5,i*5+5),kind:'body' as const}));s.coverage['roster:character']=['working-0:0:5','stale']
+ const before=structuredClone(s);assert.equal(toImportView(s).wizard!.rosterIncomplete,1);assert.deepEqual(s,before);assert.equal(Object.hasOwn(s.wizard!,'rosterIncomplete'),false)
+ for(const state of ['running','failed'] as const){s.wizard!.stepState['detect-char']=state;assert.equal(toImportView(s).wizard!.rosterIncomplete,undefined,state)}
+ s.wizard!.stepState['detect-char']='waiting';s.coverage['roster:character']=s.workingUnits.map(u=>u.id);assert.equal(toImportView(s).wizard!.rosterIncomplete??0,0)
+ s.wizard!.step='detect-scene';s.wizard!.stepState['detect-scene']='waiting';s.targets=['scene'];s.coverage['roster:scene']=[];assert.equal(toImportView(s).wizard!.rosterIncomplete,undefined)
 })
 
 import {importArtifactSemanticHash} from '../../desktop/core/novel-import-semantics'

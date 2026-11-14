@@ -218,6 +218,17 @@ test('NIW-B14: recognition failure and empty roster screens',async()=>{
  await mount({step:'detect-char',recognitionFailed:true},async page=>{const d=dialog(page);assert.match(await d.getByRole('alert').innerText(),/识别失败/);await d.getByRole('button',{name:'重新识别'}).waitFor();await d.getByRole('button',{name:'跳过此步骤'}).waitFor()})
  await mount({step:'detect-char',empty:true},async page=>{const d=dialog(page);assert.match(await d.innerText(),/未识别到角色/);await d.getByRole('button',{name:'跳过'}).waitFor()})
 })
+test('NIW-B14b: incomplete rosters offer retry and explicit continuation without becoming a global failure',async()=>{
+ await mount({step:'detect-char',rosterIncomplete:2,rosterDropped:true},async page=>{
+  const d=dialog(page);assert.match(await d.innerText(),/2 个正文片段未完成识别/);assert.match(await d.innerText(),/部分角色结果未采用/);assert.match(await d.innerText(),/5 项无法在原文定位/);await d.getByRole('button',{name:'详情'}).first().click();assert.equal(await d.getByRole('button',{name:'合并',exact:true}).count(),0)
+  await d.getByRole('button',{name:'重试未完成片段'}).click();assert.deepEqual((await calls(page)).map(c=>c.type).filter(type=>type!=='current'),['wizard-redetect'])
+  await page.evaluate(()=>window.wizardFixture.set(v=>{v.wizard!.rosterIncomplete=0}));assert.doesNotMatch(await d.innerText(),/个正文片段未完成识别/);await d.getByRole('button',{name:'合并',exact:true}).waitFor()
+ })
+ await mount({step:'detect-char',empty:true,rosterIncomplete:1},async page=>{
+  const d=dialog(page);assert.match(await d.innerText(),/1 个正文片段未完成识别/);await d.getByRole('button',{name:'接受遗漏并继续'}).click();const sent=await calls(page);assert.equal(sent.at(-1)!.type,'wizard-next');assert.equal((sent.at(-1) as {skip?:boolean}).skip,undefined)
+ })
+ for(const options of [{step:'detect-char',phase:'running',rosterIncomplete:1},{step:'detect-char',recognitionFailed:true,rosterIncomplete:1},{step:'detect-char',phase:'failed',rosterIncomplete:1}] as const)await mount(options,async page=>{assert.doesNotMatch(await dialog(page).innerText(),/个正文片段未完成识别/)})
+})
 test('NICC-B01: closing during setup still deletes directly',()=>mount({step:'files'},async page=>{
  await dialog(page).getByRole('button',{name:'关闭导入窗口',exact:true}).click();await dialog(page).waitFor({state:'hidden'})
  assert.equal(await closeConfirmation(page).count(),0);assert.deepEqual((await businessCalls(page)).map(c=>c.type),['cancel'])

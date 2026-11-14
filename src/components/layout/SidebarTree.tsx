@@ -8,7 +8,6 @@ import { FaultedWorkMenuItems, faultInfo, repairStatus, useWorkLeaseRepair, type
 import { FaultedWorkIcon, type FaultTone } from "@/components/desktop/FaultedWorkIcon"
 import { ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu"
 import type { UnavailableWork } from "@desktop/shared/work-list"
-import {NovelImportTaskButton} from '@/components/desktop/NovelImportDialog'
 import {requestNovelImport} from '@/lib/desktop/novel-import'
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
@@ -1886,7 +1885,6 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       <div className="create-actions">
         <button type="button" className="create-action" onClick={() => setCreateOpen(true)}><NotebookPen aria-hidden="true" size={18} strokeWidth={1.7} /><NavigationLabel>创建作品</NavigationLabel></button>
         <button type="button" className="create-action" onClick={()=>void requestNovelImport()}><FileInput aria-hidden="true" size={18} strokeWidth={1.7}/><NavigationLabel>导入作品</NavigationLabel></button>
-        <NovelImportTaskButton/>
         <button type="button" className="create-action" onClick={() => useChatStore.getState().requestNewConversation()}><MessageCirclePlus aria-hidden="true" size={18} strokeWidth={1.7} /><NavigationLabel>新对话</NavigationLabel></button>
       </div>
       <div role="tablist" aria-label="导航分类" className="nav-tabs">

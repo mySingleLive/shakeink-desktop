@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {mkdtemp,mkdir,writeFile,readFile,realpath,rename,rm,symlink,opendir} from 'node:fs/promises'
+import {mkdtemp,mkdir,writeFile,readFile,realpath,rename,rm,symlink,opendir,chmod,stat} from 'node:fs/promises'
 import {join} from 'node:path'
 import {tmpdir} from 'node:os'
 import type {Dir} from 'node:fs'
@@ -62,6 +62,11 @@ test('CP-F03: identity changes after selection are rejected by confirmation and 
  try{let v=await r.ready();await r.act('toggle',{entryId:v.entries[0].id});await rename(file,file+'.old');await writeFile(file,'替换内容');await r.act('confirm');v=r.view()!;assert.ok(v);assert.match(v.error!,/变化|重新/);assert.equal(v.selected.length,0);assert.equal(v.entries.find(e=>e.name==='正文.txt')!.selectable,false);assert.equal(await readFile(file,'utf8'),'替换内容')
   await r.act('navigate',{entryId:v.current!.id});await r.ready();await r.act('toggle',{entryId:r.view()!.entries.find(e=>e.name==='正文.txt')!.id});await r.act('confirm');const grants=await pending;assert.equal(grants!.length,1);assert.equal(grants![0].path,file)
  }finally{r.picker.cancel();await pending}
+}))
+
+test('CP-F03: an existing grant stays strict about ctime-only metadata drift',()=>fixture(async root=>{
+ const file=join(root,'正文.txt');await writeFile(file,'原句');const grant=await captureNovelSourceGrant(file),before=await stat(file,{bigint:true});await chmod(file,0o600);const after=await stat(file,{bigint:true});assert.notEqual(after.ctimeNs,before.ctimeNs);assert.equal(after.mtimeNs,before.mtimeNs)
+ await assert.rejects(verifyNovelSourceGrant(grant),/变化/);const files=await scanNovelSources([file],{grants:[grant]});assert.ok(files.every(f=>!f.included));assert.ok(files.every(f=>!f.text))
 }))
 
 test('CP-F03: scan boundary rejects swapped file, directory and ancestor after the trusted grant was issued',()=>fixture(async root=>{

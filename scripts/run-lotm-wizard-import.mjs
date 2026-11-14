@@ -5,26 +5,28 @@
 import {_electron as electron} from 'playwright'
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
-import {mkdir,readFile,writeFile,appendFile,readdir} from 'node:fs/promises'
+import {mkdir,readFile,writeFile,appendFile,readdir,lstat} from 'node:fs/promises'
 import {join,resolve} from 'node:path'
 
-const repo=resolve('.'),root=process.env.LOTM_WIZARD_ROOT??'/private/tmp/shakeink-lotm-wizard-20261029',baseline='/private/tmp/shakeink-lotm-local-20261028'
+const repo=resolve('.'),root=process.env.LOTM_WIZARD_ROOT??'/private/tmp/shakeink-lotm-wizard-20261029',baseline=process.env.LOTM_BASELINE??'/private/tmp/shakeink-lotm-local-20261028'
 const appRoot=process.env.LOTM_APP_ROOT??'/private/tmp/shakeink-lotm-runtime-20261027/app-data-wizard-20261029'
 const source='/Users/dt_flys/Documents/拆书/诡秘之主-原始文本.txt',target=join(root,'works',process.env.LOTM_WIZARD_WORK??'LOTM-WIZARD-20261029')
 // LOTM_ROSTER_ONLY=1 measures step 9 (docs/239 RR): time, live count samples and screenshots, then stops.
-const rosterOnly=process.env.LOTM_ROSTER_ONLY==='1'
+const rosterOnly=process.env.LOTM_ROSTER_ONLY==='1',firstVolumeOnly=process.env.LOTM_FIRST_VOLUME_ONLY==='1'
 // Scoped acceptance for docs/243: stop as soon as the full character import has passed.
 const charactersOnly=process.env.LOTM_CHARACTERS_ONLY==='1'
 const scenesOnly=process.env.LOTM_SCENES_ONLY==='1'
 assert.ok([rosterOnly,charactersOnly,scenesOnly].filter(Boolean).length<=1,'choose only one scoped acceptance mode')
-assert.ok(appRoot.startsWith('/private/tmp/'),'this driver requires an isolated test root')
+assert.ok(appRoot.startsWith('/private/tmp/')||appRoot.startsWith('/Users/dt_flys/shakeink-test-roots/'),'this driver requires an isolated test root')
 const label=process.env.LOTM_EVIDENCE_LABEL;assert.ok(label,'LOTM_EVIDENCE_LABEL is required');const evidence=join(root,'evidence',label);await mkdir(join(root,'evidence'),{recursive:true});await mkdir(evidence,{recursive:false})
-const run=JSON.parse(await readFile(join(baseline,'run.json'),'utf8')),expected=JSON.parse(await readFile(join(baseline,'expected-chapters.json'),'utf8'))
+const run=JSON.parse(await readFile(join(baseline,'run.json'),'utf8')),expected=JSON.parse(await readFile(join(baseline,'expected-chapters.json'),'utf8')),selectedExpected=firstVolumeOnly?expected.slice(0,213):expected
+if(firstVolumeOnly)assert.match(run.firstVolumeBodySha256??'',/^[a-f0-9]{64}$/u,'first-volume acceptance requires an independent firstVolumeBodySha256 baseline')
 const TARGETS=scenesOnly?['scene']:['outline','theme','style','character','item','scene','world','foreshadow','trope','worldline','narrative'],LABELS={outline:'大纲',theme:'主题',style:'文风',character:'角色',item:'物品',scene:'场景',world:'世界观',foreshadow:'伏笔',goldenFinger:'金手指',trope:'爽点/泪点',worldline:'世界线',narrative:'叙事线'}
 const sha=value=>createHash('sha256').update(value).digest('hex'),sorted=list=>[...list].sort()
 const save=(name,value)=>writeFile(join(evidence,name),JSON.stringify(value,null,2)+'\n',{flag:'wx'})
 const log=async(event,details={})=>{const line=JSON.stringify({at:new Date().toISOString(),event,...details});console.log(line);await appendFile(join(evidence,'events.jsonl'),line+'\n')}
 const sourceHash=sha(await readFile(source));assert.equal(sourceHash,run.sourceSha256,'source file changed')
+const sourceProof=async()=>{const s=await lstat(source,{bigint:true});return {device:String(s.dev),inode:String(s.ino),size:String(s.size),mtime:String(s.mtimeNs),ctime:String(s.ctimeNs)}},initialSourceProof=await sourceProof()
 await mkdir(target,{recursive:true})
 
 const app=await electron.launch({executablePath:process.env.LOTM_ELECTRON_RUNTIME,args:[repo],env:{...process.env,SHAKEINK_TEST_ROOT:appRoot,SHAKEINK_IMPORT_DEBUG:scenesOnly?'0':'1'},timeout:60000})
@@ -179,14 +181,26 @@ try{
     const volumes={};for(const c of got)volumes[c.volume??'(未分卷)']=(volumes[c.volume??'(未分卷)']??0)+1
     await save(`step06-tree-r${v.revision}.json`,{chapters:got.length,volumes,diffCount:diff.length,firstDiffs:diff.slice(0,20),selected:w.chapterSelection.length});await shot('tree')
     if(diff.length){await log('structure-mismatch',{diffCount:diff.length});exitCode=2;break}
-    assert.equal(w.chapterSelection.length,expected.length);await click('允许分析并导入','structure matches the frozen baseline; all chapters selected');rosterStart=Date.now();break}
+    if(firstVolumeOnly){
+     assert.ok(expected.length>=213&&expected.slice(0,213).every(c=>c.volumeName==='小丑'),'the frozen baseline starts with the first volume')
+     await click('全不选','select only the first volume after checking the complete structure');await until(v=>v.wizard.chapterSelection.length===0)
+     await page.getByRole('checkbox',{name:'选择 小丑',exact:true}).click();await until(v=>v.wizard.chapterSelection.length===213)
+     assert.deepEqual((await current()).wizard.chapterSelection,Array.from({length:213},(_,i)=>i));await save('first-volume-selection.json',{chapters:213,indices:[0,212],volume:'小丑'})
+    }else assert.equal(w.chapterSelection.length,expected.length)
+    await click('允许分析并导入',firstVolumeOnly?'complete structure checked; only indices 0–212 authorized':'structure matches the frozen baseline; all chapters selected');rosterStart=Date.now();break}
    case 'detect-char':if(rosterOnly){
+    if(w.rosterIncomplete){if(retried.has('roster-incomplete')){await save('roster-incomplete-after-retry.json',{incomplete:w.rosterIncomplete,stepError:w.stepError??null});exitCode=2;break}
+     await save('roster-incomplete.json',{incomplete:w.rosterIncomplete,covered:(await journal(id)).coverage['roster:character']?.length??0,units:(await journal(id)).workingUnits?.length??0,dropped:w.dropped});retried.add('roster-incomplete');await click('重试未完成片段','retry only the uncovered character units once through the real UI');break
+    }
     const list=w.candidates.character??[],elapsed=rosterStart?Date.now()-rosterStart:null,j=await journal(id),call=JSON.parse(await readFile(join(appRoot,'novel-imports',id,'runtime.json'),'utf8')).calls.filter(c=>c.intent==='roster')
     const started=call.map(c=>Date.parse(c.startedAt)),settled=call.filter(c=>c.settledObservedAt).map(c=>Date.parse(c.settledObservedAt))
-    await save('roster-timing.json',{driverElapsedMs:elapsed,callWindowMs:started.length&&settled.length?Math.max(...settled)-Math.min(...started):null,calls:call.length,outcomes:call.map(c=>c.outcome),samples,candidates:list.length,covered:(j.coverage['roster:character']??[]).length,units:(j.workingUnits??[]).length,top:[...list].sort((a,b)=>b.chapterCount-a.chapterCount).slice(0,40).map(c=>({name:c.name,aliases:c.aliases,roleType:c.roleType,chapterCount:c.chapterCount}))})
+    assert.ok(list.length>0,'real roster acceptance requires at least one recognized character')
+    const finalSourceProof=await sourceProof();for(const key of ['device','inode','size','mtime'])assert.equal(finalSourceProof[key],initialSourceProof[key],key);assert.equal(sha(await readFile(source)),sourceHash)
+    if(firstVolumeOnly){assert.deepEqual(j.wizard.grantedChapters,Array.from({length:213},(_,i)=>i));assert.equal(j.chapters.length,selectedExpected.length);for(const [i,c]of j.chapters.entries()){const e=selectedExpected[i];assert.equal(c.title,e.title);assert.equal(c.volume,e.volumeName);assert.equal(c.start,e.start);assert.equal(c.end,e.end)}assert.equal(sha(j.workingProse),run.firstVolumeBodySha256)}
+    await save('roster-timing.json',{driverElapsedMs:elapsed,callWindowMs:started.length&&settled.length?Math.max(...settled)-Math.min(...started):null,calls:call.length,outcomes:call.map(c=>c.outcome),samples,candidates:list.length,covered:(j.coverage['roster:character']??[]).length,units:(j.workingUnits??[]).length,incomplete:w.rosterIncomplete??0,dropped:w.dropped,retry:retried.has('roster-incomplete')?'exercised':'not-exercised',firstVolume:firstVolumeOnly?{chapters:j.chapters.length,granted:[0,212],bodySha256:sha(j.workingProse)}:null,sourceProof:{before:initialSourceProof,after:finalSourceProof},top:[...list].sort((a,b)=>b.chapterCount-a.chapterCount).slice(0,40).map(c=>({name:c.name,aliases:c.aliases,roleType:c.roleType,chapterCount:c.chapterCount}))})
     // Diagnostic only: names and role votes, no text, kept outside the repository.
     if(process.env.LOTM_ROSTER_STASH)await writeFile(process.env.LOTM_ROSTER_STASH,JSON.stringify(lastStash.map(({unitId,name,aliases,roleType})=>({unitId,name,aliases,roleType}))),{flag:'wx'})
-    await shot('detect-char-done');exitCode=elapsed!==null&&elapsed<=60000?0:4;break
+    await shot('detect-char-done');exitCode=w.rosterIncomplete?2:elapsed!==null&&elapsed<=60000?0:4;break
    }
    case 'detect-char':case 'detect-scene':case 'detect-item':case 'detect-world':{
     const kind={'detect-char':'character','detect-scene':'scene','detect-item':'item','detect-world':'world'}[step],list=w.candidates[kind]??[]

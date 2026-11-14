@@ -16,6 +16,7 @@ const natural=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'variant'})
 const digest=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex')
 const proof=(s:BigIntStats):ImportProof=>({device:String(s.dev),inode:String(s.ino),size:String(s.size),mtime:String(s.mtimeNs),ctime:String(s.ctimeNs)})
 const same=(a:ImportProof,b:ImportProof)=>a.device===b.device&&a.inode===b.inode&&a.size===b.size&&a.mtime===b.mtime&&a.ctime===b.ctime
+const sameStable=(a:ImportProof,b:ImportProof)=>a.device===b.device&&a.inode===b.inode&&a.size===b.size&&a.mtime===b.mtime
 const within=(path:string,root:string)=>{const r=relative(root,path);return r===''||(!r.startsWith('..'+sep)&&r!=='..'&&!isAbsolute(r))}
 function fail(message:string):never{throw new Error(message)}
 const formatOf=(path:string):ImportFile['format']=>{const f=extname(path).slice(1).toLowerCase();return IMPORT_FORMATS.includes(f as ImportFormat)?f as ImportFormat:'unsupported'}
@@ -54,8 +55,8 @@ async function canonicalSelection(path:string,context?:PdfJobContext){
  }
  return identityIo(context,()=>realpath(path))
 }
-async function checkIdentity(chain:Awaited<ReturnType<typeof pathIdentity>>,context?:PdfJobContext){
- for(const item of chain){const s=await identityIo(context,()=>lstat(item.path,{bigint:true})),current=proof(s);if(s.isSymbolicLink()||(item.directory?(!s.isDirectory()||current.device!==item.proof.device||current.inode!==item.proof.inode):!same(current,item.proof)))fail('来源文件或目录发生变化，请重新选择')}
+async function checkIdentity(chain:Awaited<ReturnType<typeof pathIdentity>>,context?:PdfJobContext,allowCtimeDrift=false){
+ for(const item of chain){const s=await identityIo(context,()=>lstat(item.path,{bigint:true})),current=proof(s);if(s.isSymbolicLink()||(item.directory?(!s.isDirectory()||current.device!==item.proof.device||current.inode!==item.proof.inode):!(allowCtimeDrift?sameStable:same)(current,item.proof)))fail('来源文件或目录发生变化，请重新选择')}
 }
 export async function captureNovelSourceGrant(path:string,hooks?:{beforeRealpath?:()=>Promise<void>},context?:PdfJobContext):Promise<ImportSourceGrant>{
  // A custom-picker grant is for the original path and ancestor objects. Do not
@@ -75,24 +76,27 @@ export async function verifyNovelSourceGrant(grant:ImportSourceGrant,context?:Pd
  const current=await captureNovelSourceGrant(grant.path,undefined,context)
  if(current.path!==grant.path||current.directory!==grant.directory||(grant.directory?current.proof.device!==grant.proof.device||current.proof.inode!==grant.proof.inode:!same(current.proof,grant.proof))||current.ancestors.length!==grant.ancestors.length||current.ancestors.some((item,index)=>item.path!==grant.ancestors[index].path||item.device!==grant.ancestors[index].device||item.inode!==grant.ancestors[index].inode))fail('来源文件或目录发生变化，请重新选择')
 }
-async function readSource(path:string,expected?:ImportProof,ancestors?:ImportFile['ancestors']){
- try{return await readSourceChecked(path,expected,ancestors)}catch(error){throw new Error(safeError(error))}
+async function readSource(path:string,expected?:ImportProof,ancestors?:ImportFile['ancestors'],expectedHash?:string){
+ try{return await readSourceChecked(path,expected,ancestors,expectedHash)}catch(error){throw new Error(safeError(error))}
 }
-async function readSourceChecked(path:string,expected?:ImportProof,ancestors?:ImportFile['ancestors']){
- const chain=await pathIdentity(path),before=chain[0].proof
+async function readSourceChecked(path:string,expected?:ImportProof,ancestors?:ImportFile['ancestors'],expectedHash?:string){
+ const chain=await pathIdentity(path),before=chain[0].proof,contentRecheck=expectedHash!==undefined,matches=contentRecheck?sameStable:same
+ if(contentRecheck&&!expected)fail('来源尚未完成核对')
  const currentAncestors=chain.filter(item=>item.directory).map(item=>({path:item.path,device:item.proof.device,inode:item.proof.inode}))
  if(ancestors&&(currentAncestors.length!==ancestors.length||currentAncestors.some((item,index)=>item.path!==ancestors[index].path||item.device!==ancestors[index].device||item.inode!==ancestors[index].inode)))fail('来源授权目录身份已变化，请重新选择')
- if(expected&&!same(before,expected))fail('来源文件已发生变化，请重新选择')
+ if(expected&&!matches(before,expected))fail('来源文件已发生变化，请重新选择')
  const handle=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW)
  try{
   const stat=await handle.stat({bigint:true})
-  if(!stat.isFile()||!same(before,proof(stat)))fail('来源不是原来的普通文件')
+  if(!stat.isFile()||!matches(before,proof(stat)))fail('来源不是原来的普通文件')
   if(stat.size>BigInt(NOVEL_SOURCE_LIMITS.fileBytes))fail('文件超过 50 MiB 大小限制')
   const chunks:Buffer[]=[];let length=0
   for(;;){const chunk=Buffer.allocUnsafe(Math.min(64*1024,NOVEL_SOURCE_LIMITS.fileBytes+1-length));const {bytesRead}=await handle.read(chunk,0,chunk.length,null);if(!bytesRead)break;length+=bytesRead;if(length>NOVEL_SOURCE_LIMITS.fileBytes)fail('文件超过 50 MiB 大小限制');chunks.push(chunk.subarray(0,bytesRead))}
-  if(!same(before,proof(await handle.stat({bigint:true}))))fail('读取期间来源文件发生变化')
-  await checkIdentity(chain)
-  return {bytes:Buffer.concat(chunks,length),proof:before,ancestors:currentAncestors}
+  if(!matches(before,proof(await handle.stat({bigint:true}))))fail('读取期间来源文件发生变化')
+  await checkIdentity(chain,undefined,contentRecheck)
+  const bytes=Buffer.concat(chunks,length),current=proof(await handle.stat({bigint:true}));if(!matches(before,current))fail('读取期间来源文件发生变化')
+  if(expectedHash&&digest(bytes)!==expectedHash)fail('来源文件内容已发生变化，请重新选择')
+  return {bytes,proof:contentRecheck?current:before,ancestors:currentAncestors}
  }finally{await handle.close()}
 }
 
@@ -358,15 +362,14 @@ export async function extractNovelText(bytes:Uint8Array,format:ImportFormat,enco
 export async function redecodeNovelFile(file:ImportFile,encoding:string):Promise<ImportFile>{
  if(!['txt','md','html','htm'].includes(file.format))fail('此文件不支持重新选择编码')
  if(!file.ancestors?.length)fail('来源授权目录身份缺失，请重新选择')
- const snapshot=await readSource(file.path,file.proof,file.ancestors)
- if(digest(snapshot.bytes)!==file.hash)fail('来源文件已发生变化，请重新选择')
+ const snapshot=await readSource(file.path,file.proof,file.ancestors,file.hash)
  return {...file,...await extractNovelText(snapshot.bytes,file.format as ImportFormat,encoding),proof:snapshot.proof,error:undefined,included:true}
 }
 export async function verifyNovelSources(files:ImportFile[]):Promise<void>{
  for(const file of files.filter(f=>f.included)){
   if(!file.proof||!file.hash||file.error||!file.ancestors?.length)fail('来源尚未完成核对')
   if(file.format==='pdf'){const {defaultNovelImportPdfClient}=await import('./novel-import-pdf-client');await defaultNovelImportPdfClient().verify(file,{operationId:randomUUID(),assertCurrent:()=>{}});continue}
-  const snapshot=await readSource(file.path,file.proof,file.ancestors)
-  if(digest(snapshot.bytes)!==file.hash)fail('来源文件内容已发生变化，请重新选择')
+  const snapshot=await readSource(file.path,file.proof,file.ancestors,file.hash)
+  file.proof=snapshot.proof;file.ancestors=snapshot.ancestors
  }
 }

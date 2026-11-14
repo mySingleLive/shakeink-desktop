@@ -875,6 +875,39 @@ test('RS-05b: a source change found by the final check fails the step; redetect 
   changed=false;await f.act('wizard-redetect');v=await f.settle();assert.equal(v.wizard!.stepState['detect-char'],'waiting');assert.equal(v.wizard!.candidates.character!.length,40)
  }finally{await f.dispose()}
 })
+async function partialCharacterRoster(){
+ const names=['甲角色','乙角色','丙角色'],target=names[0],body=names.map((name,i)=>`第${i+1}章 篇${i}\n\n${(name+'走过长街。').repeat(300)}\n\n`).join('');let fail=true,injected=false
+ const f=await fixture([source(body,'正文.txt','f-body')],rosterAi({'roster:character':r=>{
+  if(fail&&r.units.some(u=>u.text.includes(target)))throw Error('模型输出未完整结束')
+  const out={roster:r.units.flatMap(u=>names.filter(name=>u.text.includes(name)).map(name=>({name,aliases:[],roleType:'SUPPORTING' as const,evidence:{unitId:u.id,quote:name}})))}
+  if(!injected){injected=true;return {...out,rosterRepairs:{droppedInvalid:1,droppedUnlocatable:1}}}return out
+ }}));await rsStart(f);const v=await f.settle(),j=await f.journal(),units=j.workingUnits??[],failedIds=units.filter(u=>u.text.includes(target)).map(u=>u.id).sort()
+ assert.equal(v.wizard!.stepState['detect-char'],'waiting');assert.equal(v.wizard!.stepError,undefined);assert.ok(failedIds.length>0);assert.deepEqual(v.wizard!.candidates.character!.map(c=>c.name).sort(),names.slice(1).sort());assert.equal(v.wizard!.rosterIncomplete,failedIds.length)
+ assert.deepEqual([...failedIds].sort(),units.filter(u=>!(j.coverage['roster:character']??[]).includes(u.id)).map(u=>u.id).sort());assert.ok(j.wizard!.rosterStash?.character?.length)
+ const repair=j.wizard!.dropped.find(d=>(d as {kind:string}).kind==='roster') as unknown as {rosterKind:string;invalid:number;unlocatable:number;unfinishedUnits?:number};assert.equal(repair.rosterKind,'character');assert.equal(repair.invalid,1);assert.equal(repair.unlocatable,1);assert.equal(repair.unfinishedUnits,undefined)
+ return {f,names,target,failedIds,recover(){fail=false}}
+}
+test('RS-08: an exhausted character unit keeps other results and redetect fills exactly the uncovered set',async()=>{
+ const p=await partialCharacterRoster(),f=p.f;try{
+  const before=f.requests.length;p.recover();await f.act('wizard-redetect');const v=await f.settle(),j=await f.journal(),resent=f.requests.slice(before).filter(r=>r.intent==='roster'&&r.kind==='character')
+  assert.deepEqual([...new Set(resent.flatMap(r=>r.units.map(u=>u.id)))].sort(),p.failedIds);assert.deepEqual(v.wizard!.candidates.character!.map(c=>c.name).sort(),p.names.sort());assert.equal(v.wizard!.rosterIncomplete??0,0);assert.equal(j.wizard!.rosterStash?.character,undefined)
+  const repairs=j.wizard!.dropped.filter(d=>(d as {kind:string}).kind==='roster');assert.equal(repairs.length,1);assert.equal((repairs[0] as unknown as {unfinishedUnits?:number}).unfinishedUnits,undefined)
+ }finally{await f.dispose()}
+})
+test('RS-09: accepting an incomplete roster records the omission, clears retry stash and protects merges atomically',async()=>{
+ const p=await partialCharacterRoster(),f=p.f;try{
+  const before=await f.journal();await assert.rejects(f.act('wizard-merge-candidates',{keepId:before.wizard!.candidates.character![0].id,mergeIds:[before.wizard!.candidates.character![1].id]}),/未完成|重试/);assert.deepEqual(await f.journal(),before)
+  await f.act('wizard-next');const j=await f.journal(),repair=j.wizard!.dropped.find(d=>(d as {kind:string}).kind==='roster') as unknown as {invalid:number;unlocatable:number;unfinishedUnits:number};assert.equal(repair.invalid,1);assert.equal(repair.unlocatable,1);assert.equal(repair.unfinishedUnits,p.failedIds.length);assert.equal(j.wizard!.rosterStash?.character,undefined)
+ }finally{await f.dispose()}
+})
+test('RS-10: skipping an incomplete roster is audited and revise drops all stale retry state',async()=>{
+ for(const action of ['skip','revise'] as const){
+  const p=await partialCharacterRoster(),f=p.f;try{
+   if(action==='skip'){await f.act('wizard-next',{skip:true});const v=await f.settle(),j=await f.journal(),repair=j.wizard!.dropped.find(d=>(d as {kind:string}).kind==='roster') as unknown as {unfinishedUnits:number};assert.equal(repair.unfinishedUnits,p.failedIds.length);assert.equal(j.wizard!.stepState['import-char'],'skipped');assert.equal(j.wizard!.rosterStash?.character,undefined);assert.equal(f.requests.some(r=>r.intent==='entity'&&r.kind==='character'),false);assert.notEqual(v.wizard!.step,'detect-char')}
+   else{await f.act('wizard-revise',{to:'tree'});const j=await f.journal();assert.equal(j.wizard!.rosterStash?.character,undefined);assert.equal(j.coverage['roster:character'],undefined);assert.equal(j.wizard!.dropped.some(d=>(d as {kind:string}).kind==='roster'),false)}
+  }finally{await f.dispose()}
+ }
+})
 test('RS-07: the list does not depend on which batch returns first',async()=>{
  const body=['第1章 甲\n\n','甲走过长街。'.repeat(560),'\n\n第2章 乙\n\n','甲乙走过长街。'.repeat(480),'\n\n'].join('')
  const lists:unknown[]=[]

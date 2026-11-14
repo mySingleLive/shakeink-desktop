@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {runImportAi,importRosterModel,type ImportAiDependencies} from '../../desktop/service/novel-import-ai'
+import {runImportAi,generateImportAiJson,importRosterModel,type ImportAiDependencies} from '../../desktop/service/novel-import-ai'
 import {importAiPrompt} from '../../desktop/core/novel-import-ai-payload'
 import type {ResolvedModel} from '../../src/lib/ai/provider'
 import type {ImportAiRequest,ImportModel} from '../../desktop/shared/novel-import'
@@ -20,9 +20,9 @@ test('RA-02: an entry found only by its alias cites that alias',async()=>{
  const out=await run(request('character'),{roster:[{name:'沈公子',aliases:['砚哥'],roleType:'SUPPORTING'}]})
  assert.deepEqual(out.roster![0].evidence,{unitId:'u2',quote:'砚哥'})
 })
-test('RA-03: a name absent from every unit is dropped',async()=>{
+test('RA-03: a name absent from every unit is dropped and counted',async()=>{
  const out=await run(request('character'),{roster:[{name:'无名氏',aliases:['无影'],roleType:'SUPPORTING'},{name:'沈砚',aliases:[],roleType:'PROTAGONIST'}]})
- assert.deepEqual(out.roster!.map(e=>e.name),['沈砚'])
+ assert.deepEqual(out.roster!.map(e=>e.name),['沈砚']);assert.deepEqual(out.rosterRepairs,{droppedInvalid:0,droppedUnlocatable:1})
 })
 test('RA-04: model evidence that locates is kept',async()=>{
  const out=await run(request('character'),{roster:[{name:'沈砚',aliases:[],roleType:'PROTAGONIST',evidence:{unitId:'u2',quote:'推门而入'}}]})
@@ -30,11 +30,24 @@ test('RA-04: model evidence that locates is kept',async()=>{
 })
 test('RA-05: model evidence that does not locate falls back to the name',async()=>{
  const out=await run(request('character'),{roster:[{name:'沈砚',aliases:[],roleType:'PROTAGONIST',evidence:{unitId:'u1',quote:'不存在的引文片段内容'}}]})
- assert.deepEqual(out.roster![0].evidence,{unitId:'u2',quote:'沈砚'})
+ assert.deepEqual(out.roster![0].evidence,{unitId:'u2',quote:'沈砚'});assert.equal(out.rosterRepairs,undefined)
 })
-test('RA-06: other roster field rules are unchanged',async()=>{
- for(const bad of [{name:'沈砚',aliases:[],roleType:'HERO'},{name:'沈砚',aliases:[],roleType:'PROTAGONIST',extra:1},{name:' ',aliases:[],roleType:'PROTAGONIST'},{name:'沈砚',aliases:[]}])
-  await assert.rejects(run(request('character'),{roster:[bad]}),Error,JSON.stringify(bad))
+test('RA-06: one malformed character never rejects valid roster entries',async()=>{
+ const bad=[{name:'沈砚',aliases:[],roleType:'HERO'},{name:'沈砚',aliases:[],roleType:'PROTAGONIST',extra:1},{name:' ',aliases:[],roleType:'PROTAGONIST'},{name:'沈砚',aliases:[]}]
+ const out=await run(request('character'),{roster:[bad[0],{name:'沈砚',aliases:[],roleType:'PROTAGONIST'},...bad.slice(1)]})
+ assert.deepEqual(out.roster!.map(e=>e.name),['沈砚']);assert.deepEqual(out.rosterRepairs,{droppedInvalid:4,droppedUnlocatable:0})
+ const empty=await run(request('character'),{roster:[bad[0]]});assert.deepEqual(empty.roster,[]);assert.deepEqual(empty.rosterRepairs,{droppedInvalid:1,droppedUnlocatable:0})
+ await assert.rejects(run(request('character'),{roster:{0:{name:'沈砚',aliases:[],roleType:'PROTAGONIST'}}}))
+ await assert.rejects(run(request('character'),{roster:[],extra:true}))
+ await assert.rejects(run(request('scene'),{roster:[{name:'沈砚',aliases:[],extra:true}]}),'ordinary scene schema stays strict')
+})
+test('RA-06b: production generation keeps valid entries and exact repair counts through both parses',async()=>{
+ const replies=[{roster:[{name:'沈砚',aliases:[],roleType:'HERO'},{name:'沈砚',aliases:[],roleType:'PROTAGONIST',extra:1},{name:'沈砚',aliases:[],roleType:'PROTAGONIST'},{name:'无名氏',aliases:[],roleType:'SUPPORTING'}]}]
+ const repliesWithExtraRoot=[{roster:[],rosterRepairs:{droppedInvalid:999,droppedUnlocatable:999}},...replies]
+ for(const [label,values,calls] of [['mixed entries',replies,1],['extra root and forged repairs',repliesWithExtraRoot,2]] as const){
+  let generated=0;const out=await runImportAi(request('character'),new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async(input,_model,signal,prompt)=>generateImportAiJson(input,{userId:'synthetic',resolvedModel:{} as ResolvedModel,maxNetworkRetries:0},signal,prompt,{generateText:async()=>{const text=JSON.stringify(values[Math.min(generated++,values.length-1)]);return {text,promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'}}})} as ImportAiDependencies)
+  assert.equal(generated,calls,label);assert.deepEqual(out.roster!.map(e=>e.name),['沈砚'],label);assert.deepEqual(out.rosterRepairs,{droppedInvalid:2,droppedUnlocatable:1},label)
+ }
 })
 test('RA-07: scenes, items and worlds are located the same way and keep their fields',async()=>{
  const scene=await run(request('scene'),{roster:[{name:'沈砚',aliases:[],parent:'北城'}]})
@@ -75,10 +88,10 @@ test('WP-04: the whole roster prompt asks for no quotes; other intents keep the 
  assert.ok(fixed(request(undefined,'touches')).includes('每项evidence引用真实输入unitId'))
  assert.ok(fixed({...request('character'),intent:'entity'} as ImportAiRequest).includes('每项evidence引用真实输入unitId'))
 })
-test('491-F2..F5: item category is optional, null means unknown, other values and other kinds reject it',async()=>{
+test('491-F2..F5: item category is optional and invalid values drop only their own entries',async()=>{
  const base={name:'风声',aliases:[],itemType:'信物',important:true}
  assert.ok(!('category' in (await run(request('item'),{roster:[base]})).roster![0]),'F2')
  assert.ok(!('category' in (await run(request('item'),{roster:[{...base,category:null}]})).roster![0]),'F3')
- for(const category of ['Item','weapon'])await assert.rejects(run(request('item'),{roster:[{...base,category}]}),Error,'F4 '+category)
- await assert.rejects(run(request('character'),{roster:[{name:'沈砚',aliases:[],roleType:'PROTAGONIST',category:'character'}]}),Error,'F5')
+ for(const category of ['Item','weapon']){const out=await run(request('item'),{roster:[{...base,category}]});assert.deepEqual(out.roster,[],'F4 '+category);assert.deepEqual(out.rosterRepairs,{droppedInvalid:1,droppedUnlocatable:0})}
+ const character=await run(request('character'),{roster:[{name:'沈砚',aliases:[],roleType:'PROTAGONIST',category:'character'}]});assert.deepEqual(character.roster,[],'F5');assert.deepEqual(character.rosterRepairs,{droppedInvalid:1,droppedUnlocatable:0})
 })

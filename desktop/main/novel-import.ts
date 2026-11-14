@@ -11,7 +11,7 @@ import {lstat,mkdir,open,readFile,readdir,realpath,rename,rmdir,unlink} from 'no
 import {isAbsolute,join,relative,resolve,sep,dirname} from 'node:path'
 import {randomUUID,createHash} from 'node:crypto'
 import {importActionSchema,IMPORT_KINDS,IMPORT_LABELS,IMPORT_TARGETS,type ImportSettingsRepairs,type ImportAction,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportFile,type ImportKind,type ImportModel,type ImportPublishInput,type ImportReceipt,type ImportResponse,type ImportSession,type ImportTarget,type ImportUnit,type ImportView} from '../shared/novel-import'
-import {wizardSelectionHash,applyImportPatches,classifyLocalUnits,importSourceUnits,importStructureAvailable,conflictChoices,importChapters,importSessionChapters,importHash,importPlanHash,importScopeHash,importSourceReady,importSteps,mergeImportArtifacts,safeImportBoundary,selectedImportUnits,sourceBody,sourceImportArtifacts,splitImportBatches,splitImportUnits,toImportView,validateImportCoverage,validateImportEvidence,validateImportReferences,validateImportArtifactCapacity,workingImportUnits} from '../core/novel-import'
+import {wizardSelectionHash,applyImportPatches,classifyLocalUnits,importSourceUnits,importStructureAvailable,conflictChoices,importChapters,importSessionChapters,importHash,importPlanHash,importScopeHash,importSourceReady,importSteps,mergeImportArtifacts,safeImportBoundary,selectedImportUnits,sourceBody,sourceImportArtifacts,splitImportBatches,splitImportUnits,toImportView,validateImportCoverage,validateImportEvidence,validateImportReferences,validateImportArtifactCapacity,workingImportUnits,pendingWizardRosterUnits} from '../core/novel-import'
 import {captureNovelSourceGrant,type ImportSourceGrant} from './novel-import-files'
 import {NovelImportPdfClient,PDF_LIMITS,PdfJobError,type PdfBitmap} from './novel-import-pdf-client'
 import {validatePdfPageReviews,validatePdfStoredFields,pdfSourceKey,pdfReviewsReady} from '../core/novel-import-pdf'
@@ -28,7 +28,7 @@ import {validateImportSemanticState,ImportSemanticStateError,createImportSemanti
 import {projectDetailedOutlines,validateDetailedOutlineAssignments,validateDetailedOutlines} from '../core/novel-import-outline'
 import {WIZARD_REVIEW_TEXT,WIZARD_REVIEW_FACT,WIZARD_REVIEW_STRUCTURAL,conflictChoiceOptions,conflictDetail,conflictTarget,fieldValue,assertFieldValue,inferredValue} from '../core/novel-import-conflict-choices'
 import {importFieldLabel} from '../shared/novel-import-field-labels'
-import {validateImportWizardState,emptyWizardState,type ImportWizardState} from '../core/novel-import-wizard-state'
+import {validateImportWizardState,emptyWizardState,recordWizardRosterDropped,type ImportWizardState} from '../core/novel-import-wizard-state'
 import type {WizardStep} from '../shared/novel-import-wizard'
 import {normalizeWizardName,wizardCandidateId,WIZARD_ALIAS_LIMIT,splitWizardSourceBlocks,splitWizardSourceWorlds,wizardSkippedSteps,materializeWizardChapters,assertWizardSessionChapters,patchWizardChapters,selectWizardWorld,keptWizardWorlds,WIZARD_STEPS,type WizardCandidate} from '../core/novel-import-wizard'
 import type {WizardTask} from '../shared/novel-import-wizard'
@@ -740,12 +740,12 @@ export class NovelImportController {
     const queue=sharedStage(units.filter(u=>!done.has(u.id))),attempts=new Map<string,number>()
     // Batches run WIZARD_ROSTER_CONCURRENCY at a time (docs/238 A). Sources are checked before the
     // first batch, every 30 s while batches run and before the list is built, instead of around every
-    // request. Returned batches are merged in one serial save without blocking the workers. After an
-    // error no new batch starts; batches already in flight finish and are kept for redetect.
-    const order=new Map(units.map((u,k)=>[u.id,k])),finished:{request:typeof queue[number];entries:ImportRosterEntry[]}[]=[]
+    // request. Returned batches are merged in one serial save without blocking the workers. A singleton
+    // whose output still fails after its bounded attempts stays uncovered; a global error stops new work.
+    const order=new Map(units.map((u,k)=>[u.id,k])),finished:{request:typeof queue[number];entries:ImportRosterEntry[];repairs?:ImportAiResult['rosterRepairs']}[]=[]
     let halt:{error:unknown}|undefined,saving:Promise<void>|undefined,checked=0,checking:Promise<void>|undefined
     const flush=async():Promise<void>=>{
-     while(finished.length){const batch=finished.splice(0);await this.checkpoint(s,epoch,()=>{const stash=(w.rosterStash??={});
+     while(finished.length){const batch=finished.splice(0);await this.checkpoint(s,epoch,()=>{for(const result of batch)if(result.repairs)recordWizardRosterDropped(w,kind,result.repairs);const stash=(w.rosterStash??={});
       // Stash order follows the text, not arrival, so display names and ids do not depend on timing.
       stash[kind]=[...(stash[kind]??[]),...batch.flatMap(({entries})=>entries.map(e=>({unitId:e.evidence.unitId,name:e.name,aliases:e.aliases,...(e.roleType?{roleType:e.roleType}:{}),...(e.parent?{parent:e.parent}:{}),...(e.itemType?{itemType:e.itemType}:{}),...(e.important!==undefined?{important:e.important}:{}),...(e.category?{category:e.category}:{}),...(e.parallel!==undefined?{parallel:e.parallel}:{}),...(e.settings?{settings:e.settings}:{})})))].map((e,k)=>({e,k})).sort((a,b)=>(order.get(a.e.unitId??'')??-1)-(order.get(b.e.unitId??'')??-1)||a.k-b.k).map(({e})=>e)
       s.coverage[coverageKey]=[...new Set([...(s.coverage[coverageKey]??[]),...batch.flatMap(({request})=>request.units.map(u=>u.id))])]})}
@@ -755,12 +755,17 @@ export class NovelImportController {
     const stop=(error:unknown)=>{halt??={error};queue.length=0}
     const worker=async()=>{
      for(let request=queue.shift();request&&!halt;request=queue.shift()){
-      try{await check();if(halt)return;finished.push({request,entries:(await this.ai(s,epoch,request,true)).roster??[]})}
+      try{await check();if(halt)return;const result=await this.ai(s,epoch,request,true);finished.push({request,entries:result.roster??[],repairs:result.rosterRepairs})}
       catch(error){if(error instanceof DOMException&&error.name==='AbortError')throw error
        // docs/503: an unfinished or malformed reply is split and re-run, as for scenes; one unit gets
-       // ROSTER_UNIT_ATTEMPTS fresh tries. Provider, stop, grant, source and transport failures still end the step.
+       // ROSTER_UNIT_ATTEMPTS total tries, then remains pending for an explicit redetect.
        const key=request.units.map(u=>u.id).join('\0'),tries=(attempts.get(key)??0)+1
-       if(!halt&&error instanceof Error&&ROSTER_OUTPUT_RETRYABLE.test(error.message)&&(request.units.length>1||tries<ROSTER_UNIT_ATTEMPTS)){attempts.set(key,tries);if(request.units.length>1){const middle=Math.ceil(request.units.length/2);queue.unshift(...stage(request.units.slice(0,middle)),...stage(request.units.slice(middle)))}else queue.unshift(...stage(request.units));continue}
+       if(!halt&&error instanceof Error&&ROSTER_OUTPUT_RETRYABLE.test(error.message)){
+        attempts.set(key,tries)
+        if(request.units.length>1){const middle=Math.ceil(request.units.length/2);queue.unshift(...stage(request.units.slice(0,middle)),...stage(request.units.slice(middle)));continue}
+        if(tries<ROSTER_UNIT_ATTEMPTS){queue.unshift(...stage(request.units));continue}
+        continue
+       }
        stop(error);return}
       void save().catch(stop)
      }
@@ -777,13 +782,13 @@ export class NovelImportController {
     // Always checked before the list is built, also when every batch was already covered.
     await this.verify(s)
    }
-   const prior=new Map((w.candidates[kind]??[]).map(c=>[c.id,c]));let candidates=buildWizardCandidates(kind,w.rosterStash?.[kind]??[],sources,s.chapters,kind==='item'?itemRosterTaken(w):kind==='world'?worldRosterTaken(w):undefined).map(c=>{const p=prior.get(c.id);return p?{...c,selected:p.selected,...(p.roleType?{roleType:p.roleType}:{})}:c})
+   const incomplete=infer&&pendingWizardRosterUnits(s,kind).length>0,prior=new Map((w.candidates[kind]??[]).map(c=>[c.id,c]));let candidates=buildWizardCandidates(kind,w.rosterStash?.[kind]??[],sources,s.chapters,kind==='item'?itemRosterTaken(w):kind==='world'?worldRosterTaken(w):undefined).map(c=>{const p=prior.get(c.id);return p?{...c,selected:p.selected,...(p.roleType?{roleType:p.roleType}:{})}:c})
    if(kind==='scene'&&infer)candidates=await this.repairSceneParents(s,epoch,candidates)
    await this.serial(async()=>{
     this.assertCandidateOpen();this.current(s,epoch)
     const before={candidates:w.candidates[kind],stash:w.rosterStash?.[kind],state:w.stepState[w.step],error:w.stepError,phase:s.phase,resume:s.resumePhase}
-    try{w.candidates[kind]=candidates;delete w.rosterStash?.[kind];w.stepState[w.step]='waiting';delete w.stepError;s.phase='select';s.resumePhase=undefined;await this.save()}
-    catch(error){if(before.candidates)w.candidates[kind]=before.candidates;else delete w.candidates[kind];if(before.stash)(w.rosterStash??={})[kind]=before.stash;w.stepState[w.step]=before.state;w.stepError=before.error;s.phase=before.phase;s.resumePhase=before.resume;throw error}
+    try{w.candidates[kind]=candidates;if(!incomplete)delete w.rosterStash?.[kind];w.stepState[w.step]='waiting';delete w.stepError;s.phase='select';s.resumePhase=undefined;await this.save()}
+    catch(error){if(before.candidates)w.candidates[kind]=before.candidates;else delete w.candidates[kind];if(before.stash)(w.rosterStash??={})[kind]=before.stash;else delete w.rosterStash?.[kind];w.stepState[w.step]=before.state;w.stepError=before.error;s.phase=before.phase;s.resumePhase=before.resume;throw error}
    })
   }catch(error){
    if(error instanceof DOMException&&error.name==='AbortError')throw error
@@ -1814,6 +1819,7 @@ export class NovelImportController {
   w.tasks=w.tasks.filter(t=>!removeTasks.includes(t));w.skipped=w.skipped.filter(r=>w.tasks.some(t=>t.id===r.taskId));w.dropped=[];w.deferredConflicts=[];delete w.checks;delete w.foreshadowRefs;delete w.touchStash;delete w.lineRepairs
   s.artifacts=s.artifacts.filter(a=>!dropped.has(a.id));s.conflicts=s.conflicts.filter(c=>!c.source.artifactId||!dropped.has(c.source.artifactId));s.decisions=s.decisions.filter(d=>s.conflicts.some(c=>c.hash===d.hash))
   for(const key of Object.keys(s.coverage))if(key.startsWith('roster:')?!keepKinds.has(key.slice(7) as ImportTarget):!keepKinds.has(key as ImportTarget))delete s.coverage[key]
+  for(const kind of ['character','scene','item','world'] as const)if(!keepKinds.has(kind))delete w.rosterStash?.[kind]
   delete s.semanticState;delete s.detailedOutlineIds;s.notFound=s.notFound.filter(k=>keepKinds.has(k))
   if(!keepLists)for(const kind of ['character','scene','item','world'] as const)if(!keepKinds.has(kind)&&WIZARD_STEPS.indexOf(({character:'detect-char',scene:'detect-scene',item:'detect-item',world:'detect-world'} as const)[kind])>=from&&to.startsWith('detect'))delete w.candidates[kind]
   this.resetLaterSteps(s,to)
@@ -1867,7 +1873,7 @@ export class NovelImportController {
   if(this.rosterKind(s)!=='character')throw Error('只有角色可以修改类型');const c=this.candidates(s,'character').find(c=>c.id===action.candidateId);if(!c)throw Error('清单项目无效');c.roleType=action.roleType
  }
  private mergeCandidates(s:ImportSession,action:Extract<ImportAction,{type:'wizard-merge-candidates'}>){
-  const kind=this.rosterKind(s);if(kind==='world')throw Error('世界观不能合并');const list=this.candidates(s,kind),keep=list.find(c=>c.id===action.keepId),merged=action.mergeIds.map(id=>list.find(c=>c.id===id))
+  const kind=this.rosterKind(s);if(kind==='world')throw Error('世界观不能合并');if((kind!=='scene'||this.wizard(s).sceneIdentityVersion!==1)&&this.wizardInfers(s,kind)&&pendingWizardRosterUnits(s,kind).length)throw Error('有未完成识别片段，请先重试或继续导入');const list=this.candidates(s,kind),keep=list.find(c=>c.id===action.keepId),merged=action.mergeIds.map(id=>list.find(c=>c.id===id))
   if(!keep||!merged.length||merged.some(c=>!c||c.id===keep.id))throw Error('合并项目无效')
   for(const c of merged as WizardCandidate[]){keep.aliases=[...new Set([c.name,...keep.aliases,...c.aliases])].filter(a=>a!==keep.name).slice(0,WIZARD_ALIAS_LIMIT);keep.sources=[...new Set([...keep.sources,...c.sources])];keep.sourceArtifactIds=[...new Set([...keep.sourceArtifactIds,...c.sourceArtifactIds])];keep.chapterCount=Math.max(keep.chapterCount,c.chapterCount)}
   this.wizard(s).candidates[kind]=list.filter(c=>!action.mergeIds.includes(c.id))
@@ -1886,6 +1892,7 @@ export class NovelImportController {
   const settings=kind==='world'&&WIZARD_SETTINGS_KINDS.some(k=>s.selected.includes(k)||this.wizardInfers(s,k))
   if(action.skip)w.candidates[kind]=(w.candidates[kind]??[]).map(c=>({...c,selected:false}))
   w.stepState[importStep]=(action.skip||!selected)&&!settings?'skipped':'pending'
+  if(kind!=='scene'||w.sceneIdentityVersion!==1){const unfinished=this.wizardInfers(s,kind)?pendingWizardRosterUnits(s,kind).length:0;if(unfinished)recordWizardRosterDropped(w,kind,{},unfinished);delete w.rosterStash?.[kind]}
   w.selectionHash=wizardSelectionHash(s)
   this.advance(s)
  }
@@ -1898,7 +1905,7 @@ export class NovelImportController {
  private file(s:ImportSession,id:string){const file=s.files.find(f=>f.id===id);if(!file)throw Error('来源文件无效');return file}
  private readSource(s:ImportSession,id:string,offset:number,limit:number):ImportResponse{const file=this.file(s,id);if(offset>file.text.length)throw Error('原文分页位置无效');if(!safeImportBoundary(file.text,offset))offset--;let end=Math.min(file.text.length,offset+limit);if(!safeImportBoundary(file.text,end))end--;return {...this.response(),source:{fileId:id,offset,total:file.text.length,text:file.text.slice(offset,end),units:s.units.filter(u=>u.fileId===id&&u.end>offset&&u.start<end).map(({id,start,end,kind,part})=>({id,start,end,kind,part}))}}}
  private invalidate(s:ImportSession,source:boolean){
-  this.sceneSourceMemo.delete(s)
+  this.sceneSourceMemo.delete(s);if(s.wizard)for(const kind of ['character','scene','item','world'] as const)delete s.wizard.rosterStash?.[kind]
   const preserveManual=s.semanticVersion===1&&!source&&s.chapterDetection?.mode==='manual'&&s.chapters.map(c=>c.content).join('')===sourceBody(s)
   if(source)s.chapterDetection=undefined
   if(s.detailedOutlineIds)for(const index of Object.keys(s.detailedOutlineIds))delete s.chapters[Number(index)]?.outline
@@ -2249,7 +2256,7 @@ export class NovelImportController {
   try{const invoke=()=>this.options.ai({...snapshot,operationId,models:{text:grant.textModel,review:grant.reviewModel}}),original=s.semanticVersion===1?this.runtime.invoke({version:1,processRunId:this.runtime.processRunId,sessionId:s.id,operationId,epoch,phase:request.phase,...(request.kind?{kind:request.kind}:{}),...(request.intent?{intent:request.intent}:{}),workingRevision:s.workingRevision,scopeHash:request.intent==='structure'?grant.hash:s.wizardVersion===1&&verified&&request.phase==='analyze'&&(request.intent==='entity'&&(request.kind==='character'||request.kind==='scene'||request.kind==='item'||request.kind==='world')||request.intent==='roster'&&request.kind==='scene'&&!!request.sceneIdentity||request.executionLane==='wizard-lines-v1'||request.intent==='touches')?this.runtimeScopeCache.resolve(s,grant,()=>importScopeHash(s,'analyze')):importScopeHash(s,request.phase==='classify'?'classify':'analyze'),payloadHash:createHash('sha256').update(payload).digest('hex'),startedAt:new Date().toISOString()},invoke):invoke();if(s.semanticVersion===1)try{await this.recordRuntime(s,epoch,operationId)}catch(error){await Promise.allSettled([Promise.resolve().then(()=>this.options.cancelAi(operationId))]);await original.then(()=>undefined,()=>undefined);throw error}
    // The settled state reaches runtime.json too; a failed write here only loses diagnostics.
    if(s.wizardVersion===1)void original.then(()=>undefined,()=>undefined).then(()=>freshImportRuntimeTask(()=>undefined)).then(()=>this.writeWizardRuntime(s)).catch(()=>undefined)
-   const result=await original.catch(error=>{if(wave&&!reviewGlobalFailure(error))throw new ReviewPacketFailure(error);throw error});this.current(s,epoch);if(!verified)await this.verify(s);this.current(s,epoch);const latest=await this.options.models();if(!same(grant.textModel,latest.text)||request.phase==='review'&&!same(grant.reviewModel,latest.review))throw Error('模型配置或授权已变化，未采用返回结果');if(s.semanticVersion===1){const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneIdentity?.mode==='cleanup'?'sceneCleanup':request.sceneIdentity?.mode==='roster'?'sceneRoster':request.sceneParentTargets?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'&&request.intent==='reconcile'?'reconcile':request.phase==='analyze'&&(request.intent==='roster'||request.intent==='touches')?request.intent:request.phase,allowed:Record<string,string[]>={classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:['roster'],sceneRoster:['roster','sceneRosterRecords'],sceneLinks:['sceneIdentityDecisions'],sceneCleanup:['sceneCleanup'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']};for(const key of ['sceneRosterRecords','sceneIdentityDecisions','sceneCleanup'] as const)if(Object.hasOwn(result,key)&&!allowed[stage].includes(key))throw Error('当前语义阶段返回了越权内容');if(stage==='sceneRoster')assertSceneRosterCanonical(result,request.units);if(stage==='sceneLinks'&&(Reflect.ownKeys(result).length!==1||!Object.hasOwn(result,'sceneIdentityDecisions')||!Array.isArray(result.sceneIdentityDecisions)))throw Error('场景身份核对返回结构无效');if(stage==='sceneCleanup'&&(Reflect.ownKeys(result).length!==1||!Object.hasOwn(result,'sceneCleanup')||!Array.isArray(result.sceneCleanup)))throw Error('场景清单整理返回结构无效');for(const key of ['classifications','artifacts','artifactEdits','conflicts','missingTargets','patches','chapterCuts','ignoredStarts','roster','touches','sceneParents'] as const)if(result[key]?.length&&!allowed[stage].includes(key))throw Error('当前语义阶段返回了越权内容');if(result.notFound===true&&stage!=='analyze')throw Error('当前语义阶段不能返回notFound')}if(result.settingsRepairs!==undefined&&request.executionLane!=='wizard-settings-v1')throw Error('当前语义阶段返回了越权内容');if(result.linesRepairs!==undefined&&request.executionLane!=='wizard-lines-v1')throw Error('当前语义阶段返回了越权内容');return result}finally{this.operations.delete(operationId)}
+   const result=await original.catch(error=>{if(wave&&!reviewGlobalFailure(error))throw new ReviewPacketFailure(error);throw error});this.current(s,epoch);if(!verified)await this.verify(s);this.current(s,epoch);const latest=await this.options.models();if(!same(grant.textModel,latest.text)||request.phase==='review'&&!same(grant.reviewModel,latest.review))throw Error('模型配置或授权已变化，未采用返回结果');if(s.semanticVersion===1){const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneIdentity?.mode==='cleanup'?'sceneCleanup':request.sceneIdentity?.mode==='roster'?'sceneRoster':request.sceneParentTargets?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'&&request.intent==='reconcile'?'reconcile':request.phase==='analyze'&&(request.intent==='roster'||request.intent==='touches')?request.intent:request.phase,allowed:Record<string,string[]>={classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:['roster'],sceneRoster:['roster','sceneRosterRecords'],sceneLinks:['sceneIdentityDecisions'],sceneCleanup:['sceneCleanup'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']};for(const key of ['sceneRosterRecords','sceneIdentityDecisions','sceneCleanup'] as const)if(Object.hasOwn(result,key)&&!allowed[stage].includes(key))throw Error('当前语义阶段返回了越权内容');if(stage==='sceneRoster')assertSceneRosterCanonical(result,request.units);if(stage==='sceneLinks'&&(Reflect.ownKeys(result).length!==1||!Object.hasOwn(result,'sceneIdentityDecisions')||!Array.isArray(result.sceneIdentityDecisions)))throw Error('场景身份核对返回结构无效');if(stage==='sceneCleanup'&&(Reflect.ownKeys(result).length!==1||!Object.hasOwn(result,'sceneCleanup')||!Array.isArray(result.sceneCleanup)))throw Error('场景清单整理返回结构无效');for(const key of ['classifications','artifacts','artifactEdits','conflicts','missingTargets','patches','chapterCuts','ignoredStarts','roster','touches','sceneParents'] as const)if(result[key]?.length&&!allowed[stage].includes(key))throw Error('当前语义阶段返回了越权内容');if(result.notFound===true&&stage!=='analyze')throw Error('当前语义阶段不能返回notFound')}if(result.rosterRepairs!==undefined&&(request.intent!=='roster'||request.sceneIdentity))throw Error('当前语义阶段返回了越权内容');if(result.settingsRepairs!==undefined&&request.executionLane!=='wizard-settings-v1')throw Error('当前语义阶段返回了越权内容');if(result.linesRepairs!==undefined&&request.executionLane!=='wizard-lines-v1')throw Error('当前语义阶段返回了越权内容');return result}finally{this.operations.delete(operationId)}
   }catch(error){if(!wave||error instanceof ReviewPacketFailure)throw error;throw error instanceof ReviewWaveFailure?error:new ReviewWaveFailure(error)}
  }
  private async classify(s:ImportSession,mode:'local'|'ai',consent:boolean){

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, test } from 'node:test'
-import { mkdtemp, mkdir, readFile, writeFile, symlink, rename, rm, truncate, stat } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile, symlink, rename, rm, truncate, stat, chmod, utimes } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
@@ -112,6 +112,22 @@ test('NI-F07: protected roots, symlinks and source inode/content replacement fai
  const higher=await root();await mkdir(join(higher,'卷','章'),{recursive:true});const leafPath=join(higher,'卷','章','正文.txt');await writeFile(leafPath,'原文件及其时间戳均保持不变');const [stableLeaf]=await scanNovelSources([join(higher,'卷')]),leafBefore=await stat(leafPath,{bigint:true});await rename(join(higher,'卷'),join(higher,'旧卷'));await mkdir(join(higher,'卷'));await rename(join(higher,'旧卷','章'),join(higher,'卷','章'));const leafAfter=await stat(leafPath,{bigint:true});assert.equal(leafAfter.ino,leafBefore.ino);assert.equal(leafAfter.mtimeNs,leafBefore.mtimeNs);assert.equal(leafAfter.ctimeNs,leafBefore.ctimeNs);await assert.rejects(verifyNovelSources([stableLeaf]),/目录|来源/)
  const missing=await root();await writeFile(join(missing,'删除.txt'),'原文');const [deleted]=await scanNovelSources([join(missing,'删除.txt')]);await rm(deleted.path);await assert.rejects(redecodeNovelFile(deleted,'utf-8'),error=>{assert.ok(error instanceof Error);assert.ok(!error.message.includes(missing));return true})
  const protectedFiles=await scanNovelSources([outside],{protectedRoots:[outside]});assert.ok(protectedFiles.every(f=>!f.included&&f.error));assert.ok(protectedFiles.every(f=>!f.text))
+})
+
+test('NI-F07b: saved-content verification accepts only ctime-only metadata drift and refreshes the proof',async()=>{
+ const p=await root(),path=join(p,'正文.txt');await writeFile(path,'第一章\r\n完整原句。');const [file]=await scanNovelSources([path]),before=await stat(path,{bigint:true}),originalProof={...file.proof!},originalHash=file.hash
+ await chmod(path,0o600);const drifted=await stat(path,{bigint:true});assert.equal(drifted.dev,before.dev);assert.equal(drifted.ino,before.ino);assert.equal(drifted.size,before.size);assert.equal(drifted.mtimeNs,before.mtimeNs);assert.notEqual(drifted.ctimeNs,before.ctimeNs);assert.equal(hash(await readFile(path)),originalHash)
+ await verifyNovelSources([file]);assert.equal(file.proof!.ctime,String(drifted.ctimeNs));for(const key of ['device','inode','size','mtime'] as const)assert.equal(file.proof![key],originalProof[key]);await verifyNovelSources([file])
+ await chmod(path,0o400);const again=await stat(path,{bigint:true});assert.notEqual(again.ctimeNs,drifted.ctimeNs);const decoded=await redecodeNovelFile(file,'utf-8');assert.equal(decoded.text,file.text);assert.equal(decoded.proof!.ctime,String(again.ctimeNs));await verifyNovelSources([decoded])
+})
+test('NI-F07c: saved-content verification still rejects real byte, mtime and stored-hash changes',async()=>{
+ for(const mode of ['bytes','mtime','hash'] as const){
+  const p=await root(),path=join(p,mode+'.txt');await writeFile(path,'第一章\r\n原句。');await utimes(path,1700000000,1700000000);const [file]=await scanNovelSources([path]),before=await stat(path,{bigint:true})
+  if(mode==='bytes'){await writeFile(path,'第一章\r\n改句。');await utimes(path,1700000000,1700000000);const after=await stat(path,{bigint:true});assert.equal(after.ino,before.ino);assert.equal(after.size,before.size);assert.equal(after.mtimeNs,before.mtimeNs);assert.notEqual(hash(await readFile(path)),file.hash)}
+  if(mode==='mtime')await utimes(path,1700000000,1700000001)
+  if(mode==='hash')file.hash='0'.repeat(64)
+  await assert.rejects(verifyNovelSources([file]),/变化/,mode);await assert.rejects(redecodeNovelFile(file,'utf-8'),/变化/,mode)
+ }
 })
 
 test('NI-F08: oversized files/ZIP expansion and partial parse failure are explicit and never truncated successes',async()=>{

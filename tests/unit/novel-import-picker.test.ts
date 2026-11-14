@@ -41,6 +41,7 @@ test('UP-05: one full sidebar button and default native command; mac menu dedupl
  const source=await readFile('src/components/layout/SidebarTree.tsx','utf8'),file=ts.createSourceFile('sidebar.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
  const found:ts.Node[]=[];const visit=(node:ts.Node)=>{found.push(node);ts.forEachChild(node,visit)};visit(file)
  assert.ok(!source.includes('更多导入方式'))
+ assert.ok(!source.includes('NovelImportTaskButton'),'导入作品下方不显示导入任务记录')
  const buttons=found.filter((node):node is ts.JsxElement=>ts.isJsxElement(node)&&node.openingElement.tagName.getText(file)==='button'&&node.getText(file).includes('<NavigationLabel>导入作品</NavigationLabel>'))
  assert.equal(buttons.length,1)
  const click=buttons[0].openingElement.attributes.properties.find(p=>ts.isJsxAttribute(p)&&p.name.getText(file)==='onClick')!

@@ -24,7 +24,7 @@ import {sceneRosterBoundNativeSchema,sceneRosterKeyedInlineSchema,sceneRosterBou
 import {IMPORT_FIXED_PROMPT_RESERVE_BYTES,importRequestBudget,type ImportExecutionBudget} from '../core/novel-import-budget-policy'
 import {sceneRosterNativeSchema,assertSceneRosterNativeBudget,assertSceneRosterKeyedInlineBudget} from '../core/novel-import-scene-roster-native'
 import {serializeImportAiPayload,assertImportPayloadBudget,importAiPrompt,assertImportFixedPromptReserve,assertImportReconcileContextBudget,IMPORT_JSON_WRAPPER_RESERVE_BYTES,IMPORT_SCENE_OWNERSHIP_CONTRACT,IMPORT_SCENE_ROSTER_ROOT_GUIDANCE} from '../core/novel-import-ai-payload'
-import {IMPORT_KINDS,IMPORT_TARGETS,type ImportSettingsRepairs,type ImportLinesRepairs,type ImportReviewRepairs,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportModel,type ImportUnit} from '../shared/novel-import'
+import {IMPORT_KINDS,IMPORT_TARGETS,type ImportSettingsRepairs,type ImportLinesRepairs,type ImportReviewRepairs,type ImportRosterRepairs,type ImportAiRequest,type ImportAiResult,type ImportArtifact,type ImportEvidence,type ImportModel,type ImportUnit} from '../shared/novel-import'
 import {importHash,safeImportBoundary,validateImportEvidence,validateImportReferences} from '../core/novel-import'
 import {importStructureCandidateMetadata,importStructureResult} from '../core/novel-import-structure'
 import {sceneParentCycleIds,applySceneParentProposals} from '../core/novel-import-wizard-roster'
@@ -372,6 +372,14 @@ const rosterEntrySchemas={
  item:z.object({name:rosterName,aliases:rosterAliases,itemType:z.string().trim().max(100).default(''),important:z.boolean(),category:z.enum(['item','character','place','organization','concept','other']).nullable().optional(),evidence:rosterEvidence.optional()}).strict().transform(entry=>{if(entry.category!==null)return entry;const {category:_category,...rest}=entry;return rest}),
  world:z.object({name:rosterName,aliases:rosterAliases,parent:rosterName.optional(),parallel:z.boolean().optional(),settings:z.array(z.object({settingType:z.enum(IMPORT_WORLD_SETTING_TYPES),name:rosterName}).strict()).max(50),evidence:rosterEvidence.optional()}).strict(),
 }
+const invalidRosterCounts=new WeakMap<object,number>()
+const invalidRosterCount=(value:unknown)=>value&&typeof value==='object'?invalidRosterCounts.get(value)??0:0
+function repairableRosterSchema(entry:z.ZodTypeAny){
+ return z.object({roster:z.array(z.unknown()).max(2000)}).strict().transform(({roster})=>{
+  let invalid=0;const valid:unknown[]=[];for(const value of roster){const parsed=entry.safeParse(value);if(parsed.success)valid.push(parsed.data);else invalid++}
+  const result={roster:valid};if(invalid)invalidRosterCounts.set(result,invalid);return result
+ })
+}
 /** docs/535 3R-5: an over-long summary or content is cut by code points to at most `max` UTF-16 units, so no lone surrogate remains. Shape fix only. */
 export function trimWellFormed(value:string,max:number){if(value.length<=max)return value;let out='';for(const ch of value){if(out.length+ch.length>max)break;out+=ch}return out}
 const touchSchema=z.object({foreshadowKey:rosterName,title:rosterName,content:z.string().default('').transform(v=>trimWellFormed(v,4000)),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:z.number().int().nonnegative(),summary:z.string().transform(v=>trimWellFormed(v,200)),quote:z.string().min(1).max(200),eventId:z.string().min(1).optional(),narrativeId:z.string().min(1).optional()}).strict(),evidence:rosterEvidence}).strict()
@@ -497,7 +505,7 @@ export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodTyp
  if(request.sceneParentTargets!==undefined)return sceneParentResponseSchema(request)
  const selected=selectedEntityTarget(request),anchorFeedback=importEvidenceFeedback(request)
  if(request.intent==='structure')return structureSchema
- if(request.intent==='roster'){const entry=rosterEntrySchemas[request.kind as keyof typeof rosterEntrySchemas];if(!entry)throw Error('当前识别类别无效');return z.object({roster:z.array(entry).max(2000)}).strict() as unknown as z.ZodType<ImportSemanticAiResult>}
+ if(request.intent==='roster'){const entry=rosterEntrySchemas[request.kind as keyof typeof rosterEntrySchemas];if(!entry)throw Error('当前识别类别无效');return (request.kind==='scene'?z.object({roster:z.array(entry).max(2000)}).strict():repairableRosterSchema(entry)) as unknown as z.ZodType<ImportSemanticAiResult>}
  if(request.intent==='touches')return z.object({touches:z.array(touchSchema).max(2000)}).strict() as unknown as z.ZodType<ImportSemanticAiResult>
  const base=request.semanticVersion===1?semanticSchema:schema
  if(request.phase==='classify'){
@@ -1137,9 +1145,10 @@ export async function runImportAi(request:ImportSemanticAiRequest&{executionBudg
  assertSceneRosterNativeBudget(request,model,budget,payload,prompt,'first')
  await deps.assert(model);signal.throwIfAborted()
  const generated=await deps.generate(request,model,signal,prompt,options);signal.throwIfAborted()
+ const generatedInvalid=invalidRosterCount(generated)
  const {raw:settingsRaw,repairs}=takeSettingsRepairs(request,generated),{raw:linesRaw,repairs:lineRepairs}=takeLinesRepairs(request,settingsRaw),{raw,repairs:reviewRepairs}=takeReviewRepairs(request,linesRaw)
  const parsed=responseSchema.safeParse(raw);if(!parsed.success)throw Error('模型返回结构或类别无效，请重试')
- const result=parsed.data as ImportSemanticAiResult,ids=new Set(request.units.map(u=>u.id))
+ const droppedInvalid=generatedInvalid+invalidRosterCount(parsed.data),result=parsed.data as ImportSemanticAiResult,ids=new Set(request.units.map(u=>u.id))
  // docs/542: knowledge notes a model writes into prose are removed before any check; facts keep the knowledge.
  if(request.semanticVersion===1)for(const item of result.artifacts??[])stripArtifactAnnotations(item)
  // docs/544 M2: reconcile edits carry model prose too; only their new values change, never ranges or the original text.
@@ -1185,7 +1194,9 @@ export async function runImportAi(request:ImportSemanticAiRequest&{executionBudg
  if(request.phase==='analyze'&&!['reconcile','roster','touches'].includes(request.intent??'')&&!(result.artifacts?.length)&&result.notFound!==true)throw Error('未找到内容时必须明确返回 notFound')
  // Roster and touch entries whose quote cannot be located are dropped, never guessed.
  const located=<T extends {evidence:ImportEvidence}>(entries:T[]|undefined)=>entries?.flatMap(entry=>{try{return [{...entry,evidence:anchorEvidence([entry.evidence],request.units)[0]}]}catch{return []}})
+ const rosterBeforeLocation=result.roster?.length??0
  if(result.roster&&request.sceneIdentity?.mode!=='roster')result.roster=locatedRoster(result.roster,request.units)
+ const droppedUnlocatable=rosterBeforeLocation-(result.roster?.length??0),rosterRepairs:ImportRosterRepairs|undefined=droppedInvalid||droppedUnlocatable?{droppedInvalid,droppedUnlocatable}:undefined
  if(result.touches)result.touches=located(result.touches as {evidence:ImportEvidence}[]) as typeof result.touches
  if(request.semanticVersion===1){
   for(const item of result.artifactEdits??[])item.evidence=anchorEvidence(item.evidence,request.units)
@@ -1205,7 +1216,8 @@ export async function runImportAi(request:ImportSemanticAiRequest&{executionBudg
  if(request.phase==='patch'&&!result.patches?.length)throw Error('未生成可核对的正文修改')
  await deps.assert(model);const current=await deps.resolve(role,pinned.id);signal.throwIfAborted();if(!equalSnapshot(current,pinned))throw Error('模型配置或授权已变化，未采用返回结果')
  if(themeProfileRequest(request))result.artifacts=result.artifacts?.map(item=>({...item,schema:2}))
- return repairs?{...result,settingsRepairs:repairs}:lineRepairs?{...result,linesRepairs:lineRepairs}:reviewRepairs?{...result,reviewRepairs}:result
+ const accepted=rosterRepairs?{...result,rosterRepairs}:result
+ return repairs?{...accepted,settingsRepairs:repairs}:lineRepairs?{...accepted,linesRepairs:lineRepairs}:reviewRepairs?{...accepted,reviewRepairs}:accepted
 }
 /** Prose fields only: text, descriptive facts and world content strings. Structural/JSON facts and knowledge fields are kept. */
 const ANNOTATION_KEPT_FACTS=new Set(['reliability','attribution','temporalScope','entityType','settingType','worldId','parentId','chapterIndex','order','refs','people','narrator','status','characterId','sceneId','itemId','eventId','lineId','lineName','timeKind','timeValue','timeEnd','tropeKind','roleType','aliases','tags','personalityTags','bigFive','coordinates','channel','genre'])
