@@ -374,3 +374,34 @@ S3–S8、S10–S13 已充分采纳。另有三条：
 - **Q1 中以下部分**：不复制 `drafts.json`、`catalog.json`、`session/`；`restoreSession=false`；新 catalog 为空，通过“打开作品”登记副本，这样不会触发重复作品检查；启动前和结束后都对比原作品、用户作品和 cache-522 的文件列表、mtime 和 sha256，有差异就视为失败。这些都成立。
 - **Q2**：`refs` 由 `useMemo([data])` 建好映射，并使用模块级 `EMPTY_REFS`，可以实现。
 - WU-56h 已加入“单击展开只重新渲染 1 张”的检查。
+
+---
+
+## 修订 7 复审
+
+复审对象：`docs/580-worldline-ui-plan.md` 修订 7（提交 `0b32bd3`）。代码行号指 chronology 提交 `195b4c0`，测试根只读检查。
+
+**结论：通过。** V1、V2 已解决，没有剩余的必须修改项。协调者提出的两个问题，核对结果如下。
+
+### 初始化后再覆盖 `state.json`，会不会与初始化写入的内容冲突
+
+不会。初始化写入的身份信息都不依赖 `state.json`：
+- **根标记**：`shakeink-app.json` 中的 `id` 和 `phase`、`inboxReady`（`workspaces.ts:131-139`、`:513-517`），以及引导目录中的 `data-root.json` 指针（`rootId` 取标记中的 `id`，由 `manager.adopt` 写入，`root-startup.ts:66-69`），都只和根目录、inbox 互相校验，不读取 `state.json`。
+- **启动链**：`startOwnedRoot` → `Workspaces.initialize` → inbox 连接 → `ModelRepository.initialize`（`desktop/main/index.ts:380-381`）。前面几步都不涉及 `state.json`，`ModelRepository` 只读取它并按 schema 校验（`model-repository.ts:39-48`），没有摘要、根 id 或 inode 绑定。
+- **会检查 `state.json` 的地方**：`data-root.ts:322` 的 ownedFiles 检查、`application-cold-source.ts`、`root-inventory-paths.ts` 等，只在迁移、备份、恢复时运行，并且只检查文件是否存在，不比较内容。本轮不执行这些操作。
+- **inbox** 中存的是对话、模板和会话台账，与模型状态无关。
+- **模型 Key**：Key 用 safeStorage 加密，与启动用的 app 身份绑定，与根目录无关。修订 7 第 2、4 步都用 LotmVerification.app 启动，与 cache-522 写入 Key 时的身份一致。
+- **路径检查**：我检查了 cache-522 的 `state.json` 和 `model-catalogs.json`，其中没有 `/Documents/`、`worldline-570/works`、`cache-522` 的出现（各 0 处），所以覆盖后第 4 步启动前的 grep 能通过。`state.json` 中也没有任何文件路径：`defaultParent` 为空，`avatarAssetId` 为 null。
+
+### 首次启动写入的默认 `state.json` 中，有没有会被覆盖掉、而又需要的内容
+
+没有。
+- 默认状态就是 `defaultState`（`desktop/core/settings.ts:50-60`）：默认设置、空模型列表、`onboarding: null`。`VersionedStore` 在文件不存在时直接返回默认值，不写文件（`versioned-store.ts:56-58`）。所以第 2 步只是启动后退出、不做任何操作时，根目录中可能根本没有 `state.json`。修订 7 写的“以及默认的 `state.json`”不一定成立，但覆盖步骤不受影响，直接写入即可。
+- cache-522 的 `state.json` 是完整状态，通过 `stateSchema`：设置的五个部分齐全，快捷键覆盖为空，主题为 paper，有 1 个已启用的 TEXT 模型，引导已完成且 `textModelId` 指向这个模型。覆盖后不会出现首次引导，模型可以直接使用。
+- `avatarAssetId: null`，所以不依赖 cache-522 的 `assets/global/` 头像文件，不复制 `assets/` 不会造成引用失效。
+
+### 实现时注意（不阻塞）
+
+- **改写 `restoreSession` 后先确认文件仍能通过 schema。** 文件格式不合法时，`ModelRepository.initialize` 会先调用 `quarantineInvalidStore`，把文件原样移到一边，然后用默认状态启动，模型列表为空（`model-repository.ts:41`、`versioned-store.ts:69-80`）。第 4 步“能读取模型列表”能发现这种情况。建议同时检查根目录中没有生成被移开的 state 文件，并用应用自己的设置界面确认“启动时恢复上次工作台”已关闭。
+- **第 2 步正常退出应用，不要强行结束进程。** cache-522 的 `inbox/` 中留有 `.shakeink-lock`。正常退出可以避免新根留下同样的残留锁，否则下次启动会有锁冲突。
+- 第 2 步首次启动时，`state.onboarding` 为 null，会显示首次引导界面，不需要操作，直接退出即可。

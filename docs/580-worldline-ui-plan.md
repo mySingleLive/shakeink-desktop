@@ -219,9 +219,10 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
   1. **离线准备新根** [Q1]：新根第一次启动时，会立刻连接 catalog 中的每一部作品（侧边栏的 `/api/novels`、对话列表的 `/api/chat/conversations`，见 `dispatcher.ts:87-88`、`:100-101`）。连接时会创建 `.shakeink-lock`、启动 PGlite 并执行迁移。所以“启动后再从列表移除”来不及，**所有准备必须在应用第一次启动之前、在文件系统上完成**：
      - **让应用自己初始化空根** [V1]：`WorkspaceService.initialize` 只在目录为空时才写入标记，并新建 catalog 和 inbox（`workspaces.ts:129-139`）。所以按以下顺序准备：
        1. 新建空目录 `~/shakeink-test-roots/worldline-ui-583/`。
-       2. 用 LotmVerification.app 和 `SHAKEINK_TEST_ROOT` 指向这个空目录，启动一次应用，等它完成初始化（出现主窗口、根中有 `shakeink-app.json`，且 `phase:"ready"`）后退出。这时根中只有应用新写的 `shakeink-app.json`、空 catalog、空 `inbox/`，以及默认的 `state.json`。
+       2. 用 LotmVerification.app 和 `SHAKEINK_TEST_ROOT` 指向这个空目录，启动一次应用，等它完成初始化（出现主窗口、根中有 `shakeink-app.json`，且 `phase:"ready"`）后退出。这时根中只有应用新写的 `shakeink-app.json`、空 catalog 和空 `inbox/`。
        3. 退出后，用 `cache-522` 的 `state.json` 和 `model-catalogs.json` 覆盖新根中的同名文件，让模型配置可用（模型 Key 加密绑定在 LotmVerification.app 上，所以第 2、4 步都必须用它启动）。然后把 `settings.general.restoreSession` 改为 `false`，并确认文件仍能通过应用的设置校验。
        4. 再次启动，确认能读取模型列表，没有出现启动错误。
+       - 注意（修订 7 复审）：第 2 步出现首次引导界面时不需要操作，直接用菜单正常退出，不要强行结束进程，以免留下锁。第 2 步之后根目录里可能还没有 `state.json`（文件不存在时应用直接使用默认值，不写文件），所以第 3 步是新建这个文件而不是覆盖。第 4 步确认模型列表不为空，并确认根目录中没有被应用移走的 state 文件。如果 schema 校验失败，应用会把文件原样移走并用默认状态启动。
      - **不复制**：`shakeink-app.json` 和 `inbox/` 由应用新建 [V1]；`novel-imports/` [V2] 不复制，因为其中的旧导入会话记录了目标作品路径（包括 `~/Documents/小说/` 下的两部用户作品），而第 3 步的新导入会新建会话，不依赖它们；`drafts.json`、`catalog.json`、`session/` 也不复制。
      - **路径检查**：第 2、4 步启动前，都用 `grep -r` 确认新根中没有任何文件包含 `/Documents/`、`worldline-570/works` 或 `cache-522` 路径，**不留例外** [V2]。
   2. **旧作品** [N5、P4、Q1]：
