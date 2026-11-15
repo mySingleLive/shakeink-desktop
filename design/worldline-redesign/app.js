@@ -7,13 +7,22 @@ const descendants = (id) => kids(id).flatMap((c) => [c, ...descendants(c.id)])
 const open = new Set(), folded = new Set(), hiddenTypes = new Set()
 let selected = null, hot = null, view = 'table', query = '', zoom = 1, activePeriod = null
 const hue = (e) => `var(--c${e.category})`
-const dimmed = (e) => hiddenTypes.has(e.category) || (query && !e.title.includes(query))
+const terms = () => query.toLowerCase().split(/\s+/).filter(Boolean)
+// Every term must appear somewhere in the event (title, fact, people or type name).
+const matches = (e) => { const hay = [e.title, e.fact, e.people.join(' '), categories[e.category], e.label ?? ''].join(' ').toLowerCase(); return terms().every((t) => hay.includes(t)) }
+const dimmed = (e) => hiddenTypes.has(e.category) || (!!query && !matches(e))
+const mark = (text) => {
+  let out = esc(text)
+  for (const t of terms()) out = out.replace(new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\const dimmed = (e) => hiddenTypes.has(e.category) || (query && !e.title.includes(query))'), 'gi'), (m) => `<mark>${m}</mark>`)
+  return out
+}
+let hits = [], hitIndex = -1
 const yearOf = (t) => Math.floor(t / Y)
 const yearName = (t) => fmt(t, 'year')
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const AV = ['#b5654f', '#5f8f7a', '#7a6bb0', '#b08a45', '#4f86a3', '#a3587f']
 const avColor = (name) => AV[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % AV.length]
-const avatars = (e, max) => e.people.length
+const avatarsFor = (e, max) => e.people.length
   ? `<span class="avs" title="${esc(e.people.join('、'))}">${e.people.slice(0, max).map((p) => `<i style="background:${avColor(p)}">${p[0]}</i>`).join('')}${e.people.length > max ? `<i class="more">+${e.people.length - max}</i>` : ''}</span>`
   : ''
 const familyEnd = (e) => Math.max(e.start + (e.dur || 0), ...descendants(e.id).filter((d) => d.start !== null).map((d) => d.start + (d.dur || 0)))
@@ -35,7 +44,7 @@ function renderLegend() {
 // ---------- shared card ----------
 function card(e, opts = {}) {
   const el = document.createElement('article'), isOpen = open.has(e.id), n = kids(e.id).length
-  el.className = 'ev' + (isOpen ? ' open' : '') + (selected === e.id ? ' sel' : '') + (dimmed(e) ? ' dim' : '')
+  el.className = 'ev' + (hits[hitIndex]?.id === e.id ? ' hit' : '') + (isOpen ? ' open' : '') + (selected === e.id ? ' sel' : '') + (dimmed(e) ? ' dim' : '')
   el.dataset.id = e.id
   el.style.setProperty('--ec', hue(e))
   el.setAttribute('aria-expanded', isOpen)
@@ -43,8 +52,8 @@ function card(e, opts = {}) {
   const fold = n && opts.foldable ? `<button class="fold-btn${folded.has(e.id) ? ' closed' : ''}" data-fold aria-label="${folded.has(e.id) ? '展开' : '折叠'}子事件">▾</button>` : ''
   const meta = n ? `<span class="group-head-meta"><span class="compact">▸ ${all}</span><span class="full">${e.dur ? `<span class="span-bar" title="持续 ${e.dur} 天"><i style="width:100%"></i></span>${e.dur} 天 · ` : ''}${n} 个子事件${all > n ? `（共 ${all}）` : ''}</span></span>` : ''
   el.innerHTML = `<div class="ev-head" title="${esc(e.title)}">${fold}
-      <span class="ev-dot ${e.kind} i${e.importance}"></span><span class="ev-title">${esc(e.title)}</span>
-      ${isOpen ? '' : avatars(e, opts.compact ? 2 : 3)}${meta}<button class="ev-more" aria-label="${esc(e.title)}更多操作">⋯</button></div>`
+      <span class="ev-dot ${e.kind} i${e.importance}"></span><span class="ev-title">${mark(e.title)}</span>
+      ${isOpen ? '' : avatarsFor(e, opts.compact ? 3 : 4)}${meta}<button class="ev-more" aria-label="${esc(e.title)}更多操作">⋯</button></div>`
   if (isOpen) {
     const kind = e.start === null ? '' : e.kind === 'window' ? `时间不确定 · 最晚 ${fmt(e.windowEnd)}` : e.dur ? `持续 ${e.dur} 天` : '时点'
     const parent = e.parent && byId.get(e.parent)
@@ -52,7 +61,7 @@ function card(e, opts = {}) {
       <div class="ev-meta"><span class="ev-tag">${categories[e.category]}</span><span class="ev-when">${fmt(e.start, e.precision)}</span>
         ${kind ? `<span class="ev-kind">${kind}</span>` : ''}<span class="ev-kind">${IMP[e.importance]}</span>
         ${e.label ? `<span class="ev-kind">${esc(e.label)}</span>` : ''}${parent ? `<span class="ev-kind">属于「${esc(parent.title)}」</span>` : ''}</div>
-      ${e.fact.split('\n\n').map((p) => `<p>${esc(p)}</p>`).join('')}
+      ${e.fact.split('\n\n').map((p) => `<p>${mark(p)}</p>`).join('')}
       ${e.people.length ? `<div class="ev-people">${e.people.map((p) => `<span class="who"><i>${p[0]}</i>${p}</span>`).join('')}</div>` : ''}
       ${e.changes.map((c) => `<div class="change"><b>${c.who}</b>${c.dim}<span>${c.before}</span><em>→</em><span>${c.after}</span></div>`).join('')}</div>`)
   }
@@ -95,7 +104,7 @@ function renderTree({ placed, pending }) {
     r.style.paddingLeft = 4 + depth * 16 + 'px'
     r.style.setProperty('--ec', hue(e))
     r.innerHTML = `<span class="tw${folded.has(e.id) ? ' fold' : ''}">${n ? '▾' : ''}</span><span class="td" style="width:${3 + e.importance * 2}px;height:${3 + e.importance * 2}px"></span>
-      <span class="tt" title="${esc(e.title)}">${esc(e.title)}</span><span class="ts">${n ? `<span style="margin-right:6px">${descendants(e.id).length}</span>` : ''}${short(e.start, e.precision)}</span>`
+      <span class="tt" title="${esc(e.title)}">${mark(e.title)}</span><span class="ts">${n ? `<span style="margin-right:6px">${descendants(e.id).length}</span>` : ''}${short(e.start, e.precision)}</span>`
     r.querySelector('.tw').addEventListener('click', (ev) => { ev.stopPropagation(); folded.has(e.id) ? folded.delete(e.id) : folded.add(e.id); render() })
     r.addEventListener('click', () => locate(e.id))
     tree.append(r)
@@ -273,11 +282,49 @@ $('#scroller').addEventListener('wheel', (ev) => {
   if (again) sc.scrollTop += again.getBoundingClientRect().top - sc.getBoundingClientRect().top - offset
 }, { passive: false })
 function setZoom(z) { zoom = Math.min(4, Math.max(1, Math.round(z * 100) / 100)); $('#zoomVal').textContent = Math.round(zoom * 100) + '%'; render() }
+// Hits are kept in time order; stepping jumps to the hit in the current view (table: scroll; timeline: move the window).
+function updateSearch() {
+  hits = query ? events.filter(matches).sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity)) : []
+  hitIndex = hits.length ? 0 : -1
+  renderSearchState()
+}
+function renderSearchState() {
+  $('#searchBox').classList.toggle('active', !!query)
+  $('#searchBox').classList.toggle('none', !!query && !hits.length)
+  $('#searchCount').textContent = !query ? '' : hits.length ? `${hitIndex + 1} / ${hits.length}` : '无结果'
+  $('#searchPrev').disabled = $('#searchNext').disabled = hits.length < 2
+}
+function gotoHit(step) {
+  if (!hits.length) return
+  hitIndex = (hitIndex + step + hits.length) % hits.length
+  const e = hits[hitIndex]
+  renderSearchState()
+  if (view === 'timeline' && e.start !== null) {
+    selected = e.id
+    for (let p = e; p?.parent; p = byId.get(p.parent)) folded.delete(p.parent)
+    win.start = e.start - win.span * 0.3; render()
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`#lane .ev[data-id="${e.id}"]`), lane = $('#lane')
+      if (!el) return
+      lane.scrollTo({ top: el.getBoundingClientRect().top - lane.getBoundingClientRect().top + lane.scrollTop - 80, behavior: 'smooth' })
+      el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300)
+    })
+  } else locate(e.id)
+}
+let searchTimer
 $('#search').addEventListener('input', (ev) => {
-  query = ev.target.value.trim(); render()
-  const hit = query && events.find((e) => e.title.includes(query))
-  if (hit) document.querySelector(`.tree-row[data-id="${hit.id}"]`)?.scrollIntoView({ block: 'center' })
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { query = ev.target.value.trim(); updateSearch(); render(); if (hits.length) gotoHit(0) }, 120)
 })
+$('#search').addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') { ev.preventDefault(); gotoHit(ev.shiftKey ? -1 : 1) }
+  if (ev.key === 'Escape') { ev.target.value = ''; query = ''; updateSearch(); render() }
+})
+$('#searchPrev').addEventListener('click', () => gotoHit(-1))
+$('#searchNext').addEventListener('click', () => gotoHit(1))
+$('#searchClear').addEventListener('click', () => { $('#search').value = ''; query = ''; updateSearch(); render(); $('#search').focus() })
+// Ctrl/Cmd + F focuses the panel search instead of the browser's.
+document.addEventListener('keydown', (ev) => { if ((ev.ctrlKey || ev.metaKey) && ev.key === 'f') { ev.preventDefault(); $('#search').focus(); $('#search').select() } })
 
 // ---------- timeline view ----------
 let win = null
@@ -302,8 +349,8 @@ function renderTimeline() {
   // parent's time range and is widened to cover every child card, so children always sit inside the frame under it.
   // A bright track inside the bar marks the parent's real time range.
   const roots = kids(null).filter((e) => e.start !== null && familyEnd(e) >= win.start - 10 && e.start <= win.start + win.span)
-  const MIN_BAR = 200
-  const leafW = (e, depth) => (open.has(e.id) ? 340 : depth ? 180 : 200)
+  const MIN_BAR = 260
+  const leafW = (e, depth) => (open.has(e.id) ? 420 : depth ? 230 : 260)
   // Right edge in px of e's family, computed before placing anything so the header width is known up front.
   const extent = (e, depth) => {
     if (!kids(e.id).length) return x(e.start) + leafW(e, depth)
@@ -369,7 +416,7 @@ function renderTimeline() {
 // ---------- minimap (docs/577 §10) ----------
 // Segments use the same gap rule as the event-table rail. Each segment's width follows its event count, with a 10px
 // break between segments, so a 20万-year gap does not squeeze the dense years into one pixel.
-const MW = 300, GAP = 10
+const MW = 420, GAP = 14
 function miniModel() {
   const roots = kids(null).filter((e) => e.start !== null).sort((a, b) => a.start - b.start)
   const seg = segmentOf(roots.map((e) => ({ e, depth: 0 })))
@@ -397,8 +444,8 @@ function miniModel() {
 function drawMinimap() {
   const m = miniModel(), a = m.toX(win.start), b = m.toX(win.start + win.span)
   $('#minimap').innerHTML =
-    m.groups.map((g, i) => `<u style="left:${g.x0}px;width:${g.w}px" title="${fmt(g.t0, 'year')}"></u>` + (i ? `<s style="left:${g.x0 - GAP / 2}px"></s>` : '')).join('') +
-    m.roots.map((e) => `<i style="left:${m.toX(e.start)}px;--ec:${hue(e)};height:${6 + e.importance * 3}px;top:${14 - (3 + e.importance * 1.5)}px${dimmed(e) ? ';opacity:.2' : ''}"></i>`).join('') +
+    m.groups.map((g, i) => `<u style="left:${g.x0}px;width:${g.w}px" title="${fmt(g.t0, 'year')}"></u>` + (g.w > 34 ? `<em style="left:${g.x0 + 4}px;max-width:${g.w - 6}px">${short(g.t0, 'year')}</em>` : '') + (i ? `<s style="left:${g.x0 - GAP / 2}px"></s>` : '')).join('') +
+    m.roots.map((e) => `<i style="left:${m.toX(e.start)}px;--ec:${hue(e)};height:${10 + e.importance * 6}px;top:${26 - (5 + e.importance * 3)}px${dimmed(e) ? ';opacity:.2' : ''}"></i>`).join('') +
     `<b id="miniFrame" style="left:${a}px;width:${Math.max(8, b - a)}px"></b>`
 }
 let mini = null

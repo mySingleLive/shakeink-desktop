@@ -50,7 +50,7 @@
 .break::before, .break::after { content: ""; position: absolute; left: 150px; width: 16px; height: 2px; background: var(--faint); transform: rotate(-24deg); }
 .break::before { top: calc(50% - 4px); } .break::after { top: calc(50% + 3px); }
 .cards { position: relative; margin-left: 210px; padding: 10px 24px 80px 12px; }
-.cards .ev { max-width: 600px; margin-top: 6px; } .cards .ev.open { max-width: 760px; margin: 10px 0; }
+.cards .ev { max-width: 760px; margin-top: 6px; } .cards .ev.open { max-width: 920px; margin: 10px 0; }
 .lead { fill: none; stroke: color-mix(in srgb, var(--ec) 35%, var(--line-soft)); stroke-width: 1; transition: stroke .15s; }
 .lead.hot { stroke: var(--ec); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--ec)); }
 .lead.dim { opacity: .15; }
@@ -91,7 +91,7 @@
 .legend .sizes i { display: inline-block; border-radius: 50%; background: var(--muted); }
 
 /* Hierarchy in the event table: a parent and its children share one group box; a tree connector joins them. */
-.group { position: relative; margin: 10px 0; padding: 0 0 8px; border-radius: 12px; max-width: 640px;
+.group { position: relative; margin: 10px 0; padding: 0 0 8px; border-radius: 12px; max-width: 820px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 7%, transparent), transparent 80%);
   border: 1px solid color-mix(in srgb, var(--ec) 22%, var(--line-soft)); }
 .group > .ev { margin-top: 0; max-width: none; border-color: transparent; border-radius: 11px 11px 9px 9px; }
@@ -181,3 +181,31 @@
 .tcard.header .track { position: absolute; left: 0; bottom: -1px; height: 3px; border-radius: 0 2px 2px 6px; pointer-events: none;
   background: linear-gradient(90deg, var(--ec), color-mix(in srgb, var(--ec) 60%, transparent)); box-shadow: 0 0 8px var(--ec); }
 .tcard.header .track::after { content: ""; position: absolute; right: -3px; top: -2px; width: 7px; height: 7px; border-radius: 50%; background: var(--ec); box-shadow: 0 0 6px var(--ec); }
+
+/* ---------- v6: toolbar search, larger minimap ---------- */
+.search { position: relative; display: flex; align-items: center; gap: 2px; width: 260px; height: 30px; padding: 0 6px 0 9px; border-radius: 9px;
+  border: 1px solid var(--line-soft); background: var(--panel); transition: width .2s, border-color .15s, box-shadow .15s; }
+.search:focus-within, .search.active { width: 400px; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.search.none { border-color: var(--c0); }
+.search svg { flex: none; width: 14px; height: 14px; color: var(--faint); }
+.search input { flex: 1; min-width: 0; height: 100%; padding: 0 6px; border: 0; outline: none; background: none; }
+.search input::placeholder { color: var(--faint); }
+.search .count { flex: none; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; padding: 0 4px; }
+.search.none .count { color: var(--c0); }
+.search button { flex: none; width: 22px; height: 22px; border-radius: 6px; color: var(--muted); display: none; }
+.search.active button { display: block; }
+.search button:hover:not(:disabled) { background: var(--accent-soft); color: var(--text); } .search button:disabled { opacity: .35; cursor: default; }
+.search kbd { flex: none; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line-soft); color: var(--faint); font: 10px/16px inherit; }
+.search.active kbd, .search:focus-within kbd { display: none; }
+mark { padding: 0 1px; border-radius: 3px; color: inherit; background: color-mix(in srgb, var(--c1) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c1) 50%, transparent); }
+.ev.hit { box-shadow: 0 0 0 2px var(--c1), 0 0 14px color-mix(in srgb, var(--c1) 50%, transparent); }
+.tree-search { display: none; }
+#treeRows { padding-top: 0; }
+
+.minimap { width: 420px; height: 52px; border-radius: 9px; bottom: 12px; right: 16px; }
+.minimap u { top: 4px; bottom: 16px; border-radius: 5px; }
+.minimap i { width: 2.5px; border-radius: 1.5px; }
+.minimap s { top: 14px; height: 12px; }
+.minimap b { top: 2px; bottom: 2px; border-radius: 7px; border-width: 1.5px; }
+.minimap em { position: absolute; bottom: 2px; font-style: normal; font-size: 9px; line-height: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; pointer-events: none; }
+.lane { padding-bottom: 80px; }
