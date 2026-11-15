@@ -329,3 +329,48 @@ S3–S8、S10–S13 已充分采纳。另有三条：
 ### 建议（不阻塞）
 
 - WU-56h 除了测试“编辑时输入”，还建议测“单击展开一张卡片”：重新渲染的 `EventCard` 应只有 1 张。这样能同时检查 `expanded`、`selected` 等 prop 的稳定性。
+
+---
+
+## 修订 6 复审
+
+复审对象：`docs/580-worldline-ui-plan.md` 修订 6（提交 `6dd026b`）。代码行号指 chronology 提交 `195b4c0`，测试根中的文件为只读检查。
+
+**结论：不通过。** Q2 已解决。Q1 的方向正确：离线准备新根、不复制 `drafts.json`/`catalog.json`/`session/`、设置 `restoreSession=false`、启动前后都对比文件状态。但按修订 6 的文件清单准备好的新根启动不了（V1），而且复制 `novel-imports/` 既没有必要，又让路径检查留下了漏洞（V2）。按协调者的要求，我逐项检查了启动时会读取的位置，结果如下。
+
+### 启动路径逐项检查
+
+| 启动时读取的位置 | 在新根中的情况 | 是否会触及新根以外的作品 |
+|---|---|---|
+| `state.json`（`ModelRepository`，`desktop/main/index.ts:380`） | 只有 `settings`、`models`、`onboarding` 三部分。`defaultParent` 为空，`avatarAssetId` 为 null，没有任何路径；模型 Key 已加密 | 不会 |
+| `model-catalogs.json` | 只有模型目录 | 不会 |
+| `catalog.json`（`WorkspaceService`） | 修订 6 新写为空 | 不会。`/api/novels` 和对话列表只连接 inbox |
+| `drafts.json`（`restoreDesktopDraft`） | 不复制，并且 `restoreSession=false` | 不会 |
+| `novel-imports/*/session.json`（`NovelImportController.initialize`，`desktop/main/novel-import.ts:524-546`） | 4 个会话的 phase 都是 `completed`，启动时在 `:532` 被跳过，不会恢复，也不会连接目标作品 | 现在不会，但见 V2 |
+| 引导目录 `<root>-bootstrap`（`brand-startup-paths.ts:29`，`SHAKEINK_TEST_ROOT`） | 新建的 `worldline-ui-583-bootstrap`，`data-root.json` 由应用写入 | 不会。`cache-522-bootstrap` 不会被使用 |
+| `inbox/` | **不复制** | 见 V1 |
+
+结论：按修订 6 的做法，启动时不会再触及 `~/Documents/小说/` 和 `worldline-570/works` 下的作品。剩下的问题是新根能不能启动，以及检查是否完整。
+
+### 必须修改
+
+**V1：复制 `shakeink-app.json` 但不复制 `inbox/`，新根在启动时报错。**
+`cache-522/shakeink-app.json` 是 `{"phase":"ready","inboxReady":true,…}`。`WorkspaceService.initialize()`（`desktop/service/workspaces.ts:119-144`）发现标记已经是 `ready`，就不会执行建立 inbox 的初始化（`:131-140`），接着在 `:142-143` 对 `inbox/` 调用 `lstat`。目录不存在时会抛出“全局收件箱目录缺失或已变化”，导致启动失败。即使手动建一个空的 `inbox/`，因为 `inboxReady:true`，第一次连接 inbox 时也会在 `:507` 抛出“全局收件箱数据库缺失，不能自动重建”。
+
+请二选一，并写进 §9 和 WU-89：
+- **（推荐）不复制 `shakeink-app.json`。** 新根第一次启动时，应用会自己写入新的标记，并建立 inbox 和空 catalog（`:126-140`）。前提是 `initialize` 要求根目录除标记外为空（`:130`，“应用数据目录不是空目录”）。所以必须先让应用在空目录中完成一次初始化，再把 `state.json` 和 `model-catalogs.json` 放进去。或者先确认 `state.json` 的读取早于这一检查，且不受它影响。请写出准确的步骤和顺序，并实测一次。
+- 或者复制 `inbox/database`，但不复制 `inbox/.shakeink-lease-recovery.json`（按记忆规则移到 stale-receipts）和 `inbox/.shakeink-lock`。代价是 inbox 中会带上 cache-522 的对话记录和会话位置台账。
+
+另外请注意：模型 Key 是用 LotmVerification.app 的身份加密的（见记忆中的 LOTM 运行环境规则）。§9 的步骤 1 和 2（打开旧作品）也应该用同一个 app 启动，否则启动后会提示 Key 缺失。
+
+**V2：不要复制 `novel-imports/`，或者至少不要在路径检查中排除它。**
+- **不需要。** 4 个会话都是 `completed`，启动时会被跳过（`novel-import.ts:532`）。第 3 步新导入会在 `novel-imports/` 下新建会话（`:528`），不依赖旧会话。修订 6 说它是“导入时需要的会话目录”，这个说法不对。
+- **检查有漏洞。** 这 4 个会话不仅记录原文路径 `~/Documents/拆书/…`，还记录了**目标作品路径**：`~/Documents/小说/导入诡秘之主6`、`导入诡秘之主7`、`worldline-570/works/WL-wl-era1`、`WL-wl-demo1`。修订 6 把 `novel-imports/` 整体排除在 grep 检查之外，这些目标路径也就查不到了。如果其中某个会话不是 `completed`，启动时就会被恢复，而它的 target 指向用户本人的作品。
+- 另外，这部分有 164 MB，内容是全书原文和中间结果，复制它与本轮验收无关。
+- 修改方法：不复制 `novel-imports/`。删掉 grep 检查中的例外，要求整个新根都不出现 `/Documents/`、`worldline-570/works`、`cache-522` 这些路径。
+
+### 已解决
+
+- **Q1 中以下部分**：不复制 `drafts.json`、`catalog.json`、`session/`；`restoreSession=false`；新 catalog 为空，通过“打开作品”登记副本，这样不会触发重复作品检查；启动前和结束后都对比原作品、用户作品和 cache-522 的文件列表、mtime 和 sha256，有差异就视为失败。这些都成立。
+- **Q2**：`refs` 由 `useMemo([data])` 建好映射，并使用模块级 `EMPTY_REFS`，可以实现。
+- WU-56h 已加入“单击展开只重新渲染 1 张”的检查。

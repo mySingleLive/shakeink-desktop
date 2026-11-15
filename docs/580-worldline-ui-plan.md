@@ -1,8 +1,8 @@
-# 580 · 世界线界面改版 技术方案（修订 6）
+# 580 · 世界线界面改版 技术方案（修订 7）
 
 依据：`577-worldline-ui-product-design.md`（§1–§15，2026-11-15 设计稿 v9 审核通过）、`design/worldline-redesign/`（只作视觉参考，不进入产品）。基础：`fix/worldline-chronology` 提交 `195b4c0`（docs/570–582，纪元历法，2026-11-16 第六轮复审通过）。本分支已变基到这个提交上。
 
-修订 2 回应 `580-worldline-ui-plan-review.md` 的 M1–M9 和 S1–S14。修订 3 回应该文件“修订 2 复审”一节的 R1–R5、各项细节和新增矛盾，并写入用户 2026-11-16 的决定：Cmd/Ctrl+F 接入桌面快捷键系统。修订 4 回应“修订 3 复审”一节的 N1–N5 和两条说明。修订 5 回应“修订 4 复审”一节的 P1–P4。修订 6 回应“修订 5 复审”一节的 Q1、Q2 和一条建议。每处在方括号中标注对应编号。下文行号指提交 `195b4c0`。
+修订 2 回应 `580-worldline-ui-plan-review.md` 的 M1–M9 和 S1–S14。修订 3 回应该文件“修订 2 复审”一节的 R1–R5、各项细节和新增矛盾，并写入用户 2026-11-16 的决定：Cmd/Ctrl+F 接入桌面快捷键系统。修订 4 回应“修订 3 复审”一节的 N1–N5 和两条说明。修订 5 回应“修订 4 复审”一节的 P1–P4。修订 6 回应“修订 5 复审”一节的 Q1、Q2 和一条建议。修订 7 回应“修订 6 复审”一节的 V1、V2。每处在方括号中标注对应编号。下文行号指提交 `195b4c0`。
 
 ## 1. 范围与原则
 
@@ -217,11 +217,13 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 - **浏览器测试**：沿用 `planning-card-menu.test.ts` 的方式，使用真实的 `WorldlinePanel` 和内存接口数据。内容见 docs/581 §3。家族标题栏、分组框、待定位切换只能由这些固定数据覆盖（见下）。
 - **真实目标系统**：
   1. **离线准备新根** [Q1]：新根第一次启动时，会立刻连接 catalog 中的每一部作品（侧边栏的 `/api/novels`、对话列表的 `/api/chat/conversations`，见 `dispatcher.ts:87-88`、`:100-101`）。连接时会创建 `.shakeink-lock`、启动 PGlite 并执行迁移。所以“启动后再从列表移除”来不及，**所有准备必须在应用第一次启动之前、在文件系统上完成**：
-     - 新建空目录 `~/shakeink-test-roots/worldline-ui-583/`。从 `cache-522` 只复制 `state.json`（模型配置，含加密的 Key，不读取内容）、`model-catalogs.json`、`shakeink-app.json`，以及 `novel-imports/`（导入时需要的会话目录）。
-     - **不复制** `drafts.json`。恢复的标签页存在这个文件里，`cache-522` 中恢复的正是用户本人作品 `导入诡秘之主7` 的世界线标签。另外把新根 `state.json` 中的 `settings.general.restoreSession` 改为 `false`，并通过应用自己的设置校验，确认它能读取。
-     - **不复制** `catalog.json`。新根的 catalog 按 VersionedStore 格式另写：`{"schemaVersion":1,"revision":0,"value":[]}`。然后在应用中通过“打开作品”逐个打开副本，由应用自己登记。
-     - 不复制 `inbox/`（lease 回执，参见记忆），也不复制 `session/`。
-     - 用 `find ~/shakeink-test-roots/worldline-ui-583 -name catalog.json -o -name drafts.json` 确认只有新写的 catalog。再用 `grep -r` 确认新根中任何文件都不包含 `/Documents/`、`worldline-570/works` 或 `cache-522` 路径（`novel-imports/` 中引用的原文路径除外）。
+     - **让应用自己初始化空根** [V1]：`WorkspaceService.initialize` 只在目录为空时才写入标记，并新建 catalog 和 inbox（`workspaces.ts:129-139`）。所以按以下顺序准备：
+       1. 新建空目录 `~/shakeink-test-roots/worldline-ui-583/`。
+       2. 用 LotmVerification.app 和 `SHAKEINK_TEST_ROOT` 指向这个空目录，启动一次应用，等它完成初始化（出现主窗口、根中有 `shakeink-app.json`，且 `phase:"ready"`）后退出。这时根中只有应用新写的 `shakeink-app.json`、空 catalog、空 `inbox/`，以及默认的 `state.json`。
+       3. 退出后，用 `cache-522` 的 `state.json` 和 `model-catalogs.json` 覆盖新根中的同名文件，让模型配置可用（模型 Key 加密绑定在 LotmVerification.app 上，所以第 2、4 步都必须用它启动）。然后把 `settings.general.restoreSession` 改为 `false`，并确认文件仍能通过应用的设置校验。
+       4. 再次启动，确认能读取模型列表，没有出现启动错误。
+     - **不复制**：`shakeink-app.json` 和 `inbox/` 由应用新建 [V1]；`novel-imports/` [V2] 不复制，因为其中的旧导入会话记录了目标作品路径（包括 `~/Documents/小说/` 下的两部用户作品），而第 3 步的新导入会新建会话，不依赖它们；`drafts.json`、`catalog.json`、`session/` 也不复制。
+     - **路径检查**：第 2、4 步启动前，都用 `grep -r` 确认新根中没有任何文件包含 `/Documents/`、`worldline-570/works` 或 `cache-522` 路径，**不留例外** [V2]。
   2. **旧作品** [N5、P4、Q1]：
      - **启动前**，先记录以下目录的状态（完整文件列表、各文件 mtime 和 sha256，不读取正文）：原作品 `worldline-570/works/WL-wl-era1`、`WL-wl-base1`；用户作品 `~/Documents/小说/导入诡秘之主6`、`导入诡秘之主7`；以及 `cache-522` 根本身。
      - 把 `WL-wl-era1`、`WL-wl-base1` 复制到新根的 `works/`，不带 `.shakeink-lock`。
@@ -288,6 +290,8 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 | P4 先清理会话、移除原作品登记，再打开副本 | §9（已由 Q1 改为离线准备） |
 | Q1 首次启动前离线准备新根：不复制 drafts/catalog/inbox/session，`restoreSession=false`，启动前后核对原作品和用户作品的状态 | §9 |
 | Q2 `refs` 预先建好映射，并使用固定的空数组 | §7.1 |
+| V1 由应用初始化空根，再放入模型配置 | §9 第 1 步 |
+| V2 不复制 `novel-imports/`，路径检查不留例外 | §9 第 1 步 |
 | 细节：M4 删除 `constrainWindow`、`time.anchor`；M8 `fitDense` 条件、时间基准阈值；M9 指定旧作品、Windows 待验收 | §6、§4、§9 |
 | 新增矛盾：尺寸以设计稿 v9 为准；S14 理由改正 | §5.1、§2 |
 | 建议：S1 `event.detail`；S9 单独的保存状态与“只读”标记 | §7.3、§7.1 |

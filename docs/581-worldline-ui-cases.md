@@ -1,6 +1,6 @@
-# 581 · 世界线界面改版 测试用例（对应方案修订 6）
+# 581 · 世界线界面改版 测试用例（对应方案修订 7）
 
-依据：`577-worldline-ui-product-design.md`、`580-worldline-ui-plan.md`（修订 6）。编号前缀 WU。数据均为合成内容，真实作品只在 §5 的隔离根中使用。
+依据：`577-worldline-ui-product-design.md`、`580-worldline-ui-plan.md`（修订 7）。编号前缀 WU。数据均为合成内容，真实作品只在 §5 的隔离根中使用。
 
 ## 1. 数据与导入（单元 / 集成）
 
@@ -142,10 +142,11 @@
 ## 5. 真实目标系统验证
 
 - **隔离根（离线准备）** [Q1]：在应用第一次启动之前，按 580 §9 第 1 步在文件系统上准备 `~/shakeink-test-roots/worldline-ui-583`：
-  - 只复制 `state.json`、`model-catalogs.json`、`shakeink-app.json`、`novel-imports/`；
-  - 不复制 `drafts.json`、`catalog.json`、`inbox/`、`session/`；
-  - catalog 新写为空列表；`restoreSession` 设为 `false`；
-  - 用 `grep` 确认新根不含 `/Documents/`、`worldline-570/works`、`cache-522` 路径。
+  - 先用 LotmVerification.app 让应用在空目录中完成初始化，然后退出 [V1]；
+  - 退出后只覆盖 `state.json` 和 `model-catalogs.json`，并把 `restoreSession` 设为 `false`；
+  - 不复制 `shakeink-app.json`、`inbox/`、`novel-imports/`、`drafts.json`、`catalog.json`、`session/` [V2]；
+  - 每次启动前，用 `grep -r` 确认新根中不含 `/Documents/`、`worldline-570/works`、`cache-522` 路径，不设例外；
+  - 第二次启动后能读取模型列表，没有启动错误。
 
   之后的步骤都使用 LotmVerification.app，并新开会话。
 - **WU-89 启动前后状态核对**：首次启动前，以及整轮测试结束后，各记录一次以下目录的状态（文件列表、mtime、sha256，不读取正文），两次结果必须完全一致：`worldline-570/works/WL-wl-era1`、`WL-wl-base1`，`~/Documents/小说/导入诡秘之主6`、`导入诡秘之主7`，以及 `cache-522`。任何差异都算验收失败。
