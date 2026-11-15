@@ -1,5 +1,5 @@
 /* Table view: tree | rail + cards (one scroller). */
-.table { flex: 1; min-height: 0; display: grid; grid-template-columns: 248px 1fr; border-top: 1px solid var(--line-soft); }
+.table { min-height: 0; min-width: 0; display: grid; grid-template-columns: 1fr; }
 .tree { overflow: auto; padding: 10px 10px 40px 0; border-right: 1px solid var(--line-soft); scrollbar-width: thin; }
 .tree-search { position: sticky; top: -10px; z-index: 2; padding: 10px 0 8px; margin-top: -10px; background: var(--bg); }
 .tree-search input { width: 100%; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-soft); background: var(--panel); outline: none; }
@@ -56,7 +56,7 @@
 .lead.dim { opacity: .15; }
 
 /* Timeline view. */
-.canvas { flex: 1; min-height: 0; position: relative; overflow: hidden; border-top: 1px solid var(--line-soft); }
+.canvas { min-height: 0; min-width: 0; position: relative; overflow: hidden; }
 .ruler { position: absolute; left: 0; right: 0; top: 0; height: 32px; background: linear-gradient(var(--panel), transparent); }
 .ruler span { position: absolute; top: 9px; transform: translateX(-50%); color: var(--muted); font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ruler span.major { color: var(--accent-2); font-weight: 700; }
@@ -209,3 +209,20 @@ mark { padding: 0 1px; border-radius: 3px; color: inherit; background: color-mix
 .minimap b { top: 2px; bottom: 2px; border-radius: 7px; border-width: 1.5px; }
 .minimap em { position: absolute; bottom: 2px; font-style: normal; font-size: 9px; line-height: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; pointer-events: none; }
 .lane { padding-bottom: 80px; }
+
+/* ---------- v7: one event tree shared by both views ---------- */
+.workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(0, 1fr); border-top: 1px solid var(--line-soft); transition: grid-template-columns .2s; }
+.workspace.tree-off { grid-template-columns: 0 minmax(0, 1fr); }
+.workspace.tree-off .tree { visibility: hidden; padding: 0; border: 0; }
+.tree { padding-top: 0; }
+.tree-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: baseline; justify-content: space-between; padding: 12px 4px 8px 6px; background: var(--bg); }
+.tree-head b { font-size: 12px; color: var(--muted); letter-spacing: .08em; font-weight: 600; }
+.tree-head span { font-size: 11px; color: var(--faint); }
+/* Timeline: rows whose events are inside the current window get a type-colored mark, so the tree shows the window's coverage. */
+.tree-row.inview .td { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ec) 25%, transparent), 0 0 6px var(--ec); }
+.tree-row.inview { color: var(--text); }
+.tree-row.inview::after { content: ""; position: absolute; right: 2px; top: 8px; bottom: 8px; width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--ec) 60%, transparent); }
+.btn.icon { width: 30px; padding: 0; display: grid; place-items: center; }
+.btn.icon svg { width: 15px; height: 15px; }
+.btn.icon[aria-pressed="false"] { color: var(--faint); }
+.family { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: top .18s; }

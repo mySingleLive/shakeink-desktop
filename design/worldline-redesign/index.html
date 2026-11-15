@@ -2,19 +2,21 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>世界线改版设计稿 v6 · docs/577</title>
+<title>世界线改版设计稿 v7 · docs/577</title>
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="views.css">
 </head>
 <body>
 <div class="review" aria-label="评审工具条（只属于设计稿）">
-  <b>评审 v6 · 风格 A · 颜色=类型 · 圆点大小=重要度</b>
+  <b>评审 v7 · 风格 A · 颜色=类型 · 圆点大小=重要度</b>
   <button data-light-toggle>亮色主题</button>
   <span class="note">示例数据为虚构</span>
 </div>
 <main class="panel">
   <h1>世界线</h1>
   <div class="bar">
+    <button class="btn icon" id="treeToggle" aria-pressed="true" title="显示/隐藏事件目录" aria-label="显示或隐藏事件目录">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg></button>
     <button class="btn">主世界线 ▾</button>
     <div class="seg" role="group" aria-label="视图">
       <button data-view="timeline">时间线</button>
@@ -51,10 +53,12 @@
   <div class="toast" id="toast" hidden></div>
   <div class="status"><span id="range"></span><span id="count"></span>
     <span class="legend" id="legend" aria-label="事件类型（点击隐藏/显示，双击只看这一类）"></span></div>
+  <div class="workspace" id="workspace">
+  <nav class="tree" id="tree" aria-label="事件目录">
+    <div class="tree-head"><b>事件目录</b><span id="treeInfo"></span></div>
+    <div id="treeRows" role="tree"></div>
+  </nav>
   <section class="table" id="tableView">
-    <nav class="tree" id="tree" aria-label="事件目录">
-      <div id="treeRows" role="tree"></div>
-    </nav>
     <div class="scroller" id="scroller" title="Ctrl + 滚轮缩放时间轴间距">
       <div class="sticky-year" id="stickyYear"></div>
       <div class="rail" id="rail"></div>
@@ -69,6 +73,7 @@
     <div class="hint">单击卡片展开/收起 · ▾ 折叠子事件 · 双击编辑 · 拖空白平移 · Ctrl + 滚轮缩放</div>
     <div class="minimap" id="minimap" tabindex="0" role="slider" aria-label="全局缩略：点击或拖动移动视窗，← → 平移" title="点击跳转 · 拖动方框移动视窗"></div>
   </section>
+  </div>
 </main>
 <script src="data.js"></script>
 <script src="app.js"></script>

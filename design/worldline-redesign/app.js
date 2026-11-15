@@ -131,7 +131,6 @@ function block(e) {
 }
 function renderTable() {
   const list = visibleList(), seg = segmentOf(list.placed)
-  renderTree(list)
   const cards = $('#cards'); cards.innerHTML = ''
   // Zoom stretches the rail: each root block gets extra space proportional to the time gap to the next root.
   const roots = list.placed.filter((x) => x.depth === 0).map((x) => x.e)
@@ -248,23 +247,56 @@ function setHot(id) {
     if (d.classList.contains('dlabel') && on) d.style.visibility = ''
   })
 }
+// Locates an event in the current view. Event table: scroll the list. Timeline: move the window so the event's start is
+// at 30% of the width (keeping the zoom, unless its family is wider than the window), then scroll its row into view.
+// Unplaced events exist only in the event table, so locating one switches views.
 function locate(id) {
+  const e = byId.get(id)
   selected = id
-  for (let e = byId.get(id); e?.parent; e = byId.get(e.parent)) folded.delete(e.parent)
-  view = 'table'; render()
+  for (let p = e; p?.parent; p = byId.get(p.parent)) folded.delete(p.parent)
+  if (view === 'timeline' && e.start === null) { view = 'table'; toast('待定位事件只在事件表中显示，已切换到事件表') }
+  if (view === 'timeline') {
+    const famSpan = familyEnd(e) - e.start
+    if (famSpan > win.span * 0.6) win.span = Math.min(100000, famSpan / 0.6)
+    win.start = e.start - win.span * 0.3
+  }
+  render()
   requestAnimationFrame(() => {
-    const el = document.querySelector(`#cards .ev[data-id="${id}"]`), sc = $('#scroller')
+    const sel = view === 'timeline' ? `#lane .ev[data-id="${id}"]` : `#cards .ev[data-id="${id}"]`
+    const el = document.querySelector(sel), sc = view === 'timeline' ? $('#lane') : $('#scroller')
     if (!el) return
-    sc.scrollTo({ top: el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - sc.clientHeight / 3, behavior: 'smooth' })
+    const offset = view === 'timeline' ? 80 : sc.clientHeight / 3
+    sc.scrollTo({ top: el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - offset, behavior: 'smooth' })
     el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300)
   })
 }
+// Keeps the selected row and the "in view" rows of the tree in sync with what the active view shows.
+function syncTree() {
+  const tree = $('#tree')
+  let inView = new Set(), first = null
+  if (view === 'table') {
+    const top = $('#scroller').getBoundingClientRect().top + 10
+    first = [...document.querySelectorAll('#cards .ev')].find((el) => el.getBoundingClientRect().bottom > top)?.dataset.id
+    if (first) inView.add(first)
+  } else {
+    // Every event whose time overlaps the window counts as visible; the earliest one is "current".
+    const a = win.start, b = win.start + win.span
+    const vis = events.filter((e) => e.start !== null && e.start <= b && e.start + (e.dur || 0) >= a).sort((p, q) => p.start - q.start)
+    inView = new Set(vis.map((e) => e.id)); first = vis.find((e) => e.start >= a)?.id ?? vis[0]?.id
+  }
+  document.querySelectorAll('.tree-row').forEach((r) => {
+    r.classList.toggle('cur', r.dataset.id === first)
+    r.classList.toggle('inview', view === 'timeline' && inView.has(r.dataset.id))
+  })
+  // Only follow the view automatically while the user is not interacting with the tree itself.
+  const cur = document.querySelector('.tree-row.cur')
+  if (cur && !tree.matches(':hover') && (cur.offsetTop < tree.scrollTop + 40 || cur.offsetTop > tree.scrollTop + tree.clientHeight - 40)) tree.scrollTop = cur.offsetTop - tree.clientHeight / 3
+  const n = inView.size
+  $('#treeInfo').textContent = view === 'timeline' ? `视窗内 ${n} 件` : ''
+}
 function syncScroll() {
   const sc = $('#scroller'), top = sc.getBoundingClientRect().top + 10
-  const first = [...document.querySelectorAll('#cards .ev')].find((el) => el.getBoundingClientRect().bottom > top)
-  document.querySelectorAll('.tree-row').forEach((r) => r.classList.toggle('cur', r.dataset.id === first?.dataset.id))
-  const cur = document.querySelector('.tree-row.cur'), tree = $('#tree')
-  if (cur && (cur.offsetTop < tree.scrollTop + 40 || cur.offsetTop > tree.scrollTop + tree.clientHeight - 40)) tree.scrollTop = cur.offsetTop - tree.clientHeight / 3
+  void top; syncTree()
   const years = JSON.parse($('#rail').dataset.years || '[]').filter((y) => y.y <= sc.scrollTop + 4)
   $('#stickyYear').innerHTML = years.length && sc.scrollTop > 20 ? `<span>${yearName(years.at(-1).t)}</span>` : ''
 }
@@ -299,17 +331,7 @@ function gotoHit(step) {
   hitIndex = (hitIndex + step + hits.length) % hits.length
   const e = hits[hitIndex]
   renderSearchState()
-  if (view === 'timeline' && e.start !== null) {
-    selected = e.id
-    for (let p = e; p?.parent; p = byId.get(p.parent)) folded.delete(p.parent)
-    win.start = e.start - win.span * 0.3; render()
-    requestAnimationFrame(() => {
-      const el = document.querySelector(`#lane .ev[data-id="${e.id}"]`), lane = $('#lane')
-      if (!el) return
-      lane.scrollTo({ top: el.getBoundingClientRect().top - lane.getBoundingClientRect().top + lane.scrollTop - 80, behavior: 'smooth' })
-      el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1300)
-    })
-  } else locate(e.id)
+  locate(e.id)
 }
 let searchTimer
 $('#search').addEventListener('input', (ev) => {
@@ -357,6 +379,7 @@ function renderTimeline() {
     const own = Math.max(x(e.start) + MIN_BAR, x(familyEnd(e)))
     return folded.has(e.id) ? own : Math.max(own, ...kids(e.id).map((k) => extent(k, depth + 1) + 10))
   }
+  let host = lane
   const placeCard = (e, left, top, width, depth) => {
     const wrap = document.createElement('div'), isParent = kids(e.id).length > 0
     wrap.className = 'tcard' + (depth ? ' child' : '') + (isParent ? ' header' : '')
@@ -371,7 +394,7 @@ function renderTimeline() {
       c.insertAdjacentHTML('beforeend', `<i class="track" style="width:${Math.min(tw, width)}px"></i>`)
     }
     wrap.style.left = left + 'px'; wrap.style.top = top + 'px'
-    lane.append(wrap)
+    host.append(wrap)
     return c.offsetHeight
   }
   const layout = (e, top, depth) => {
@@ -396,19 +419,29 @@ function renderTimeline() {
         y = Math.max(...placed.map((p) => p.bottom)) + 26
       })
       bottom = y - 12
-      lane.insertAdjacentHTML('afterbegin', `<div class="frame" style="left:${l}px;width:${width}px;top:${top}px;height:${bottom - top}px;--ec:${hue(e)}"></div>`)
+      host.insertAdjacentHTML('afterbegin', `<div class="frame" style="left:${l}px;width:${width}px;top:${top}px;height:${bottom - top}px;--ec:${hue(e)}"></div>`)
     }
     return { right: l + width, bottom }
   }
-  const shelves = []
+  // 2D packing (docs/577 §13): lay each family out at y = 0 in its own host, measure it, then move it to the highest y
+  // where its box [left, right] x [y, y + h] does not intersect any family placed before it. Families are placed in
+  // start order, so the earlier event always wins the higher slot.
+  const placed = [], H_GAP = 14, V_GAP = 30, TOP = 28
+  let laneBottom = 0
   roots.sort((p, q) => p.start - q.start).forEach((e) => {
-    const left = x(e.start)
-    let sh = shelves.find((v) => v.right + 14 <= left)
-    if (!sh) { sh = { right: -Infinity, top: shelves.length ? Math.max(...shelves.map((v) => v.bottom)) + 34 : 28, bottom: 0 }; shelves.push(sh) }
-    const r = layout(e, sh.top, 0)
-    sh.right = r.right; sh.bottom = Math.max(sh.bottom, r.bottom)
+    host = document.createElement('div'); host.className = 'family'; lane.append(host)
+    const box = layout(e, 0, 0), left = x(e.start) - 6, right = box.right + H_GAP, h = box.bottom
+    const blockers = placed.filter((r) => r.left < right && r.right > left).sort((p, q) => p.top - q.top)
+    let y = TOP
+    for (const r of blockers) if (y + h + V_GAP > r.top && y < r.bottom + V_GAP) y = r.bottom + V_GAP
+    host.style.top = y + 'px'
+    placed.push({ left, right, top: y, bottom: y + h })
+    laneBottom = Math.max(laneBottom, y + h)
   })
+  host = lane
+  lane.insertAdjacentHTML('beforeend', `<div style="position:absolute;left:0;width:1px;height:1px;top:${laneBottom + 96}px"></div>`)
   drawMinimap()
+  syncTree()
   $('#zoomVal').textContent = `${Math.round(win.span)} 天`
   requestAnimationFrame(markFades)
   $('#range').textContent = `${fmt(win.start)} — ${fmt(win.start + win.span)}`
@@ -542,6 +575,7 @@ function markFades() {
   document.querySelectorAll('.ev-title, .tree-row .tt').forEach((t) => t.classList.toggle('fade', t.scrollWidth > t.clientWidth + 1))
 }
 function render() {
+  renderTree(visibleList())
   $('#tableView').hidden = view !== 'table'; $('#timelineView').hidden = view !== 'timeline'
   document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === view))
   renderLegend(); renderPeriodPicker(); renderToggleAll()
@@ -560,3 +594,8 @@ $('#moreBtn').addEventListener('click', () => ($('#menu').hidden = !$('#menu').h
 $('#pending').addEventListener('click', () => locate(kids(null).find((e) => e.start === null).id))
 new ResizeObserver(() => render()).observe($('.panel'))
 render()
+
+$('#treeToggle').addEventListener('click', () => {
+  const on = $('#workspace').classList.toggle('tree-off')
+  $('#treeToggle').setAttribute('aria-pressed', !on); render()
+})
