@@ -293,3 +293,39 @@ S3–S8、S10–S13 已充分采纳。另有三条：
 ### 建议（不阻塞）
 
 - 世界坐标 `wx = start × scale` 写入单元测试时，请用 4.2×10⁹ 小时乘以最大缩放比例的组合检验，确认碰撞判断在大数值下仍然正确。
+
+---
+
+## 修订 5 复审
+
+复审对象：`docs/580-worldline-ui-plan.md` 修订 5（提交 `f6cb695`）。行号指 chronology 提交 `195b4c0`。
+
+**结论：不通过。** P1、P2 已解决，P3 基本解决。P4 的执行顺序在现有代码下做不到，而且会在测试前就打开并改动用户本人的作品，必须修改（Q1）。P3 还有一处小遗漏（Q2）。
+
+### 已解决
+
+- **P1（§7.5）**：两个作用域分开后，画布、目录和卡片只启用 `worldline` 与 `global` 两类命令，改绑 `input.*` 或 `text.*` 不会再拦截画布的方向键。搜索框（`worldline-search`）仍启用 `input`、`text` 两类命令，用户改过的绑定在搜索框里有效。`worldline.search` 的作用域仍是 `worldline`，`overlapping` 与 `input`、`text` 判为重叠，所以搜索框中的冲突能被检查出来，并按原子转移处理。菜单改派对两个作用域都生效。我对照了 `configurationFor`、`:76`、`:88`、`:96` 的逻辑，没有发现遗漏。
+- **P2（§7.2）**：表格列出了需要随视窗更新的内容，并且有一条测试保证 `PlanningWorkspace.tsx` 中不再有 `windowRange` 状态（WU-56g）。表中没有逐项列出的写入点，按“都调用 `store.setWindow`”这条规则处理即可：首次适配（`:412`）、`panelFocus`（`:307`）、按世界线记忆视窗（`:2223`）、滚轮缩放（`:330-356`）、缩放按钮和“全貌”（`:2559-2593`）、时期定位（`:2680`）。实现时 grep 和静态测试会把它们全部找出来。
+- **P3（§7.1）**：编辑器改由独立的 `EventEditorContext` 加 `EventEditorSlot` 读取，只有正在编辑的那张卡片订阅这个 context，`WorldlineContext` 保持稳定，这个做法成立。
+
+### 必须修改
+
+**Q1（§9，P4）：在应用里“先清理会话、再用界面移除旧登记”做不到。新根第一次启动，就会连接 catalog 中登记的每一部作品，其中包括用户本人的两部作品。**
+
+1. **启动即连接全部作品。** 应用启动后，侧边栏通过 `useNovelList` 请求 `GET /api/novels`（`src/lib/novel-list.ts:10`）。这个请求对 catalog 的每一行都调用 `works.run(row.id, …)`（`desktop/service/dispatcher.ts:87-88`），对话列表 `/api/chat/conversations` 也一样（`:100-101`）。`works.run` 进而调用 `connect`（`workspaces.ts:522-528`、`:449-480`）。`connect` 会在作品目录里创建 `.shakeink-lock`（`lockDirectory`，`:70-87`），启动 PGlite，并执行 `migrateDatabase`（`:478`），这些都会写入作品目录。所以在用户还没点击“从列表移除”之前，catalog 中所有作品都已被打开、加锁，并可能被迁移。
+2. **涉及的作品。** 复制过来的 catalog 有 13 行，包括 `worldline-570/works/` 下的 7 部、`/private/tmp/` 下的 4 部，以及 `~/Documents/小说/导入诡秘之主6` 和 `导入诡秘之主7`。后两部是用户本人的作品，方案 §9 已明确不打开。另外，原作品的哈希在第一次启动时就已改变，结束时的哈希核对必然失败。
+3. **恢复的标签页不在 `session/` 里。** 标签页保存在根目录的 `drafts.json` 中（快照 `sources.workspace.tabs`，经 `restoreDesktopDraft` 恢复，`src/lib/desktop/draft-recovery.ts:209-221`）。`session/` 是 Chromium 的用户数据目录，删除它清不掉标签页。`cache-522/drafts.json` 中恢复的是 `导入诡秘之主7` 的“诡秘之主”和“世界线”两个标签。也就是说，即使删除了 `session/`，启动时仍会打开用户本人作品的世界线面板。
+
+需要改为在应用启动之前离线准备新根：
+- 复制 `cache-522` 时，**不复制 `drafts.json`**；或者在复制的 `state.json` 中把 `settings.general.restoreSession` 设为 `false`。
+- 按 `VersionedStore` 的格式（`schemaVersion`、`revision`、`value`，`desktop/core/versioned-store.ts`）改写复制的 `catalog.json`，让 `value` 只包含两份副本，或者为空，之后再通过“打开作品”加入两份副本。
+- 按记忆规则移走 inbox 中的 lease 回执。
+- 在第一次启动前，就记录 `worldline-570/works/` 下全部原作品，以及 `~/Documents/小说/` 下两部作品的目录哈希，或者 mtime 与锁目录状态。测试结束后再核对一次，确认这些目录没有新增 `.shakeink-lock`，也没有被修改。
+- 581 的 WU-90 要按上面的步骤改写，并写明首次启动时侧边栏只显示两份副本。
+
+**Q2（§7.1，P3）：`refs` 这个 prop 每次渲染都会生成新数组，会让 WU-56h 失败。**
+`EventCard` 的 `refs` 由 `data.cards.flatMap(...)` 得到（现有代码 `eventReferences`，`:1912-1946`）。如果每次渲染都重新计算，编辑时每输入一个字符，885 张卡片都会收到新数组，`memo` 失效，“输入时重新渲染的 EventCard 为 0”就达不到。请写明：在 `useMemo([data])` 中按事件 id 建好引用映射，卡片取 `refsById.get(id) ?? EMPTY`。其他会生成新对象的 prop（如果有）也照此处理。
+
+### 建议（不阻塞）
+
+- WU-56h 除了测试“编辑时输入”，还建议测“单击展开一张卡片”：重新渲染的 `EventCard` 应只有 1 张。这样能同时检查 `expanded`、`selected` 等 prop 的稳定性。

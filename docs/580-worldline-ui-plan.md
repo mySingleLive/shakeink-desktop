@@ -1,8 +1,8 @@
-# 580 · 世界线界面改版 技术方案（修订 5）
+# 580 · 世界线界面改版 技术方案（修订 6）
 
 依据：`577-worldline-ui-product-design.md`（§1–§15，2026-11-15 设计稿 v9 审核通过）、`design/worldline-redesign/`（只作视觉参考，不进入产品）。基础：`fix/worldline-chronology` 提交 `195b4c0`（docs/570–582，纪元历法，2026-11-16 第六轮复审通过）。本分支已变基到这个提交上。
 
-修订 2 回应 `580-worldline-ui-plan-review.md` 的 M1–M9 和 S1–S14。修订 3 回应该文件“修订 2 复审”一节的 R1–R5、各项细节和新增矛盾，并写入用户 2026-11-16 的决定：Cmd/Ctrl+F 接入桌面快捷键系统。修订 4 回应“修订 3 复审”一节的 N1–N5 和两条说明。修订 5 回应“修订 4 复审”一节的 P1–P4。每处在方括号中标注对应编号。下文行号指提交 `195b4c0`。
+修订 2 回应 `580-worldline-ui-plan-review.md` 的 M1–M9 和 S1–S14。修订 3 回应该文件“修订 2 复审”一节的 R1–R5、各项细节和新增矛盾，并写入用户 2026-11-16 的决定：Cmd/Ctrl+F 接入桌面快捷键系统。修订 4 回应“修订 3 复审”一节的 N1–N5 和两条说明。修订 5 回应“修订 4 复审”一节的 P1–P4。修订 6 回应“修订 5 复审”一节的 Q1、Q2 和一条建议。每处在方括号中标注对应编号。下文行号指提交 `195b4c0`。
 
 ## 1. 范围与原则
 
@@ -130,7 +130,7 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 | `WorldlineToolbar.tsx` | 目录开关；世界线 `Select`；视图 `Tabs`；时期选择 `DropdownMenu`（定位后让色带或竖条闪烁，并提示“已定位到时期「…」· N 件事件”）[S4]；全部展开/收起；缩放（− 值 ＋ 复位）；搜索 `Input`；待定位；延续事件；“更多” `DropdownMenu`；“＋ 事件”。窄窗口规则：≤1280px 时隐藏“复位”、⌘F 提示和计数为 0 的延续事件；≤1160px 时，时期、全部展开、待定位只显示图标和数字；搜索框最小 120px；始终单行 [S8] |
 | `WorldlineLegend.tsx` | 状态行：时间范围、事件数；类型图例（7 类，各带计数；单击隐藏/显示，双击只看这一类）；重要度大小说明。隐藏的类型在图例中用空心圆点加删除线表示，不只靠颜色区分 [M7、S10] |
 | `EventTree.tsx` | 左侧事件目录，`role="tree"`，两个视图共用：年份分隔、视窗内标记、当前行跟随；支持 ↑↓←→ 和 Enter [S10] |
-| `EventCard.tsx`（`memo`） | 收起态：圆点、标题（溢出时淡出）、头像叠层、子事件数。展开态：内容与现有 `eventCard()`（`:1949-2103`）相同（菜单、时间行、`MarkdownPreview`、人物、角色变化、引用），但改写成独立组件，不再是闭包 [R4]：<br>• **props**：`event`、`expanded`、`selected`、`hit`、`dimmed`、`frozen`、`editing`、`childCount`（由父组件从 `eventTree` 算出）、`refs`（该事件的引用列表）<br>• **`WorldlineContext`**（值由 `useMemo` 生成，只在依赖变化时更新）：`data`（整份规划数据，供 `resolveTime`、`timeBaseValue` 沿锚点查找）[N3]、`calendar`、`timeBase`、`readonly`、`hasDraft`、`characters`（头像、姓名）、`searchTerms`（标题和正文高亮所需的关键字列表；`hit` 只表示是否为当前结果）[N3]<br>• **稳定回调**（`useRef` 加一个不变的包装函数）：`onToggle`、`onEdit`（已有草稿时调用现有提示“请先保存或取消当前事件编辑，输入已保留。”，`:1955`）[N3]、`onDetail`、`onQuote`、`onCopy`、`onDelete`、`onFork`、`onLocateChildren`（定位子事件）、`onNewChild`（新建子事件）[N3]、`onStartTimeDrag`、`onReferenceClick`。它们内部调用 `put`、`setDialog`、`quotePlanning`、`startTimeDrag`<br>• **原位编辑器** [N3、P3]：`editing` 为真时，`EventCard` 渲染 `<EventEditorSlot />`。这个组件从一个**独立的** `EventEditorContext` 读取 `renderEventEditor`（现有约 440 行的闭包，`:1950`，本轮不拆分）。`EventEditorContext` 的值每次渲染都会变，但只有处于编辑状态的那张卡片挂载了 `EventEditorSlot`，所以草稿变化只会让这一个组件重新渲染。`WorldlineContext` 中不放这个函数，回调也都用稳定包装，所以 `memo` 对其它卡片有效。实现时用 React Profiler 验证：编辑时每输入一个字符，重新渲染的 `EventCard` 数量为 0（WU-56h）<br>• **时间行**：按事件精度选择 span：日精度为 48，时精度为 1，其余使用 `formatTime` 的精度参数。不再读取 `windowRange.span`（`:2044-2049`）<br>props 和 context 中都不出现 `windowRange` [M5] |
+| `EventCard.tsx`（`memo`） | 收起态：圆点、标题（溢出时淡出）、头像叠层、子事件数。展开态：内容与现有 `eventCard()`（`:1949-2103`）相同（菜单、时间行、`MarkdownPreview`、人物、角色变化、引用），但改写成独立组件，不再是闭包 [R4]：<br>• **props**：`event`、`expanded`、`selected`、`hit`、`dimmed`、`frozen`、`editing`、`childCount`（由父组件从 `eventTree` 算出）、`refs`。`refs` 是该事件的引用列表 [Q2]：在 `useMemo([data])` 中一次性建好 `Map<eventId, Ref[]>`，卡片从这个映射中取值；没有引用的事件统一使用模块级常量 `EMPTY_REFS`，因此 `data` 不变时同一事件拿到的始终是同一个数组<br>• **`WorldlineContext`**（值由 `useMemo` 生成，只在依赖变化时更新）：`data`（整份规划数据，供 `resolveTime`、`timeBaseValue` 沿锚点查找）[N3]、`calendar`、`timeBase`、`readonly`、`hasDraft`、`characters`（头像、姓名）、`searchTerms`（标题和正文高亮所需的关键字列表；`hit` 只表示是否为当前结果）[N3]<br>• **稳定回调**（`useRef` 加一个不变的包装函数）：`onToggle`、`onEdit`（已有草稿时调用现有提示“请先保存或取消当前事件编辑，输入已保留。”，`:1955`）[N3]、`onDetail`、`onQuote`、`onCopy`、`onDelete`、`onFork`、`onLocateChildren`（定位子事件）、`onNewChild`（新建子事件）[N3]、`onStartTimeDrag`、`onReferenceClick`。它们内部调用 `put`、`setDialog`、`quotePlanning`、`startTimeDrag`<br>• **原位编辑器** [N3、P3]：`editing` 为真时，`EventCard` 渲染 `<EventEditorSlot />`。这个组件从一个**独立的** `EventEditorContext` 读取 `renderEventEditor`（现有约 440 行的闭包，`:1950`，本轮不拆分）。`EventEditorContext` 的值每次渲染都会变，但只有处于编辑状态的那张卡片挂载了 `EventEditorSlot`，所以草稿变化只会让这一个组件重新渲染。`WorldlineContext` 中不放这个函数，回调也都用稳定包装，所以 `memo` 对其它卡片有效。实现时用 React Profiler 验证：编辑时每输入一个字符，重新渲染的 `EventCard` 数量为 0（WU-56h）<br>• **时间行**：按事件精度选择 span：日精度为 48，时精度为 1，其余使用 `formatTime` 的精度参数。不再读取 `windowRange.span`（`:2044-2049`）<br>props 和 context 中都不出现 `windowRange` [M5] |
 | `EventTable.tsx` | 时间带（SVG 引线、圆点、标签、刻度、年份徽章、时期竖条、断轴、吸顶年份）和分组卡片列；Ctrl + 滚轮缩放；虚拟化 |
 | `EventTimeline.tsx` | 刻度尺、时期色带（可拖动改时间，沿用 `:2930-2963`）[S4]、`#plane` 平移层（父事件标题栏和框体、卡片、角色变化泳道 [S3]）、小地图 |
 | `worldline.module.css` | 只使用 `globals.css` 中的主题变量 |
@@ -216,15 +216,18 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 - **导入**：语义白名单、值域校验、规整、跨批合并、发布转换、提示词 golden。
 - **浏览器测试**：沿用 `planning-card-menu.test.ts` 的方式，使用真实的 `WorldlinePanel` 和内存接口数据。内容见 docs/581 §3。家族标题栏、分组框、待定位切换只能由这些固定数据覆盖（见下）。
 - **真实目标系统**：
-  1. 把 `~/shakeink-test-roots/cache-522` 复制到新的隔离根 `~/shakeink-test-roots/worldline-ui-583`。复制时把 inbox 中的 lease 回执移出（参见记忆），并确认 `state.json` 存在。
-  2. **旧作品** [N5、P4]：
-     - 先计算 `worldline-570/works/WL-wl-era1` 和 `WL-wl-base1` 两个原作品目录的哈希。
-     - 把这两个目录复制到 `~/shakeink-test-roots/worldline-ui-583/works/`，不带 `.shakeink-lock`。
-     - 新根**首次启动时、打开任何作品之前**，先清理复制过来的会话状态：删除 `session/` 中恢复的标签页，避免连接到原作品或给原作品加锁。然后用应用的“从列表移除”（`workspaces.ts:408` `forget`，只修改索引，不碰作品目录）删除 catalog 中指向原作品的所有登记。否则副本与原作品的 `id`、`novelId` 相同，打开副本时 `workspaces.ts:362-364` 会抛出“检测到重复作品”。
-     - 之后在新根中按新路径打开两份副本。
-     - 整轮测试结束后，再核对一次原作品的哈希，应与开始时一致，以证明 570–578 的验收数据没有被改动。
-     两部作品：① `worldline-570/works/WL-wl-era1`：2026-11-15 由带纪元的版本保存，885 个事件，全部是“第五纪…”。② `worldline-570/works/WL-wl-base1`：2026-11-14 由无纪元的旧版本保存，91 条世界线，事件全部“待定位”。两部作品的两个视图都应正常显示，事件显示为“其他 / 一般”。各编辑一个事件的类型和重要度并保存，然后读回。
-     - `~/Documents/小说/` 下的两部作品是用户本人的作品，不打开，也不复制。
+  1. **离线准备新根** [Q1]：新根第一次启动时，会立刻连接 catalog 中的每一部作品（侧边栏的 `/api/novels`、对话列表的 `/api/chat/conversations`，见 `dispatcher.ts:87-88`、`:100-101`）。连接时会创建 `.shakeink-lock`、启动 PGlite 并执行迁移。所以“启动后再从列表移除”来不及，**所有准备必须在应用第一次启动之前、在文件系统上完成**：
+     - 新建空目录 `~/shakeink-test-roots/worldline-ui-583/`。从 `cache-522` 只复制 `state.json`（模型配置，含加密的 Key，不读取内容）、`model-catalogs.json`、`shakeink-app.json`，以及 `novel-imports/`（导入时需要的会话目录）。
+     - **不复制** `drafts.json`。恢复的标签页存在这个文件里，`cache-522` 中恢复的正是用户本人作品 `导入诡秘之主7` 的世界线标签。另外把新根 `state.json` 中的 `settings.general.restoreSession` 改为 `false`，并通过应用自己的设置校验，确认它能读取。
+     - **不复制** `catalog.json`。新根的 catalog 按 VersionedStore 格式另写：`{"schemaVersion":1,"revision":0,"value":[]}`。然后在应用中通过“打开作品”逐个打开副本，由应用自己登记。
+     - 不复制 `inbox/`（lease 回执，参见记忆），也不复制 `session/`。
+     - 用 `find ~/shakeink-test-roots/worldline-ui-583 -name catalog.json -o -name drafts.json` 确认只有新写的 catalog。再用 `grep -r` 确认新根中任何文件都不包含 `/Documents/`、`worldline-570/works` 或 `cache-522` 路径（`novel-imports/` 中引用的原文路径除外）。
+  2. **旧作品** [N5、P4、Q1]：
+     - **启动前**，先记录以下目录的状态（完整文件列表、各文件 mtime 和 sha256，不读取正文）：原作品 `worldline-570/works/WL-wl-era1`、`WL-wl-base1`；用户作品 `~/Documents/小说/导入诡秘之主6`、`导入诡秘之主7`；以及 `cache-522` 根本身。
+     - 把 `WL-wl-era1`、`WL-wl-base1` 复制到新根的 `works/`，不带 `.shakeink-lock`。
+     - 启动新根，用“打开作品”打开两份副本。副本的 `id` 和 `novelId` 与原作品相同，但新根的 catalog 中没有原作品的登记，所以不会触发“检测到重复作品”（`workspaces.ts:362-364`）。
+     - 两份副本的作用：WL-wl-era1 带纪元，有 885 个事件；WL-wl-base1 无纪元，91 条世界线，事件全部待定位。两个视图都应正常显示，事件显示为“其他 / 一般”。各编辑一个事件的类型和重要度，保存后读回。
+     - **整轮测试结束后**再记录一次上述所有目录的状态，与启动前比较，必须完全一致。任何差异都视为验收失败，并停下来报告。
   3. **新导入**：使用 LotmVerification.app，新开会话，只选第一卷“小丑”，目标为“角色 + 世界线”。保存后检查类型和重要度有值的比例、头像，并复测 docs/581 §5 中列出的用例和性能。
   4. 证据写入 `~/shakeink-test-roots/worldline-ui-583/evidence/<label>/`，不进入仓库，不包含原文和 Key。
 - **平台**：本轮在 macOS 上做原生验收。按 implementation-boundaries 的要求，Windows 的原生验收在台账中标为“待验收”。
@@ -282,7 +285,9 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 | P1 `worldline-search` 与 `worldline` 两个作用域 | §7.5 |
 | P2 视窗使用者逐项列出 | §7.2 |
 | P3 编辑器插槽改用独立 context | §7.1 |
-| P4 先清理会话、移除原作品登记，再打开副本 | §9 |
+| P4 先清理会话、移除原作品登记，再打开副本 | §9（已由 Q1 改为离线准备） |
+| Q1 首次启动前离线准备新根：不复制 drafts/catalog/inbox/session，`restoreSession=false`，启动前后核对原作品和用户作品的状态 | §9 |
+| Q2 `refs` 预先建好映射，并使用固定的空数组 | §7.1 |
 | 细节：M4 删除 `constrainWindow`、`time.anchor`；M8 `fitDense` 条件、时间基准阈值；M9 指定旧作品、Windows 待验收 | §6、§4、§9 |
 | 新增矛盾：尺寸以设计稿 v9 为准；S14 理由改正 | §5.1、§2 |
 | 建议：S1 `event.detail`；S9 单独的保存状态与“只读”标记 | §7.3、§7.1 |
