@@ -263,3 +263,17 @@ test('CC-33 (559-3): an invalid 自己填写 value explains the field, not the m
   assert.equal(merge.available,true,JSON.stringify(d.choices));const err=await decide(f,{choice:'merge',mergedText:'三年后'}).then(()=>undefined,e=>e as Error);assert.ok(err,'refused');assert.doesNotMatch(err!.message,/模型配置/);assert.match(err!.message,/填写的内容不能保存为「时间」：/)
  }finally{await f.dispose()}
 })
+test('WT-40b (docs/571): a step-21 conflict on a placed event time stays for the author; it is not repaired automatically',async()=>{
+ const worldEvent=(r:ImportAiRequest)=>r.artifacts.find(a=>a.kind==='worldline'&&a.facts.timeValue!==undefined)
+ const f=await legacySceneFixture(filesF(),rosterAi());const base=fullAi(f)
+ let reported=false
+ // Only the first packet reports it; a targeted re-review is clean, so an automatic repair would succeed if allowed.
+ f.setAi(async r=>{if(!isReview(r))return base(r);const a=worldEvent(r),u=r.units[0];if(reported||!a||!u)return {conflicts:[]};reported=true
+  return {conflicts:[{id:'x',type:'setting-body',kind:'worldline',entity:a.name,field:'timeValue',source:{text:a.facts.timeValue,value:a.facts.timeValue,artifactId:a.id},candidate:{text:'999',value:'999'},evidence:[{unitId:u.id,quote:u.text.slice(0,6)}],status:'pending',hash:'h'}]}})
+ try{
+  const v=await toVerify(f),j=await f.journal(),pending=j.conflicts.filter(c=>c.status==='pending'&&c.field==='timeValue')
+  if(!j.artifacts.some(a=>a.kind==='worldline'&&a.facts.timeValue!==undefined))return void assert.fail('fixture has no placed event')
+  assert.equal(pending.length,1,JSON.stringify({c:j.conflicts.map(c=>[c.status,c.field,c.kind]),reviews:f.requests.filter(isReview).map(r=>r.artifacts.filter(a=>a.kind==='worldline').length)}));assert.ok(!(v.wizard!.verify?.fixed??[]).some(x=>x.field==='timeValue'),'not auto-fixed')
+  const e=j.artifacts.find(a=>a.id===pending[0].source.artifactId)!;assert.notEqual(e.facts.timeValue,'999','the placed time is unchanged')
+ }finally{await f.dispose()}
+})

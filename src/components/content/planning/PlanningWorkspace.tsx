@@ -9,6 +9,7 @@ import {
   layoutTimelineCards,
   timelineTicks,
   fitTimelineWindow,
+  fitDenseTimelineWindow,
   snapTimelineDelta,
 } from "@/lib/planning/timeline";
 import {
@@ -405,8 +406,10 @@ function PlanningWorkspace({
       .filter((e) => e.parent === null)
       .map((e) => resolveTime(query.data.data, e))
       .filter((t) => t.start !== null);
+    // docs/572 R14: on a calendar with eras the first view fits the crowded stretch; 全貌 still shows everything.
+    const world = query.data.data.worlds.find((w) => w.id === worldId);
     setWindowRange({
-      ...fitTimelineWindow(
+      ...(world?.calendar.eras.length ? fitDenseTimelineWindow : fitTimelineWindow)(
         times.map((t) => ({ start: t.start!, end: t.end })),
         Math.max(1, (timeline.current?.clientWidth ?? 800) - 28),
       ),
@@ -418,7 +421,11 @@ function PlanningWorkspace({
     setStartUnit(1);
     setDurationUnit(1);
   }, [eventDraft?.id]);
-  function worldTimeLabel(value: number, span = windowRange.span) {
+  function worldTimeLabel(
+    value: number,
+    span = windowRange.span,
+    precision?: PlanningEvent["time"]["precision"],
+  ) {
     const base = activeWorld?.timeBases.find((b) => b.id === timeBase);
     if (!activeWorld) return "";
     const converted = base ? timeBaseValue(data, worldId, base, value) : value;
@@ -428,6 +435,7 @@ function PlanningWorkspace({
           converted,
           base?.calendar ?? activeWorld.calendar,
           span * (base?.scale ?? 1),
+          precision,
         );
   }
   function openTab(tab: Parameters<typeof storeOpenTab>[0]) {
@@ -2031,12 +2039,20 @@ function PlanningWorkspace({
             ? "待定位"
             : worldTimeLabel(
                 t.start,
-                activeWorld?.calendar.kind === "gregorian" ||
-                  activeWorld?.timeBases.find((b) => b.id === timeBase)
-                    ?.calendar.kind === "gregorian"
-                  ? 1
-                  : windowRange.span,
+                // A day-precision event shows only its date (docs/570); hour precision keeps the minute.
+                e.time.precision !== "hour"
+                  ? Math.max(48, windowRange.span)
+                  : activeWorld?.calendar.kind === "gregorian" ||
+                      activeWorld?.timeBases.find((b) => b.id === timeBase)
+                        ?.calendar.kind === "gregorian"
+                    ? 1
+                    : windowRange.span,
+                // docs/572: era calendars cut the label to the event precision.
+                e.time.precision,
               )}
+          {e.time.kind === "exact" && e.time.label
+            ? ` · ${e.time.label}`
+            : ""}
           {e.time.kind === "window"
             ? `～${t.windowEnd} ${timeUnit(activeWorld!.calendar)} · ${e.time.label || "时间窗口"}`
             : e.duration === 0

@@ -8,6 +8,8 @@ import {projectDetailedOutlines,validateDetailedOutlines} from './novel-import-o
 /** docs/557: wizard step-21 conflicts. Pure helpers shared by the controller (decisions) and the public view (details). */
 export const WIZARD_REVIEW_TEXT=2000,WIZARD_REVIEW_FACT=1500
 /** docs/541-2: identity, ownership, ordering and link fields are never rewritten by an automatic repair. */
+/** docs/570 R6: the placed worldline time and line are never changed automatically; the author may still decide. */
+export const WIZARD_REVIEW_NO_AUTO_REPAIR:ReadonlySet<string>=new Set(['lineName','timeKind','timeValue','timeEnd'])
 export const WIZARD_REVIEW_STRUCTURAL:ReadonlySet<string>=new Set(['entityType','settingType','worldId','parentId','chapterIndex','order','refs','people','narrator','touches','status','relationships','characterId','sceneId','itemId','eventId','lineId','tropeKind','content','aliases','roleType','reliability','attribution','temporalScope'])
 const REFERENCE_FIELDS=new Set(['parentId','sceneId','characterId','itemId','worldId','eventId','lineId'])
 const ENTITY_ID=/\b[a-z]{1,2}-[0-9a-f]{16}\b/gu

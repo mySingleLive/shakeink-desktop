@@ -214,7 +214,8 @@ test('LP-16d: same-name narrative points in one chapter keep the smaller order w
 test('LP-12: only lines-lane prompts carry the story-line and refs rules',()=>{
  const unit={id:'u',fileId:'f',kind:'body',start:0,end:4,text:'合成文字'} as ImportUnit
  const lane=(kind:'worldline'|'narrative')=>importAiPrompt(lineRequest(kind,{units:[unit]})),plain=(kind:'worldline'|'narrative')=>importAiPrompt(lineRequest(kind,{units:[unit],executionLane:undefined}))
- assert.match(lane('worldline'),/lineName不得等于或改写事件name/u);assert.doesNotMatch(plain('worldline'),/lineName不得等于或改写事件name/u)
+ // docs/570: lane worldline batches use the one worldline (story lines are no longer separate worldlines).
+ assert.match(lane('worldline'),/lineName一律写"主世界线"/u);assert.doesNotMatch(plain('worldline'),/lineName一律写"主世界线"/u)
  assert.match(lane('narrative'),/每一章都须至少返回一个叙事点/u);assert.doesNotMatch(plain('narrative'),/每一章都须至少返回一个叙事点/u)
  assert.match(lane('narrative'),/refs写入对应eventId/u);assert.doesNotMatch(plain('narrative'),/refs写入对应eventId/u)
 })
@@ -387,3 +388,79 @@ test('LP-20: pausing waits for every in-flight line request before the step retu
 })
 // LP-22 is replaced by docs/532 OP-04 (wizard outlines run on the lines lane) and OP-14 (other flows stay serial).
 export type {ImportAiResult}
+
+/* docs/571 §三: the step-17 timeline request on the synthetic book (64 chapters). */
+const isTimeline=(r:ImportAiRequest)=>r.phase==='analyze'&&r.intent==='timeline'
+const worldBatches=(f:Awaited<ReturnType<typeof fixture>>)=>f.requests.filter(r=>isLine(r)&&r.kind==='worldline').length
+test('WT-31: a timeline failure is re-run once; the event batches are not sent again',async()=>{
+ let fail=1
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&fail-->0)return {timeline:'bad'} as never;return inner(r)}})
+ try{
+  await toLines(f);const v=await toStep(f,'narrative').catch(async()=>f.settle());assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)
+  assert.equal(f.requests.filter(isTimeline).length,2);const j=await f.journal();assert.ok(j.wizard!.worldTimeline)
+  assert.ok(j.artifacts.filter(a=>a.kind==='worldline').every(a=>a.facts.timeKind==='exact'&&a.facts.lineId==='import-main-worldline'))
+ }finally{await f.dispose()}
+})
+test('WT-32: a timeline failing twice fails step 17; a retry sends only the timeline request',async()=>{
+ let broken=true
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&broken)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+ try{
+  await toLines(f);let v=await f.settle();assert.equal(v.wizard!.step,'worldline');assert.equal(v.wizard!.stepState.worldline,'failed');assert.ok(v.wizard!.stepError)
+  let j=await f.journal();assert.equal(j.wizard!.worldTimeline,undefined);assert.equal(f.requests.filter(isTimeline).length,2)
+  const batches=worldBatches(f);broken=false;await f.act('wizard-redetect');v=await toStep(f,'narrative').catch(async()=>f.settle())
+  assert.equal(worldBatches(f),batches,'no event batch is sent again');assert.equal(f.requests.filter(isTimeline).length,3)
+  j=await f.journal();assert.ok(j.wizard!.worldTimeline);assert.equal(v.wizard!.stepState.worldline,'done')
+ }finally{await f.dispose()}
+})
+test('WT-33: pausing during the timeline request resumes with only that request',async()=>{
+ let hold:(()=>void)|undefined,held=false
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&!held){held=true;await new Promise<void>(resolve=>{hold=resolve})}return inner(r)}})
+ f.options.cancelAi=async()=>{hold?.()}
+ try{
+  await toLines(f);await until(()=>!!hold);const batches=worldBatches(f)
+  await f.act('pause');await f.settle();let j=await f.journal();assert.equal(j.wizard!.worldTimeline,undefined,'a paused timeline writes nothing')
+  await f.act('resume',{consent:true});const v=await toStep(f,'narrative').catch(async()=>f.settle())
+  assert.equal(worldBatches(f),batches);assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)
+  j=await f.journal();assert.ok(j.wizard!.worldTimeline);assert.ok(f.requests.filter(isTimeline).length>=2)
+ }finally{hold?.();await f.dispose()}
+})
+test('WT-34: without inferred events no timeline request is sent',async()=>{
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>isLine(r)&&r.kind==='worldline'?{notFound:true}:inner(r)})
+ try{
+  await toLines(f);const v=await toStep(f,'narrative').catch(async()=>f.settle())
+  assert.equal(f.requests.filter(isTimeline).length,0);const j=await f.journal();assert.ok(j.notFound.includes('worldline'));assert.equal(j.wizard!.worldTimeline,undefined);void v
+ }finally{await f.dispose()}
+})
+test('WT-35: going back to the character list or retrying it at step 21 clears the timeline; step 17 orders the events again',async()=>{
+ const f=await linesFixture()
+ try{
+  await toLines(f);await toStep(f,'verify').catch(async()=>f.settle());let j=await f.journal();assert.ok(j.wizard!.worldTimeline,'placed once')
+  const before=f.requests.filter(isTimeline).length
+  await f.act('wizard-retry-kind',{kind:'character'});j=await f.journal();assert.equal(j.wizard!.worldTimeline,undefined,'retrying a list clears the timeline')
+  await toStep(f,'verify').catch(async()=>f.settle());j=await f.journal();assert.ok(j.wizard!.worldTimeline);assert.equal(f.requests.filter(isTimeline).length,before+1)
+  await f.act('wizard-revise',{to:'detect-char'});j=await f.journal();assert.equal(j.wizard!.worldTimeline,undefined,'going back to a list clears the timeline')
+ }finally{await f.dispose()}
+})
+test('WT-35b: every place that drops the worldline results also drops the timeline marker',async()=>{
+ const {readFile}=await import('node:fs/promises'),source=await readFile('desktop/main/novel-import.ts','utf8')
+ // Each statement that removes worldline artifacts or lineRepairs must delete worldTimeline in the same statement group.
+ const sites=source.split('\n').filter(l=>/delete (w|this\.wizard\(s\))\.lineRepairs/u.test(l))
+ assert.equal(sites.length,3,'three cleanup sites');assert.ok(sites.every(l=>/delete (w|this\.wizard\(s\))\.worldTimeline/u.test(l)))
+})
+test('WT-39: a chapter left without an event is asked once more on its own before the order is decided',async()=>{
+ // One event per chapter a batch starts, except the last chapter. Requests sent once every unit is covered are the
+ // re-ask; they report the last chapter.
+ const reasks:ImportAiRequest[]=[];let full=false
+ const perChapter=(r:ImportAiRequest)=>{const last=r.chapters!.length-1
+  const onlyLast=full;if(onlyLast)reasks.push(r)
+  const starts=r.chapters!.map((c,i)=>({c,i})).filter(({c,i})=>(onlyLast?i===last:i!==last)&&r.units.some(u=>u.start<c.end&&u.end>c.start)&&(onlyLast||r.units.some(u=>u.start<=c.start&&u.end>c.start)))
+  return starts.length?{artifacts:starts.map(({c,i})=>{const u=r.units.find(u=>u.start<=c.start&&u.end>c.start)??r.units.find(u=>u.start<c.end&&u.end>c.start)!,from=Math.max(0,c.start-u.start);return {id:'ev-'+i,kind:'worldline' as const,name:'第'+i+'章事件',text:'发生了一件事。',facts:{lineId:'main',lineName:'主世界线',timeKind:'unknown',people:'[]',reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(from,from+6)}],sourceUnitIds:[u.id],origin:'inferred' as const}})}:{notFound:true}}
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'){const j=await f.journal();full=(j.coverage.worldline??[]).length===j.workingUnits!.length;return perChapter(r)}return inner(r)}})
+ try{
+  await toLines(f);const v=await toStep(f,'narrative').catch(async()=>f.settle());assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)
+  const j=await f.journal(),ev=j.artifacts.filter(a=>a.kind==='worldline')
+  assert.ok(reasks.length>=1,'asked once more');assert.ok(reasks.every(r=>r.units.length<=2),'only the empty chapter is sent');assert.ok(ev.some(a=>a.name==='第63章事件'),'the re-asked chapter now has its event')
+  assert.equal(j.wizard!.worldGapsAsked,true);assert.ok(ev.every(a=>a.facts.timeKind==='exact'))
+  assert.ok(f.requests.indexOf(reasks[0])<f.requests.findIndex(isTimeline),'the order is decided after the re-ask')
+ }finally{await f.dispose()}
+})
