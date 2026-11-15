@@ -12,7 +12,13 @@
   <button data-pick="neon">B 霓虹科技</button>
   <button data-pick="chronicle">C 古典史册</button>
   <button data-light-toggle>亮色主题</button>
-  <span class="note">示例数据为虚构，密度参照《诡秘之主》导入结果：大部分事件集中在 3 年内，同一天最多 5 个</span>
+  <b style="margin-left:14px">着色依据</b>
+  <button data-color="combo" aria-pressed="true">D 类型 + 重要度（推荐）</button>
+  <button data-color="type">按类型</button>
+  <button data-color="people">按角色</button>
+  <button data-color="importance">按重要度</button>
+  <button data-color="none">不着色</button>
+  <span class="note">示例数据为虚构</span>
 </div>
 <main class="panel">
   <h1>世界线</h1>
@@ -34,7 +40,7 @@
     <button>✓ 显示时期</button><button>✓ 显示角色变化</button><hr>
     <button id="collapseAll">全部收起</button>
   </div>
-  <div class="status"><span id="range"></span><span id="count"></span></div>
+  <div class="status"><span id="range"></span><span id="count"></span><span class="legend" id="legend" aria-label="颜色图例（点击只看这一类）"></span></div>
   <section class="table" id="tableView">
     <nav class="tree" id="tree" role="tree" aria-label="事件目录"></nav>
     <div class="scroller" id="scroller">

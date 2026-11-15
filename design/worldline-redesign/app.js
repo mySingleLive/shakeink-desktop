@@ -1,25 +1,58 @@
 // docs/577 design prototype. Cards flow in tree order; the rail is drawn afterwards from measured card positions.
-const { events, periods, fmt, short, span, M } = window.WL
+const { events, periods, fmt, short, span, M, categories, people: cast } = window.WL
 const $ = (s) => document.querySelector(s)
 const byId = new Map(events.map((e) => [e.id, e]))
 const kids = (id) => events.filter((e) => e.parent === id).sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity))
 const open = new Set(), folded = new Set()
 let selected = null, hot = null, view = 'table'
 
+// ---------- color modes (docs/577 §5.1) ----------
+// none: single accent. type: hue = category. people: hue = first participating character (gray when none).
+// importance: one hue, strength = importance. combo: hue = category, size/weight = importance.
+let colorMode = 'combo', focus = null
+const IMP = ['', '一般', '重要', '关键']
+const hueOf = (e) => {
+  if (colorMode === 'none' || colorMode === 'importance') return 'var(--accent)'
+  if (colorMode === 'people') return e.people.length ? `var(--c${cast.indexOf(e.people[0]) % 6})` : 'var(--c6)'
+  return `var(--c${e.category})`
+}
+const keyOf = (e) => colorMode === 'people' ? (e.people[0] ?? '无角色') : colorMode === 'importance' ? e.importance : e.category
+const dimmed = (e) => focus !== null && keyOf(e) !== focus
+const impClass = (e) => (colorMode === 'importance' || colorMode === 'combo') ? ` imp${e.importance}` : ''
+function renderLegend() {
+  const lg = $('#legend')
+  const items = colorMode === 'type' || colorMode === 'combo'
+    ? categories.map((c, i) => [i, c, `var(--c${i})`])
+    : colorMode === 'people' ? [...cast.map((p, i) => [p, p, `var(--c${i % 6})`]), ['无角色', '无角色', 'var(--c6)']]
+      : colorMode === 'importance' ? [[3, '★ 关键', 'var(--accent)'], [2, '重要', 'var(--accent)'], [1, '一般', 'var(--muted)']] : []
+  lg.innerHTML = items.map(([k, label, c]) =>
+    `<button data-k="${k}" aria-pressed="${focus === k}" style="--ec:${c}"><span><i></i>${label}</span></button>`).join('') +
+    (colorMode === 'combo' ? '<span style="color:var(--faint)">· 点大 = 关键 · 点小 = 一般</span>' : '')
+  lg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    const k = items.find(([key]) => String(key) === b.dataset.k)[0]
+    focus = focus === k ? null : k; render()
+  }))
+}
+
 // ---------- shared card ----------
 function card(e, depth = 0) {
   const el = document.createElement('article')
-  el.className = 'ev' + (open.has(e.id) ? ' open' : '') + (selected === e.id ? ' sel' : '')
+  el.className = 'ev' + (open.has(e.id) ? ' open' : '') + (selected === e.id ? ' sel' : '') + impClass(e) + (dimmed(e) ? ' dim' : '')
   el.dataset.id = e.id
   el.style.marginLeft = depth * 16 + 'px'
+  el.style.setProperty('--ec', hueOf(e))
+  if (colorMode !== 'none') el.dataset.colored = ''
   el.setAttribute('aria-expanded', open.has(e.id))
   const n = kids(e.id).length
+  const tag = colorMode === 'type' || colorMode === 'combo' ? categories[e.category] : colorMode === 'people' ? (e.people[0] ?? '') : ''
   el.innerHTML = `<div class="ev-head" title="${e.title}">
       <span class="ev-dot ${e.kind}"></span><span class="ev-title">${e.title}</span>
+      ${open.has(e.id) && tag ? `<span class="ev-tag">${tag}</span>` : ''}
       ${n ? `<span class="ev-kids">▸ ${n}</span>` : ''}<button class="ev-more" aria-label="${e.title}更多操作">⋯</button></div>`
   if (open.has(e.id)) {
     const time = e.start === null ? '待定位' : fmt(e.start, e.precision) +
-      (e.kind === 'window' ? ` ～ ${fmt(e.windowEnd)} · ${e.label}` : e.dur ? ` · 持续 ${e.dur} 天` : ' · 时点')
+      (e.kind === 'window' ? ` ～ ${fmt(e.windowEnd)} · ${e.label}` : e.dur ? ` · 持续 ${e.dur} 天` : ' · 时点') +
+      (colorMode === 'importance' || colorMode === 'combo' ? ` · ${IMP[e.importance]}` : '')
     el.insertAdjacentHTML('beforeend', `<div class="ev-body"><div class="ev-time">${time}</div>
       ${e.fact.split('\n\n').map((p) => `<p>${p}</p>`).join('')}
       ${e.people.length ? `<div class="pills">${e.people.map((p) => `<span class="pill">${p}</span>`).join('')}</div>` : ''}
@@ -65,6 +98,8 @@ function renderTree({ placed, pending }) {
     r.dataset.id = e.id; r.setAttribute('role', 'treeitem'); r.tabIndex = -1
     if (n) r.setAttribute('aria-expanded', !folded.has(e.id))
     r.style.paddingLeft = 4 + depth * 14 + 'px'
+    if (colorMode !== 'none') r.style.setProperty('--ec', hueOf(e))
+    if (dimmed(e)) r.style.opacity = .35
     r.innerHTML = `<span class="tw">${n ? (folded.has(e.id) ? '▸' : '▾') : ''}</span><span class="td"></span>
       <span class="tt" title="${e.title}">${e.title}</span><span class="ts">${n ? n + ' · ' : ''}${short(e.start, e.precision)}</span>`
     r.querySelector('.tw').addEventListener('click', (ev) => {
@@ -158,17 +193,18 @@ function drawRail(list, seg, breaks) {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       path.setAttribute('d', `M156 ${c.y} C 186 ${c.y}, ${x1 - 34} ${p.head}, ${x1} ${p.head}`)
       path.classList.add('lead'); path.dataset.id = d.e.id
+      if (dimmed(d.e)) path.classList.add('dim')
       svg.append(path)
       if (d.e.dur && d.e.kind !== 'window') {
         const end = yOf(Math.min(d.e.start + d.e.dur, d.s.t1), d.s)
-        if (end - c.y > 3) rail.insertAdjacentHTML('beforeend', `<i class="dur" style="top:${c.y}px;height:${end - c.y}px"></i>`)
+        if (end - c.y > 3) rail.insertAdjacentHTML('beforeend', `<i class="dur" style="top:${c.y}px;height:${end - c.y}px;--ec:${hueOf(d.e)}"></i>`)
       }
       if (d.e.kind === 'window') rail.insertAdjacentHTML('beforeend', `<i class="dur window" style="top:${c.y}px;height:${Math.max(8, yOf(Math.min(d.e.windowEnd, d.s.t1), d.s) - c.y)}px"></i>`)
     })
     const ids = c.items.map((d) => d.e.id).join(' ')
     const dot = c.items.length > 1
-      ? `<b class="dot cluster" data-ids="${ids}" style="top:${c.y}px" title="${c.items.map((d) => d.e.title).join('\n')}">${c.items.length}</b>`
-      : `<b class="dot ${lead.e.kind}" data-ids="${ids}" style="top:${c.y}px" aria-label="${lead.e.title} ${fmt(lead.e.start, lead.e.precision)}"></b>`
+      ? `<b class="dot cluster" data-ids="${ids}" style="top:${c.y}px;--ec:${hueOf(lead.e)};background:${hueOf(lead.e)}" title="${c.items.map((d) => d.e.title).join('\n')}">${c.items.length}</b>`
+      : `<b class="dot ${lead.e.kind}${impClass(lead.e)}${dimmed(lead.e) ? ' dim' : ''}" data-ids="${ids}" style="top:${c.y}px;--ec:${hueOf(lead.e)}" aria-label="${lead.e.title} ${fmt(lead.e.start, lead.e.precision)}"></b>`
     rail.insertAdjacentHTML('beforeend', dot)
     const show = c.y - lastLabel >= 18
     if (show) lastLabel = c.y
@@ -237,7 +273,8 @@ function renderTimeline() {
     wrap.append(card(e))
     const left = x(e.start)
     if (e.dur) wrap.insertAdjacentHTML('afterbegin', `<i class="bar-x" style="width:${Math.max(6, x(e.start + e.dur) - left)}px"></i>`)
-    wrap.insertAdjacentHTML('afterbegin', `<i class="pin"></i><span class="tstamp">${short(e.start, e.precision)}</span>`)
+    wrap.style.setProperty('--ec', hueOf(e))
+    wrap.insertAdjacentHTML('afterbegin', `<i class="pin" style="background:var(--ec);box-shadow:0 0 6px var(--ec)"></i><span class="tstamp">${short(e.start, e.precision)}</span>`)
     lane.append(wrap)
     return { e, wrap, left, w }
   })
@@ -271,6 +308,7 @@ function render() {
   $('#tableView').hidden = view !== 'table'; $('#timelineView').hidden = view !== 'timeline'
   document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === view))
   const placed = events.filter((e) => e.start !== null)
+  renderLegend()
   $('#count').textContent = `${events.length} 件事件 · 已展开 ${open.size}`
   if (view === 'table') {
     const dense = placed.map((e) => e.start).sort((a, b) => a - b)
@@ -291,3 +329,7 @@ $('#collapseAll').addEventListener('click', () => { open.clear(); $('#menu').hid
 $('#pending').addEventListener('click', () => { view = 'table'; locate(kids(null).find((e) => e.start === null).id) })
 new ResizeObserver(() => render()).observe($('.panel'))
 render()
+document.querySelectorAll("[data-color]").forEach((b) => b.addEventListener("click", () => {
+  colorMode = b.dataset.color; focus = null
+  document.querySelectorAll("[data-color]").forEach((x) => x.setAttribute("aria-pressed", x === b)); render()
+}))

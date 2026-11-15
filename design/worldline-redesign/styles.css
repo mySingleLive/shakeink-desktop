@@ -150,3 +150,30 @@ h1 { margin: 0 0 12px; font: 600 22px/1.2 var(--title-font); letter-spacing: .02
 .cards .ev { max-width: 560px; }
 .cards .ev.open { max-width: 720px; }
 [data-style="chronicle"] .dot.cluster { transform: none; border-radius: 50%; }
+
+/* Event colors (docs/577 §5.1). Seven category hues per style; --ec is set per card/dot from the chosen mode. */
+:root, [data-style="calm"] { --c0:#e0705f; --c1:#c9a86a; --c2:#7fb7c9; --c3:#c58bb2; --c4:#8fbf8a; --c5:#e09a4f; --c6:#8f857e; }
+[data-style="neon"] { --c0:#ff4f6d; --c1:#ffd166; --c2:#2ee6d6; --c3:#ff4fd8; --c4:#7dff8a; --c5:#ff9f40; --c6:#6f84a8; }
+[data-style="chronicle"] { --c0:#b35a4a; --c1:#c9a24a; --c2:#6f9aa0; --c3:#9a6f9e; --c4:#7f8c5a; --c5:#c07a3a; --c6:#857860; }
+[data-light] { --c6:#9a8f86; }
+.ev { --ec: var(--accent); }
+.ev[data-colored] { border-left: 3px solid var(--ec); background: color-mix(in srgb, var(--ec) 7%, var(--card)); }
+.ev[data-colored]:hover { background: color-mix(in srgb, var(--ec) 12%, var(--card-2)); }
+.ev[data-colored].sel { border-color: var(--ec); border-left-width: 3px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ec) 40%, transparent); }
+.ev .ev-dot { background: var(--ec); box-shadow: 0 0 6px var(--ec); }
+.ev .ev-dot.window { background: transparent; border-color: var(--ec); box-shadow: none; }
+.ev .ev-tag { flex: none; font-size: 11px; padding: 0 6px; border-radius: 8px; color: var(--ec); background: color-mix(in srgb, var(--ec) 14%, transparent); }
+.ev.imp3 .ev-title { font-weight: 700; } .ev.imp3 .ev-dot { width: 10px; height: 10px; box-shadow: 0 0 10px var(--ec), 0 0 2px var(--ec); }
+.ev.imp3 .ev-head::after { content: "★"; color: var(--ec); font-size: 11px; }
+.ev.imp1 .ev-title { color: var(--muted); } .ev.imp1 .ev-dot { width: 6px; height: 6px; box-shadow: none; opacity: .8; }
+.ev.dim { opacity: .28; } .dot.dim, .dlabel.dim, .lead.dim { opacity: .2; }
+.dot { --ec: var(--accent); border-color: var(--ec); } .dot.point { background: var(--ec); }
+.dot.imp3 { width: 14px; height: 14px; margin: -7px 0 0 -7px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 25%, transparent), 0 0 12px var(--ec); }
+.dot.imp1 { width: 8px; height: 8px; margin: -4px 0 0 -4px; }
+.dur { background: var(--ec, var(--accent)); }
+.tree-row .td { background: var(--ec, var(--line)); opacity: .9; }
+.legend { display: flex; gap: 10px; align-items: center; margin-left: auto; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--ec); }
+.legend button { color: var(--muted); padding: 0 4px; border-radius: 4px; }
+.legend button[aria-pressed="true"] { color: var(--text); background: var(--accent-soft); }
