@@ -1,0 +1,76 @@
+/* Table view: tree | rail + cards (one scroller). */
+.table { flex: 1; min-height: 0; display: grid; grid-template-columns: 248px 1fr; border-top: 1px solid var(--line-soft); }
+.tree { overflow: auto; padding: 10px 10px 40px 0; border-right: 1px solid var(--line-soft); scrollbar-width: thin; }
+.tree-search { position: sticky; top: 0; z-index: 2; padding: 0 0 8px; background: var(--bg); }
+.tree-search input { width: 100%; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-soft); background: var(--panel); outline: none; }
+.tree-search input:focus { border-color: var(--accent); }
+.tree-row { position: relative; display: flex; align-items: center; gap: 6px; height: 28px; padding-right: 8px; border-radius: 7px; cursor: pointer; color: var(--muted); }
+.tree-row:hover { background: var(--card); color: var(--text); }
+.tree-row.cur { background: var(--card-2); color: var(--text); }
+.tree-row.cur::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--ec); }
+.tree-row.sel { color: var(--text); font-weight: 600; }
+.tree-row.dim { opacity: .35; }
+.tree-row .tw { flex: none; width: 16px; text-align: center; color: var(--faint); font-size: 10px; transition: transform .15s; }
+.tree-row .tw.fold { transform: rotate(-90deg); }
+.tree-row .td { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ec); }
+.tree-row .tt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tree-row .ts { flex: none; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tree-group { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px 6px; color: var(--faint); font-size: 11px; letter-spacing: .1em; }
+.tree-group::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+
+.scroller { position: relative; overflow: auto; scrollbar-width: thin; }
+.sticky-year { position: sticky; top: 0; z-index: 6; height: 0; }
+.sticky-year span { position: absolute; left: 14px; top: 8px; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--text);
+  background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line-soft); }
+.rail { position: absolute; left: 0; top: 0; width: 210px; pointer-events: none; }
+.rail-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+.rail-line { position: absolute; left: 158px; width: 2px; margin-left: -1px; border-radius: 1px;
+  background: linear-gradient(transparent, var(--line) 18px, var(--line) calc(100% - 18px), transparent); }
+.rail-line::after { content: ""; position: absolute; inset: 0 -3px; border-radius: 4px; background: inherit; filter: blur(4px); opacity: .5; }
+.tick { position: absolute; left: 150px; width: 8px; height: 1px; background: var(--line); }
+.tick-label { position: absolute; right: 66px; transform: translateY(-50%); color: var(--faint); font-size: 10px; white-space: nowrap; }
+.year { position: absolute; left: 130px; transform: translateY(-50%); }
+.year span { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--accent-2);
+  background: var(--bg); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); transform: translateX(-50%); margin-left: 28px; white-space: nowrap; }
+.dot { --ec: var(--accent); position: absolute; left: 158px; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%;
+  background: var(--ec); border: 2px solid var(--bg); box-shadow: 0 0 0 1.5px var(--ec), 0 0 10px color-mix(in srgb, var(--ec) 70%, transparent);
+  pointer-events: auto; cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .15s; }
+.dot.window { background: var(--bg); box-shadow: 0 0 0 1.5px var(--ec); border-style: dashed; }
+.dot.hot { transform: scale(1.45); box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 6px color-mix(in srgb, var(--ec) 18%, transparent), 0 0 18px var(--ec); }
+.dot.cluster { width: 18px; height: 18px; margin: -9px 0 0 -9px; border-width: 0; color: var(--bg); font-size: 10px; font-weight: 800; line-height: 18px; text-align: center;
+  background: conic-gradient(var(--cl)); box-shadow: 0 0 0 2px var(--bg), 0 0 12px rgba(0,0,0,.4); }
+.dot.dim, .dlabel.dim, .dur.dim { opacity: .2; }
+.dur { position: absolute; left: 158px; width: 5px; margin-left: -2.5px; border-radius: 3px; background: linear-gradient(var(--ec), transparent); opacity: .55; }
+.dur.window { background: none; border: 1px dashed var(--ec); }
+.dlabel { position: absolute; right: 66px; transform: translateY(-50%); white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);
+  padding: 1px 7px; border-radius: 5px; transition: color .15s, background .15s; }
+.dlabel b { color: var(--text); font-weight: 600; }
+.dlabel.hot { color: #fff; background: var(--ec); } .dlabel.hot b { color: #fff; }
+.break { position: absolute; left: 0; width: 210px; display: flex; align-items: center; justify-content: flex-end; padding-right: 66px; color: var(--faint); font-size: 11px; font-style: italic; }
+.break::before, .break::after { content: ""; position: absolute; left: 150px; width: 16px; height: 2px; background: var(--faint); transform: rotate(-24deg); }
+.break::before { top: calc(50% - 4px); } .break::after { top: calc(50% + 3px); }
+.cards { position: relative; margin-left: 210px; padding: 10px 24px 80px 12px; }
+.cards .ev { max-width: 600px; margin-top: 6px; } .cards .ev.open { max-width: 760px; margin: 10px 0; }
+.lead { fill: none; stroke: color-mix(in srgb, var(--ec) 35%, var(--line-soft)); stroke-width: 1; transition: stroke .15s; }
+.lead.hot { stroke: var(--ec); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--ec)); }
+.lead.dim { opacity: .15; }
+
+/* Timeline view. */
+.canvas { flex: 1; min-height: 0; position: relative; overflow: hidden; border-top: 1px solid var(--line-soft); }
+.ruler { position: absolute; left: 0; right: 0; top: 0; height: 32px; background: linear-gradient(var(--panel), transparent); }
+.ruler span { position: absolute; top: 9px; transform: translateX(-50%); color: var(--muted); font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ruler span.major { color: var(--accent-2); font-weight: 700; }
+.grid i { position: absolute; top: 32px; bottom: 0; width: 1px; background: linear-gradient(var(--line-soft), transparent 85%); }
+.periods { position: absolute; left: 0; right: 0; top: 36px; height: 24px; }
+.period { position: absolute; height: 20px; padding: 0 10px; border-radius: 10px; font-size: 11px; line-height: 20px; white-space: nowrap; overflow: hidden; color: var(--text);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 26%, transparent), color-mix(in srgb, var(--pc) 8%, transparent)); border: 1px solid color-mix(in srgb, var(--pc) 35%, transparent); }
+.lane { position: absolute; left: 0; right: 0; top: 66px; bottom: 0; overflow: auto; }
+.tcard { position: absolute; transition: left .18s, top .18s; }
+.tcard .bar-x { position: absolute; left: 0; top: -9px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--ec), transparent); }
+.tcard .tstamp { position: absolute; left: 10px; top: -22px; font-size: 10px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tcard .pin { position: absolute; left: -4px; top: -12px; width: 9px; height: 9px; border-radius: 50%; background: var(--ec); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--ec), 0 0 8px var(--ec); }
+.tcard .stem { position: absolute; left: 0; top: -4px; width: 1px; height: 6px; background: var(--ec); opacity: .6; }
+.hint { position: absolute; left: 14px; bottom: 10px; color: var(--faint); font-size: 11px; }
+.minimap { position: absolute; right: 14px; bottom: 10px; width: 260px; height: 26px; border-radius: 6px; border: 1px solid var(--line-soft); background: var(--panel); overflow: hidden; }
+.minimap i { position: absolute; top: 6px; width: 2px; height: 14px; border-radius: 1px; background: var(--ec); opacity: .8; }
+.minimap b { position: absolute; top: 0; bottom: 0; border: 1px solid var(--accent); border-radius: 5px; background: var(--accent-soft); }
