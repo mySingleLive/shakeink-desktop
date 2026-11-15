@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>世界线改版设计稿 v2 · docs/577</title>
+<title>世界线改版设计稿 v3 · docs/577</title>
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="views.css">
 </head>
 <body>
 <div class="review" aria-label="评审工具条（只属于设计稿）">
-  <b>评审 v2 · 风格 A 沉稳暗色 + 微光 · 按类型着色</b>
+  <b>评审 v3 · 风格 A · 颜色=类型 · 圆点大小=重要度</b>
   <button data-light-toggle>亮色主题</button>
   <span class="note">示例数据为虚构</span>
 </div>
@@ -20,6 +20,15 @@
       <button data-view="timeline">时间线</button>
       <button data-view="table" aria-pressed="true">事件表</button>
     </div>
+    <div class="picker">
+      <button class="btn" id="periodBtn" aria-haspopup="listbox" title="选择时期并定位"></button>
+      <div class="pop" id="periodPop" role="listbox" aria-label="时期" hidden></div>
+    </div>
+    <button class="btn toggle-all" id="toggleAll" title="展开或收起全部事件卡片"></button>
+    <div class="zoom" title="缩放时间轴间距（也可 Ctrl + 滚轮）">
+      <button id="zoomOut" aria-label="缩小">−</button><span id="zoomVal"></span><button id="zoomIn" aria-label="放大">＋</button>
+      <button id="zoomFit" aria-label="复位" style="width:auto;padding:0 6px;font-size:12px">复位</button>
+    </div>
     <span class="spacer"></span>
     <button class="chipbtn" id="pending">待定位<b>2</b></button>
     <button class="chipbtn zero">延续事件<b>0</b></button>
@@ -29,9 +38,9 @@
   <div class="menu" id="menu" role="menu" hidden>
     <button>世界线设置</button><button>＋ 世界线</button><button>＋ 时期</button><button>时期列表（3）</button>
     <button>跨世界连接</button><button>单位与对应 · 时间基准</button><hr>
-    <button>✓ 显示时期</button><button>✓ 显示角色变化</button><hr>
-    <button id="collapseAll">全部收起</button>
+    <button>✓ 显示时期</button><button>✓ 显示角色变化</button>
   </div>
+  <div class="toast" id="toast" hidden></div>
   <div class="status"><span id="range"></span><span id="count"></span>
     <span class="legend" id="legend" aria-label="事件类型（点击隐藏/显示，双击只看这一类）"></span></div>
   <section class="table" id="tableView">
@@ -39,7 +48,7 @@
       <div class="tree-search"><input id="search" placeholder="搜索事件标题" aria-label="搜索事件标题"></div>
       <div id="treeRows" role="tree"></div>
     </nav>
-    <div class="scroller" id="scroller">
+    <div class="scroller" id="scroller" title="Ctrl + 滚轮缩放时间轴间距">
       <div class="sticky-year" id="stickyYear"></div>
       <div class="rail" id="rail"></div>
       <div class="cards" id="cards"></div>
@@ -50,7 +59,7 @@
     <div class="grid" id="grid"></div>
     <div class="periods" id="periods"></div>
     <div class="lane" id="lane"></div>
-    <div class="hint">单击卡片展开/收起 · 双击编辑 · 拖空白平移 · Ctrl + 滚轮缩放</div>
+    <div class="hint">单击卡片展开/收起 · ▾ 折叠子事件 · 双击编辑 · 拖空白平移 · Ctrl + 滚轮缩放</div>
     <div class="minimap" id="minimap" aria-label="全局缩略"></div>
   </section>
 </main>

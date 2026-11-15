@@ -5,7 +5,7 @@
   --shadow: 0 12px 32px rgba(0,0,0,.38);
   /* 冲突 谋划 揭示 关系 成长 变故 其他 */
   --c0: #e8735f; --c1: #d9ab5b; --c2: #67b6cc; --c3: #cf8bbd; --c4: #8cc48a; --c5: #a08cf0; --c6: #8d837c;
-  --chart-1: #e07a5f; --chart-2: #8fb3a0; --chart-3: #c9a86a;
+  --chart-1: #e07a5f; --chart-2: #8fb3a0; --chart-3: #c9a86a; --chart-4: #8f9bd0;
 }
 [data-light] {
   --bg: #f6f2ee; --panel: #fffdfb; --card: #ffffff; --card-2: #faf6f3; --line: #e2d7ce; --line-soft: #eee6df;
@@ -49,7 +49,7 @@ h1 { margin: 0 0 14px; font-size: 22px; font-weight: 600; line-height: 1.2; lett
 .menu button:hover { background: var(--accent-soft); } .menu hr { border: 0; border-top: 1px solid var(--line-soft); margin: 4px 0; }
 
 /* Event card: collapsed pill / expanded card. --ec is the event type color. */
-.ev { position: relative; overflow: hidden; border-radius: 9px; border: 1px solid var(--line-soft);
+.ev { position: relative; border-radius: 9px; border: 1px solid var(--line-soft);
   background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 13%, var(--card)), var(--card) 46%);
   transition: border-color .15s, transform .15s, box-shadow .15s, opacity .15s; }
 .ev::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--ec); box-shadow: 0 0 8px var(--ec); }
