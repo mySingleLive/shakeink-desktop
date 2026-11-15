@@ -249,3 +249,47 @@ S3–S8、S10–S13 已充分采纳。另有三条：
 - **R1**：可以实现。普通语义导入路径没有现成的“整理步骤”：`:598` 在 zod 的 `superRefine` 里面，不能修改数据。请写明规整放在 `generateText` 包装器中（`novel-import-ai.ts:760-763`），在 `wizardLinesLaneRequest` 以外、`request.kind==='worldline'` 时调用。删掉的数量应计入修复计数（`ImportLinesRepairs`，`desktop/shared/novel-import.ts:183`，新增一个字段），不能写进 `mappingWarnings`，因为后者是校验函数的输出。
 - **R3、细节、新增矛盾、S1、S9**：已解决。
 - **建议（不阻塞）**：面板所在标签页隐藏时，`ResizeObserver` 会报告宽度 0（`ContentTabs.tsx:26`）。§5.2 规定宽度变化时全量重排，这会把每个家族的原位记录清掉。建议宽度为 0 时不重排。
+
+---
+
+## 修订 4 复审
+
+复审对象：`docs/580-worldline-ui-plan.md` 修订 4（提交 `464d040`）。行号指 chronology 提交 `195b4c0`。
+
+**结论：不通过。** N1、N3 的取舍、说明 1、说明 2 已解决。N2、N3、N4、N5 的修改又带出 4 处问题（P1–P4），都只需在方案里补几句，不改设计。
+
+### 已解决
+
+- **N1（§5.2）**：排布用世界坐标并以未裁剪的外框判断碰撞，上屏时逐个元素相对 `base` 换算并裁剪到 R，R 外的元素不渲染，不再使用以 `root.start` 为原点的局部坐标。上界推导成立：`|windowStart − base| × scale ≤ 10⁶`，R 的两端距 `windowStart` 为 −3·span 到 +4·span，所以任何写入 CSS 的坐标都 < 10⁶ + 7 × 视窗宽，与家族起点无关。世界坐标约为 4.2×10⁹ 小时 × 15 px ≈ 6×10¹⁰，在双精度数中误差远小于 1px，碰撞判断不受影响。宽度为 0 时不重排，原位记录得以保留。
+- **N2 中以下各项**：`commandScope` 的 7 步顺序成立。对话框排除在第 2 步；搜索框先于 input；兜底判断排在 markdown 和 preview 之后，事件编辑器内嵌的 `MarkdownEditor` 仍然得到 `markdown`。`overlapping` 的调整使冲突原子转移（`shortcuts.ts:40-60`）照常工作。按键路径的说法已改正，只有菜单点击会把 `md.find` 改派给 `worldline.search`，这条路径（`index.ts:911` → `DesktopApp.tsx:157` → `:51`）是完整的。目录校验脚本已列入修改清单。
+- **说明 1、说明 2**：已解决。
+
+### 必须修改
+
+**P1（§7.5，N2）：`input` 和 `text` 两类命令不应在整个 `worldline` 作用域启用，否则画布、目录和小地图的按键可能被拦截。**
+修订 4 让 `worldline` 作用域启用 worldline、input、text、global 四类命令，而这个作用域覆盖第 6 步兜底到的画布、目录和卡片。按现有代码：
+- 用户改绑了某个 `input.*` 或 `text.*` 命令（例如把 `input.left` 从 ArrowLeft 改成别的键）之后，原来的默认键就成为“已移除的默认键”。`:76` 的 `customized` 为真，`:88` 不再提前交给原生。dispatcher 在 `shortcut-dispatch.ts:53` 返回 `blocked`，Controller 在 `:96` 调用 `preventDefault` 并停止传播。
+- 结果是画布的 ←→ 平移和 ↑↓ 滚动（现有 `onKeyDown`，`PlanningWorkspace.tsx:2853-2870`）、目录 `role="tree"` 的方向键导航、小地图的 ←→ 都失效。现在画布的作用域是 `none`，这些命令根本不参与匹配（`:76` 中 `text` 只在作用域不为 `none` 时启用），所以不会出现这个问题。
+- 修改方法：只在第 3 步命中搜索框时启用 `input` 和 `text` 两类命令；画布、目录、卡片（第 6 步）只启用 `worldline` 和 `global`。可以把搜索框和面板其余部分区分成两个作用域值，或者在过滤条件中加入“目标是否为搜索框”。WU-66 补两条用例：改绑 `input.left` 后，画布的 ← 仍能平移；改绑 `text.selectAll` 后，画布的 Cmd+A 不被拦截。
+
+**P2（§7.2，N4）：store 成为视窗的唯一写入来源后，`PlanningWorkspace` 自己渲染的、依赖视窗的内容会停在旧值。**
+`PlanningWorkspace` 的渲染中有约 30 处读取 `windowRange`（`:176`–`:3156`）。修订 4 只说保存视窗时改用 `getSnapshot()`。以下内容由 `PlanningWorkspace` 渲染，平移后必须更新，但它在拖动时不重新渲染，交互结束后 store 更新也不会触发它重新渲染：
+- 工具栏的“延续事件 N”及其弹层列表（`continuing`，`:2359-2365`、`:2632`）；
+- 状态行的范围文字（`:2741-2742`）；
+- “视窗末端角色状态”折叠区（`characterStatesAt(…, windowRange.start + windowRange.span)`，`:3153-3156`）；
+- `worldTimeLabel` 的默认 span（`:426`）；
+- `finishTimeDrag` 的最小拖动阈值（`:2162`）。
+
+请逐项写明处理方式：要么由订阅 store 的子组件渲染（工具栏计数、状态行、角色状态区），要么在事件处理时读取 `getSnapshot()`（拖动阈值、时期定位）。581 补一条用例：平移后“延续事件 N”和范围文字随之更新。
+
+**P3（§7.1，N3）：编辑器插槽 `renderEditor` 放进 `WorldlineContext` 会让 `memo` 失效。**
+`renderEditor` 就是现有的 `renderEventEditor` 闭包，`PlanningWorkspace` 每次渲染都会生成新的函数。把它作为 `useMemo` 的依赖放进 context 后，`PlanningWorkspace` 每次渲染（单击展开、选中、输入搜索词、保存）都会更新 context，885 张卡片全部重新渲染，“展开 < 100ms”很难达到。请把它改成和其他回调一样的稳定包装（`useRef` 保存最新实现，context 中放一个固定不变的函数）。另外，只有 `editing` 为真的那张卡片需要编辑器的最新内容：草稿变化时可以只给这张卡片的 `editing` prop 或 key 一个变化，让它单独重新渲染。`data` 放进 context 是可以接受的，它只在保存后才变化。
+
+**P4（§9，N5）：在新根中打开副本会被重复作品检查拒绝。**
+复制的 catalog 中，`WL-wl-era1` 和 `WL-wl-base1` 仍登记在原路径下，而副本的 `shakeink-work.json` 中 `id` 和 `novelId` 与原作品相同。`WorkspaceService.open`（`desktop/service/workspaces.ts:362-364`）按 `id` 或 `novelId` 找到原来的登记后，会因为路径和 inode 不同抛出“检测到重复作品，需要作者确认重新关联”。所以“旧登记不使用、按新路径打开副本”这一步做不到。另外，新根启动后如果恢复了上次打开的标签页，可能会连接原路径的作品并在那里创建锁，原作品的只读和哈希一致也就无法保证。
+
+请改为：在新根第一次启动、打开任何作品之前，把 `catalog.json` 中指向 `worldline-570/works/` 和 `~/Documents/小说/` 的条目移除，或者在界面中“从列表中删除”（`forget` 只改索引，不碰作品目录，`workspaces.ts:405-408`）；然后再打开副本。同时确认新根中没有恢复指向原作品的标签页。WU-90 中原作品的哈希应在整轮测试结束后再算一次。
+
+### 建议（不阻塞）
+
+- 世界坐标 `wx = start × scale` 写入单元测试时，请用 4.2×10⁹ 小时乘以最大缩放比例的组合检验，确认碰撞判断在大数值下仍然正确。

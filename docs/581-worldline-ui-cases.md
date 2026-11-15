@@ -1,6 +1,6 @@
-# 581 · 世界线界面改版 测试用例（对应方案修订 4）
+# 581 · 世界线界面改版 测试用例（对应方案修订 5）
 
-依据：`577-worldline-ui-product-design.md`、`580-worldline-ui-plan.md`（修订 4）。编号前缀 WU。数据均为合成内容，真实作品只在 §5 的隔离根中使用。
+依据：`577-worldline-ui-product-design.md`、`580-worldline-ui-plan.md`（修订 5）。编号前缀 WU。数据均为合成内容，真实作品只在 §5 的隔离根中使用。
 
 ## 1. 数据与导入（单元 / 集成）
 
@@ -94,6 +94,8 @@
 | WU-56b | 跳到远古再跳回 | 同一缩放下，点小地图最左端，再点最右端 | 远古卡片可见且没有叠在一起；回到现代后卡片 x、y 与跳转前一致 |
 | WU-56c | 平移不渲染工作区 | React Profiler 计数，拖动 30 帧 | `PlanningWorkspace` 渲染 0 次；`EventTree` 只在节流点更新；停止 150ms 后 `PlanningWorkspace` 渲染 1 次 |
 | WU-56e | 交互中以 ref 为准 | 拖动过程中触发一次查询刷新，再写入一次实测高度 | 画面不跳回拖动前的位置；停止后视窗与最后一帧一致 |
+| WU-56g | 视窗只在 store [P2] | 平移 3 个视窗宽 | “延续事件 N”、范围文字、视窗末端角色状态都随之更新；拖动改时间的吸附步长随缩放变化；`PlanningWorkspace.tsx` 中不再出现 `windowRange` 状态（静态检查） |
+| WU-56h | 编辑时不重渲染其它卡片 [P3] | 885 个事件，编辑一个事件时输入 10 个字符（React Profiler） | 每输入一个字符，重新渲染的 `EventCard` 数为 0，只有 `EventEditorSlot` 重新渲染 |
 | WU-56f | 每个面板一个 store [N4] | 打开两部作品的世界线标签，在其中一个里平移 | 另一个标签的视窗不变；切换回去后各自的视窗保持原样 |
 | WU-56d | 取消平移 | 拖动中按 Esc | 视窗回到拖动开始时 |
 | WU-57 | 角色变化泳道 | “显示角色变化”开启时泳道在平移层中、位于所有家族下方，随平移移动，家族下移时跟着下移；关闭时消失；“视窗末端角色状态”折叠区存在 |
@@ -109,7 +111,7 @@
 | WU-63 | 待定位 | 时间线中点击待定位事件：切换到事件表并提示 |
 | WU-64 | 视窗同步 | 时间线平移后，目录中“视窗内”标记和计数更新；鼠标停在目录上时不自动滚动 |
 | WU-65 | 搜索 | “码头”得到 N 个结果（与数据一致）；Enter / Shift+Enter 前后切换；不存在的词显示“无结果”；Esc 清除 |
-| WU-66 | 搜索快捷键（单元 / 浏览器） | `commandScope` 的 7 个判断步骤：焦点在世界线画布、目录、卡片和世界线搜索框时为 `worldline`；在面板内编辑器表单的输入框时为 `input`；在事件编辑器内嵌的 Markdown 编辑器中为 `markdown`（⌘F 执行 `md.find`）；在面板内的对话框中按原有规则判断，不为 `worldline`。`overlapping('worldline','markdown')` 为 false，`overlapping('worldline','input')` 为 true。在搜索框中，用户改过的 `input.*` 绑定（如 Esc）仍然生效。`verify-command-catalogs.mjs` 能接受新的作用域。按 ⌘F / Ctrl+F：世界线作用域执行 `worldline.search`，Markdown 作用域执行 `md.find`。**鼠标点击**原生菜单“编辑 > 查找”、且目标在世界线面板时，改为执行 `worldline.search`。快捷键设置中可以录制、多绑定和修改；改成与全局命令冲突的按键时，按“原子转移”处理。`command-catalog`、`shortcut-settings`、`native-command-priority` 三组测试都更新 | 均符合 |
+| WU-66 | 搜索快捷键（单元 / 浏览器） | `commandScope` 的 7 个判断步骤：焦点在世界线画布、目录、卡片时为 `worldline`，在世界线搜索框时为 `worldline-search`；在面板内编辑器表单的输入框时为 `input`；在事件编辑器内嵌的 Markdown 编辑器中为 `markdown`（⌘F 执行 `md.find`）；在面板内的对话框中按原有规则判断，不为 `worldline`。`overlapping('worldline','markdown')` 为 false，`overlapping('worldline','input')` 为 true。在搜索框中，用户改过的 `input.*` 绑定（如 Esc）仍然生效。**改绑任意一个 `input.*` 和 `text.*` 命令后**，画布方向键平移、目录键盘导航、小地图 ←→ 都仍然有效 [P1]。`verify-command-catalogs.mjs` 能接受新的作用域。按 ⌘F / Ctrl+F：世界线作用域执行 `worldline.search`，Markdown 作用域执行 `md.find`。**鼠标点击**原生菜单“编辑 > 查找”、且目标在世界线面板时，改为执行 `worldline.search`。快捷键设置中可以录制、多绑定和修改；改成与全局命令冲突的按键时，按“原子转移”处理。`command-catalog`、`shortcut-settings`、`native-command-priority` 三组测试都更新 | 均符合 |
 | WU-66b | 输入法 | 输入法组字过程中按 Enter | 不跳转；组字结束后的 Enter 跳到下一个 |
 | WU-66c | 正文高亮 | 搜索词出现在展开卡片的 Markdown 正文中 | 正文中对应文字被 `<mark>` 包住；清除搜索后不再有 `<mark>` |
 | WU-67 | 时期定位 | 选择时期：时间线缩放到时期范围；事件表滚动到时期第一个事件；提示显示事件数 |
@@ -140,7 +142,7 @@
 ## 5. 真实目标系统验证
 
 - **隔离根**：把 `~/shakeink-test-roots/cache-522` 复制到 `~/shakeink-test-roots/worldline-ui-583`。复制时移出 inbox 中的 lease 回执，确认 `state.json` 存在。之后的步骤都使用 LotmVerification.app 和新开的会话。
-- **WU-90 旧作品**：先把 `WL-wl-era1`（带纪元，885 个事件）和 `WL-wl-base1`（无纪元，91 条世界线，事件全部待定位）复制到新根的 `works/` 下，不带 `.shakeink-lock`，然后打开副本；原作品目录在复制前后哈希一致。两个视图都正常显示“其他 / 一般”。各编辑一个事件的类型和重要度，保存后读回。`~/Documents/小说/` 下是用户本人的作品，不打开。
+- **WU-90 旧作品**：先记录原作品目录的哈希。首次启动新根时，先清理恢复的标签页，再用“从列表移除”删掉指向原作品的登记，然后才打开副本 [P4]；整轮测试结束后再核对一次哈希。先把 `WL-wl-era1`（带纪元，885 个事件）和 `WL-wl-base1`（无纪元，91 条世界线，事件全部待定位）复制到新根的 `works/` 下，不带 `.shakeink-lock`，然后打开副本；原作品目录在复制前后哈希一致。两个视图都正常显示“其他 / 一般”。各编辑一个事件的类型和重要度，保存后读回。`~/Documents/小说/` 下是用户本人的作品，不打开。
 - **WU-91 新导入**：只选第一卷“小丑”，目标为“角色 + 世界线”。统计类型和重要度有值的比例；检查收起卡片显示的头像。在真实数据上复测 WU-30、WU-50、WU-51、WU-52、WU-56b、WU-61、WU-65、WU-67，并实测 WU-80–WU-82。
 - **WU-92 快捷键**：在真实 Electron 中，分别在世界线画布、世界线搜索框、事件编辑器内的 Markdown 编辑器中按 ⌘F：前两处聚焦世界线搜索框，第三处打开 Markdown 查找。再在世界线画布获得焦点时，用鼠标点击菜单“编辑 > 查找”，应聚焦世界线搜索框。再把 `worldline.search` 改为另一个按键，确认新按键生效，⌘F 在世界线中不再触发。
 - **台账**：WU-41、WU-42、WU-48、WU-50（分组框和家族标题栏）以及 WU-63（待定位切换）在《诡秘之主》第一卷中没有对应数据，台账状态标为“真实数据未覆盖，仅固定数据浏览器测试”。
