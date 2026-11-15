@@ -66,10 +66,10 @@ function card(e, opts = {}) {
       ${e.changes.map((c) => `<div class="change"><b>${c.who}</b>${c.dim}<span>${c.before}</span><em>→</em><span>${c.after}</span></div>`).join('')}</div>`)
   }
   el.addEventListener('click', (ev) => {
-    if (ev.target.closest('[data-fold]')) { folded.has(e.id) ? folded.delete(e.id) : folded.add(e.id); render(); return }
+    if (ev.target.closest('[data-fold]')) { folded.has(e.id) ? folded.delete(e.id) : folded.add(e.id); tl.pin = e.id; render(); return }
     if (ev.target.closest('button')) return
     isOpen ? open.delete(e.id) : open.add(e.id)
-    selected = e.id; render()
+    selected = e.id; tl.pin = e.id; render()
   })
   el.addEventListener('mouseenter', () => setHot(e.id))
   el.addEventListener('mouseleave', () => setHot(null))
@@ -350,9 +350,124 @@ document.addEventListener('keydown', (ev) => { if ((ev.ctrlKey || ev.metaKey) &&
 
 // ---------- timeline view ----------
 let win = null
+// docs/577 §15: stable timeline layout.
+// - Families are laid out once in world coordinates (px from tl.base), so panning only translates #plane: no rebuild,
+//   no vertical change, no scroll clamping.
+// - Each family has a home y from first-fit packing. After an expand/collapse, a family keeps its home y unless it now
+//   collides with a family above it; then it moves down to the first free slot. Collapsing restores the home y.
+// - A full re-pack happens only when the scale (zoom or panel width) changes.
+const tl = { scale: 0, width: 0, base: 0, fams: new Map(), bottom: 0 }
+const MIN_BAR = 260, H_GAP = 14, V_GAP = 30, TOP = 28
+const leafW = (e, depth) => (open.has(e.id) ? 420 : depth ? 230 : 260)
+function lanePieces() {
+  const lane = $('#lane')
+  if (!$('#plane')) lane.insertAdjacentHTML('beforeend', '<div id="plane"></div><div id="measure"></div><div id="spacer"></div>')
+  return { lane, plane: $('#plane'), measure: $('#measure'), spacer: $('#spacer') }
+}
+// Builds one family (root + visible descendants) in family-local px, origin = root start.
+function buildFamily(root, scale, measure) {
+  const host = document.createElement('div'); host.className = 'family'; measure.append(host)
+  const rx = (t) => (t - root.start) * scale
+  const extent = (e, depth) => {
+    if (!kids(e.id).length) return rx(e.start) + leafW(e, depth)
+    const own = Math.max(rx(e.start) + MIN_BAR, rx(familyEnd(e)))
+    return folded.has(e.id) ? own : Math.max(own, ...kids(e.id).map((k) => extent(k, depth + 1) + 10))
+  }
+  const placeCard = (e, left, top, width, depth) => {
+    const wrap = document.createElement('div'), isParent = kids(e.id).length > 0
+    wrap.className = 'tcard' + (depth ? ' child' : '') + (isParent ? ' header' : '')
+    wrap.style.cssText = `left:${left}px;top:${top}px;width:${width}px`
+    wrap.style.setProperty('--ec', hue(e))
+    if (dimmed(e)) wrap.style.opacity = .3
+    const c = card(e, { foldable: true, compact: !isParent }); wrap.append(c)
+    if (!isParent) wrap.insertAdjacentHTML('afterbegin', (e.dur ? `<i class="bar-x" style="width:${Math.max(6, rx(e.start + e.dur) - left)}px"></i>` : '') +
+      `<i class="pin i${e.importance}"></i><i class="stem"></i><span class="tstamp">${short(e.start, e.precision)}</span>`)
+    else {
+      wrap.insertAdjacentHTML('afterbegin', `<span class="tstamp range">${short(e.start, e.precision)} → ${short(familyEnd(e), e.precision)}</span>`)
+      c.insertAdjacentHTML('beforeend', `<i class="track" style="width:${Math.min(Math.max(4, rx(familyEnd(e)) - left), width)}px"></i>`)
+    }
+    host.append(wrap)
+    return c.offsetHeight
+  }
+  const layout = (e, top, depth) => {
+    if (!kids(e.id).length) {
+      const left = rx(e.start), width = leafW(e, depth)
+      return { right: left + width, bottom: top + placeCard(e, left, top, width, depth) }
+    }
+    const l = rx(e.start), width = extent(e, depth) - l
+    let bottom = top + placeCard(e, l, top, width, depth)
+    if (!folded.has(e.id)) {
+      const rows = []
+      kids(e.id).forEach((k) => {
+        let r = rows.findIndex((row) => row.right + 10 <= rx(k.start))
+        if (r < 0) { r = rows.length; rows.push({ right: -Infinity, items: [] }) }
+        rows[r].right = extent(k, depth + 1); rows[r].items.push(k)
+      })
+      let y = bottom + 22
+      rows.forEach((row) => { y = Math.max(...row.items.map((k) => layout(k, y, depth + 1).bottom)) + 26 })
+      bottom = y - 12
+      host.insertAdjacentHTML('afterbegin', `<div class="frame" style="left:${l}px;width:${width}px;top:${top}px;height:${bottom - top}px;--ec:${hue(e)}"></div>`)
+    }
+    return { right: l + width, bottom }
+  }
+  const box = layout(root, 0, 0)
+  const x0 = (root.start - tl.base) * scale
+  return { id: root.id, el: host, x0, left: x0 - 6, right: x0 + box.right + H_GAP, h: box.bottom }
+}
+// Lowest y >= from where f fits: candidates are `from` and the bottoms of families that overlap f horizontally.
+function settle(f, placed, from) {
+  const cols = placed.filter((r) => r.left < f.right && r.right > f.left)
+  const cands = [from, ...cols.map((r) => r.y + r.h + V_GAP).filter((y) => y > from)].sort((a, b) => a - b)
+  return cands.find((y) => !cols.some((r) => y < r.y + r.h + V_GAP && y + f.h + V_GAP > r.y))
+}
+// Rebuilds families. full = new scale: pack all families from scratch and record each family's home y.
+// Otherwise (expand/collapse/filter): keep every family at its home y unless it now collides, then push it down.
+function layoutTimeline(full) {
+  const { plane, measure } = lanePieces(), width = $('#timelineView').clientWidth, scale = (width - 32) / win.span
+  const old = tl.fams
+  if (full) { tl.base = win.start; tl.scale = scale; tl.width = width }
+  measure.innerHTML = ''
+  const lo = win.start - 3 * win.span, hi = win.start + 4 * win.span
+  tl.range = { lo: win.start - 2 * win.span, hi: win.start + 3 * win.span }
+  const roots = kids(null).filter((e) => e.start !== null && familyEnd(e) >= lo && e.start <= hi).sort((a, b) => a.start - b.start)
+  const fams = roots.map((e) => buildFamily(e, scale, measure))
+  // Stable order: by home y (then start) so a family above stays above.
+  const rootOf = (id) => { let e = byId.get(id); while (e?.parent) e = byId.get(e.parent); return e?.id }
+  const pinned = tl.pin ? rootOf(tl.pin) : null; tl.pin = null
+  if (!full) fams.sort((a, b) => (b.id === pinned) - (a.id === pinned) || (old.get(a.id)?.home ?? Infinity) - (old.get(b.id)?.home ?? Infinity) || a.x0 - b.x0)
+  const placed = []
+  for (const f of fams) {
+    const home = full ? TOP : old.get(f.id)?.home ?? TOP
+    if (!full && old.get(f.id)) old.get(f.id).parked = false
+    f.y = settle(f, placed, home)
+    f.home = full ? f.y : home
+    placed.push(f)
+  }
+  for (const [id, f] of old) if (!fams.some((g) => g.id === id)) f.parked = true
+  tl.fams = new Map([...[...old].filter(([, f]) => f.parked && !full), ...fams.map((f) => [f.id, f])])
+  tl.bottom = Math.max(TOP, ...fams.map((f) => f.y + f.h))
+  tl.built = new Set(fams.map((f) => f.id))
+  plane.innerHTML = ''
+  for (const f of fams) { f.el.style.left = f.x0 + 'px'; f.el.style.top = f.y + 'px'; plane.append(f.el) }
+}
+// Pan = translate the plane. Cards keep their DOM, size and y; nothing is re-laid out.
+function placePlane() {
+  const { lane, plane, spacer } = lanePieces()
+  plane.style.transform = `translateX(${16 - (win.start - tl.base) * tl.scale}px)`
+  // The spacer never shrinks below the current scroll position, so the browser never clamps scrollTop.
+  spacer.style.top = Math.max(tl.bottom + 96, lane.scrollTop + lane.clientHeight) + 'px'
+}
 function renderTimeline() {
-  const lane = $('#lane'), width = $('#timelineView').clientWidth
+  const width = $('#timelineView').clientWidth
   if (!win) { const dense = events.filter((e) => e.start > 1348 * Y); win = { start: dense[0].start - 4, span: 70 } }
+  const scale = (width - 32) / win.span
+  layoutTimeline(Math.abs(scale - tl.scale) > 1e-9 || width !== tl.width || !tl.fams.size)
+  drawTimelineChrome()
+}
+// Ruler, grid, periods, minimap and tree depend only on the window; cheap to redraw on every pan frame.
+function drawTimelineChrome() {
+  if (tl.range && (win.start < tl.range.lo || win.start + win.span > tl.range.hi)) layoutTimeline(false)
+  const width = $('#timelineView').clientWidth
   const x = (t) => 16 + ((t - win.start) / win.span) * (width - 32)
   const step = win.span > 4000 ? 3600 : win.span > 600 ? 360 : win.span > 120 ? 30 : win.span > 40 ? 10 : 5
   const ruler = [], grid = []
@@ -366,86 +481,14 @@ function renderTimeline() {
     const l = Math.max(8, x(p.start)), r = Math.min(width - 8, p.end === null ? width - 8 : x(p.end))
     return r <= l ? '' : `<div class="period${activePeriod === p.id ? ' period-flash' : ''}" data-period="${p.id}" style="left:${l}px;width:${r - l}px;--pc:${PC(i)}">${p.title}</div>`
   }).join('')
-  lane.innerHTML = ''
-  // docs/577 §11: a parent event is a header bar across the top of its family. The bar is at least as long as the
-  // parent's time range and is widened to cover every child card, so children always sit inside the frame under it.
-  // A bright track inside the bar marks the parent's real time range.
-  const roots = kids(null).filter((e) => e.start !== null && familyEnd(e) >= win.start - 10 && e.start <= win.start + win.span)
-  const MIN_BAR = 260
-  const leafW = (e, depth) => (open.has(e.id) ? 420 : depth ? 230 : 260)
-  // Right edge in px of e's family, computed before placing anything so the header width is known up front.
-  const extent = (e, depth) => {
-    if (!kids(e.id).length) return x(e.start) + leafW(e, depth)
-    const own = Math.max(x(e.start) + MIN_BAR, x(familyEnd(e)))
-    return folded.has(e.id) ? own : Math.max(own, ...kids(e.id).map((k) => extent(k, depth + 1) + 10))
-  }
-  let host = lane
-  const placeCard = (e, left, top, width, depth) => {
-    const wrap = document.createElement('div'), isParent = kids(e.id).length > 0
-    wrap.className = 'tcard' + (depth ? ' child' : '') + (isParent ? ' header' : '')
-    wrap.style.width = width + 'px'; wrap.style.setProperty('--ec', hue(e))
-    if (dimmed(e)) wrap.style.opacity = .3
-    const c = card(e, { foldable: true, compact: !isParent }); wrap.append(c)
-    if (!isParent) wrap.insertAdjacentHTML('afterbegin', (e.dur ? `<i class="bar-x" style="width:${Math.max(6, x(e.start + e.dur) - left)}px"></i>` : '') +
-      `<i class="pin i${e.importance}"></i><i class="stem"></i><span class="tstamp">${short(e.start, e.precision)}</span>`)
-    else {
-      const tw = Math.max(4, x(familyEnd(e)) - left)
-      wrap.insertAdjacentHTML('afterbegin', `<span class="tstamp range">${short(e.start, e.precision)} → ${short(familyEnd(e), e.precision)}</span>`)
-      c.insertAdjacentHTML('beforeend', `<i class="track" style="width:${Math.min(tw, width)}px"></i>`)
-    }
-    wrap.style.left = left + 'px'; wrap.style.top = top + 'px'
-    host.append(wrap)
-    return c.offsetHeight
-  }
-  const layout = (e, top, depth) => {
-    if (!kids(e.id).length) {
-      const left = x(e.start), width = leafW(e, depth)
-      return { right: left + width, bottom: top + placeCard(e, left, top, width, depth) }
-    }
-    const l = x(e.start), width = extent(e, depth) - l
-    const headH = placeCard(e, l, top, width, depth)
-    let bottom = top + headH
-    if (!folded.has(e.id)) {
-      const rows = []
-      kids(e.id).forEach((k) => {
-        const kl = x(k.start)
-        let r = rows.findIndex((row) => row.right + 10 <= kl)
-        if (r < 0) { r = rows.length; rows.push({ right: -Infinity, items: [] }) }
-        rows[r].right = extent(k, depth + 1); rows[r].items.push(k)
-      })
-      let y = top + headH + 22
-      rows.forEach((row) => {
-        const placed = row.items.map((k) => layout(k, y, depth + 1))
-        y = Math.max(...placed.map((p) => p.bottom)) + 26
-      })
-      bottom = y - 12
-      host.insertAdjacentHTML('afterbegin', `<div class="frame" style="left:${l}px;width:${width}px;top:${top}px;height:${bottom - top}px;--ec:${hue(e)}"></div>`)
-    }
-    return { right: l + width, bottom }
-  }
-  // 2D packing (docs/577 §13): lay each family out at y = 0 in its own host, measure it, then move it to the highest y
-  // where its box [left, right] x [y, y + h] does not intersect any family placed before it. Families are placed in
-  // start order, so the earlier event always wins the higher slot.
-  const placed = [], H_GAP = 14, V_GAP = 30, TOP = 28
-  let laneBottom = 0
-  roots.sort((p, q) => p.start - q.start).forEach((e) => {
-    host = document.createElement('div'); host.className = 'family'; lane.append(host)
-    const box = layout(e, 0, 0), left = x(e.start) - 6, right = box.right + H_GAP, h = box.bottom
-    const blockers = placed.filter((r) => r.left < right && r.right > left).sort((p, q) => p.top - q.top)
-    let y = TOP
-    for (const r of blockers) if (y + h + V_GAP > r.top && y < r.bottom + V_GAP) y = r.bottom + V_GAP
-    host.style.top = y + 'px'
-    placed.push({ left, right, top: y, bottom: y + h })
-    laneBottom = Math.max(laneBottom, y + h)
-  })
-  host = lane
-  lane.insertAdjacentHTML('beforeend', `<div style="position:absolute;left:0;width:1px;height:1px;top:${laneBottom + 96}px"></div>`)
+  placePlane()
   drawMinimap()
   syncTree()
   $('#zoomVal').textContent = `${Math.round(win.span)} 天`
-  requestAnimationFrame(markFades)
   $('#range').textContent = `${fmt(win.start)} — ${fmt(win.start + win.span)}`
+  requestAnimationFrame(markFades)
 }
+
 // ---------- minimap (docs/577 §10) ----------
 // Segments use the same gap rule as the event-table rail. Each segment's width follows its event count, with a 10px
 // break between segments, so a 20万-year gap does not squeeze the dense years into one pixel.
@@ -495,17 +538,17 @@ $('#minimap').addEventListener('pointermove', (ev) => { if (mini) moveMini(ev.cl
 $('#minimap').addEventListener('pointerup', () => { mini = null; $('#minimap').classList.remove('dragging') })
 $('#minimap').addEventListener('keydown', (ev) => {
   if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return
-  ev.preventDefault(); win.start += (ev.key === 'ArrowRight' ? 1 : -1) * win.span * 0.25; render()
+  ev.preventDefault(); win.start += (ev.key === 'ArrowRight' ? 1 : -1) * win.span * 0.25; drawTimelineChrome()
 })
 function moveMini(px) {
   // The frame keeps the current zoom; only the window start moves.
   win.start = miniModel().toT(Math.max(0, Math.min(MW, px - mini.offset)))
-  $('#minimap').classList.add('dragging'); render()
+  $('#minimap').classList.add('dragging'); drawTimelineChrome()
 }
 
 let drag = null
 $('#lane').addEventListener('pointerdown', (ev) => { if (!ev.target.closest('.ev')) drag = { x: ev.clientX, start: win.start } })
-window.addEventListener('pointermove', (ev) => { if (drag) { win.start = drag.start - ((ev.clientX - drag.x) / $('#timelineView').clientWidth) * win.span; renderTimeline() } })
+window.addEventListener('pointermove', (ev) => { if (drag) { win.start = drag.start - ((ev.clientX - drag.x) / ($('#timelineView').clientWidth - 32)) * win.span; drawTimelineChrome() } })
 window.addEventListener('pointerup', () => (drag = null))
 $('#timelineView').addEventListener('wheel', (ev) => {
   if (!ev.ctrlKey) return
@@ -588,7 +631,7 @@ function render() {
   } else { renderTimeline(); $('#zoomVal').textContent = `${Math.round(win.span)} 天` }
   requestAnimationFrame(markFades)
 }
-document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => { view = b.dataset.view; render() }))
+document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => { view = b.dataset.view; tl.fams = new Map(); render() }))
 $('[data-light-toggle]').addEventListener('click', (ev) => { ev.target.setAttribute('aria-pressed', document.body.toggleAttribute('data-light')); render() })
 $('#moreBtn').addEventListener('click', () => ($('#menu').hidden = !$('#menu').hidden))
 $('#pending').addEventListener('click', () => locate(kids(null).find((e) => e.start === null).id))

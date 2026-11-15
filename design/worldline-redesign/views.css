@@ -65,7 +65,7 @@
 .period { position: absolute; height: 20px; padding: 0 10px; border-radius: 10px; font-size: 11px; line-height: 20px; white-space: nowrap; overflow: hidden; color: var(--text);
   background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 26%, transparent), color-mix(in srgb, var(--pc) 8%, transparent)); border: 1px solid color-mix(in srgb, var(--pc) 35%, transparent); }
 .lane { position: absolute; left: 0; right: 0; top: 66px; bottom: 0; overflow: auto; }
-.tcard { position: absolute; transition: left .18s, top .18s; }
+.tcard { position: absolute; }
 .tcard .bar-x { position: absolute; left: 0; top: -9px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--ec), transparent); }
 .tcard .tstamp { position: absolute; left: 10px; top: -22px; font-size: 10px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tcard .pin { position: absolute; left: -4px; top: -12px; width: 9px; height: 9px; border-radius: 50%; background: var(--ec); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--ec), 0 0 8px var(--ec); }
@@ -225,4 +225,9 @@ mark { padding: 0 1px; border-radius: 3px; color: inherit; background: color-mix
 .btn.icon { width: 30px; padding: 0; display: grid; place-items: center; }
 .btn.icon svg { width: 15px; height: 15px; }
 .btn.icon[aria-pressed="false"] { color: var(--faint); }
-.family { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: top .18s; }
+.family { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: top .18s ease; }
+
+/* v9: one translated plane for all families; measure box is off-screen but laid out. */
+#plane { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+#measure { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; }
+#spacer { position: absolute; left: 0; width: 1px; height: 1px; }
