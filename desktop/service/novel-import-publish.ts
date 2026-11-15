@@ -1,4 +1,5 @@
 import {assertImportChapterVersion,importVolumeGroups} from '../core/novel-import-chapters'
+import {worldlineGradeFromFacts} from '../core/novel-import-worldline-facts'
 import {verifiedImportStructureVolumeCuts} from '../core/novel-import-structure'
 import {WORLD_TIMELINE_LINE_ID} from '../core/novel-import-wizard-timeline'
 import {sourceTextSummary} from '../core/novel-import-pdf-source-text'
@@ -165,7 +166,7 @@ export async function publishNovelImport(works:Workspaces,input:ImportPublishInp
     }
     const people=list(f.people).map(name=>{const id=typeof name==='string'?characterReference(name):undefined;if(!id)throw Error('世界线角色引用无效');return id})
     const parent=f.parentId?eventMap.get(f.parentId):undefined;if(f.parentId&&!parent)throw Error('世界线父事件引用无效')
-    for(const [part,text] of chunks(nativeText(a),100000).entries()){const fact=text;data.events.push(eventSchema.parse({id:part?event.id+'-part-'+part:event.id,line:event.line,parent:part?event.id:parent?.id,title:continuation(a.name,part),fact,people,time:{kind:!part&&known?f.timeKind:'unknown',value:!part&&known?Number(f.timeValue):0,end:!part&&f.timeKind==='window'?Number(f.timeEnd):null,precision,label:f.time??''}}))}
+    for(const [part,text] of chunks(nativeText(a),100000).entries()){const fact=text;data.events.push(eventSchema.parse({id:part?event.id+'-part-'+part:event.id,line:event.line,parent:part?event.id:parent?.id,title:continuation(a.name,part),fact,people,...worldlineGradeFromFacts(f),time:{kind:!part&&known?f.timeKind:'unknown',value:!part&&known?Number(f.timeValue):0,end:!part&&f.timeKind==='window'?Number(f.timeEnd):null,precision,label:f.time??''}}))}
    }
    const actualChapters=data.chapters
    for(const [i,a] of byKind('narrative').entries()){

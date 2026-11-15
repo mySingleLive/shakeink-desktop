@@ -317,6 +317,9 @@ function reconcileImportFact(kind:ImportTarget,field:string,previous:string,valu
  if(kind==='narrative'&&field==='refs'){try{const a:unknown=JSON.parse(previous),b:unknown=JSON.parse(value);if(Array.isArray(a)&&Array.isArray(b)&&[...a,...b].every(x=>x&&typeof x==='object'&&!Array.isArray(x))){const seen=new Map<string,unknown>();for(const ref of [...a,...b])seen.set(JSON.stringify(ref),ref);const list=[...seen.values()];return list.length<=500?JSON.stringify(list):undefined}}catch{}return undefined}
  // Two halves of one chapter may give the same narrative point different positions; the earlier one is kept (3R3-5).
  if(kind==='narrative'&&field==='order'&&/^\d+$/u.test(previous)&&/^\d+$/u.test(value))return String(Math.min(Number(previous),Number(value)))
+ // docs/580 §3: the same event from two batches keeps the higher importance and the first category; never a conflict.
+ if(kind==='worldline'&&field==='importance'&&/^[123]$/u.test(previous)&&/^[123]$/u.test(value))return String(Math.max(Number(previous),Number(value)))
+ if(kind==='worldline'&&field==='category')return previous
  if(kind==='worldline'&&field==='time'){const merged=unionFactText(previous,value);return merged!==previous&&merged.length>1500?undefined:merged}
  // An unchanged value adds nothing, so only growth is capped.
  if(field==='attribution'||field==='temporalScope'||kind==='character'&&RECONCILED_TEXT_FIELDS.has(field)){const merged=unionFactText(previous,value);return merged!==previous&&merged.length>1500?undefined:merged}

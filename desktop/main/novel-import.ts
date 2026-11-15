@@ -1150,9 +1150,9 @@ export class NovelImportController {
   const artifact=localThemeChannel(s,units);return artifact?{artifact,fallback:true}:{}
  }
  /** docs/517 3R3-3: one dropped record per line step, from the counts kept with its coverage. */
- private recordLinesRepairs(w:ImportWizardState,kind:'worldline'|'narrative'|'outline',counts:{droppedEvidence:number;droppedLinks:number;droppedEntries?:number}|undefined){
+ private recordLinesRepairs(w:ImportWizardState,kind:'worldline'|'narrative'|'outline',counts:{droppedEvidence:number;droppedLinks:number;droppedEntries?:number;droppedGrades?:number}|undefined){
   const label=kind==='outline'?'细纲':IMPORT_LABELS[kind];w.dropped=w.dropped.filter(d=>!(d.kind==='lines'&&d.label===label))
-  const evidence=counts?.droppedEvidence,links=counts?.droppedLinks,parts=[evidence?`丢弃 ${evidence} 条无法定位的原文引文`:'',links?`丢弃 ${links} 个无法对应已导入实体的关联`:'',counts?.droppedEntries?`丢弃 ${counts.droppedEntries} 个不属于本批章节的细纲`:''].filter(Boolean)
+  const evidence=counts?.droppedEvidence,links=counts?.droppedLinks,parts=[evidence?`丢弃 ${evidence} 条无法定位的原文引文`:'',links?`丢弃 ${links} 个无法对应已导入实体的关联`:'',counts?.droppedEntries?`丢弃 ${counts.droppedEntries} 个不属于本批章节的细纲`:'',counts?.droppedGrades?`丢弃 ${counts.droppedGrades} 个无效的事件类型或重要程度`:''].filter(Boolean)
   if(parts.length)w.dropped.push({kind:'lines',label,reason:parts.join('，')})
  }
  /** docs/514 3R-3: one dropped record per other-setting kind, written only when its task is adopted. */
@@ -1278,8 +1278,8 @@ export class NovelImportController {
     if(kind==='outline')validateDetailedOutlineAssignments({...s,artifacts:merged.artifacts})
     s.artifacts=merged.artifacts;this.addConflicts(s,merged.conflicts);for(const c of s.conflicts)if(c.status==='pending'&&!w.deferredConflicts.includes(c.id))w.deferredConflicts.push(c.id)
     s.coverage[kind]=[...new Set([...(s.coverage[kind]??[]),...request.units.map(u=>u.id)])]
-    const repairs=result.linesRepairs||strays?{droppedEvidence:result.linesRepairs?.droppedEvidence??0,droppedLinks:result.linesRepairs?.droppedLinks??0,droppedEntries:(result.linesRepairs?.droppedEntries??0)+strays}:undefined
-    if(repairs){const sum=(w.lineRepairs??={})[kind]??{droppedEvidence:0,droppedLinks:0},entries=(sum.droppedEntries??0)+repairs.droppedEntries;w.lineRepairs[kind]={droppedEvidence:sum.droppedEvidence+repairs.droppedEvidence,droppedLinks:sum.droppedLinks+repairs.droppedLinks,...(entries?{droppedEntries:entries}:{})};if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('lines-repairs '+JSON.stringify({kind,...repairs}))}
+    const repairs=result.linesRepairs||strays?{droppedEvidence:result.linesRepairs?.droppedEvidence??0,droppedLinks:result.linesRepairs?.droppedLinks??0,droppedEntries:(result.linesRepairs?.droppedEntries??0)+strays,...(result.linesRepairs?.droppedGrades?{droppedGrades:result.linesRepairs.droppedGrades}:{})}:undefined
+    if(repairs){const sum=(w.lineRepairs??={})[kind]??{droppedEvidence:0,droppedLinks:0},entries=(sum.droppedEntries??0)+repairs.droppedEntries,grades=(sum.droppedGrades??0)+(repairs.droppedGrades??0);w.lineRepairs[kind]={droppedEvidence:sum.droppedEvidence+repairs.droppedEvidence,droppedLinks:sum.droppedLinks+repairs.droppedLinks,...(entries?{droppedEntries:entries}:{}),...(grades?{droppedGrades:grades}:{})};if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('lines-repairs '+JSON.stringify({kind,...repairs}))}
     const step=s.steps.find(row=>row.key===this.kindStep(kind));if(step&&step.state!=='skipped')Object.assign(step,{completed:s.coverage[kind].length,total:workingImportUnits(s).length})
     adopt?.won()
    })

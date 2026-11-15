@@ -1,6 +1,6 @@
 import type {ImportArtifact,ImportAiRequest} from '../shared/novel-import'
 import {sceneReviewUnitReferenceRequest} from '../shared/novel-import-scene-review'
-import {assertImportReviewProjection,importFactFields,type ImportReviewProjection} from './novel-import-semantics'
+import {assertImportReviewProjection,importFactFields,importAcceptedFactFields,type ImportReviewProjection} from './novel-import-semantics'
 
 export interface ImportReviewArtifactBinding {readonly artifactIndex:number;readonly artifactId:string;readonly bindableFields:readonly string[];readonly values:ReadonlyMap<string,string>}
 export interface ImportReviewArtifactBindings {readonly entries:readonly ImportReviewArtifactBinding[];readonly byId:ReadonlyMap<string,ReadonlyMap<string,string>>}
@@ -24,7 +24,7 @@ export function sceneReviewArtifactBindings(request:Request):ImportReviewArtifac
    for(const [field,value]of Object.entries(entry.a.facts)){
     if(typeof value!=='string'||fullFacts.has(field)&&fullFacts.get(field)!==value)invalid()
     fullFacts.set(field,value)
-    if(entry.p?.fields.includes(field)&&entry.p.fullFactKeys.includes(field)&&importFactFields(entry.a.kind,entry.a.schema).includes(field)){entry.values.set(field,value);all.set(field,value)}
+    if(entry.p?.fields.includes(field)&&entry.p.fullFactKeys.includes(field)&&importAcceptedFactFields(entry.a.kind,entry.a.schema).includes(field)){entry.values.set(field,value);all.set(field,value)}
    }
   }
   const ranges=group.flatMap(entry=>entry.p?.textRange?[{...entry.p.textRange,text:entry.a.text}]:[]).sort((a,b)=>a.start-b.start||a.end-b.end),segments:{start:number;end:number;text:string}[]=[]

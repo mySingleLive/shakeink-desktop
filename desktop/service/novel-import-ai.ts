@@ -1,4 +1,5 @@
 import {isAbsolute} from 'node:path'
+import {normalizeWorldlineGrade} from '../core/novel-import-worldline-facts'
 import {randomBytes} from 'node:crypto'
 import {sharedSourceRequestError} from '../core/novel-import-shared-source'
 import {types} from 'node:util'
@@ -1243,7 +1244,7 @@ export function stripArtifactAnnotations(item:ImportArtifact){
 function stripJsonStrings(value:unknown):unknown{return typeof value==='string'?stripImportKnowledgeAnnotations(value):Array.isArray(value)?value.map(stripJsonStrings):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,stripJsonStrings(v)])):value}
 /** docs/514 3R2: counts of the accepted generation's item repairs; only wizard other-setting batches may carry them. */
 const settingsRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedArtifacts:z.number().int().nonnegative().max(1_000_000),clearedReliability:z.number().int().nonnegative().max(1_000_000),clearedPosition:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>(c.clearedPosition??0)+c.droppedEvidence+c.droppedArtifacts+c.clearedReliability>0)
-const linesRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000),droppedEntries:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>c.droppedEvidence+c.droppedLinks+(c.droppedEntries??0)>0)
+const linesRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000),droppedEntries:z.number().int().nonnegative().max(1_000_000).optional(),droppedGrades:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>c.droppedEvidence+c.droppedLinks+(c.droppedEntries??0)+(c.droppedGrades??0)>0)
 const reviewRepairsSchema=z.object({droppedConflicts:z.number().int().positive().max(1_000_000)}).strict()
 function takeReviewRepairs(request:ImportSemanticAiRequest,generated:unknown):{raw:unknown;repairs?:ImportReviewRepairs}{
  if(!generated||typeof generated!=='object'||Array.isArray(generated)||!Object.hasOwn(generated,'reviewRepairs'))return {raw:generated}
@@ -1416,7 +1417,7 @@ function settingsItemValid(request:ImportSemanticAiRequest,single:z.ZodType<Impo
 export function normalizeLinesReply(request:ImportSemanticAiRequest,text:string,parse:<T>(text:string,schema:z.ZodType<T>)=>T):{text:string;counts?:ImportLinesRepairs}|undefined{
  let value:unknown;try{value=parse(text,z.unknown())}catch{return undefined}
  if(!value||typeof value!=='object'||Array.isArray(value)||!Array.isArray((value as {artifacts?:unknown}).artifacts))return undefined
- const root=value as {artifacts:unknown[]},ids=new Set(request.units.map(u=>u.id)),counts={droppedEvidence:0,droppedLinks:0}
+ const root=value as {artifacts:unknown[]},ids=new Set(request.units.map(u=>u.id)),counts:ImportLinesRepairs={droppedEvidence:0,droppedLinks:0}
  const entities=request.entities??[],characters=entities.filter(e=>e.kind==='character')
  // A character reference as its id: an id stays, a unique name maps to its id, anything else is not a link.
  const characterId=(v:unknown):string|undefined=>{if(typeof v!=='string')return undefined;if(characters.some(e=>e.id===v))return v;const named=characters.filter(e=>e.name===v);return named.length===1?named[0].id:undefined}
@@ -1440,6 +1441,8 @@ export function normalizeLinesReply(request:ImportSemanticAiRequest,text:string,
     if(f.eventId!==undefined)delete f.eventId
     if(f.timeKind===undefined)f.timeKind=f.timeValue!==undefined||f.timeEnd!==undefined?'invalid':'unknown'
     if(f.people===undefined)f.people='[]'
+    // docs/580 §3: category / importance shape fix; dropped values are counted, never reported as mapping warnings.
+    {const g=normalizeWorldlineGrade(f);for(const k of ['category','importance'])if(k in g.facts)f[k]=g.facts[k];else delete f[k];if(g.dropped)counts.droppedGrades=(counts.droppedGrades??0)+g.dropped}
     const bad=f.timeKind==='invalid'||f.timeKind==='unknown'?f.timeValue!==undefined||f.timeEnd!==undefined:f.timeKind==='exact'?!finite(f.timeValue)||f.timeEnd!==undefined:f.timeKind==='window'?!finite(f.timeValue)||!finite(f.timeEnd)||Number(f.timeEnd)<Number(f.timeValue):false
     if(bad){const label=[...new Set([f.time,f.timeValue,f.timeEnd].filter((v):v is string=>typeof v==='string'&&!!v.trim()))];if(label.length)f.time=label.join(' — ');delete f.timeValue;delete f.timeEnd;f.timeKind='unknown'}
     if(typeof f.people==='string')try{const list:unknown=JSON.parse(f.people);if(Array.isArray(list)){const kept=[...new Set(list.map(characterId).filter((v):v is string=>!!v))];counts.droppedLinks+=list.length-list.filter(v=>characterId(v)).length;f.people=JSON.stringify(kept)}}catch{/* invalid JSON stays for the strict schema */}
@@ -1475,7 +1478,7 @@ export function normalizeLinesReply(request:ImportSemanticAiRequest,text:string,
  // An empty list is an explicit nothing-found answer.
  const next=JSON.stringify({...root,artifacts,...(!artifacts.length&&(root as {notFound?:unknown}).notFound===undefined?{notFound:true}:{})})
  if(next===JSON.stringify(root))return undefined
- return {text:next,...(counts.droppedEvidence||counts.droppedLinks?{counts}:{})}
+ return {text:next,...(counts.droppedEvidence||counts.droppedLinks||counts.droppedGrades?{counts}:{})}
 }
 
 /** AbortSignals stay in this worker. RPC callers only send operationId. */

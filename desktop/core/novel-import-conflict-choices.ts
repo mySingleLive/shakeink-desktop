@@ -1,6 +1,6 @@
 import {IMPORT_LABELS,type ImportArtifact,type ImportConflict,type ImportConflictDetail,type ImportConflictChoice,type ImportSession} from '../shared/novel-import'
 import {importFieldLabel} from '../shared/novel-import-field-labels'
-import {importFactFields,stripImportKnowledgeAnnotations,validateImportSemanticArtifact} from './novel-import-semantics'
+import {importFactFields,importAcceptedFactFields,stripImportKnowledgeAnnotations,validateImportSemanticArtifact} from './novel-import-semantics'
 import {importNativeMappings} from './novel-import-semantic-state'
 import {selectedImportUnits,workingImportUnits} from './novel-import'
 import {projectDetailedOutlines,validateDetailedOutlines} from './novel-import-outline'
@@ -27,7 +27,7 @@ const isJson=(value:string)=>{const v=value.trim();if(!/^[[{]/u.test(v))return f
 export function withField(a:ImportArtifact,field:string,value:string):ImportArtifact{
  const next=structuredClone(a)
  if(field==='text')next.text=value
- else{if(!importFactFields(next.kind,next.schema).includes(field))throw Error('冲突字段不能映射到当前业务类型');next.facts[field]=value}
+ else{if(!importAcceptedFactFields(next.kind,next.schema).includes(field))throw Error('冲突字段不能映射到当前业务类型');next.facts[field]=value}
  return next
 }
 /** Same gates the save path runs: the artifact on its own, then the whole set when the field can affect references. */
@@ -47,7 +47,7 @@ export function inferredValue(c:ImportConflict,other:ImportConflict['candidate']
 export function conflictChoiceOptions(s:Pick<ImportSession,'artifacts'>&Partial<Pick<ImportSession,'chapters'>>,c:ImportConflict):ImportConflictChoice[]{
  const {artifact:a,other}=conflictTarget(s,c)
  if(!a)return [{choice:'inferred',available:false,reason:'这处矛盾没有对应的已导入设定'},{choice:'source',available:true},{choice:'merge',available:false,reason:'这处矛盾没有对应的已导入设定'}]
- const current=fieldValue(a,c.field),fieldKnown=c.field==='text'||importFactFields(a.kind,a.schema).includes(c.field)
+ const current=fieldValue(a,c.field),fieldKnown=c.field==='text'||importAcceptedFactFields(a.kind,a.schema).includes(c.field)
  const inferred=((): ImportConflictChoice=>{
   const value=inferredValue(c,other)
   if(!fieldKnown)return {choice:'inferred',available:false,reason:'这个字段不能由导入修改'}

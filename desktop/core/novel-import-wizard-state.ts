@@ -38,7 +38,7 @@ export interface ImportWizardState {
  /** docs/570 4R: chapters without an event were asked once more in this step 17. */
  worldGapsAsked?:true
  worldTimeline?:WorldTimelineState
- lineRepairs?:Partial<Record<'worldline'|'narrative'|'outline',{droppedEvidence:number;droppedLinks:number;droppedEntries?:number}>>
+ lineRepairs?:Partial<Record<'worldline'|'narrative'|'outline',{droppedEvidence:number;droppedLinks:number;droppedEntries?:number;droppedGrades?:number}>>
  touchStash?:{foreshadowKey:string;title:string;content:string;order?:number;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string}}[]
  foreshadowRefs?:{target:'event'|'telling';targetId:string;foreshadowId:string;role:'plant'|'mention'|'payoff';note:string}[]
  /** Per-batch roster results kept until the recognition step finishes. */
@@ -62,7 +62,7 @@ const candidate=z.object({id:candidateId,kind:z.enum(['character','scene','item'
 const stepState=z.enum(['pending','running','waiting','done','skipped','failed'])
 const task=z.object({id:taskId,kind:z.enum(['entity','image','settings']),candidateId:candidateId.optional(),imageKind:z.enum(WIZARD_IMAGE_KINDS).optional(),settingsKind:z.enum(['theme','style','goldenFinger','trope']).optional(),dependsOn:taskId.optional(),state:z.enum(['waiting','running','done','failed','paused','skipped']),attempts:index.max(1000),error:text(400).optional(),resultSha256:z.string().regex(/^[0-9a-f]{64}$/u).optional(),image:z.object({mime:z.enum(['image/png','image/jpeg','image/webp']),bytes:index.max(WIZARD_LIMITS.imageBytes),prompt:text(8000)}).strict().optional()}).strict()
 const record=z.object({taskId,label:text(400)}).strict()
-const lineRepair=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000)}).strict()
+const lineRepair=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000),droppedGrades:z.number().int().nonnegative().max(1_000_000).optional()}).strict()
 const dropped=z.object({kind:z.enum(['touch','materialRef','missingTarget','relationship','parent','settings','lines','verify','roster']),label:text(400),reason:text(400),rosterKind:z.enum(['character','scene','item','world']).optional(),invalid:index.max(1_000_000).optional(),unlocatable:index.max(1_000_000).optional(),unfinishedUnits:index.max(1_000_000).optional()}).strict().refine(d=>d.kind==='roster'?!!d.rosterKind:!d.rosterKind&&d.invalid===undefined&&d.unlocatable===undefined&&d.unfinishedUnits===undefined)
 const structureItem=z.object({start:index,end:index,title:text(300).min(1),volume:text(300).optional()}).strict()
 export const importWizardStateSchema=z.object({
