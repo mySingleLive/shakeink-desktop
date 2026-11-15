@@ -41,6 +41,7 @@ import {
   children,
   eventSchema,
   findEvent,
+  forkChangedCount,
   planningSchema,
   planningUndoTarget,
   readingCards,
@@ -2261,19 +2262,7 @@ function PlanningWorkspace({
     const base = activeWorld?.timeBases?.find((b) => b.id === timeBase);
     const labelTime = worldTimeLabel;
     const fork = activeWorld?.fork;
-    const forkChanged =
-      fork?.events.filter((e) => {
-        const source = findEvent(data, fork.source, e.id);
-        return (
-          !source ||
-          source.fact !== e.fact ||
-          source.title !== e.title ||
-          JSON.stringify(resolveTime(data, source)) !==
-            JSON.stringify(resolveTime(data, e)) ||
-          source.duration !== e.duration ||
-          JSON.stringify(source.changes) !== JSON.stringify(e.changes)
-        );
-      }).length ?? 0;
+    const forkChanged = forkChangedCount(data, worldId);
     const events = worldEvents(data, worldId).filter(
         (e) => e.parent === eventParent,
       ),

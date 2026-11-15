@@ -28,9 +28,15 @@ const calendarSchema = z.object({
     .default([])
     .describe("小说纪年；按起点先后排列。修改世界线时须原样带上"),
 });
+/** docs/580 §2: event type (drives the color) and importance (drives the dot size). Both have defaults, so older works
+ * parse unchanged. */
+export const EVENT_CATEGORIES = ["冲突", "谋划", "揭示", "关系", "成长", "变故", "其他"] as const;
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
 export const eventSchema = z.object({
   id,
   line: id.describe("所属世界线ID，必须引用worlds[].id，不能引用叙事线lines[].id"),
+  category: z.enum(EVENT_CATEGORIES).default("其他").describe("事件类型，决定颜色：冲突/谋划/揭示/关系/成长/变故/其他"),
+  importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1 一般 / 2 重要 / 3 关键，决定圆点大小"),
   parent: id.nullable().default(null),
   title: name,
   fact: text.default(""),
@@ -290,6 +296,23 @@ export function worldEvents(data: PlanningData, line: string): PlanningEvent[] {
     ...(data.worlds.find((w) => w.id === line)?.fork?.events ?? []),
     ...data.events.filter((e) => e.line === line),
   ];
+}
+/** Frozen prehistory events of a fork whose source fact, title, time, duration or changes moved since the fork.
+ * Category and importance are presentation only and never make a frozen fact "changed" (docs/580 §2, WU-03). */
+export function forkChangedCount(data: PlanningData, worldId: string): number {
+  const fork = data.worlds.find((w) => w.id === worldId)?.fork;
+  if (!fork) return 0;
+  return fork.events.filter((e) => {
+    const source = findEvent(data, fork.source, e.id);
+    return (
+      !source ||
+      source.fact !== e.fact ||
+      source.title !== e.title ||
+      JSON.stringify(resolveTime(data, source)) !== JSON.stringify(resolveTime(data, e)) ||
+      source.duration !== e.duration ||
+      JSON.stringify(source.changes) !== JSON.stringify(e.changes)
+    );
+  }).length;
 }
 export function findEvent(data: PlanningData, line: string, event: string) {
   return worldEvents(data, line).find((e) => e.id === event);
