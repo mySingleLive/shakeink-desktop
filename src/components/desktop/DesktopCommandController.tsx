@@ -48,7 +48,11 @@ export function DesktopCommandController(){
    // Native menus retain the prior editor target. A modal barrier must also
    // apply here, otherwise a menu click edits content behind the dialog.
    if(document.querySelector(dialogSelector)&&(!id.startsWith("text.")||!target?.closest(dialogSelector)))return
-   if((id.startsWith("md.")||id.startsWith("monaco."))&&!["markdown","preview"].includes(scope(target)))return
+   // docs/580 §7.5 (N2): a menu click on 编辑 > 查找 while the worldline panel has focus searches its events.
+   // Only a mouse click reaches here for it: the window ignores menu accelerators, so Cmd/Ctrl+F is resolved by keydown.
+   const current=scope(target)
+   if(id==="md.find"&&(current==="worldline"||current==="worldline-search")){run("worldline.search",target);return}
+   if((id.startsWith("md.")||id.startsWith("monaco."))&&!["markdown","preview"].includes(current))return
    run(id,target)
   }
   const keydown=(event:KeyboardEvent,afterNative=false)=>{

@@ -127,3 +127,22 @@ test("MONACOCTRL48-07: explicit empty preview copy bindings remain empty while o
     await f.settle(); assert.deepEqual(executed, [])
   } finally { remove(); f.dispose() }
 })
+test("WU-66g: a native menu md.find is re-routed to worldline.search inside the worldline panel; md.* stays dropped there", async () => {
+  const f = fixture(), ran: string[] = []
+  const remove = f.bus.register({ owner: {}, accepts: () => true, commands: { "worldline.search": () => { ran.push("worldline.search") } } })
+  try {
+    // Canvas, tree or card inside the worldline panel.
+    f.target.closest = selector => selector.includes('[data-command-scope="worldline"]') ? f.target : null
+    f.menu("md.find"); await f.settle()
+    f.menu("md.bold"); await f.settle()
+    // The worldline search box.
+    f.target.closest = selector => selector.includes('[data-command-scope="worldline"]') || selector.includes("[data-worldline-search]") ? f.target : null
+    f.menu("md.find"); await f.settle()
+    // The event editor's Monaco keeps md.find.
+    f.target.closest = selector => selector.includes(".monaco-editor") || selector.includes('[data-command-scope="worldline"]') ? f.target : null
+    f.menu("md.find"); await f.settle()
+    // md.find in Monaco runs the editor's own find action (fixture records it as actions.find).
+    assert.deepEqual(ran, ["worldline.search", "worldline.search"])
+    assert.deepEqual(f.calls, ["actions.find"], "only the Monaco md.find ran; md.bold in the panel was dropped")
+  } finally { remove(); f.dispose() }
+})
