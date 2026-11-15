@@ -1,0 +1,104 @@
+/* docs/577 §14: panel header and toolbar use the project's own theme, as in ThemePanel/CharactersPanel.
+   Values copied from src/app/globals.css (.ink 玄墨 / .paper 宣纸) and src/components/ui (button, input, badge, tabs).
+   In the product these are the real tokens and shadcn components; the prototype mirrors them. */
+:root {
+  /* 玄墨 */
+  --background: #0d0b0a; --foreground: #ece7e1; --card-ui: #141110; --popover: #171312; --primary: #e07a5f; --primary-hover: #e99c87;
+  --primary-foreground: #1d110b; --secondary: #1a1614; --secondary-foreground: #ded7cf; --muted-ui: #181413; --muted-foreground: #9a918a;
+  --border: rgba(255, 248, 240, .09); --input: rgba(255, 248, 240, .13); --ring: rgba(224, 122, 95, .45);
+  --hover-wash: rgba(255, 248, 240, .05); --active-wash: rgba(224, 122, 95, .14); --selected-surface: rgba(224, 122, 95, .14);
+  --shadow-2: 0 8px 24px -8px rgba(0, 0, 0, .6); --radius: 6px; --radius-lg: 6px; --radius-md: 4.8px;
+  --font-ui: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* The worldline surfaces follow the panel background instead of their own warm gradient. */
+  --bg: var(--background); --panel: var(--background); --line-soft: var(--border); --line: var(--input);
+  --text: var(--foreground); --muted: var(--muted-foreground);
+}
+[data-light] {
+  /* 宣纸 */
+  --background: #f4edda; --foreground: #2b251b; --card-ui: #faf5e8; --popover: #fcf8ee; --primary: #b03524; --primary-hover: #97301f;
+  --primary-foreground: #faf3e3; --secondary: #e7dcc0; --secondary-foreground: #4d4430; --muted-ui: #eae1c8; --muted-foreground: #7d7157;
+  --border: #d8cba6; --input: #cfc29b; --ring: rgba(176, 53, 36, .35);
+  --hover-wash: rgba(96, 74, 38, .06); --active-wash: rgba(176, 53, 36, .09); --selected-surface: rgba(176, 53, 36, .08);
+  --shadow-2: 0 8px 24px -8px rgba(96, 74, 38, .14);
+  --card: #faf5e8; --card-2: #f1e9d3; --faint: #a3967a; --accent: #b03524; --accent-2: #97301f; --accent-soft: rgba(176, 53, 36, .09);
+}
+body { background: var(--background); font-family: var(--font-ui); }
+
+/* Panel header: same as other panels — h2 text-lg font-medium, actions on the right (SaveStatus / Badge). */
+.panel { padding: 24px 24px 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.panel-head h2 { margin: 0; font-size: 18px; line-height: 28px; font-weight: 500; letter-spacing: 0; }
+.panel-head .meta { display: flex; align-items: center; gap: 12px; }
+.badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 500;
+  background: var(--secondary); color: var(--secondary-foreground); }
+.save-status { display: inline-flex; align-items: center; gap: 6px; color: var(--muted-foreground); font-size: 12px; }
+.save-status i { width: 6px; height: 6px; border-radius: 50%; background: #7cb083; }
+h1 { display: none; }
+
+/* Toolbar: shadcn Button sm (h-7, rounded-md, text-[0.8rem]), variants outline / ghost / default; Tabs list for the view switch. */
+.bar { flex-wrap: wrap; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.bar .tb-group { display: inline-flex; align-items: center; gap: 4px; }
+.bar .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border); }
+.btn, .chipbtn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: var(--radius-md);
+  border: 1px solid var(--input); background: rgba(255, 248, 240, .04); color: var(--foreground); font-size: 12.8px; font-weight: 500; box-shadow: none;
+  transition: background .15s, color .15s, border-color .15s; }
+[data-light] .btn, [data-light] .chipbtn { background: var(--background); border-color: var(--border); }
+.btn:hover, .chipbtn:hover, .btn[aria-expanded="true"] { background: var(--muted-ui); border-color: var(--input); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted-foreground); }
+.btn.ghost:hover { background: var(--muted-ui); color: var(--foreground); }
+.btn.primary { border-color: transparent; background: var(--primary); color: var(--primary-foreground); box-shadow: none; font-weight: 500; }
+.btn.primary:hover { background: color-mix(in srgb, var(--primary) 80%, transparent); }
+.btn.icon { width: 28px; padding: 0; }
+.btn svg { width: 14px; height: 14px; flex: none; }
+.btn:focus-visible, .chipbtn:focus-visible, .seg button:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent); }
+.chipbtn { color: var(--muted-foreground); }
+.chipbtn b { margin-left: 2px; color: var(--foreground); font-weight: 600; }
+.chipbtn.zero { opacity: .5; }
+.seg { height: 28px; padding: 3px; border: 0; border-radius: var(--radius-lg); background: var(--muted-ui); }
+.seg button { height: 22px; padding: 0 10px; border-radius: var(--radius-md); font-size: 12.8px; font-weight: 500; color: var(--muted-foreground); }
+.seg button[aria-pressed="true"] { background: var(--background); color: var(--foreground); box-shadow: 0 0 0 1px var(--input); font-weight: 500; }
+[data-light] .seg button[aria-pressed="true"] { background: var(--card-ui); box-shadow: 0 1px 2px rgba(96, 74, 38, .14); }
+.zoom { height: 28px; padding: 0 2px; gap: 0; border-radius: var(--radius-md); border: 1px solid var(--input); background: transparent; }
+.zoom button { width: 24px; height: 24px; border-radius: var(--radius-md); }
+.zoom button:hover { background: var(--muted-ui); }
+.zoom span { min-width: 46px; font-size: 12px; }
+.picker .btn i { width: 8px; height: 8px; border-radius: 2px; }
+/* Input: h-8 → h-7 to match the sm buttons; rounded-lg, border-input, dark:bg-input/30, focus ring-3 ring/50. */
+.search { height: 28px; width: 240px; border-radius: var(--radius-lg); border: 1px solid var(--input); background: color-mix(in srgb, var(--input) 30%, transparent); }
+[data-light] .search { background: transparent; }
+.search:focus-within, .search.active { width: 360px; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent); }
+.search input { font-size: 13px; }
+.search input::placeholder { color: var(--muted-foreground); }
+.search svg { color: var(--muted-foreground); }
+.search kbd { border-color: var(--border); color: var(--muted-foreground); }
+/* Popovers and menus: --popover background, border, shadow-2, rounded-lg, items h-7 hover muted. */
+.menu, .pop { background: var(--popover); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-2); padding: 4px; }
+.menu button, .pop button { border-radius: var(--radius-md); font-size: 13px; }
+.menu button:hover, .pop button:hover, .pop button.cur { background: var(--muted-ui); }
+.menu hr { border-top-color: var(--border); }
+.menu { top: 132px; }
+.status { margin: 10px 0 8px; color: var(--muted-foreground); }
+.legend button { color: var(--muted-foreground); }
+.legend button:hover { border-color: var(--border); background: var(--hover-wash); }
+.toast { background: var(--popover); border-color: var(--border); box-shadow: var(--shadow-2); }
+.tree-head { background: var(--background); }
+.workspace { border-top: 0; }
+.review button[aria-pressed="true"] { background: #fff; color: #000; }
+/* base.css [data-light] has the same specificity and loads earlier, so restate the aliases for the light theme. */
+[data-light] { --bg: var(--background); --panel: var(--background); --line-soft: var(--border); --line: var(--input); --text: var(--foreground); --muted: var(--muted-foreground); }
+
+/* Toolbar stays one row: right-hand items keep their size, the search box gives way first, then labels become icons. */
+.bar { flex-wrap: nowrap; min-width: 0; }
+.bar > * { flex: none; }
+.bar .spacer { flex: 1 1 0; min-width: 8px; }
+.search { flex: 0 1 240px; width: auto; min-width: 120px; }
+.search:focus-within, .search.active { flex-basis: 360px; width: auto; }
+.btn .lbl { white-space: nowrap; }
+@media (max-width: 1280px) {
+  .zoom #zoomFit, .search kbd, .chipbtn.zero { display: none; }
+}
+@media (max-width: 1160px) {
+  .toggle-all .lbl, #periodBtn .lbl { display: none; }
+  .toggle-all, #periodBtn { padding: 0 8px; }
+  .chipbtn .lbl { display: none; }
+}

@@ -516,7 +516,7 @@ $('#timelineView').addEventListener('wheel', (ev) => {
 // ---------- toolbar: period picker, expand/collapse all, zoom ----------
 function renderPeriodPicker() {
   const p = periods.find((v) => v.id === activePeriod), i = periods.indexOf(p)
-  $('#periodBtn').innerHTML = `<i style="--pc:${p ? PC(i) : 'var(--line)'}"></i>${p ? p.title : '全部时期'} ▾`
+  $('#periodBtn').innerHTML = `<i style="background:${p ? PC(i) : 'var(--muted-foreground)'}"></i><span class="lbl">${p ? p.title : '全部时期'}</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6l4 4 4-4"/></svg>`
   const count = (q) => events.filter((e) => e.start !== null && e.start >= q.start && (q.end === null || e.start <= q.end)).length
   const nested = (q) => periods.some((o) => o !== q && o.start <= q.start && (o.end === null || (q.end !== null && q.end <= o.end)) && (o.end ?? Infinity) - o.start > (q.end ?? Infinity) - q.start)
   $('#periodPop').innerHTML = `<button data-p=""><i style="--pc:var(--line)"></i>全部时期（全貌）<small>${events.length}</small></button>` +
@@ -556,8 +556,8 @@ function renderToggleAll() {
   const visible = events.filter((e) => e.start !== null || view === 'table')
   const allOpen = visible.length && visible.every((e) => open.has(e.id))
   $('#toggleAll').innerHTML = allOpen
-    ? '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4-3 4 3M4 13l4-3 4 3"/></svg>全部收起'
-    : '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3l4 3 4-3M4 10l4 3 4-3"/></svg>全部展开'
+    ? '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4-3 4 3M4 13l4-3 4 3"/></svg><span class="lbl">全部收起</span>'
+    : '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3l4 3 4-3M4 10l4 3 4-3"/></svg><span class="lbl">全部展开</span>'
   $('#toggleAll').dataset.all = allOpen ? '1' : ''
 }
 $('#toggleAll').addEventListener('click', () => {
