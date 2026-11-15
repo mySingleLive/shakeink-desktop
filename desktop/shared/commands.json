@@ -561,6 +561,16 @@
       "platform": null
     },
     {
+      "id": "worldline.search",
+      "label": "搜索世界线事件",
+      "group": "世界线",
+      "scope": "worldline",
+      "mac": "Cmd+F",
+      "win": "Ctrl+F",
+      "locked": false,
+      "platform": null
+    },
+    {
       "id": "md.findNext",
       "label": "查找下一个",
       "group": "Markdown 编辑器",

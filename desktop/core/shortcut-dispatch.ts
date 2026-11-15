@@ -1,12 +1,13 @@
-import {bindingsFor,canonicalKey,capturedKey,type ShortcutCommand} from "./shortcuts"
+import {bindingsFor,canonicalKey,capturedKey,shortcutScopeEnables,type ShortcutCommand} from "./shortcuts"
+export {shortcutScopeEnables}
 export interface ShortcutContext {
  commands:ShortcutCommand[];overrides:Record<string,string[]>;platform:"darwin"|"win32"
- scope:"none"|"markdown"|"composer"|"input"|"preview";focus:unknown;modal?:boolean;recording?:boolean
+ scope:"none"|"markdown"|"composer"|"input"|"preview"|"worldline"|"worldline-search";focus:unknown;modal?:boolean;recording?:boolean
  enabled?(id:string):boolean;repeatable?(id:string):boolean
 }
 type KeyInput=Parameters<typeof capturedKey>[0]&{defaultPrevented?:boolean}
 function configurationFor(context:ShortcutContext){
- const commands=context.commands.filter(command=> (command.scope===context.scope||command.scope==="markdown"&&context.scope==="preview"||command.scope==="text"&&context.scope!=="none"||command.scope==="global"&&!context.modal))
+ const commands=context.commands.filter(command=>shortcutScopeEnables(context.scope,command.scope,context.modal))
  const bindings=commands.flatMap(command=>(command.locked?command.defaults:bindingsFor(command,context.overrides)).map(binding=>({command,binding:canonicalKey(binding)})))
  return {commands,bindings,key:JSON.stringify([context.scope,context.modal??false,bindings.map(row=>[row.command.id,row.binding])])}
 }

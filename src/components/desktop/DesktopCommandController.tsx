@@ -4,7 +4,7 @@ import {toast} from "sonner"
 import {useDesktopStore,updateDesktopSettings} from "@/stores/desktop"
 import {useTabsStore} from "@/stores/tabs"
 import {ShortcutDispatcher} from "@desktop/core/shortcut-dispatch"
-import {bindingsFor,canonicalKey,capturedKey} from "@desktop/core/shortcuts"
+import {shortcutScopeEnables,bindingsFor,canonicalKey,capturedKey} from "@desktop/core/shortcuts"
 import {desktopCommandCatalog,desktopCommandTargets,desktopCommandTarget,desktopEditorTarget,rememberDesktopCommandTarget} from "@/lib/desktop/command-runtime"
 import {useDesktopCommands} from "@/lib/desktop/use-command-target"
 import {installInputCommands,isAPIKeyControl} from "@/lib/desktop/input-commands"
@@ -73,7 +73,7 @@ export function DesktopCommandController(){
    const modal=!!document.querySelector(dialogSelector)
    const pending=dispatcher.waitingFor({commands,overrides,platform:bootstrap.platform,scope:currentScope,focus:target,modal})
    const matchesStroke=(binding:string)=>{const strokes=canonicalKey(binding).split(" ");return strokes[0]===normalized||pending&&strokes.includes(normalized)}
-   const active=commands.filter(command=>command.scope==="global"&&!modal||command.scope===currentScope||command.scope==="markdown"&&currentScope==="preview"||command.scope==="text"&&currentScope!=="none")
+   const active=commands.filter(command=>shortcutScopeEnables(currentScope,command.scope,modal))
    const globalMatch=active.some(command=>command.scope==="global"&&bindingsFor(command,overrides).some(matchesStroke))
    const customized=active.some(command=>{
     if(!Object.hasOwn(overrides,command.id))return false

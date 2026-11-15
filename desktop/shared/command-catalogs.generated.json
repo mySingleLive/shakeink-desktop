@@ -5,11 +5,11 @@
     "src/lib/desktop/monaco-commands.ts": "cad766d65d529120961d4a6cc7095b16da6dcde057c6844ba73370700bd54eac",
     "src/lib/desktop/markdown-actions.ts": "3684edbc677f7566efe527ec0ae22f1ccbd2e4ebbf8cd37f45d4b0fa46d39912",
     "src/lib/desktop/command-runtime.ts": "21e3f8a0fd46e3a132dbfbbe0ef53f446b17c262268afd9b21501110324add88",
-    "src/lib/desktop/command-scope.ts": "aa1ba903a704b8d35ba7d0d34c0c773ce2c644bb36e0b56a9828c8e7ad433b14",
+    "src/lib/desktop/command-scope.ts": "2436c3352532393863cba91dd73e38e99c7d6700354273f5a236838f1746a17b",
     "desktop/shared/command-registry.ts": "6adf0c3252978ebacb281a9c2981f8fa268ca20a87d59891eed6c65f05d5e3fd",
-    "desktop/shared/commands.json": "4025c9c351b6c9a4fe87e43cf443a9f392ff828ce36b4c8e54b801bb46e0a8eb",
+    "desktop/shared/commands.json": "ac5d4c76f93b0a08aa97ca25aee31507fe36da8c91c97e0f5c3bbe43b0d27d35",
     "src/components/editor/monaco-setup.ts": "8361a4c9c2d9e705715782dd7019b5731912f0605c3a49db3b3d438ca0ad4191",
-    "desktop/core/shortcuts.ts": "343b96539265f5db16e5e900c0b25818dff9236c2a413f8d8ddafebb5bdbae5e",
+    "desktop/core/shortcuts.ts": "96dc7d0c921431e5bd61e1b915b632f90e70cf62e8681b736074c7bcaf318f7d",
     "desktop/core/shortcut-context.ts": "61b18c806ddceaffdbd4f1f270a67862ea873eda529e4430e55b4d43d17f0be2",
     "node_modules/monaco-editor/package.json": "3555e3e0bc0d5f8c22be8f26164c11778dff0feabf564c67185726636f4b15c7"
   },
@@ -582,6 +582,16 @@
               "weight": 100,
               "secondaryWeight": 0
             }
+          ]
+        },
+        {
+          "id": "worldline.search",
+          "label": "搜索世界线事件",
+          "group": "世界线",
+          "scope": "worldline",
+          "locked": false,
+          "defaults": [
+            "Cmd+F"
           ]
         },
         {
@@ -7387,7 +7397,7 @@
           ]
         }
       ],
-      "sha256": "3dbb81bcb96d0fb40ab6ac4b964c3b3642a42ff57affddc395c006884a8da336"
+      "sha256": "5e0e273017a92c59abff6d3e25c41f7b280727bd72929608179604e7f4bd4e15"
     },
     "win32": {
       "resolved": true,
@@ -7924,6 +7934,16 @@
               "weight": 100,
               "secondaryWeight": 0
             }
+          ]
+        },
+        {
+          "id": "worldline.search",
+          "label": "搜索世界线事件",
+          "group": "世界线",
+          "scope": "worldline",
+          "locked": false,
+          "defaults": [
+            "Ctrl+F"
           ]
         },
         {
@@ -14114,7 +14134,7 @@
           ]
         }
       ],
-      "sha256": "cb2c0d0f6ceaa8afd8168f00950b292c581615330e3b87495b63e3c6cf88448a"
+      "sha256": "2fbe15e25af49773f81483cc1858348f85746c2cdea68a38313fc423944d59d5"
     }
   }
 }
