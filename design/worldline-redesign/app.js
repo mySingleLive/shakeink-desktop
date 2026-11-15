@@ -16,6 +16,7 @@ const avColor = (name) => AV[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) 
 const avatars = (e, max) => e.people.length
   ? `<span class="avs" title="${esc(e.people.join('、'))}">${e.people.slice(0, max).map((p) => `<i style="background:${avColor(p)}">${p[0]}</i>`).join('')}${e.people.length > max ? `<i class="more">+${e.people.length - max}</i>` : ''}</span>`
   : ''
+const familyEnd = (e) => Math.max(e.start + (e.dur || 0), ...descendants(e.id).filter((d) => d.start !== null).map((d) => d.start + (d.dur || 0)))
 const IMP = ['', '一般', '重要', '关键']
 const PC = (i) => `var(--chart-${(i % 4) + 1})`
 
@@ -297,65 +298,72 @@ function renderTimeline() {
     return r <= l ? '' : `<div class="period${activePeriod === p.id ? ' period-flash' : ''}" data-period="${p.id}" style="left:${l}px;width:${r - l}px;--pc:${PC(i)}">${p.title}</div>`
   }).join('')
   lane.innerHTML = ''
-  // Pack each root together with its visible descendants as one block: the parent bracket spans its real time,
-  // children sit in rows under the bracket, so the family never mixes with neighbours.
-  const roots = kids(null).filter((e) => e.start !== null && e.start + (e.dur || 0) >= win.start - 10 && e.start <= win.start + win.span)
-  const placeCard = (e, left, top, child) => {
-    const wrap = document.createElement('div'), w = open.has(e.id) ? 340 : child ? 180 : 200
-    wrap.className = 'tcard' + (child ? ' child' : ''); wrap.style.width = w + 'px'; wrap.style.setProperty('--ec', hue(e))
+  // docs/577 §11: a parent event is a header bar across the top of its family. The bar is at least as long as the
+  // parent's time range and is widened to cover every child card, so children always sit inside the frame under it.
+  // A bright track inside the bar marks the parent's real time range.
+  const roots = kids(null).filter((e) => e.start !== null && familyEnd(e) >= win.start - 10 && e.start <= win.start + win.span)
+  const MIN_BAR = 200
+  const leafW = (e, depth) => (open.has(e.id) ? 340 : depth ? 180 : 200)
+  // Right edge in px of e's family, computed before placing anything so the header width is known up front.
+  const extent = (e, depth) => {
+    if (!kids(e.id).length) return x(e.start) + leafW(e, depth)
+    const own = Math.max(x(e.start) + MIN_BAR, x(familyEnd(e)))
+    return folded.has(e.id) ? own : Math.max(own, ...kids(e.id).map((k) => extent(k, depth + 1) + 10))
+  }
+  const placeCard = (e, left, top, width, depth) => {
+    const wrap = document.createElement('div'), isParent = kids(e.id).length > 0
+    wrap.className = 'tcard' + (depth ? ' child' : '') + (isParent ? ' header' : '')
+    wrap.style.width = width + 'px'; wrap.style.setProperty('--ec', hue(e))
     if (dimmed(e)) wrap.style.opacity = .3
-    const c = card(e, { foldable: true, compact: true }); wrap.append(c)
-    wrap.insertAdjacentHTML('afterbegin', (e.dur && !kids(e.id).length ? `<i class="bar-x" style="width:${Math.max(6, x(e.start + e.dur) - left)}px"></i>` : '') +
+    const c = card(e, { foldable: true, compact: !isParent }); wrap.append(c)
+    if (!isParent) wrap.insertAdjacentHTML('afterbegin', (e.dur ? `<i class="bar-x" style="width:${Math.max(6, x(e.start + e.dur) - left)}px"></i>` : '') +
       `<i class="pin i${e.importance}"></i><i class="stem"></i><span class="tstamp">${short(e.start, e.precision)}</span>`)
+    else {
+      const tw = Math.max(4, x(familyEnd(e)) - left)
+      wrap.insertAdjacentHTML('afterbegin', `<span class="tstamp range">${short(e.start, e.precision)} → ${short(familyEnd(e), e.precision)}</span>`)
+      c.insertAdjacentHTML('beforeend', `<i class="track" style="width:${Math.min(tw, width)}px"></i>`)
+    }
     wrap.style.left = left + 'px'; wrap.style.top = top + 'px'
     lane.append(wrap)
-    return { w, h: c.offsetHeight }
+    return c.offsetHeight
   }
-  const layoutFamily = (e, top, depth) => {
-    // Returns { right, bottom } for the family placed with its root at `top`.
-    const left = x(e.start)
-    const me = placeCard(e, left, top, depth > 0)
-    let right = left + me.w, bottom = top + me.h
-    const ch = folded.has(e.id) ? [] : kids(e.id)
-    if (ch.length) {
-      const end = x(e.start + (e.dur || 0)), bTop = top + me.h + 14
-      const rows = []; let famBottom = bTop
-      const famItems = []
-      ch.forEach((k) => {
-        const kl = x(k.start)
-        let r = rows.findIndex((row) => row.right + 12 <= kl)
-        if (r < 0) { r = rows.length; rows.push({ right: -Infinity, top: 0, h: 0 }) }
-        famItems.push({ k, r }); rows[r].right = kl + (open.has(k.id) ? 340 : 180) + (kids(k.id).length && !folded.has(k.id) ? 200 : 0)
-      })
-      let y = bTop + 22
-      rows.forEach((row, i) => {
-        row.top = y
-        const placed = famItems.filter((f) => f.r === i).map((f) => layoutFamily(f.k, y, depth + 1))
-        const rb = Math.max(...placed.map((p) => p.bottom)); right = Math.max(right, ...placed.map((p) => p.right))
-        y = rb + 30
-      })
-      famBottom = y - 16
-      const bl = left - 6, br = Math.max(end, right) + 6
-      lane.insertAdjacentHTML('afterbegin', `<div class="bracket" style="left:${bl}px;width:${br - bl}px;top:${bTop}px;--ec:${hue(e)}"></div>
-        <div class="bracket-fill" style="position:absolute;left:${bl}px;width:${br - bl}px;top:${bTop}px;height:${famBottom - bTop}px;--ec:${hue(e)}"></div>`)
-      right = br; bottom = famBottom
+  const layout = (e, top, depth) => {
+    if (!kids(e.id).length) {
+      const left = x(e.start), width = leafW(e, depth)
+      return { right: left + width, bottom: top + placeCard(e, left, top, width, depth) }
     }
-    return { right, bottom }
+    const l = x(e.start), width = extent(e, depth) - l
+    const headH = placeCard(e, l, top, width, depth)
+    let bottom = top + headH
+    if (!folded.has(e.id)) {
+      const rows = []
+      kids(e.id).forEach((k) => {
+        const kl = x(k.start)
+        let r = rows.findIndex((row) => row.right + 10 <= kl)
+        if (r < 0) { r = rows.length; rows.push({ right: -Infinity, items: [] }) }
+        rows[r].right = extent(k, depth + 1); rows[r].items.push(k)
+      })
+      let y = top + headH + 22
+      rows.forEach((row) => {
+        const placed = row.items.map((k) => layout(k, y, depth + 1))
+        y = Math.max(...placed.map((p) => p.bottom)) + 26
+      })
+      bottom = y - 12
+      lane.insertAdjacentHTML('afterbegin', `<div class="frame" style="left:${l}px;width:${width}px;top:${top}px;height:${bottom - top}px;--ec:${hue(e)}"></div>`)
+    }
+    return { right: l + width, bottom }
   }
-  // Rows of families: a family goes to the first row whose right edge is clear.
-  const rows = []
-  let top = 28
   const shelves = []
-  roots.sort((a, b) => a.start - b.start).forEach((e) => {
+  roots.sort((p, q) => p.start - q.start).forEach((e) => {
     const left = x(e.start)
-    let s = shelves.find((sh) => sh.right + 14 <= left)
-    if (!s) { s = { right: -Infinity, top: shelves.length ? Math.max(...shelves.map((sh) => sh.bottom)) + 30 : top, bottom: 0 }; shelves.push(s) }
-    const r = layoutFamily(e, s.top, 0)
-    s.right = r.right; s.bottom = Math.max(s.bottom, r.bottom)
+    let sh = shelves.find((v) => v.right + 14 <= left)
+    if (!sh) { sh = { right: -Infinity, top: shelves.length ? Math.max(...shelves.map((v) => v.bottom)) + 34 : 28, bottom: 0 }; shelves.push(sh) }
+    const r = layout(e, sh.top, 0)
+    sh.right = r.right; sh.bottom = Math.max(sh.bottom, r.bottom)
   })
-  // Second pass would re-pack shelves by measured bottoms; the prototype keeps first-fit for readability.
-  void rows
   drawMinimap()
+  $('#zoomVal').textContent = `${Math.round(win.span)} 天`
+  requestAnimationFrame(markFades)
   $('#range').textContent = `${fmt(win.start)} — ${fmt(win.start + win.span)}`
 }
 // ---------- minimap (docs/577 §10) ----------
@@ -483,6 +491,9 @@ $('#zoomOut').addEventListener('click', () => (view === 'table' ? setZoom(zoom /
 $('#zoomFit').addEventListener('click', () => { if (view === 'table') setZoom(1); else { win = null; render() } })
 
 // ---------- chrome ----------
+function markFades() {
+  document.querySelectorAll('.ev-title, .tree-row .tt').forEach((t) => t.classList.toggle('fade', t.scrollWidth > t.clientWidth + 1))
+}
 function render() {
   $('#tableView').hidden = view !== 'table'; $('#timelineView').hidden = view !== 'timeline'
   document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === view))
@@ -494,6 +505,7 @@ function render() {
     $('#range').textContent = `${fmt(placed[0], 'year')} — ${fmt(placed.at(-1))}`
     renderTable()
   } else { renderTimeline(); $('#zoomVal').textContent = `${Math.round(win.span)} 天` }
+  requestAnimationFrame(markFades)
 }
 document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => { view = b.dataset.view; render() }))
 $('[data-light-toggle]').addEventListener('click', (ev) => { ev.target.setAttribute('aria-pressed', document.body.toggleAttribute('data-light')); render() })

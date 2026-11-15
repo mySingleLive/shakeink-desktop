@@ -13,7 +13,7 @@
 .tree-row .tw { flex: none; width: 16px; text-align: center; color: var(--faint); font-size: 10px; transition: transform .15s; }
 .tree-row .tw.fold { transform: rotate(-90deg); }
 .tree-row .td { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ec); }
-.tree-row .tt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tree-row .tt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
 .tree-row .ts { flex: none; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
 .tree-group { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px 6px; color: var(--faint); font-size: 11px; letter-spacing: .1em; }
 .tree-group::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
@@ -163,3 +163,21 @@
 .minimap { z-index: 5; background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow); }
 .hint { z-index: 5; padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, var(--bg) 80%, transparent); }
 .lane { padding-bottom: 56px; }
+
+/* ---------- v5: parent = header bar spanning its time range ---------- */
+.frame { position: absolute; border-radius: 12px; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 10%, transparent), color-mix(in srgb, var(--ec) 3%, transparent) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ec) 26%, transparent); border-top: 0; }
+.frame::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ec) 30%, transparent), transparent); }
+.tcard.header .ev { border-radius: 12px 12px 6px 6px; border-color: color-mix(in srgb, var(--ec) 45%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 34%, var(--card)), color-mix(in srgb, var(--ec) 16%, var(--card)) 60%, color-mix(in srgb, var(--ec) 8%, var(--card)));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ec) 16%, transparent); }
+.tcard.header .ev::before { top: 0; bottom: 0; left: 0; width: 4px; border-radius: 12px 0 0 6px; }
+.tcard.header .ev-head { min-height: 34px; }
+.tcard.header .ev-title { font-weight: 600; }
+.tcard.header.child .ev { border-style: solid; border-radius: 9px 9px 5px 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 26%, var(--card)), color-mix(in srgb, var(--ec) 10%, var(--card))); box-shadow: none; }
+.tstamp.range { left: 12px; color: var(--ec); font-weight: 600; }
+.tcard.header .group-head-meta .full { display: inline; } .tcard.header .group-head-meta .compact { display: none; }
+.tcard.header .track { position: absolute; left: 0; bottom: -1px; height: 3px; border-radius: 0 2px 2px 6px; pointer-events: none;
+  background: linear-gradient(90deg, var(--ec), color-mix(in srgb, var(--ec) 60%, transparent)); box-shadow: 0 0 8px var(--ec); }
+.tcard.header .track::after { content: ""; position: absolute; right: -3px; top: -2px; width: 7px; height: 7px; border-radius: 50%; background: var(--ec); box-shadow: 0 0 6px var(--ec); }

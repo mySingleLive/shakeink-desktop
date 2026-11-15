@@ -63,7 +63,9 @@ h1 { margin: 0 0 14px; font-size: 22px; font-weight: 600; line-height: 1.2; lett
 .ev-head { display: flex; align-items: center; gap: 9px; min-height: 32px; padding: 0 8px 0 14px; cursor: pointer; min-width: 0; }
 .ev-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--ec); box-shadow: 0 0 6px var(--ec); }
 .ev-dot.window { background: transparent; border: 1.5px solid var(--ec); box-shadow: none; }
-.ev-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ev-title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+/* Overflowing text fades out instead of showing an ellipsis (docs/577 §11). */
+.fade { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
 .ev.open .ev-head { min-height: 42px; }
 .ev.open .ev-title { white-space: normal; font-size: 14px; font-weight: 600; }
 .ev-kids { flex: none; padding: 0 7px; border-radius: 8px; border: 1px solid var(--line-soft); color: var(--faint); font-size: 11px; }
