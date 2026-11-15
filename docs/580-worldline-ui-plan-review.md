@@ -201,3 +201,51 @@ S3–S8、S10–S13 已充分采纳。另有三条：
 - **S1**：固定延迟 220ms 比 macOS 可以设置的双击间隔短。用户双击较慢时，第一次单击已经切换了展开状态。建议改用 `event.detail`：`detail === 1` 时立即切换，`detail === 2` 时撤销切换并进入编辑。“展开 < 100ms”从切换生效时开始计时。
 - **S9**：“保存失败”从 `message` 推导不可靠，`message` 也用于其他提示。建议在 `put` 和 `save` 中维护单独的保存状态。现有头部显示“只读”（`:4073-4076`），这是真实状态，改版后要保留，例如作为第二个 `Badge`。
 - **S14**：见上一节。
+
+---
+
+## 修订 3 复审
+
+复审对象：`docs/580-worldline-ui-plan.md` 修订 3（提交 `dad0712`，242 行）。行号指 chronology 提交 `195b4c0`。
+
+**结论：不通过。** R3、各项细节、新增矛盾、S1、S9 都已解决。R2、R4、R5 和 M9 还有下面 5 处必须修改（N1–N5），都是具体的遗漏，不需要改设计。
+
+### 必须修改
+
+**N1（§5.2，R2）：家族本身的左坐标仍可能是 10⁹ 级；碰撞外框按视窗裁剪会让排布结果依赖视窗。**
+1. 重定原点只能约束 `|windowStart − base|`，约束不了 `|root.start − base|`。只要家族满足 `familyEnd ≥ lo` 就会被构建：比如从远古开始、持续到现在的长事件，或者跨纪元的父事件。这样的家族 `x0 = (root.start − base) × scale` 仍是 −10⁹ 级，§5.2 的“所有元素 < 10⁶ + 7 × 视窗宽度”不成立。
+2. 家族内部的子卡片按 `rx(k.start)` 放在以 `root.start` 为原点的局部坐标中（设计稿 `app.js:368`、`:394`）。一个很宽的家族被构建时，离视窗很远的子卡片也会得到 10⁹ 级的 left。§5.2 只裁剪了标题栏、框体、时间条和泳道，没有处理子卡片的位置。
+3. “家族排布用于判断相交的外框也按同样的范围裁剪”会再次引入 577 §15 原因 1 的缺陷。外框随视窗变化，一个很宽的家族在平移时外框会变大，已放好的家族就会与它重新判定相交并被推开。
+
+需要改成：
+- 碰撞判断和原位 y 一律用未裁剪的世界坐标计算。JS 的双精度数没有像素上限，只有写进 CSS 时才有。
+- 写 CSS 时，每个元素（家族容器、子卡片、圆点、时间戳、标题栏、框体、时间条）都单独换算成相对 `base` 的坐标，再裁剪到已构建范围。不要再用以 `root.start` 为原点的家族局部坐标。
+- 落在已构建范围外的子卡片不渲染。
+- WU-19b 和 WU-56b 增加一组数据：一个从远古持续到现代的根事件，加上一个跨纪元、带子事件的父事件。断言是每个写入 DOM 的 left 和 width 都 < 10⁶ + 7 × 视窗宽度，平移前后其它家族的 y 不变。
+
+**N2（§7.5，R5）：`worldline` 作用域与现有快捷键代码有 5 处冲突或遗漏。**
+1. **判断顺序没写全。** 现有顺序是 composer → input → markdown（`.monaco-editor`）→ preview（`.desktop-markdown-editor`）→ none（`command-scope.ts:4-10`）。修订 3 只把“面板内的搜索框”放在 input 之前，这一步是对的。但“焦点在画布、目录、卡片时返回 `worldline`”这个兜底判断，必须放在 markdown 和 preview 之后、none 之前。原因是事件编辑器内嵌了 `MarkdownEditor`（`PlanningWorkspace.tsx:1736`），它也在世界线面板里。兜底如果提前，编辑器中按 ⌘F 会落到 `worldline`，`md.find` 就失效了。请在方案中写出完整顺序，并补一条用例：焦点在事件编辑器的 Monaco 中时，结果是 `markdown`。
+2. **搜索框失去 input 作用域的命令。** 搜索框是普通的 `<input>`。作用域改成 `worldline` 后，`active` 过滤（`DesktopCommandController.tsx:76`）和 `configurationFor`（`shortcut-dispatch.ts:9`）都不会再启用 22 条 `input.*` 命令。用户改过的光标移动、`input.confirm`（Enter）、`input.cancel`（Esc）等绑定，在这个输入框里会失效，违反“全部设置快捷键生效”。请规定：搜索框中启用 `worldline`、`input`、`text`、`global` 四类命令。相应地，`overlapping('worldline','input')` 必须为 true，否则把 `worldline.search` 改绑到 Enter 时不会提示冲突，冲突原子转移也不会发生。
+3. **对话框。** 世界线面板的对话框（`:3464`、`:3512`、`:3539`、`:3602`，`role="dialog"`）在面板 DOM 内部。焦点在对话框里时，`closest('[data-command-scope="worldline"]')` 仍会命中，⌘F 会把焦点移到被对话框遮住的搜索框。请规定在 `[role="dialog"]` 内不返回 `worldline`，或者在 modal 状态下让 `enabled('worldline.search')` 返回 false。
+4. **目录校验脚本。** `scripts/verify-command-catalogs.mjs:15` 写死了作用域白名单 `['global','text','markdown','composer','input']`。不加入 `worldline`，方案中说的“通过 verify-command-catalogs 校验”无法实现，打包校验（`verify-content-drawer-*.mjs` 会引用目录文件）也会失败。请把这个脚本列入修改清单。
+5. **原生菜单的说法不对，但改派本身仍然需要。** 主窗口调用了 `webContents.setIgnoreMenuShortcuts(true)`（`desktop/main/index.ts:930`，注释写明“Keyboard bindings are resolved once in the renderer”），所以菜单加速键不会先于渲染进程触发。按键一律由渲染进程处理，菜单只有被鼠标点击时才会发出 `md.find`。改派逻辑仍然需要，而且已经完整：点击后经过 `executeCommand` → `send({type:"command"})`（`:911`）→ `DesktopApp.tsx:157` → `desktop:command` → `:51`。请把方案中的理由改正，并把 WU-92 中的菜单用例改为“鼠标点击 编辑 > 查找”。
+
+修改后，冲突原子转移仍能正常工作：`bindingConflicts` 和 `editBinding`（`shortcuts.ts:40-60`）只依赖 `overlapping` 和 contexts，按上面第 2 条调整 `overlapping` 即可。
+
+**N3（§7.1，R4）：`eventCard()` 用到的几样东西在新组件中没有来源。**
+- **编辑态。** `eventCard` 的第一行是 `if (eventDraft?.id === e.id) return renderEventEditor()`（`:1950`）。编辑器是约 440 行的闭包（`:1504-1945`），依赖草稿、单位、`endTimeMode` 等大量状态。方案没有说明 `EventCard` 怎样显示原位编辑器。建议父组件只给正在编辑的卡片传一个 `editor` 节点，或者在列表中直接用编辑器替换这张卡片。不能把编辑器状态拆成 props 传给所有卡片。
+- **时间解析。** 时间行用的 `resolveTime(data, e)` 会沿 `time.anchor` 查找其它事件（`domain.ts:304`）。`worldTimeLabel` 用的 `timeBaseValue(data, worldId, base, value)` 也需要 `data` 才能查时间基准的锚点事件（`timeline.ts:119-123`）。只靠 props 中的 `event` 和 context 中的 `calendar`、`timeBase`，都算不出这些值。请补上：由父组件算好 `time`（`resolveTime` 的结果）作为 prop 传入，context 中提供一个预先绑定好 `data` 的 `labelTime(value, precision)`。
+- **缺少回调。** 回调列表里没有 §6 新增的“定位子事件”和“新建子事件”，也没有原来在双击时、已有草稿的情况下调用的 `setMessage("请先保存或取消当前事件编辑…")`（`:1963`）。前两项要加回调，后一项可以并入 `onEdit`。
+- **标题高亮。** 搜索高亮需要关键字。`hit` 只是一个布尔值，标题里的 `<mark>` 需要关键字列表，请放进 context，例如 `terms`。
+
+**N4（§7.2，R4）：视窗 store 必须每个面板一个实例。**
+`ContentTabs` 会让隐藏的标签页保持挂载（`ContentTabs.tsx:24-26`，`hidden={!active}`）。打开两部作品的世界线标签时，如果 `worldline-viewport.ts` 导出的是模块级单例，一个面板平移，另一个面板的目录和刻度也会跟着变。请写明 store 由 `EventTimeline` 或 `WorldlinePanel` 在 `useRef` 中创建，并通过 context 交给订阅方。另外，“交互中以 ref 为准”建议改成：`PlanningWorkspace` 只通过 store 提供的命令式方法（例如 `setViewport`，用于时期定位、`locateEvent`、缩放按钮）修改视窗，不再通过 props 下发 `start`。这样在交互结束后 150ms 内点击缩放按钮，也不会有两个来源同时写视窗。
+
+**N5（§9，M9）：旧作品的验证没有隔离。**
+`cache-522/catalog.json` 中登记的 `WL-wl-era1`、`WL-wl-base1` 用的是绝对路径 `/Users/dt_flys/shakeink-test-roots/worldline-570/works/…`。把 `cache-522` 复制到 `worldline-ui-583` 后，新根的 catalog 仍然指向 570 根里的原作品目录。“编辑并保存”会直接改掉 docs/570–578 的验收数据。另外，`WL-wl-era1/.shakeink-lock` 目录还在。请改为：把这两个作品目录复制到 `worldline-ui-583/works/` 下，在新根中按新路径登记（或用“打开作品”打开复制件），并确认复制件中没有遗留锁。原作品只读，不打开。
+
+### 已解决
+
+- **R1**：可以实现。普通语义导入路径没有现成的“整理步骤”：`:598` 在 zod 的 `superRefine` 里面，不能修改数据。请写明规整放在 `generateText` 包装器中（`novel-import-ai.ts:760-763`），在 `wizardLinesLaneRequest` 以外、`request.kind==='worldline'` 时调用。删掉的数量应计入修复计数（`ImportLinesRepairs`，`desktop/shared/novel-import.ts:183`，新增一个字段），不能写进 `mappingWarnings`，因为后者是校验函数的输出。
+- **R3、细节、新增矛盾、S1、S9**：已解决。
+- **建议（不阻塞）**：面板所在标签页隐藏时，`ResizeObserver` 会报告宽度 0（`ContentTabs.tsx:26`）。§5.2 规定宽度变化时全量重排，这会把每个家族的原位记录清掉。建议宽度为 0 时不重排。

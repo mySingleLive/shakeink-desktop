@@ -1,8 +1,8 @@
-# 580 · 世界线界面改版 技术方案（修订 3）
+# 580 · 世界线界面改版 技术方案（修订 4）
 
 依据：`577-worldline-ui-product-design.md`（§1–§15，2026-11-15 设计稿 v9 审核通过）、`design/worldline-redesign/`（只作视觉参考，不进入产品）。基础：`fix/worldline-chronology` 提交 `195b4c0`（docs/570–582，纪元历法，2026-11-16 第六轮复审通过）。本分支已变基到这个提交上。
 
-修订 2 回应 `580-worldline-ui-plan-review.md` 的 M1–M9 和 S1–S14。修订 3 回应该文件“修订 2 复审”一节的 R1–R5、各项细节和新增矛盾，并写入用户 2026-11-16 的决定：Cmd/Ctrl+F 接入桌面快捷键系统。每处在方括号中标注对应编号。下文行号指提交 `195b4c0`。
+修订 2 回应 `580-worldline-ui-plan-review.md` 的 M1–M9 和 S1–S14。修订 3 回应该文件“修订 2 复审”一节的 R1–R5、各项细节和新增矛盾，并写入用户 2026-11-16 的决定：Cmd/Ctrl+F 接入桌面快捷键系统。修订 4 回应“修订 3 复审”一节的 N1–N5 和两条说明。每处在方括号中标注对应编号。下文行号指提交 `195b4c0`。
 
 ## 1. 范围与原则
 
@@ -33,7 +33,7 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 |---|---|
 | `desktop/core/novel-import-semantics.ts:57` `IMPORT_SEMANTIC_FACT_FIELDS.worldline` | 加入 `category`、`importance`。不加的话，strict 校验（`:232-233`）会拒收回复 |
 | `novel-import-semantics.ts:264-270` worldline 校验分支 [R1] | 这里是纯校验函数，不修改 artifact。规则：`category` 只能是 7 个取值之一，`importance` 只能是 `"1"`/`"2"`/`"3"`，否则 `fail`。非法值在下一行的规整阶段就已删掉，所以正常情况下不会走到 `fail` |
-| `desktop/core/novel-import-worldline-facts.ts`（新增）`normalizeWorldlineGrade(facts)` [R1] | 纯函数：去掉首尾空白；数字 `importance` 转为字符串；非法值删除；结果写入 `mappingWarnings`。由**两条**回复整理路径调用：向导路径的 `normalizeLinesReply`（`novel-import-ai.ts:1439`，`wizard-lines-v1`），以及普通语义导入路径（`referenceContract`）在 `novel-import-ai.ts:598` 调用校验函数之前的整理步骤。两条路径各有单元测试（WU-08） |
+| `desktop/core/novel-import-worldline-facts.ts`（新增）`normalizeWorldlineGrade(facts)` [R1] | 纯函数：去掉首尾空白；数字 `importance` 转为字符串；非法值删除，并返回删除的个数。由**两条**回复整理路径调用：向导路径的 `normalizeLinesReply`（`novel-import-ai.ts:1439`，`wizard-lines-v1`）；普通语义导入路径（`referenceContract`）则在 `generateText` 包装器中调用（`:760-763`），时机在 `:598` 的校验之前。删掉的非法值个数计入 `ImportLinesRepairs`（新增 `droppedGrades`），不写入 `mappingWarnings`。两条路径各有单元测试（WU-08） |
 | `desktop/core/novel-import.ts:308-322` 跨批合并 | `importance` 取较大值；`category` 保留先出现的值。两者都不产生冲突，也不进入 `WIZARD_REVIEW_STRUCTURAL` 或人工复核 |
 | `desktop/shared/novel-import-field-labels.ts:6` | 增加中文标签：类型、重要程度 |
 | `desktop/core/novel-import-ai-payload.ts:79` `referenceContract` 与 `:145` `wizardLinesContract` | 两处都写明：`category` 取 7 个值之一，`importance` 取 1–3，按事件在全书情节中的分量判断，拿不准时写 1 |
@@ -73,13 +73,22 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 
 ### 5.2 时间线排布与原点 [M2]
 
-`packFamilies(families, prev, { base, scale, pinned })`：
-- 坐标 `x = (start − base) × scale`。`base` 是平移层的原点。
-- **重定原点** [R2]：**每次写入 `transform` 之前**，在同一帧内同步检查：只要 `|windowStart − base| × scale > 10⁶ px`，就令 `base = windowStart`，所有家族重新计算 x0，y 保持原位。小地图点击这类单步跳转也是先重定原点再写 transform，所以任何一帧的 `translateX` 都 < 10⁶ px。全量重排（缩放变化，包括 `locateEvent` 为容纳家族而缩小视窗）时，直接令 `base = windowStart`。
-- **宽度裁剪** [R2]：父事件标题栏和框体、持续事件和开放结束的时间条、时期色带、角色变化泳道，这些元素的宽度都来自“时间跨度 × scale”，可能远超浏览器上限（约 3.3×10⁷ px）。它们一律裁剪到已构建范围 `[windowStart − 3·span, windowStart + 4·span]` 之内：被裁掉的左端显示“‹ 起点在视野外”，右端显示“延续到视野外 ›”（沿用现有 `:3043-3067` 的标记）。开放结束的时间条不再用 `timelineWidth − 14 − x`，改为画到已构建范围的右端。家族排布用于判断相交的外框也按同样的范围裁剪。综上，平移层内所有元素的 left 和 width 的绝对值都 < 10⁶ + 7 × 视窗宽度。
-- 只构建视窗前后各 3 个视窗宽度范围内的家族；平移超出这个范围时增量构建，已放置的家族 y 不变。
-- 首次排布：按开始时间放到最高的空位，记录原位 y。展开或收起后，被点击的家族固定不动，其它家族回到原位，只有相撞时才下移；收起后回到原位。
-- 只有缩放比例或面板宽度变化时才全量重排。
+`packFamilies(families, prev, { scale, pinned })` 与 `placeOnPlane(layout, { base, scale, range })` 分成两步 [N1]：
+
+**① 排布：世界坐标，不裁剪。**
+- 每个家族及其所有卡片、标题栏、框体都用世界坐标 `wx = start × scale`（以 px 为单位，不减 `base`），宽度也按世界坐标计算。数值可以很大，但只用于计算，不写入 CSS。
+- 碰撞判断只用这些**未裁剪的**世界外框，所以平移不会改变外框，已放好的家族不会被重新推开（不再出现 577 §15 的原因 1）。
+- 首次排布时按开始时间放到最高的空位，记下原位 y。展开或收起后，被点击的家族固定不动，其它家族回到原位，只有发生相撞才下移；收起后回到原位。
+- 只有缩放比例或面板宽度变化时才全量重排。**面板宽度为 0（标签页隐藏）时不重排**，保留原位记录，等宽度恢复后再按实际宽度处理 [说明 2]。
+- 构建范围：结束时刻 ≥ `windowStart − 3·span` 且开始时刻 ≤ `windowStart + 4·span` 的家族才参与排布。平移超出这个范围时增量构建，新家族按同样的规则加入，已放好的家族 y 不变。
+
+**② 上屏：逐个元素换算并裁剪。**
+- 每个元素写入 CSS 时，单独换算成相对 `base` 的坐标：`left = wx − base × scale`。然后把 `[left, left + width]` 裁剪到已构建范围 `R = [(windowStart − 3·span − base) × scale, (windowStart + 4·span − base) × scale]`。被裁掉的左端显示“‹ 起点在视野外”，右端显示“延续到视野外 ›”（沿用现有 `:3043-3067`）。
+- 完全落在 R 之外的元素不渲染。这包括长跨度家族中离视窗很远的子卡片和孙卡片，例如从远古持续到现代的根事件、跨纪元的父事件。
+- 家族不再使用“以 `root.start` 为原点的局部坐标”，每张卡片都按自己的世界坐标换算，所以长跨度家族里的子卡片也受这个约束。
+- 适用范围：卡片、父事件标题栏和框体、时间轨、持续事件和开放结束的时间条、时期色带、角色变化泳道。开放结束的时间条画到 R 的右端。
+- **重定原点** [R2]：每次写入 `transform` 之前，在同一帧内同步检查。只要 `|windowStart − base| × scale > 10⁶ px`，就令 `base = windowStart`，按 ② 重新写入所有元素的 left，排布结果和 y 不变。全量重排时直接令 `base = windowStart`。
+- **上界**：R 的两端到 `base` 的距离都 ≤ 10⁶ + 4 × 视窗宽。平移层中每个元素的 left 和 left + width 都在 R 内。`translateX` 的绝对值 < 10⁶ + 视窗宽。所以写进 CSS 的任何坐标的绝对值都 < 10⁶ + 7 × 视窗宽，与家族自身的起点无关。
 
 ### 5.3 其它纯函数
 
@@ -121,7 +130,7 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 | `WorldlineToolbar.tsx` | 目录开关；世界线 `Select`；视图 `Tabs`；时期选择 `DropdownMenu`（定位后让色带或竖条闪烁，并提示“已定位到时期「…」· N 件事件”）[S4]；全部展开/收起；缩放（− 值 ＋ 复位）；搜索 `Input`；待定位；延续事件；“更多” `DropdownMenu`；“＋ 事件”。窄窗口规则：≤1280px 时隐藏“复位”、⌘F 提示和计数为 0 的延续事件；≤1160px 时，时期、全部展开、待定位只显示图标和数字；搜索框最小 120px；始终单行 [S8] |
 | `WorldlineLegend.tsx` | 状态行：时间范围、事件数；类型图例（7 类，各带计数；单击隐藏/显示，双击只看这一类）；重要度大小说明。隐藏的类型在图例中用空心圆点加删除线表示，不只靠颜色区分 [M7、S10] |
 | `EventTree.tsx` | 左侧事件目录，`role="tree"`，两个视图共用：年份分隔、视窗内标记、当前行跟随；支持 ↑↓←→ 和 Enter [S10] |
-| `EventCard.tsx`（`memo`） | 收起态：圆点、标题（溢出时淡出）、头像叠层、子事件数。展开态：内容与现有 `eventCard()`（`:1949-2103`）相同（菜单、时间行、`MarkdownPreview`、人物、角色变化、引用），但改写成独立组件，不再是闭包 [R4]：<br>• **props**：`event`、`expanded`、`selected`、`hit`、`dimmed`、`frozen`、`childCount`（由父组件从 `eventTree` 算出）、`refs`（该事件的引用列表）<br>• **`WorldlineContext`**（值用 `useMemo` 生成，只在依赖变化时更新）：`calendar`、`timeBase`、`readonly`、`hasDraft`、`characters`（头像和姓名）<br>• **稳定回调**（`useRef` 加一个不变的包装函数）：`onToggle`、`onEdit`、`onDetail`、`onQuote`、`onCopy`、`onDelete`、`onFork`、`onStartTimeDrag`、`onReferenceClick`，内部调用 `put`、`setDialog`、`quotePlanning`、`startTimeDrag`<br>• **时间行**：按事件精度选 span，日精度为 48，时精度为 1，其余用 `formatTime` 的精度参数，不再读 `windowRange.span`（`:2044-2049`）<br>props 和 context 中都不出现 `windowRange` [M5] |
+| `EventCard.tsx`（`memo`） | 收起态：圆点、标题（溢出时淡出）、头像叠层、子事件数。展开态：内容与现有 `eventCard()`（`:1949-2103`）相同（菜单、时间行、`MarkdownPreview`、人物、角色变化、引用），但改写成独立组件，不再是闭包 [R4]：<br>• **props**：`event`、`expanded`、`selected`、`hit`、`dimmed`、`frozen`、`editing`、`childCount`（由父组件从 `eventTree` 算出）、`refs`（该事件的引用列表）<br>• **`WorldlineContext`**（值由 `useMemo` 生成，只在依赖变化时更新）：`data`（整份规划数据，供 `resolveTime`、`timeBaseValue` 沿锚点查找）[N3]、`calendar`、`timeBase`、`readonly`、`hasDraft`、`characters`（头像、姓名）、`searchTerms`（标题和正文高亮所需的关键字列表；`hit` 只表示是否为当前结果）[N3]<br>• **稳定回调**（`useRef` 加一个不变的包装函数）：`onToggle`、`onEdit`（已有草稿时调用现有提示“请先保存或取消当前事件编辑，输入已保留。”，`:1955`）[N3]、`onDetail`、`onQuote`、`onCopy`、`onDelete`、`onFork`、`onLocateChildren`（定位子事件）、`onNewChild`（新建子事件）[N3]、`onStartTimeDrag`、`onReferenceClick`。它们内部调用 `put`、`setDialog`、`quotePlanning`、`startTimeDrag`<br>• **原位编辑器** [N3]：`editing` 为真时，`EventCard` 渲染一个插槽 `renderEditor(event)`。这个函数由 `PlanningWorkspace` 通过 context 传入，函数体就是现有的 `renderEventEditor`（约 440 行，`:1950`），本轮不拆分。因为同一时刻最多只有一张卡片处于编辑状态，`memo` 对其它卡片仍然有效<br>• **时间行**：按事件精度选择 span：日精度为 48，时精度为 1，其余使用 `formatTime` 的精度参数。不再读取 `windowRange.span`（`:2044-2049`）<br>props 和 context 中都不出现 `windowRange` [M5] |
 | `EventTable.tsx` | 时间带（SVG 引线、圆点、标签、刻度、年份徽章、时期竖条、断轴、吸顶年份）和分组卡片列；Ctrl + 滚轮缩放；虚拟化 |
 | `EventTimeline.tsx` | 刻度尺、时期色带（可拖动改时间，沿用 `:2930-2963`）[S4]、`#plane` 平移层（父事件标题栏和框体、卡片、角色变化泳道 [S3]）、小地图 |
 | `worldline.module.css` | 只使用 `globals.css` 中的主题变量 |
@@ -130,13 +139,14 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 
 ### 7.2 平移帧不经过 React 状态 [M5]
 
-- **视窗 store** [R4]：新增 `src/lib/planning/worldline-viewport.ts`，提供一个最小的外部 store（`subscribe`/`getSnapshot`）。`EventTimeline` 写入视窗，`EventTree`（目录的“视窗内”标记）、刻度尺、时期色带、小地图通过 `useSyncExternalStore` 订阅。目录的“视窗内”标记每 100ms 节流一次。这样平移时不经过 `PlanningWorkspace` 的 state，它在拖动过程中不会重新渲染。
-- **交互中以 ref 为准** [R4]：拖动、方向键、滚轮、小地图交互开始时设置 `interacting=true`。到交互结束后的 150ms 同步完成为止，`EventTimeline` 在 render 和 effect 中都不读 props 里的 `windowRange.start`，只用 ref。其它原因引起的重渲染（查询刷新、实测高度写入、悬停、保存完成）因此不会把 transform 写回旧位置。同步完成后，props 和 ref 一致，`interacting` 再设为 `false`。
+- **视窗 store** [R4、N4]：新增 `src/lib/planning/worldline-viewport.ts`，导出 `createViewportStore()`，返回一个最小的外部 store（`subscribe`/`getSnapshot`/`setWindow`）。**每个世界线面板实例各建一个**：`PlanningWorkspace` 在 `useRef` 中创建，并通过 context 传给子组件。原因是 `ContentTabs` 会让隐藏的标签页保持挂载，模块级单例会让两个世界线标签互相影响。
+- **唯一写入来源** [N4]：`windowRange.start`/`span` 只保存在 store 中，不再作为 `PlanningWorkspace` 的 state，也不再通过 props 下发。时期定位、目录定位、搜索、小地图、拖动、缩放、“复位”都调用 `store.setWindow`。`PlanningWorkspace` 中需要视窗的地方（按世界线记住视窗、保存视窗等）改为调用 `store.getSnapshot()`。这样交互结束后的 150ms 内只有一个写入来源。`EventTimeline` 写入视窗，`EventTree`（目录的“视窗内”标记）、刻度尺、时期色带、小地图通过 `useSyncExternalStore` 订阅。目录的“视窗内”标记每 100ms 节流一次。这样平移时不经过 `PlanningWorkspace` 的 state，它在拖动过程中不会重新渲染。
+- **交互中以 ref 为准** [R4]：拖动、方向键、滚轮、小地图的每一帧只写 ref 和 transform。交互结束后，再调用一次 `store.setWindow`，把最终位置写入 store。因为视窗不再经过 props（见上一条），查询刷新、实测高度写入、悬停、保存完成等其它原因引起的重渲染，都不会把 transform 写回旧位置。
 - `EventTimeline` 内部用 `useRef` 保存 `{start, span, base}`。pointermove、方向键、Shift + 滚轮、横向滚轮（沿用 `:330-356`）、小地图拖动时，只做三件事 [S5]：
   1. 写 `#plane.style.transform`；
   2. 在 `requestAnimationFrame` 中重画刻度尺、时期色带和小地图方框（子组件局部 state）；
   3. 每 100ms 节流更新一次目录的“视窗内”标记。
-- 停止拖动或空闲 150ms 后，才把 `start` 同步回 `PlanningWorkspace` 的 `windowRange`，供保存视窗、时期定位等使用。
+- 停止拖动或空闲 150ms 后，把最终位置写入 store（`setWindow`），订阅者随之更新。
 - 删除 `windowRange.y` 这个纵向偏移（`:2977`、`:3004`、`:3097`）。纵向只用原生滚动，并用 spacer 保证滚动位置不被浏览器截断。
 - 取消平移（Esc、失焦，`:2120-2128`、`:2836`）：恢复拖动开始时 ref 中保存的 `start`，再写回 transform。
 - 拖动改时间（`startTimeDrag`/`finishTimeDrag`）：预览期间，被拖的家族只改自己的 `translateX`，不全量重排；松开后保存，再按 §5.2 对该家族重新放置。
@@ -153,17 +163,23 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 ### 7.5 定位、深链接与快捷键 [S2、S6]
 
 - 目录、搜索、时间带圆点、待定位按钮、`panelFocus` 深链接，共用一个 `locateEvent(id)`：展开祖先，选中，按当前视图滚动或平移，然后闪烁。`panelFocus` 的 effect（`:269-325`）改为调用 `locateEvent`，并在首次视窗适配（`:398-418`）之后执行：首次适配完成时设置一个标志，`locateEvent` 等到这个标志后再运行，所以不会被首次适配覆盖。
-- **Ctrl/⌘ + F** [S2、R5，用户 2026-11-16 决定：接入快捷键系统]：
-  - 新增快捷键作用域 `worldline`，并修改以下位置：
-    - `ShortcutScope`（`desktop/core/shortcuts.ts:2`）和 `DesktopCommandScope`（`src/lib/desktop/command-scope.ts:1`）、`ShortcutContext.scope`（`desktop/core/shortcut-dispatch.ts:4`）都加入 `worldline`。
-    - `commandScope(target)`：在判断 `composer` 之后、判断 `input` 之前，先用 `target.closest('[data-command-scope="worldline"]')` 判断是否在世界线面板内，再判断目标是否是面板内的世界线搜索框（`[data-worldline-search]`）；两者都满足时返回 `worldline`。世界线面板中其它输入框（编辑器表单）仍返回 `input`，Markdown 编辑器仍返回 `markdown`。焦点在世界线画布、目录、卡片上时返回 `worldline`。
-    - `overlapping(a,b)`（`shortcuts.ts:35`）：`worldline` 与 `markdown`、`composer`、`input` 不重叠，与 `global`、`text` 重叠。因此新命令和 `md.find` 的同一默认按键不算冲突；它与全局命令冲突时，仍按现有的“冲突原子转移”处理。
-    - `configurationFor`（`shortcut-dispatch.ts:9`）和 `DesktopCommandController.tsx:76` 的 `active` 过滤：`worldline` 作用域只启用 `worldline`、`global`、`text` 三类命令。
-    - `DesktopCommandController.tsx:88` 的提前返回：作用域为 `worldline` 且按键命中 `worldline` 命令时，不交给原生处理；其它未命中的按键照常交给原生。
-  - 新命令写在 `desktop/shared/commands.json`：`{"id":"worldline.search","label":"搜索世界线事件","group":"世界线","scope":"worldline","mac":"Cmd+F","win":"Ctrl+F","locked":false}`。修改后用 `scripts/generate-command-catalogs.mjs` 重新生成 `command-catalogs.generated.json`，并通过 `verify-command-catalogs.mjs` 校验。快捷键设置中可以录制、多绑定和修改这个命令。
-  - **原生菜单路径**：原生“编辑”菜单的 `md.find` 加速键（`desktop/main/index.ts:844-846`）会先于渲染进程触发。`DesktopCommandController.tsx:51` 改为：`md.find` 到达时，如果目标作用域是 `worldline`，改为执行 `worldline.search`；其它 `md.*` 命令照旧丢弃。
-  - **执行**：`worldline.search` 通过 `desktopCommandTargets` 注册到世界线面板，执行时聚焦并全选搜索框。
-  - **测试**：更新 `command-catalog.test.ts`、`shortcut-settings.test.ts`、`native-command-priority.test.ts`，并新增作用域判断和菜单改派的用例（WU-66、WU-92）。真实 Electron 中验证以下三种焦点的按键结果：世界线画布、世界线搜索框、Markdown 编辑器。
+- **Ctrl/⌘ + F** [S2、R5、N2，用户 2026-11-16 决定：接入快捷键系统]：
+  - **作用域**：新增 `worldline`。以下位置都加入这个值：`ShortcutScope`（`desktop/core/shortcuts.ts:2`）、`DesktopCommandScope`（`src/lib/desktop/command-scope.ts:1`）、`ShortcutContext.scope`（`desktop/core/shortcut-dispatch.ts:4`），以及目录校验脚本中写死的作用域白名单（`scripts/verify-command-catalogs.mjs:15`）。
+  - **`commandScope(target)` 的判断顺序** [N2]：
+    1. `composer`；
+    2. 对话框内（`target.closest('[role="dialog"],[role="alertdialog"]')`）时，跳过所有世界线判断，按原有规则继续；
+    3. 世界线搜索框（`target.closest('[data-worldline-search]')`，且在 `[data-command-scope="worldline"]` 内）返回 `worldline`；
+    4. 原有的 `input` 判断（面板内编辑器表单的输入框仍是 `input`）；
+    5. 原有的 `markdown`（Monaco）和 `preview`。事件编辑器内嵌的 `MarkdownEditor`（`:1736`）在这一步命中，所以 ⌘F 仍执行 `md.find`；
+    6. **最后**才兜底：`target.closest('[data-command-scope="worldline"]')` 返回 `worldline`（世界线画布、目录、卡片）；
+    7. 其余返回 `none`。
+  - **启用的命令** [N2]：`worldline` 作用域启用 `worldline`、`input`、`text`、`global` 四类命令，这样用户改过的 22 条 `input.*` 绑定（回车、Esc、光标移动等）在搜索框里仍然有效。需要修改的位置：`configurationFor`（`shortcut-dispatch.ts:9`）、`DesktopCommandController.tsx:76` 的 `active` 过滤，以及 `:88` 的提前返回（作用域为 `worldline` 时，与 `input` 一样，没有命中自定义按键或 `worldline.*` 命令的按键都交给原生处理）。
+  - **冲突检查** [N2]：`overlapping`（`shortcuts.ts:35`）中，`worldline` 与 `global`、`text`、`input` 重叠，与 `markdown`、`composer` 不重叠。所以 `worldline.search` 和 `md.find` 可以共用同一个默认按键；它与 `input.*` 或全局命令冲突时，仍按“冲突原子转移”（`shortcuts.ts:40-60`）处理。
+  - **命令定义**：`desktop/shared/commands.json` 中新增 `{"id":"worldline.search","label":"搜索世界线事件","group":"世界线","scope":"worldline","mac":"Cmd+F","win":"Ctrl+F","locked":false}`。之后用 `scripts/generate-command-catalogs.mjs` 重新生成目录，并用 `verify-command-catalogs.mjs` 校验。快捷键设置中可以录制、多绑定、修改这个命令。
+  - **按键路径** [N2，更正修订 3 的错误说法]：主窗口设置了 `setIgnoreMenuShortcuts(true)`（`desktop/main/index.ts:930`），所有按键都由渲染进程的命令控制器处理，原生菜单的加速键不会先触发。所以 ⌘F 只走上面的作用域判断。
+  - **菜单点击路径**：只有用鼠标点击“编辑 > 查找”时，才会经 `index.ts:911` → `DesktopApp.tsx:157` 送到 `DesktopCommandController.tsx:51`。`:51` 改为：`md.find` 到达时，如果当前目标的作用域是 `worldline`，就改为执行 `worldline.search`；其它 `md.*` 命令照旧丢弃。
+  - **执行**：`worldline.search` 通过 `desktopCommandTargets` 注册到当前获得焦点的世界线面板实例，执行时聚焦并全选该面板的搜索框。
+  - **测试**：更新 `command-catalog.test.ts`、`shortcut-settings.test.ts`、`native-command-priority.test.ts`。新增以下用例：作用域判断（7 个判断步骤）、启用命令过滤、冲突检查和原子转移、菜单点击改派。见 WU-66、WU-92。
 - 搜索框的 Enter 先判断 `event.nativeEvent.isComposing`，输入法组字时不跳转 [S2]。
 - **正文高亮** [S7]：`MarkdownPreview` 渲染完成后，用 `TreeWalker` 遍历文本节点，把命中的关键字包进 `<mark>`；不改 Markdown 源文本。搜索词变化时先移除旧的 `<mark>`，再重新包。
 
@@ -188,7 +204,8 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 - **浏览器测试**：沿用 `planning-card-menu.test.ts` 的方式，使用真实的 `WorldlinePanel` 和内存接口数据。内容见 docs/581 §3。家族标题栏、分组框、待定位切换只能由这些固定数据覆盖（见下）。
 - **真实目标系统**：
   1. 把 `~/shakeink-test-roots/cache-522` 复制到新的隔离根 `~/shakeink-test-roots/worldline-ui-583`。复制时把 inbox 中的 lease 回执移出（参见记忆），并确认 `state.json` 存在。
-  2. **旧作品**：不重新导入，直接打开根中 catalog 已登记的两部旧作品。① `worldline-570/works/WL-wl-era1`：2026-11-15 由带纪元的版本保存，885 个事件，全部是“第五纪…”。② `worldline-570/works/WL-wl-base1`：2026-11-14 由无纪元的旧版本保存，91 条世界线，事件全部“待定位”。两部作品的两个视图都应正常显示，事件显示为“其他 / 一般”。各编辑一个事件的类型和重要度并保存，然后读回。
+  2. **旧作品** [N5]：先把 `worldline-570/works/WL-wl-era1` 和 `WL-wl-base1` 两个目录复制到 `~/shakeink-test-roots/worldline-ui-583/works/` 下，复制时不带 `.shakeink-lock`，然后在新根中按新路径打开这两份副本。新根 catalog 中仍指向 `worldline-570/works` 原作品的登记不使用。原作品保持只读，不打开，所以 570–578 的验收数据不会被改动。复制前后各计算一次原作品目录的哈希，确认没有变化。
+     两部作品：① `worldline-570/works/WL-wl-era1`：2026-11-15 由带纪元的版本保存，885 个事件，全部是“第五纪…”。② `worldline-570/works/WL-wl-base1`：2026-11-14 由无纪元的旧版本保存，91 条世界线，事件全部“待定位”。两部作品的两个视图都应正常显示，事件显示为“其他 / 一般”。各编辑一个事件的类型和重要度并保存，然后读回。
      - `~/Documents/小说/` 下的两部作品是用户本人的作品，不打开，也不复制。
   3. **新导入**：使用 LotmVerification.app，新开会话，只选第一卷“小丑”，目标为“角色 + 世界线”。保存后检查类型和重要度有值的比例、头像，并复测 docs/581 §5 中列出的用例和性能。
   4. 证据写入 `~/shakeink-test-roots/worldline-ui-583/evidence/<label>/`，不进入仓库，不包含原文和 Key。
@@ -237,6 +254,13 @@ importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1
 | R3 滚动锚定、虚拟化条件 | §5.1 |
 | R4 视窗 store、交互中以 ref 为准、EventCard 抽取 | §7.1、§7.2 |
 | R5 快捷键作用域 `worldline` | §7.5 |
+| N1 世界坐标排布、逐元素换算裁剪、构建范围外不渲染、长跨度家族 | §5.2 |
+| N2 作用域判断顺序、启用 input 命令、对话框排除、校验脚本白名单、按键路径更正 | §7.5 |
+| N3 编辑器插槽、`data` 与关键字进 context、补齐回调 | §7.1 |
+| N4 每个面板一个 store，唯一写入来源 | §7.2 |
+| N5 复制旧作品到新根，原作品只读 | §9 |
+| 说明 1 普通路径规整位置与计数 | §3 |
+| 说明 2 隐藏标签页不重排 | §5.2 |
 | 细节：M4 删除 `constrainWindow`、`time.anchor`；M8 `fitDense` 条件、时间基准阈值；M9 指定旧作品、Windows 待验收 | §6、§4、§9 |
 | 新增矛盾：尺寸以设计稿 v9 为准；S14 理由改正 | §5.1、§2 |
 | 建议：S1 `event.detail`；S9 单独的保存状态与“只读”标记 | §7.3、§7.1 |
