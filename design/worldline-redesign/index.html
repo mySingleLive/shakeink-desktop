@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>世界线改版设计稿 · docs/577</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-style="calm">
+<div class="review" aria-label="评审工具条（只属于设计稿）">
+  <b>评审 · 视觉风格</b>
+  <button data-pick="calm" aria-pressed="true">A 沉稳暗色 + 微光</button>
+  <button data-pick="neon">B 霓虹科技</button>
+  <button data-pick="chronicle">C 古典史册</button>
+  <button data-light-toggle>亮色主题</button>
+  <span class="note">示例数据为虚构，密度参照《诡秘之主》导入结果：大部分事件集中在 3 年内，同一天最多 5 个</span>
+</div>
+<main class="panel">
+  <h1>世界线</h1>
+  <div class="bar">
+    <button class="btn">主世界线 ▾</button>
+    <div class="seg" role="group" aria-label="视图">
+      <button data-view="timeline">时间线</button>
+      <button data-view="table" aria-pressed="true">事件表</button>
+    </div>
+    <button class="btn">＋ 事件</button>
+    <span class="spacer"></span>
+    <button class="chipbtn" id="pending">待定位<b>2</b></button>
+    <button class="chipbtn zero">延续事件<b>0</b></button>
+    <button class="btn" id="moreBtn" aria-haspopup="menu">⋯ 更多</button>
+  </div>
+  <div class="menu" id="menu" role="menu" hidden>
+    <button>世界线设置</button><button>＋ 世界线</button><button>＋ 时期</button><button>时期列表（3）</button>
+    <button>跨世界连接</button><button>单位与对应 · 时间基准</button><hr>
+    <button>✓ 显示时期</button><button>✓ 显示角色变化</button><hr>
+    <button id="collapseAll">全部收起</button>
+  </div>
+  <div class="status"><span id="range"></span><span id="count"></span></div>
+  <section class="table" id="tableView">
+    <nav class="tree" id="tree" role="tree" aria-label="事件目录"></nav>
+    <div class="scroller" id="scroller">
+      <div class="rail" id="rail"></div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </section>
+  <section class="canvas" id="timelineView" hidden>
+    <div class="ruler" id="ruler"></div>
+    <div class="grid" id="grid"></div>
+    <div class="periods" id="periods"></div>
+    <div class="lane" id="lane"></div>
+    <div class="hint">单击卡片展开/收起 · 双击编辑 · 拖空白平移 · Ctrl + 滚轮缩放</div>
+  </section>
+</main>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
