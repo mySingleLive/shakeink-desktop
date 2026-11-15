@@ -145,3 +145,59 @@
 ### 测试
 
 方案 §8 的分层方向正确：单元测试、浏览器测试使用真实的 `WorldlinePanel` 加内存数据（与 `planning-card-menu.test.ts` 相同），再做真实目标系统验证。需要补充：M2 的同缩放远古往返、M3 的虚拟化状态、M9 的旧作品、S2 的真实 Electron 快捷键、S8 的窄窗口、M7 的图例。另外要明确，浏览器测试的结果在台账中只能记为“组件测试通过”，不能记为真实验收通过。
+
+---
+
+## 修订 2 复审
+
+复审对象：`docs/580-worldline-ui-plan.md` 修订 2（217 行）。行号仍指 chronology 工作树。
+
+**结论：不通过。** M4、M6、M7、M8、M9 已具体解决。M1、M2、M3、M5 和 S2 仍各有一处问题：要么写法与代码不符，要么约束不完整。下面的 R1–R5 修改后即可通过，不需要再改设计。
+
+### 仍须修改
+
+**R1（M1，方案 §3 第 2 行）：“值域校验不合法时删掉字段”在校验函数里做不到；非向导导入路径没有规整。**
+- `validateImportSemanticArtifactV1`（`novel-import-semantics.ts:229`）是纯校验函数，只返回结果或 `fail`，不修改 artifact。`novel-import-ai.ts:598` 的注释也写明“Reuse the final native validator without transforming provider values”。在这里“删字段”无法实现。如果只是忽略非法值，它会留在 facts 里，最后进入复核界面和发布。
+- `normalizeLinesReply` 只在 `wizardLinesLaneRequest` 为真时调用（`novel-import-ai.ts:763`、`:1112`，要求 `executionLane==='wizard-lines-v1'`）。普通语义导入（`referenceContract`，`novel-import-ai-payload.ts:79`）的回复不经过规整。
+- 需要二选一并写明：(a) 校验函数对非法值 `fail`，同时在两条路径的回复整理阶段都先删掉非法值；(b) 校验函数接受任意字符串但记录 `mappingWarnings`，由发布阶段（`novel-import-publish.ts:168`）回退为默认值。还要给出普通路径的测试。
+
+**R2（M2，方案 §5.2）：上界只约束了家族的左坐标，没有约束元素宽度和重定原点的时机。**
+- “绝对值 < 10⁶ + 7 × 视窗宽度”只适用于 `x0`。以下元素的宽度由时间跨度乘以 `scale` 得到，不受这个上界限制：父事件标题栏和框体（宽度不小于家族跨度，577 §11）、持续事件的时间条、开放结束的时间条（现有代码中 `barWidth` 为 `timelineWidth − 14 − x`，`:2992-2995`，在平移层坐标中没有意义）、角色变化泳道。一个跨越第四纪到第五纪的父事件，在日级缩放下宽约 10⁹ px，仍会超过浏览器约 3.3×10⁷ px 的上限。需要规定：这些元素都裁剪到已构建范围 `[windowStart − 3·span, windowStart + 4·span]` 之内，被裁掉的一端用“‹ 起点在视野外 / 延续到视野外 ›”标记（沿用 `:3043-3067`）。
+- 重定原点必须在写入 `transform` 之前、同一帧中同步完成。小地图点击是单步跳转，如果“平移结束时才检查”，这一帧的 `translateX(−(windowStart − base) × scale)` 本身就是 10⁹ 级。方案写的“每次平移结束（以及每帧检查）”需要改成“每次写入 transform 前检查”。
+- 全量重排（缩放变化，包括 `locateEvent` 因父事件家族超过视窗 60% 而缩小视窗）时，令 `base = windowStart`。设计稿是这样做的（`app.js:428`），方案没有写。
+- 被固定家族的展开路径只改 y，不改 x，满足上界。增量构建的新家族使用当前 `base`，也满足上界。这两条路径不需要修改。
+
+**R3（M3，方案 §5.1）：估算高度被实测值替换时会出现跳动；虚拟化条件的含义不明确。**
+- 虚拟化后，“全部展开”的 885 张卡片中，视口外的卡片都只有估算高度。卡片进入视口并测得实际高度后，它下方所有卡片和时间带都会移动。如果被修正的卡片在视口上方，屏幕内容就会跳动，这与 577 §15 修复的是同一类缺陷。需要规定滚动锚定：修正发生在锚点（视口顶部的卡片）之上时，按差值同步调整 `scrollTop`；Ctrl+滚轮缩放时，指针下的卡片作为锚点。
+- “卡片总数 > 300”要写清楚是全部事件数，还是折叠后可见的卡片数。建议用全部事件数，避免折叠或展开时在虚拟化与非虚拟化之间来回切换。
+
+**R4（M5，方案 §7.1、§7.2、§8）：三处写法与“拖动中 `PlanningWorkspace` 渲染 0 次”的目标冲突。**
+- 目录（`EventTree`）由两个视图共用，折叠、滚动、选中状态要在视图切换后保留（577 §13），所以它的状态在 `PlanningWorkspace` 或更上层。“每 100ms 节流更新目录的视窗内标记”如果通过 `PlanningWorkspace` 的 state 传递，渲染次数就不会是 0。需要写明通道，例如一个外部 store 配合 `useSyncExternalStore`，只让 `EventTree` 订阅视窗变化。
+- 平移期间 ref 和 props 谁说了算没有规定。150ms 同步回 state 之前，任何其他原因引起的重渲染（查询刷新、`ResizeObserver` 写入高度、悬停状态、保存完成）都会把旧的 `windowRange` 作为 props 传进来。如果 `EventTimeline` 根据 props 写 transform，画面会跳回旧位置。需要规定交互进行中以 ref 为准，忽略 props 中的 `start`。
+- “展开态复用现有 `eventCard()` 的内容”与 `memo` 加最少 props 的写法冲突。`eventCard`（`:1949-2103`）是闭包，直接引用了 `data`、`query.data.characters`（`chip`）、`readonly`、`eventDraft`、`activeWorld.fork`、`put`、`setDialog`、`quotePlanning`、`eventReferences`、`worldEvents(data, …)`（子事件计数）和 `windowRange.span`（`:2044-2049`）。方案需要说明怎样抽出：哪些改为 props 或 context，哪些改为稳定回调。时间行目前按 `windowRange.span` 截断，要改为只按精度给出 span（日精度用 48，时精度用 1），否则 props 中仍然离不开 `windowRange`。
+
+**R5（S2，方案 §7.5）：“作用域过滤（`DesktopCommandController.tsx:51`）让 `worldline.search` 优先于 `md.find`”与代码不符。**
+- 快捷键作用域只有 `global | text | markdown | composer | input`（`desktop/core/shortcuts.ts:2`），`commandScope()` 只返回 `none | markdown | composer | input | preview`（`src/lib/desktop/command-scope.ts:1`），代码中没有“世界线面板”作用域。焦点在画布上时作用域是 `none`，此时只有 global 命令生效（`DesktopCommandController.tsx:76`；`shortcut-dispatch.ts:9`）。焦点在搜索框时作用域是 `input`，按键在 `:88` 直接交给原生处理。
+- `:51` 只会丢弃不在 markdown 或 preview 作用域内的 `md.*` 菜单命令，不会把命令转给别的处理者。如果原生菜单的 Cmd/Ctrl+F 加速键（`desktop/main/index.ts:844-846`）先于渲染进程触发，`md.find` 到达 `:51` 后会被丢弃，世界线搜索也不会打开。
+- 如果新命令设为 `global`，冲突检查函数 `overlapping`（`shortcuts.ts:35`）会判定它与 `md.find` 冲突，而且是默认绑定之间的冲突。
+- 需要给出完整做法，例如：新增作用域值 `worldline`，并修改 `ShortcutScope`、`overlapping`、`commandScope`（用 `closest('[data-command-scope="worldline"]')` 识别）、`shortcut-dispatch` 的过滤、`DesktopCommandController` 中 `:76` 的过滤和 `:88` 的提前返回规则（搜索框本身就在面板内）。还要处理菜单路径：`md.find` 到达且目标在世界线面板内时，改为执行 `worldline.search`。修改 `commands.json` 后要重新生成 `command-catalogs.generated.json`（`scripts/generate-command-catalogs.mjs`），并更新 `command-catalog.test.ts`、`shortcut-settings.test.ts`、`native-command-priority.test.ts`。另一种做法是不进入注册表，只在面板内处理按键，但这样需要说明为什么不受快捷键设置约束（AGENTS.md 要求快捷键逐条照批准设计实现）。
+
+### 已解决（附带的小问题，实现时处理即可）
+
+- **M4（§6）**：整树显示加移除面包屑，与已批准的 v9 设计稿一致；577 §9、§11、§13 覆盖了 §1、§4 中的“面包屑”。建议在 581 或台账中注明这项取舍的依据。“在『…』下新建子事件”要同时设置 `parent` 和 `time.anchor`，沿用 `:2536-2538` 的写法。删除 `constrainWindow` 的 effect（`:218-224`）这一点请写明。
+- **M6（§2）**：已解决。
+- **M7（§5.3、§7.1）**：已解决。
+- **M8（§4）**：已解决。有两处细节。首次进入和“复位”使用 `fitDenseTimelineWindow`，应写成“与 chronology 相同的条件（只在有纪元时使用，`:412`）”，否则无纪元作品的行为会改变。时间基准的历法单位与世界线不同时，断轴阈值的“30 天”要换算回世界线的小时，再与 `base.scale` 相乘。
+- **M9（§9）**：已解决。请写明“旧作品”指 `cache-522` 中的哪个作品，以及它是否由带纪元的版本保存过。最好再验证一个没有纪元的旧作品。implementation-boundaries 要求 macOS 和 Windows 各自做原生验收，台账中 Windows 一项应标为“待验收”。
+
+### 修订 2 新增的矛盾
+
+- **断轴高度和缩进与 577 不一致。** 方案 §5.1 写断轴 46px、子事件缩进 18px，577 §3.2 是 44px，§3.3 是 16px/层。设计稿 v9 的断轴是 46px（`app.js:150`、`:203`），目录缩进是 16px（`app.js:104`）。请以已批准的设计稿为准，并在方案中注明。
+- **S14 的说法不准确。** `worldRepairProtectedRowsHash` 的 `protectedKeys` 包含 `'planning'`（`novel-import-world-repair.ts:19`），方案说的“与规划事件无关”不对。哈希是对数据库原样存储的行计算的，默认值只在读取时补上，所以结论“不会误报”仍然成立。请改正这句的理由。
+
+### 建议修改项
+
+S3–S8、S10–S13 已充分采纳。另有三条：
+- **S1**：固定延迟 220ms 比 macOS 可以设置的双击间隔短。用户双击较慢时，第一次单击已经切换了展开状态。建议改用 `event.detail`：`detail === 1` 时立即切换，`detail === 2` 时撤销切换并进入编辑。“展开 < 100ms”从切换生效时开始计时。
+- **S9**：“保存失败”从 `message` 推导不可靠，`message` 也用于其他提示。建议在 `put` 和 `save` 中维护单独的保存状态。现有头部显示“只读”（`:4073-4076`），这是真实状态，改版后要保留，例如作为第二个 `Badge`。
+- **S14**：见上一节。
