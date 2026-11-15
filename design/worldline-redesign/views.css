@@ -142,3 +142,24 @@
 .tcard .ev:not(.open) .group-head-meta .full { display: none; }
 .tcard .ev:not(.open) .group-head-meta .compact { display: inline; }
 .tcard .fold-btn { width: 16px; }
+
+/* ---------- v4: avatars in collapsed cards, interactive minimap ---------- */
+/* Overlapping 18px avatars inside the 32px head row: no extra card height. */
+.avs { flex: none; display: inline-flex; align-items: center; padding-left: 4px; }
+.avs i { display: grid; place-items: center; width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; font-style: normal; font-size: 10px; font-weight: 600;
+  color: #fff; border: 1.5px solid var(--card); box-shadow: 0 0 0 .5px var(--line); }
+.avs i:first-child { margin-left: 0; }
+.avs i.more { width: auto; min-width: 18px; padding: 0 4px; border-radius: 9px; background: var(--card-2); color: var(--muted); font-weight: 500; }
+.ev:hover .avs i { border-color: var(--card-2); }
+.tcard .avs i { width: 16px; height: 16px; font-size: 9px; }
+
+.minimap { width: 300px; height: 28px; cursor: pointer; user-select: none; touch-action: none; }
+.minimap:hover { border-color: var(--line); }
+.minimap.dragging { cursor: grabbing; }
+.minimap u { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; background: var(--card); }
+.minimap s { position: absolute; top: 9px; width: 1px; height: 10px; background: var(--faint); transform: skewX(-24deg); box-shadow: 3px 0 0 var(--faint); }
+.minimap b { cursor: grab; box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent); }
+.minimap.dragging b { cursor: grabbing; background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.minimap { z-index: 5; background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow); }
+.hint { z-index: 5; padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.lane { padding-bottom: 56px; }

@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>世界线改版设计稿 v3 · docs/577</title>
+<title>世界线改版设计稿 v4 · docs/577</title>
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="views.css">
 </head>
 <body>
 <div class="review" aria-label="评审工具条（只属于设计稿）">
-  <b>评审 v3 · 风格 A · 颜色=类型 · 圆点大小=重要度</b>
+  <b>评审 v4 · 风格 A · 颜色=类型 · 圆点大小=重要度</b>
   <button data-light-toggle>亮色主题</button>
   <span class="note">示例数据为虚构</span>
 </div>
@@ -60,7 +60,7 @@
     <div class="periods" id="periods"></div>
     <div class="lane" id="lane"></div>
     <div class="hint">单击卡片展开/收起 · ▾ 折叠子事件 · 双击编辑 · 拖空白平移 · Ctrl + 滚轮缩放</div>
-    <div class="minimap" id="minimap" aria-label="全局缩略"></div>
+    <div class="minimap" id="minimap" tabindex="0" role="slider" aria-label="全局缩略：点击或拖动移动视窗，← → 平移" title="点击跳转 · 拖动方框移动视窗"></div>
   </section>
 </main>
 <script src="data.js"></script>

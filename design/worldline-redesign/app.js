@@ -11,6 +11,11 @@ const dimmed = (e) => hiddenTypes.has(e.category) || (query && !e.title.includes
 const yearOf = (t) => Math.floor(t / Y)
 const yearName = (t) => fmt(t, 'year')
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+const AV = ['#b5654f', '#5f8f7a', '#7a6bb0', '#b08a45', '#4f86a3', '#a3587f']
+const avColor = (name) => AV[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % AV.length]
+const avatars = (e, max) => e.people.length
+  ? `<span class="avs" title="${esc(e.people.join('、'))}">${e.people.slice(0, max).map((p) => `<i style="background:${avColor(p)}">${p[0]}</i>`).join('')}${e.people.length > max ? `<i class="more">+${e.people.length - max}</i>` : ''}</span>`
+  : ''
 const IMP = ['', '一般', '重要', '关键']
 const PC = (i) => `var(--chart-${(i % 4) + 1})`
 
@@ -38,7 +43,7 @@ function card(e, opts = {}) {
   const meta = n ? `<span class="group-head-meta"><span class="compact">▸ ${all}</span><span class="full">${e.dur ? `<span class="span-bar" title="持续 ${e.dur} 天"><i style="width:100%"></i></span>${e.dur} 天 · ` : ''}${n} 个子事件${all > n ? `（共 ${all}）` : ''}</span></span>` : ''
   el.innerHTML = `<div class="ev-head" title="${esc(e.title)}">${fold}
       <span class="ev-dot ${e.kind} i${e.importance}"></span><span class="ev-title">${esc(e.title)}</span>
-      ${meta}<button class="ev-more" aria-label="${esc(e.title)}更多操作">⋯</button></div>`
+      ${isOpen ? '' : avatars(e, opts.compact ? 2 : 3)}${meta}<button class="ev-more" aria-label="${esc(e.title)}更多操作">⋯</button></div>`
   if (isOpen) {
     const kind = e.start === null ? '' : e.kind === 'window' ? `时间不确定 · 最晚 ${fmt(e.windowEnd)}` : e.dur ? `持续 ${e.dur} 天` : '时点'
     const parent = e.parent && byId.get(e.parent)
@@ -299,7 +304,7 @@ function renderTimeline() {
     const wrap = document.createElement('div'), w = open.has(e.id) ? 340 : child ? 180 : 200
     wrap.className = 'tcard' + (child ? ' child' : ''); wrap.style.width = w + 'px'; wrap.style.setProperty('--ec', hue(e))
     if (dimmed(e)) wrap.style.opacity = .3
-    const c = card(e, { foldable: true }); wrap.append(c)
+    const c = card(e, { foldable: true, compact: true }); wrap.append(c)
     wrap.insertAdjacentHTML('afterbegin', (e.dur && !kids(e.id).length ? `<i class="bar-x" style="width:${Math.max(6, x(e.start + e.dur) - left)}px"></i>` : '') +
       `<i class="pin i${e.importance}"></i><i class="stem"></i><span class="tstamp">${short(e.start, e.precision)}</span>`)
     wrap.style.left = left + 'px'; wrap.style.top = top + 'px'
@@ -350,11 +355,66 @@ function renderTimeline() {
   })
   // Second pass would re-pack shelves by measured bottoms; the prototype keeps first-fit for readability.
   void rows
-  const all = events.filter((e) => e.start > 1348 * Y && !e.parent), t0 = all[0].start - 5, t1 = all.at(-1).start + 5, mx = (t) => ((t - t0) / (t1 - t0)) * 260
-  $('#minimap').innerHTML = all.map((e) => `<i style="left:${mx(e.start)}px;--ec:${hue(e)};height:${6 + e.importance * 3}px;top:${13 - (3 + e.importance * 1.5)}px"></i>`).join('') +
-    `<b style="left:${Math.max(0, mx(win.start))}px;width:${Math.max(6, mx(win.start + win.span) - mx(win.start))}px"></b>`
+  drawMinimap()
   $('#range').textContent = `${fmt(win.start)} — ${fmt(win.start + win.span)}`
 }
+// ---------- minimap (docs/577 §10) ----------
+// Segments use the same gap rule as the event-table rail. Each segment's width follows its event count, with a 10px
+// break between segments, so a 20万-year gap does not squeeze the dense years into one pixel.
+const MW = 300, GAP = 10
+function miniModel() {
+  const roots = kids(null).filter((e) => e.start !== null).sort((a, b) => a.start - b.start)
+  const seg = segmentOf(roots.map((e) => ({ e, depth: 0 })))
+  const groups = []
+  roots.forEach((e) => {
+    const k = seg(e)
+    groups[k] ??= { t0: e.start, t1: e.start, n: 0 }
+    groups[k].t1 = Math.max(groups[k].t1, e.start + (e.dur || 0)); groups[k].n++
+  })
+  groups.forEach((g) => { const pad = Math.max(2, (g.t1 - g.t0) * 0.04); g.t0 -= pad; g.t1 += pad })
+  const total = groups.reduce((a, g) => a + g.n, 0), usable = MW - GAP * (groups.length - 1)
+  let x = 0
+  groups.forEach((g) => { g.x0 = x; g.w = Math.max(14, (g.n / total) * usable); x += g.w + GAP })
+  const k = MW / (x - GAP); groups.forEach((g) => { g.x0 *= k; g.w *= k })
+  const toX = (t) => {
+    const g = groups.find((g) => t <= g.t1) ?? groups.at(-1)
+    return t < g.t0 ? g.x0 : g.x0 + Math.min(1, (t - g.t0) / Math.max(1e-9, g.t1 - g.t0)) * g.w
+  }
+  const toT = (px) => {
+    const g = groups.find((g) => px <= g.x0 + g.w + GAP / 2) ?? groups.at(-1)
+    return g.t0 + Math.min(1, Math.max(0, (px - g.x0) / g.w)) * (g.t1 - g.t0)
+  }
+  return { roots, groups, toX, toT }
+}
+function drawMinimap() {
+  const m = miniModel(), a = m.toX(win.start), b = m.toX(win.start + win.span)
+  $('#minimap').innerHTML =
+    m.groups.map((g, i) => `<u style="left:${g.x0}px;width:${g.w}px" title="${fmt(g.t0, 'year')}"></u>` + (i ? `<s style="left:${g.x0 - GAP / 2}px"></s>` : '')).join('') +
+    m.roots.map((e) => `<i style="left:${m.toX(e.start)}px;--ec:${hue(e)};height:${6 + e.importance * 3}px;top:${14 - (3 + e.importance * 1.5)}px${dimmed(e) ? ';opacity:.2' : ''}"></i>`).join('') +
+    `<b id="miniFrame" style="left:${a}px;width:${Math.max(8, b - a)}px"></b>`
+}
+let mini = null
+$('#minimap').addEventListener('pointerdown', (ev) => {
+  ev.preventDefault(); ev.stopPropagation()
+  const el = $('#minimap'), px = ev.clientX - el.getBoundingClientRect().left, frame = $('#miniFrame')
+  const fl = frame.offsetLeft, fw = frame.offsetWidth
+  el.setPointerCapture(ev.pointerId)
+  // Grabbing the frame keeps the grab offset; clicking elsewhere centres the clicked time, then dragging continues.
+  mini = { offset: px >= fl && px <= fl + fw ? px - fl : fw / 2 }
+  moveMini(px)
+})
+$('#minimap').addEventListener('pointermove', (ev) => { if (mini) moveMini(ev.clientX - $('#minimap').getBoundingClientRect().left) })
+$('#minimap').addEventListener('pointerup', () => { mini = null; $('#minimap').classList.remove('dragging') })
+$('#minimap').addEventListener('keydown', (ev) => {
+  if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return
+  ev.preventDefault(); win.start += (ev.key === 'ArrowRight' ? 1 : -1) * win.span * 0.25; render()
+})
+function moveMini(px) {
+  // The frame keeps the current zoom; only the window start moves.
+  win.start = miniModel().toT(Math.max(0, Math.min(MW, px - mini.offset)))
+  $('#minimap').classList.add('dragging'); render()
+}
+
 let drag = null
 $('#lane').addEventListener('pointerdown', (ev) => { if (!ev.target.closest('.ev')) drag = { x: ev.clientX, start: win.start } })
 window.addEventListener('pointermove', (ev) => { if (drag) { win.start = drag.start - ((ev.clientX - drag.x) / $('#timelineView').clientWidth) * win.span; renderTimeline() } })
