@@ -5,8 +5,6 @@ import {
   timeUnit,
   timeBaseValue,
   zoomAt,
-  layoutTimelineCards,
-  timelineTicks,
   fitTimelineWindow,
   fitDenseTimelineWindow,
   snapTimelineDelta,
@@ -63,47 +61,15 @@ import { Button } from "@/components/ui/button";
 import { WorldlineHeader, type WorldlineSaveState } from "./worldline/WorldlineHeader";
 import { EventCard, EventEditorContext, WorldlineCardContext, type WorldlineCardContextValue } from "./worldline/EventCard";
 import { EventTable } from "./worldline/EventTable";
-import { EventTimeline, ViewportRange } from "./worldline/EventTimeline";
+import { EventTimeline, TimelineTreeNav, ViewportRange, ViewportValue } from "./worldline/EventTimeline";
 import { createViewportStore, type ViewportStore } from "@/lib/planning/worldline-viewport";
+import { renderProbe } from "@/lib/planning/render-probe";
 import { EventTreeNav } from "./worldline/EventTree";
 import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
 import wl from "./worldline/worldline.module.css";
 import { adapterFor, descendants, dimmedBy, eventTree, matchEvent, searchTerms as toSearchTerms, ZOOM_MAX, ZOOM_MIN } from "@/lib/planning/worldline-layout";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS, type MaterialRef } from "@/lib/material-reference";
 
-function MeasuredEvent({
-  id,
-  className,
-  style,
-  children,
-  onHeight,
-}: {
-  id: string;
-  className: string;
-  style: CSSProperties;
-  children: ReactNode;
-  onHeight: (id: string, height: number) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const callback = useRef(onHeight);
-  useEffect(() => {
-    callback.current = onHeight;
-  }, [onHeight]);
-  useEffect(() => {
-    if (!ref.current) return;
-    const el = ref.current;
-    const observer = new ResizeObserver(() =>
-      callback.current(id, Math.ceil(el.getBoundingClientRect().height)),
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [id]);
-  return (
-    <div ref={ref} data-event={id} className={className} style={style}>
-      {children}
-    </div>
-  );
-}
 
 type View = {
   version: number;
@@ -182,7 +148,6 @@ function PlanningWorkspace({
     [durationUnit, setDurationUnit] = useState(1),
     [eventSelection, setEventSelection] = useState<string | null>(null),
     [timelineWidth, setTimelineWidth] = useState(800),
-    [eventHeights, setEventHeights] = useState<Record<string, number>>({}),
     [worldPopover, setWorldPopover] = useState<
       "periods" | "pending" | "continuing" | null
     >(null),
@@ -191,7 +156,6 @@ function PlanningWorkspace({
     [timeBase, setTimeBase] = useState(""),
     [mappingEdit, setMappingEdit] = useState(""),
     [changes, setChanges] = useState(true),
-    [windowRange, setWindowRangeState] = useState({ start: 0, span: 240, y: 0 }),
     [dragId, setDragId] = useState<string | null>(null),
     // docs/580 §1 interface state of the worldline redesign; never written to the work (WU-09e).
     [openCards, setOpenCards] = useState<ReadonlySet<string>>(new Set()),
@@ -205,32 +169,20 @@ function PlanningWorkspace({
     [tableZoom, setTableZoom] = useState(1),
     [treeOn, setTreeOn] = useState(true),
     [currentRow, setCurrentRow] = useState<string | null>(null);
-  // docs/580 §7.2: one viewport store per panel; it is the source of truth for the window start and span.
-  // windowRange mirrors it (debounced) for the code that renders from state; every write goes through
-  // setWindowRange, which applies functional updates to the store's current value, so a pan that has not been
-  // mirrored yet is never overwritten (review R3).
+  // docs/580 §7.2 / 581 WU-56c: one viewport store per panel is the only window state. PlanningWorkspace does not
+  // subscribe to it (a pan never re-renders the workspace); the views, ruler, tree, status line and window-dependent
+  // values subscribe themselves. setWindowRange keeps the old call shape and applies functional updates to the
+  // store's current value, so no pending pan is ever overwritten.
+  renderProbe("PlanningWorkspace");
   const viewport = useRef<ViewportStore>(null!);
   viewport.current ??= createViewportStore({ start: 0, span: 240 });
   const windowY = useRef(0);
   type WindowValue = { start: number; span: number; y: number };
   const setWindowRange = useCallback((next: WindowValue | ((v: WindowValue) => WindowValue)) => {
     const w = viewport.current.getSnapshot();
-    const cur = { start: w.start, span: w.span, y: windowY.current };
-    const v = typeof next === "function" ? next(cur) : next;
+    const v = typeof next === "function" ? next({ start: w.start, span: w.span, y: windowY.current }) : next;
     windowY.current = v.y;
     viewport.current.setWindow({ start: v.start, span: v.span });
-    setWindowRangeState((s) => (s.start === v.start && s.span === v.span && s.y === v.y ? s : v));
-  }, []);
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const off = viewport.current.subscribe(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        const w = viewport.current.getSnapshot();
-        setWindowRangeState((v) => (v.start === w.start && v.span === w.span ? v : { ...v, start: w.start, span: w.span }));
-      }, 160);
-    });
-    return () => { off(); clearTimeout(timer); };
   }, []);
   const tableScroller = useRef<HTMLDivElement>(null),
     worldSearch = useRef<HTMLInputElement>(null),
@@ -447,8 +399,6 @@ function PlanningWorkspace({
       if (prior?.isConnected) prior.focus();
     };
   }, [dialog]);
-  // docs/580 §7.2: one viewport store per panel. Legacy paths (fit, zoom buttons, locate, periods) still write
-  // windowRange and are pushed in; store moves (drag, wheel, minimap) flow back once they settle, not per frame.
   useEffect(() => {
     if (!searchQuery) { setSearchApplied(""); return; }
     const timer = setTimeout(() => setSearchApplied(searchQuery), 120);
@@ -484,7 +434,7 @@ function PlanningWorkspace({
   }, [eventDraft?.id]);
   function worldTimeLabel(
     value: number,
-    span = windowRange.span,
+    span = viewport.current.getSnapshot().span,
     precision?: PlanningEvent["time"]["precision"],
   ) {
     const base = activeWorld?.timeBases.find((b) => b.id === timeBase);
@@ -2099,7 +2049,7 @@ function PlanningWorkspace({
     if (
       !drag ||
       Math.abs(drag.delta) <
-        (windowRange.span * 5) / Math.max(1, timelineWidth - 28)
+        (viewport.current.getSnapshot().span * 5) / Math.max(1, timelineWidth - 28)
     )
       return;
     suppressPeriodClick.current = true;
@@ -2285,8 +2235,6 @@ function PlanningWorkspace({
           ]
         : [];
     const plotWidth = Math.max(1, timelineWidth - 28);
-    const scale = plotWidth / windowRange.span;
-    const toX = (value: number) => 14 + (value - windowRange.start) * scale;
     const allPeriods = [
       ...(fork?.periods ?? []),
       ...data.periods.filter((p) => p.line === worldId),
@@ -2312,57 +2260,14 @@ function PlanningWorkspace({
       })
       .filter(
         (p) =>
-          p.start !== null &&
-          p.start <= windowRange.start + windowRange.span &&
-          (p.end === null || p.end >= windowRange.start),
+          p.start !== null,
       );
-    const tickCalendar = activeWorld?.calendar ?? {
-      kind: "fixed" as const,
-      epoch: "",
-      hoursPerDay: 24,
-      daysPerMonth: 30,
-      monthsPerYear: 12,
-    };
-    const baseZero = base ? timeBaseValue(data, worldId, base, 0) : null;
-    const ticks =
-      base && baseZero !== null
-        ? timelineTicks(
-            windowRange.start * base.scale + baseZero,
-            windowRange.span * base.scale,
-            base.calendar,
-            plotWidth,
-          ).map((t) => (t - baseZero) / base.scale)
-        : timelineTicks(
-            windowRange.start,
-            windowRange.span,
-            tickCalendar,
-            plotWidth,
-          );
-    const layout = layoutTimelineCards(
-      placed.map((e) => {
+    const continuingAt = (start: number) =>
+      placed.filter((e) => {
         const t = resolveTime(data, e);
-        const preview = timePreview?.id === e.id ? timePreview : null;
-        return {
-          id: e.id,
-          start:
-            t.start! + (preview && preview.edge !== "end" ? preview.delta : 0),
-          end:
-            t.end === null
-              ? null
-              : t.end +
-                (preview && preview.edge !== "start" ? preview.delta : 0),
-          height: eventHeights[e.id],
-        };
-      }),
-      scale,
-    );
-    const continuing = placed.filter((e) => {
-      const t = resolveTime(data, e);
-      return (
-        t.start! < windowRange.start &&
-        (t.end === null || t.end > windowRange.start)
-      );
-    });
+        return t.start! < start && (t.end === null || t.end > start);
+      });
+    const continuing = continuingAt(viewport.current.getSnapshot().start);
     const changeItems = changes
       ? placed.flatMap((e) =>
           e.changes.flatMap((c) => {
@@ -2379,42 +2284,6 @@ function PlanningWorkspace({
       id,
       items: changeItems.filter((c) => c.character === id),
     }));
-    let laneTop = layout.height + 28;
-    const characterLayouts = characterGroups.map((group) => {
-      const packed = layoutTimelineCards(
-        group.items.map((c) => ({
-          id: c.id,
-          start: c.time,
-          end: c.time,
-          height: Math.max(
-            94,
-            58 +
-              Math.ceil(
-                (c.before.length + c.after.length + c.event.title.length) / 15,
-              ) *
-                22,
-          ),
-        })),
-        scale,
-        230,
-      );
-      const top = laneTop;
-      laneTop += packed.height + 40;
-      return { ...group, packed, top };
-    });
-    const eventPath: PlanningEvent[] = [];
-    let eventAncestor = eventParent
-      ? findEvent(data, worldId, eventParent)
-      : undefined;
-    while (
-      eventAncestor &&
-      !eventPath.some((e) => e.id === eventAncestor?.id)
-    ) {
-      eventPath.unshift(eventAncestor);
-      eventAncestor = eventAncestor.parent
-        ? findEvent(data, worldId, eventAncestor.parent)
-        : undefined;
-    }
     const locateEvent = (e: PlanningEvent) => {
       const t = resolveTime(data, e);
       setEventSelection(e.id);
@@ -2495,7 +2364,7 @@ function PlanningWorkspace({
           }
           allExpanded={worldAllEvents.length > 0 && worldAllEvents.every((e) => openCards.has(e.id))}
           onToggleAll={() => setOpenCards((v) => (worldAllEvents.length > 0 && worldAllEvents.every((e) => v.has(e.id)) ? new Set() : new Set(worldAllEvents.map((e) => e.id))))}
-          zoomLabel={table ? `${Math.round(tableZoom * 100)}%` : `${Math.round(windowRange.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`}
+          zoomLabel={table ? `${Math.round(tableZoom * 100)}%` : <ViewportValue store={viewport.current} render={(w) => `${Math.round(w.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`} />}
           onZoom={(dir) => {
             if (table) setTableZoom((z) => (dir === 0 ? 1 : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * (dir > 0 ? 1.25 : 0.8) * 100) / 100))));
             else if (dir === 0) setWindowRange((v) => ({ ...v, ...fitTimelineWindow(placed.map((e) => { const t = resolveTime(data, e); return { start: t.start!, end: t.end } }), plotWidth) }));
@@ -2513,7 +2382,8 @@ function PlanningWorkspace({
             locateWorldEvent(wHits[next]);
           }}
           pending={pending.length}
-          continuing={continuing.length}
+          continuing={<ViewportValue store={viewport.current} render={(w) => continuingAt(w.start).length} />}
+          continuingZero={continuing.length === 0}
           onPending={() => setWorldPopover((v) => (v === "pending" ? null : "pending"))}
           onContinuing={() => setWorldPopover((v) => (v === "continuing" ? null : "continuing"))}
           searchRef={worldSearch}
@@ -2694,12 +2564,12 @@ function PlanningWorkspace({
               </>
             ) : (
               <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420 }}>
-                <EventTreeNav
+                <TimelineTreeNav
+                  viewport={viewport.current}
                   tree={wTree}
                   folded={foldedEvents}
                   selected={eventSelection}
                   current={currentRow}
-                  inView={null}
                   dimmed={wDimmed}
                   onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
                   onLocate={locateWorldEvent}
@@ -2787,17 +2657,18 @@ function PlanningWorkspace({
             {changes && (
               <details>
                 <summary>角色在视窗末端的状态（无基线的属性保持未知）</summary>
-                {characterStatesAt(
-                  data,
-                  worldId,
-                  windowRange.start + windowRange.span,
-                ).map((state) => (
-                  <p key={`${state.character}/${state.dimension}`}>
-                    {chip(state.character)} · {state.dimension}：
-                    {state.values.join(" / ")}
-                    {state.conflict ? " · 同时变化存在冲突" : ""}
-                  </p>
-                ))}
+                <ViewportValue
+                  store={viewport.current}
+                  render={(w) =>
+                    characterStatesAt(data, worldId, w.start + w.span).map((state) => (
+                      <p key={`${state.character}/${state.dimension}`}>
+                        {chip(state.character)} · {state.dimension}：
+                        {state.values.join(" / ")}
+                        {state.conflict ? " · 同时变化存在冲突" : ""}
+                      </p>
+                    ))
+                  }
+                />
               </details>
             )}
             <details>

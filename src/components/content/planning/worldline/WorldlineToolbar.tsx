@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { EVENT_CATEGORIES, type EventCategory } from "@/lib/planning/domain";
 import { CATEGORY_VAR } from "@/lib/planning/worldline-layout";
 import s from "./worldline.module.css";
+import { renderProbe } from "@/lib/planning/render-probe";
 
 /** docs/577 §1, §12, §14 / docs/580 §7.1: one-row toolbar. View switch, periods, expand all, zoom, search, pending /
  * continuing, more, new event. The existing world select and dialogs stay owned by PlanningWorkspace (`slots`). */
@@ -15,7 +16,7 @@ export function WorldlineToolbar(p: {
   periodPicker: React.ReactNode;
   allExpanded: boolean;
   onToggleAll(): void;
-  zoomLabel: string;
+  zoomLabel: React.ReactNode;
   onZoom(dir: -1 | 1 | 0): void;
   query: string;
   /** The hits belong to the current box text (577 §12: they follow 120ms after typing stops). */
@@ -25,7 +26,8 @@ export function WorldlineToolbar(p: {
   hitCount: number;
   onStep(dir: -1 | 1): void;
   pending: number;
-  continuing: number;
+  continuing: React.ReactNode;
+  continuingZero: boolean;
   onPending(): void;
   onContinuing(): void;
   more: React.ReactNode;
@@ -97,7 +99,7 @@ export function WorldlineToolbar(p: {
       <button className={`${s.chip} ${s.iconNarrow}`} onClick={p.onPending} title="待定位事件">
         <span className={s.lbl}>待定位</span><b>{p.pending}</b>
       </button>
-      <button className={`${s.chip} ${p.continuing ? "" : s.zero}`} onClick={p.onContinuing} title="从视窗外延续的事件">
+      <button className={`${s.chip} ${p.continuingZero ? s.zero : ""}`} onClick={p.onContinuing} title="从视窗外延续的事件">
         <span className={s.lbl}>延续事件</span><b>{p.continuing}</b>
       </button>
       {p.more}
@@ -115,6 +117,7 @@ export function WorldlineLegend({ counts, hidden, onToggle, onSolo, range, total
   range: React.ReactNode;
   total: number;
 }) {
+  renderProbe("WorldlineLegend");
   return (
     <div className={s.status}>
       <span data-range="">{range}</span>

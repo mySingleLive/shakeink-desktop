@@ -175,3 +175,4 @@
 .periodEdge:hover { background: color-mix(in srgb, var(--pc) 45%, transparent); }
 
 .emptyNote { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); color: var(--muted-foreground); font-size: 13px; pointer-events: none; }
+.workspace.treeOff .tree { width: 0; min-width: 0; overflow: hidden; }

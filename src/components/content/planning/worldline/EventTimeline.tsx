@@ -16,7 +16,9 @@ import {
 import { layoutTimelineCards, timelineTicks } from "@/lib/planning/timeline";
 import type { ViewportStore } from "@/lib/planning/worldline-viewport";
 import { EventCard, WorldlineCardContext } from "./EventCard";
+import { EventTreeNav } from "./EventTree";
 import s from "./worldline.module.css";
+import { renderProbe } from "@/lib/planning/render-probe";
 
 const MINIMAP_WIDTH = 420;
 const LANE_CARD_WIDTH = 230;
@@ -58,6 +60,18 @@ export function ViewportRange({ store, label }: { store: ViewportStore; label(t:
   return <>{label(w.start)} — {label(w.start + w.span)}</>;
 }
 const PAD = 14;
+
+/** The time ruler; a component of its own so the render-count case can see it re-render on every window change. */
+function Ruler({ ticks, toX, label }: { ticks: readonly number[]; toX(t: number): number; label(t: number): string }) {
+  renderProbe("Ruler");
+  return (
+    <div className={s.ruler} data-ruler="">
+      {ticks.map((t) => (
+        <span key={t} style={{ left: toX(t) }}>{label(t)}</span>
+      ))}
+    </div>
+  );
+}
 
 /** The tree as drawn: during an event time drag the dragged node (and, for a move, its subtree) is shifted by the
  * preview delta, so the card follows the pointer the way the old canvas did. */
@@ -294,11 +308,7 @@ export function EventTimeline({
         }
       }}
     >
-      <div className={s.ruler} data-ruler="">
-        {ticks.map((t) => (
-          <span key={t} style={{ left: toX(t) }}>{ctx.adapter.label(t, view.span)}</span>
-        ))}
-      </div>
+      <Ruler ticks={ticks} toX={toX} label={(t) => ctx.adapter.label(t, view.span)} />
       <div className={s.periodsRow}>
         {periods.map((p) => {
           const right = width + PAD, a = toX(p.start), b = p.end === null ? Infinity : toX(p.end);
@@ -443,4 +453,34 @@ export function EventTimeline({
       </div>
     </div>
   );
+}
+
+/** docs/577 §13 / 581 WU-64, WU-56c: the tree beside the timeline marks the events inside the window. It subscribes to
+ * the viewport store itself (throttled to one update per 100ms during a pan) so PlanningWorkspace never re-renders. */
+export function TimelineTreeNav(props: Omit<React.ComponentProps<typeof EventTreeNav>, "inView"> & { viewport: ViewportStore }) {
+  const { viewport, tree, ...rest } = props;
+  const [w, setW] = useState(() => viewport.getSnapshot());
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null, last = 0;
+    const flush = () => { timer = null; last = performance.now(); setW(viewport.getSnapshot()); };
+    const off = viewport.subscribe(() => {
+      if (timer) return;
+      const wait = Math.max(0, 100 - (performance.now() - last));
+      timer = setTimeout(flush, wait);
+    });
+    return () => { off(); if (timer) clearTimeout(timer); };
+  }, [viewport]);
+  const inView = useMemo(() => {
+    const set = new Set<string>(), lo = w.start, hi = w.start + w.span;
+    for (const n of tree.byId.values()) if (n.start !== null && n.start <= hi && (n.end ?? n.start) >= lo) set.add(n.id);
+    return set;
+  }, [tree, w]);
+  return <EventTreeNav tree={tree} inView={inView} {...rest} />;
+}
+
+/** Renders `render(window)` from the viewport store, so values that follow the window (zoom label, 延续事件 count,
+ * end-of-window character states) update without re-rendering PlanningWorkspace (581 WU-56c). */
+export function ViewportValue({ store, render }: { store: ViewportStore; render(w: { start: number; span: number }): React.ReactNode }) {
+  const w = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  return <>{render(w)}</>;
 }

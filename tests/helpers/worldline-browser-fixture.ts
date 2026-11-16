@@ -27,7 +27,7 @@ import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {WorldlinePanel} from './src/components/content/planning/PlanningWorkspace';
 import {applyPlanningOperations,planningSchema} from './src/lib/planning/domain';
 import {useChatStore} from './src/stores/chat';
-globalThis.renders={};
+globalThis.renders={};globalThis.__renderProbe=(id)=>{globalThis.renders[id]=(globalThis.renders[id]??0)+1};
 const onRender=(id)=>{globalThis.renders[id]=(globalThis.renders[id]??0)+1};
 globalThis.mountWorldline=(view)=>{
  window.desktop={};

@@ -1,4 +1,5 @@
 "use client";
+import { renderProbe } from "@/lib/planning/render-probe";
 import { useContext, useEffect, useRef } from "react";
 import { CATEGORY_VAR, descendants, TREE_INDENT, type EventTree as Tree, type TreeNode } from "@/lib/planning/worldline-layout";
 import { Highlight, WorldlineCardContext } from "./EventCard";
@@ -26,6 +27,7 @@ export function EventTreeNav({
 }) {
   const ctx = useContext(WorldlineCardContext)!;
   const nav = useRef<HTMLElement>(null);
+  renderProbe("EventTree");
   const rows: { node: TreeNode; depth: number; year?: string; pendingHead?: number }[] = [];
   let year: string | null = null;
   const walk = (n: TreeNode, depth: number) => {

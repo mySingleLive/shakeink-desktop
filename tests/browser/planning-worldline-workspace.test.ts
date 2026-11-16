@@ -123,7 +123,8 @@ test("WU-40b: search results arrive 120ms after typing stops; count, 无结果 b
   assert.ok(Math.abs((await host.boundingBox())!.width - 240) <= 1)
   await box.fill("码头")
   await page.clock.runFor(119)
-  await expect(page.locator("[data-search-count]")).toHaveCount(0)
+  // An instant read: a polling matcher would itself let the installed clock advance past 120ms.
+  assert.equal(await page.locator("[data-search-count]").count(), 0, "no result at 119ms")
   await page.clock.runFor(2)
   await expect(page.locator("[data-search-count]")).toHaveText(/^1 \/ \d+$/)
   await expect.poll(async () => Math.round((await host.boundingBox())!.width)).toBe(360)
