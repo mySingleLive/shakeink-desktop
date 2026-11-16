@@ -110,7 +110,7 @@ export function WorldlineLegend({ counts, hidden, onToggle, onSolo, range, total
   hidden: ReadonlySet<EventCategory>;
   onToggle(c: EventCategory): void;
   onSolo(c: EventCategory): void;
-  range: string;
+  range: React.ReactNode;
   total: number;
 }) {
   return (

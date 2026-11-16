@@ -134,3 +134,44 @@
 @media (prefers-reduced-motion: reduce) {
   .card, .treeTwist, .fold, .search { transition: none; }
 }
+
+/* ---------- timeline (577 §4, §10–§11, §15) ---------- */
+.timeline { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; outline: none; }
+.ruler { position: relative; flex: none; height: 26px; border-bottom: 1px solid var(--border); }
+.ruler span { position: absolute; top: 6px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); }
+.ruler span::after { content: ""; position: absolute; left: 50%; top: 16px; width: 1px; height: 4px; background: var(--input); }
+.periodsRow { position: relative; flex: none; height: 20px; }
+.periodBand { position: absolute; top: 3px; height: 14px; overflow: hidden; white-space: nowrap; padding: 0 8px; border-radius: 7px; font-size: 10px; line-height: 14px;
+  color: var(--foreground); background: color-mix(in srgb, var(--pc) 22%, transparent); border-left: 2px solid var(--pc); }
+.lane { position: relative; flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; cursor: grab; touch-action: none; }
+.lane:active { cursor: grabbing; }
+.plane { position: absolute; left: 0; top: 0; width: 1px; will-change: transform; }
+.familyFrame { position: absolute; z-index: 0; border-radius: 12px; pointer-events: none; border: 1px solid color-mix(in srgb, var(--ec) 22%, var(--border));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 7%, transparent), transparent 85%); }
+.track { position: absolute; z-index: 1; height: 3px; border-radius: 2px; pointer-events: none; background: color-mix(in srgb, var(--ec) 45%, transparent); }
+.durBar { position: absolute; z-index: 1; height: 4px; margin-top: 3px; border-radius: 2px; pointer-events: none; background: linear-gradient(90deg, var(--ec), color-mix(in srgb, var(--ec) 25%, transparent)); }
+.tcard { position: absolute; z-index: 2; }
+.tcard:has([aria-expanded="true"]) { z-index: 5; }
+.tcard:has(details[open]) { z-index: 9; }
+.tcard .card { width: 100%; }
+.header > .card { background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 20%, var(--card)), color-mix(in srgb, var(--ec) 6%, var(--card))); }
+.stamp { position: absolute; left: 4px; bottom: 100%; margin-bottom: 2px; white-space: nowrap; font-size: 10.5px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); pointer-events: none; }
+.stamp::before { content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 5px; vertical-align: 1px; border-radius: 50%; background: var(--ec); }
+.clipNote { position: absolute; top: 100%; left: 4px; margin-top: 2px; font-size: 10px; color: var(--muted-foreground); white-space: nowrap; pointer-events: none; }
+.clipNote.clipEnd { left: auto; right: 4px; }
+.minimap { position: absolute; right: 18px; bottom: 14px; z-index: 12; height: 44px; border-radius: 10px; cursor: pointer; touch-action: none;
+  border: 1px solid var(--border); background: color-mix(in srgb, var(--popover) 92%, transparent); box-shadow: var(--shadow-2); }
+.minimap:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.minimap u { position: absolute; top: 8px; bottom: 8px; border-radius: 4px; background: var(--muted); }
+.minimap i { position: absolute; bottom: 10px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ec); }
+.minimap b { position: absolute; top: 3px; bottom: 3px; border-radius: 7px; border: 1.5px solid var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.laneItem { position: absolute; z-index: 2; }
+.laneHead { position: absolute; left: 0; z-index: 3; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-foreground); pointer-events: none; }
+.laneItem > button { width: 100%; min-height: 80px; }
+.periodBand { display: flex; align-items: center; padding: 0; border-right: 1px solid var(--pc); cursor: pointer; }
+.periodOpen { border-right-color: transparent; }
+.periodTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; padding: 0 8px; text-align: left; font: inherit; color: inherit; }
+.periodEdge { flex: none; width: 8px; height: 100%; cursor: ew-resize; color: transparent; }
+.periodEdge:hover { background: color-mix(in srgb, var(--pc) 45%, transparent); }
+
+.emptyNote { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); color: var(--muted-foreground); font-size: 13px; pointer-events: none; }

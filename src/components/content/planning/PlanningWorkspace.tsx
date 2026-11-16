@@ -64,6 +64,8 @@ import { Button } from "@/components/ui/button";
 import { WorldlineHeader, type WorldlineSaveState } from "./worldline/WorldlineHeader";
 import { EventCard, EventEditorContext, WorldlineCardContext, type WorldlineCardContextValue } from "./worldline/EventCard";
 import { EventTable } from "./worldline/EventTable";
+import { EventTimeline, ViewportRange } from "./worldline/EventTimeline";
+import { createViewportStore, type ViewportStore } from "@/lib/planning/worldline-viewport";
 import { EventTreeNav } from "./worldline/EventTree";
 import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
 import wl from "./worldline/worldline.module.css";
@@ -190,10 +192,11 @@ function PlanningWorkspace({
     [timeBase, setTimeBase] = useState(""),
     [mappingEdit, setMappingEdit] = useState(""),
     [changes, setChanges] = useState(true),
-    [windowRange, setWindowRange] = useState({ start: 0, span: 240, y: 0 }),
+    [windowRange, setWindowRangeState] = useState({ start: 0, span: 240, y: 0 }),
     [dragId, setDragId] = useState<string | null>(null),
     // docs/580 §1 interface state of the worldline redesign; never written to the work (WU-09e).
     [openCards, setOpenCards] = useState<ReadonlySet<string>>(new Set()),
+    [pinnedCard, setPinnedCard] = useState<string | null>(null),
     [foldedEvents, setFoldedEvents] = useState<ReadonlySet<string>>(new Set()),
     [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<PlanningEvent["category"]>>(new Set()),
     [searchQuery, setSearchQuery] = useState(""),
@@ -201,6 +204,33 @@ function PlanningWorkspace({
     [tableZoom, setTableZoom] = useState(1),
     [treeOn, setTreeOn] = useState(true),
     [currentRow, setCurrentRow] = useState<string | null>(null);
+  // docs/580 §7.2: one viewport store per panel; it is the source of truth for the window start and span.
+  // windowRange mirrors it (debounced) for the code that renders from state; every write goes through
+  // setWindowRange, which applies functional updates to the store's current value, so a pan that has not been
+  // mirrored yet is never overwritten (review R3).
+  const viewport = useRef<ViewportStore>(null!);
+  viewport.current ??= createViewportStore({ start: 0, span: 240 });
+  const windowY = useRef(0);
+  type WindowValue = { start: number; span: number; y: number };
+  const setWindowRange = useCallback((next: WindowValue | ((v: WindowValue) => WindowValue)) => {
+    const w = viewport.current.getSnapshot();
+    const cur = { start: w.start, span: w.span, y: windowY.current };
+    const v = typeof next === "function" ? next(cur) : next;
+    windowY.current = v.y;
+    viewport.current.setWindow({ start: v.start, span: v.span });
+    setWindowRangeState((s) => (s.start === v.start && s.span === v.span && s.y === v.y ? s : v));
+  }, []);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const off = viewport.current.subscribe(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const w = viewport.current.getSnapshot();
+        setWindowRangeState((v) => (v.start === w.start && v.span === w.span ? v : { ...v, start: w.start, span: w.span }));
+      }, 160);
+    });
+    return () => { off(); clearTimeout(timer); };
+  }, []);
   const tableScroller = useRef<HTMLDivElement>(null),
     worldSearch = useRef<HTMLInputElement>(null),
     actions = useRef<{ toggle(id: string, detail: number): void; menu: WorldlineCardContextValue["onMenu"]; drag(ev: React.PointerEvent, id: string): void; refs(e: PlanningEvent): ReactNode }>(null!);
@@ -382,37 +412,12 @@ function PlanningWorkspace({
   useEffect(() => {
     const el = timeline.current;
     if (!el) return;
+    // docs/580 §7.2: the timeline lane is the measured element; wheel zoom and pan live in EventTimeline (one
+    // handler, through the viewport store).
     const resize = new ResizeObserver(() => setTimelineWidth(el.clientWidth));
     resize.observe(el);
-    const wheel = (e: WheelEvent) => {
-      if ((e.target as Element).closest("input,textarea,.monaco-editor"))
-        return;
-      if (e.ctrlKey) {
-        e.preventDefault();
-        const ratio =
-          (e.clientX - el.getBoundingClientRect().left - 14) /
-          Math.max(1, el.clientWidth - 28);
-        setWindowRange((v) => ({
-          ...v,
-          ...zoomAt(v.start, v.span, e.deltaY > 0 ? 1.2 : 1 / 1.2, ratio),
-        }));
-      } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        e.preventDefault();
-        setWindowRange((v) => ({
-          ...v,
-          start:
-            v.start +
-            ((e.shiftKey ? e.deltaY : e.deltaX) /
-              Math.max(1, el.clientWidth - 28)) *
-              v.span,
-        }));
-      }
-    };
-    el.addEventListener("wheel", wheel, { passive: false });
-    return () => {
-      resize.disconnect();
-      el.removeEventListener("wheel", wheel);
-    };
+    setTimelineWidth(el.clientWidth);
+    return () => resize.disconnect();
   }, [mode, table, worldId, query.isPending]);
   useEffect(() => {
     if (!dialog) return;
@@ -450,6 +455,8 @@ function PlanningWorkspace({
       if (prior?.isConnected) prior.focus();
     };
   }, [dialog]);
+  // docs/580 §7.2: one viewport store per panel. Legacy paths (fit, zoom buttons, locate, periods) still write
+  // windowRange and are pushed in; store moves (drag, wheel, minimap) flow back once they settle, not per frame.
   const fittedViews = useRef(new Set<string>());
   useEffect(() => {
     if (mode !== "world" || !query.data || !worldId) return;
@@ -2196,6 +2203,7 @@ function PlanningWorkspace({
     // docs/580 §7.3 (S1): detail 1 toggles at once; detail 2 undoes that toggle and opens the editor.
     toggle(id, detail) {
       setEventSelection(id);
+      setPinnedCard(id);
       if (detail >= 2) {
         setOpenCards((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; });
         const e = findWorldEvent(id);
@@ -2235,7 +2243,17 @@ function PlanningWorkspace({
       for (let p = wTree.byId.get(id)?.parent ?? null; p; p = wTree.byId.get(p)?.parent ?? null) if (v.has(p)) { n ??= new Set(v); n.delete(p); }
       return n ?? v;
     });
-    if (!table) { setTable(true); }
+    if (!table) {
+      // Timeline: pan the window to the event and scroll the lane to its card (review R5).
+      const n = wTree.byId.get(id);
+      if (n?.start != null) setWindowRange((v) => ({ ...v, start: n.start! - v.span * 0.08 }));
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const lane = timeline.current, el = lane?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
+        if (!lane || !el) return;
+        lane.scrollTop += el.getBoundingClientRect().top - lane.getBoundingClientRect().top - lane.clientHeight / 3;
+      }));
+      return;
+    }
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const sc = tableScroller.current, el = sc?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
       if (!sc || !el) return;
@@ -2401,13 +2419,10 @@ function PlanningWorkspace({
           y: 0,
         }));
       else setTable(true);
-      requestAnimationFrame(() => {
-        if (timeline.current)
-          timeline.current.scrollTop = Math.max(
-            0,
-            (layout.items.find((item) => item.id === e.id)?.top ?? 0) - 24,
-          );
-      });
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const lane = timeline.current, el = lane?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(e.id)}"]`);
+        if (lane && el) lane.scrollTop += el.getBoundingClientRect().top - lane.getBoundingClientRect().top - 24;
+      }));
     };
     return (
       <WorldlineCardContext.Provider value={wCardContext}>
@@ -2524,7 +2539,7 @@ function PlanningWorkspace({
             hidden={hiddenTypes}
             onToggle={(c) => setHiddenTypes((v) => { const n = new Set(v); if (n.has(c)) n.delete(c); else n.add(c); return n; })}
             onSolo={(c) => setHiddenTypes(new Set(EVENT_CATEGORIES.filter((x) => x !== c)))}
-            range={`${labelTime(windowRange.start)} — ${labelTime(windowRange.start + windowRange.span)}`}
+            range={<ViewportRange store={viewport.current} label={labelTime} />}
             total={worldAllEvents.length}
           />
         )}
@@ -2628,13 +2643,6 @@ function PlanningWorkspace({
                     )}
               </section>
             )}
-            <div className={s.worldRange}>
-              <span>
-                {labelTime(windowRange.start)} —{" "}
-                {labelTime(windowRange.start + windowRange.span)}
-              </span>
-              <span>当前层 · {events.length} 件事件</span>
-            </div>
             {eventDraft &&
               !worldEvents(data, worldId).some((e) => e.id === eventDraft.id) &&
               renderEventEditor()}
@@ -2669,394 +2677,78 @@ function PlanningWorkspace({
                   </div>
               </>
             ) : (
-              <div
-                ref={timeline}
-                tabIndex={0}
-                aria-label="世界时间线"
-                className={s.timeline}
-                onScroll={(ev) => {
-                  const y = -ev.currentTarget.scrollTop;
-                  setWindowRange((v) =>
-                    v.y === y || (v.y > 0 && y === 0) ? v : { ...v, y },
-                  );
-                }}
-                onPointerDown={(ev) => {
-                  if (
-                    buttonTarget(ev.target) ||
-                    (ev.target as Element).closest(
-                      "article,[data-event], [data-period]",
-                    )
-                  )
-                    return;
-                  pan.current = {
-                    x: ev.clientX,
-                    y: ev.clientY,
-                    start: windowRange.start,
-                    top:
-                      ev.currentTarget.scrollTop - Math.max(0, windowRange.y),
-                  };
-                  ev.currentTarget.setPointerCapture(ev.pointerId);
-                }}
-                onPointerMove={(ev) => {
-                  if (temporalDrag.current) {
-                    const drag = temporalDrag.current;
-                    drag.delta = snapTimelineDelta(
-                      ((ev.clientX - drag.x) / plotWidth) * windowRange.span,
-                      windowRange.span,
-                      plotWidth,
-                      activeWorld?.calendar.kind === "years",
-                    );
-                    setTimePreview({
-                      id: drag.id,
-                      delta: drag.delta,
-                      edge: drag.edge,
-                    });
-                    return;
-                  }
-                  if (pan.current) {
-                    const origin = pan.current,
-                      dx = ev.clientX - origin.x,
-                      dy = ev.clientY - origin.y;
-                    if (Math.hypot(dx, dy) < 5) return;
-                    const vertical = origin.top - dy;
-                    ev.currentTarget.scrollTop = Math.max(0, vertical);
-                    const nextY =
-                      vertical < 0 ? -vertical : -ev.currentTarget.scrollTop;
-                    setWindowRange((v) => ({
-                      ...v,
-                      start: origin.start - (dx / plotWidth) * v.span,
-                      y: nextY,
-                    }));
-                  }
-                }}
-                onPointerUp={() => {
-                  pan.current = null;
-                  void finishTimeDrag();
-                }}
-                onPointerCancel={() => {
-                  if (pan.current) {
-                    const p = pan.current;
-                    setWindowRange((v) => ({
-                      ...v,
-                      start: p.start,
-                      y: -p.top,
-                    }));
-                    if (timeline.current) timeline.current.scrollTop = p.top;
-                  }
-                  pan.current = null;
-                  temporalDrag.current = null;
-                  setTimePreview(null);
-                }}
-                onKeyDown={(ev) => {
-                  if (ev.target !== ev.currentTarget) return;
-                  if (ev.key === "Escape") {
-                    if (pan.current) {
-                      const p = pan.current;
-                      setWindowRange((v) => ({
-                        ...v,
-                        start: p.start,
-                        y: -p.top,
-                      }));
-                      ev.currentTarget.scrollTop = p.top;
-                    }
-                    pan.current = null;
-                    temporalDrag.current = null;
-                    setTimePreview(null);
-                  }
-                  if (
-                    [
-                      "ArrowUp",
-                      "ArrowDown",
-                      "ArrowLeft",
-                      "ArrowRight",
-                    ].includes(ev.key)
-                  ) {
-                    ev.preventDefault();
-                    if (ev.key === "ArrowUp" || ev.key === "ArrowDown")
-                      ev.currentTarget.scrollTop +=
-                        ev.key === "ArrowUp" ? -60 : 60;
-                    else
-                      setWindowRange((v) => ({
-                        ...v,
-                        start:
-                          v.start +
-                          ((ev.key === "ArrowRight" ? 1 : -1) * v.span) / 10,
-                      }));
-                  }
-                }}
-              >
-                <div className={s.timelineHeader}>
-                  <div className={s.ruler}>
-                    {ticks.map((tick) => (
-                      <span key={tick} style={{ left: toX(tick) }}>
-                        {worldTimeLabel(
-                          tick,
-                          ticks.length > 1
-                            ? ticks[1] - ticks[0]
-                            : windowRange.span,
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                  {visiblePeriods.map((p) => {
-                    const left = Math.max(14, toX(p.start!)),
-                      right = Math.min(
-                        timelineWidth - 14,
-                        p.end === null ? timelineWidth - 14 : toX(p.end),
-                      );
-                    const colorIndex =
-                      [...p.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 5;
-                    const clippedStart = p.start! < windowRange.start,
-                      clippedEnd =
-                        p.end !== null &&
-                        p.end > windowRange.start + windowRange.span;
-                    const mutable =
-                      !readonly &&
-                      !p.event &&
-                      data.periods.some(
-                        (v) => v.id === p.id && v.line === worldId,
-                      );
-                    return (
-                      <div key={p.id} className={s.periodRow}>
-                        <div
-                          data-period={p.id}
-                          className={`${s.period} ${p.end === null ? s.periodOpen : ""}`}
-                          style={
-                            {
-                              marginLeft: left,
-                              width: Math.max(1, right - left),
-                              "--period-color": `var(--chart-${colorIndex + 1})`,
-                              borderLeftStyle: clippedStart
-                                ? "dashed"
-                                : "solid",
-                              borderRightStyle: clippedEnd ? "dashed" : "solid",
-                            } as CSSProperties
-                          }
-                          onClick={() => {
-                            if (suppressPeriodClick.current) {
-                              suppressPeriodClick.current = false;
-                              return;
-                            }
-                            setDialog({ kind: "period-detail", id: p.id });
-                          }}
-                          onPointerDown={(ev) => {
-                            if (mutable)
-                              startTimeDrag(ev, "periods", p.id, "move");
-                          }}
-                        >
-                          {mutable && !clippedStart && right - left >= 64 && (
-                            <button
-                              aria-label={`调整${p.title}开始`}
-                              className={s.periodStart}
-                              onPointerDown={(ev) =>
-                                startTimeDrag(ev, "periods", p.id, "start")
-                              }
-                            >
-                              │
-                            </button>
-                          )}
-                          <button className={s.periodTitle} title={p.title}>
-                            {clippedStart ? "‹ " : ""}
-                            {p.title}
-                            {p.end === null
-                              ? p.ongoing
-                                ? " · 持续中 ›"
-                                : " · 结束未定"
-                              : clippedEnd
-                                ? " ›"
-                                : ""}
-                          </button>
-                          {mutable &&
-                            p.end !== null &&
-                            !clippedEnd &&
-                            right - left >= 64 && (
-                              <button
-                                className={s.periodEnd}
-                                aria-label={`调整${p.title}结束`}
-                                onPointerDown={(ev) =>
-                                  startTimeDrag(ev, "periods", p.id, "end")
-                                }
-                              >
-                                │
-                              </button>
-                            )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div
-                  className={s.eventSurface}
-                  style={{
-                    height: Math.max(300, laneTop + Math.max(0, windowRange.y)),
+              <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420 }}>
+                <EventTreeNav
+                  tree={wTree}
+                  folded={foldedEvents}
+                  selected={eventSelection}
+                  current={currentRow}
+                  inView={null}
+                  dimmed={wDimmed}
+                  onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                  onLocate={locateWorldEvent}
+                />
+                <EventTimeline
+                  tree={wTree}
+                  viewport={viewport.current}
+                  expanded={openCards}
+                  folded={foldedEvents}
+                  selected={eventSelection}
+                  editing={eventDraft && worldAllEvents.some((e) => e.id === eventDraft.id) ? eventDraft.id : null}
+                  hitId={wHits[hitIndex] ?? null}
+                  dimmed={wDimmed}
+                  pinned={pinnedCard}
+                  periods={visiblePeriods.map((p) => ({
+                    id: p.id,
+                    title: p.title,
+                    start: p.start!,
+                    end: p.end,
+                    ongoing: !!p.ongoing,
+                    mutable: !readonly && !p.event && data.periods.some((v) => v.id === p.id && v.line === worldId),
+                  }))}
+                  laneRef={timeline}
+                  timeDrag={{
+                    startPeriod: (ev, id, edge) => startTimeDrag(ev, "periods", id, edge),
+                    move(clientX, pxPerUnit) {
+                      const drag = temporalDrag.current;
+                      if (!drag) return false;
+                      const span = viewport.current.getSnapshot().span, plot = span * pxPerUnit;
+                      drag.delta = snapTimelineDelta((clientX - drag.x) / pxPerUnit, span, plot, activeWorld?.calendar.kind === "years");
+                      setTimePreview({ id: drag.id, delta: drag.delta, edge: drag.edge });
+                      return true;
+                    },
+                    end: () => { void finishTimeDrag(); },
+                    cancel: () => { temporalDrag.current = null; setTimePreview(null); },
+                    preview: timePreview && timePreview.id && data.events.some((e) => e.id === timePreview.id) ? timePreview : null,
+                    onPeriodClick(id) {
+                      if (suppressPeriodClick.current) { suppressPeriodClick.current = false; return; }
+                      setDialog({ kind: "period-detail", id });
+                    },
                   }}
-                >
-                  <div className={s.timelineGrid}>
-                    {ticks.map((tick) => (
-                      <i key={tick} style={{ left: toX(tick) }} />
-                    ))}
-                  </div>
-                  {!placed.length && (
-                    <p className={s.canvasEmpty}>
-                      当前层还没有已定位事件。添加事件，或为待定位事件设置时间。
-                    </p>
-                  )}
-                  {layout.items.map((item) => {
-                    const e = placed.find((e) => e.id === item.id)!;
-                    const x = toX(item.start);
-                    const barWidth =
-                      item.intervalWidth === null
-                        ? Math.max(item.width, timelineWidth - 14 - x)
-                        : item.intervalWidth;
-                    return (
-                      <MeasuredEvent
-                        key={e.id}
-                        id={e.id}
-                        className={s.eventCard}
-                        style={{
-                          left: x,
-                          top: item.top + Math.max(0, windowRange.y),
-                          width: item.width,
-                          zIndex:
-                            eventDraft?.id === e.id
-                              ? 8
-                              : eventSelection === e.id
-                                ? 4
-                                : 2,
-                        }}
-                        onHeight={(id, height) =>
-                          setEventHeights((old) =>
-                            old[id] === height ? old : { ...old, [id]: height },
-                          )
-                        }
-                      >
-                        <div
-                          className={`${s.timeBar} ${e.duration === 0 && e.time.kind !== "window" ? s.timePoint : ""} ${e.time.kind === "window" ? s.timeWindow : ""} ${e.duration === null ? s.timeOpen : ""}`}
-                          style={{
-                            width:
-                              e.time.kind === "window"
-                                ? Math.max(
-                                    1,
-                                    ((resolveTime(data, e).windowEnd ??
-                                      item.start) -
-                                      item.start) *
-                                      scale,
-                                  )
-                                : barWidth,
-                          }}
-                          title={
-                            e.duration === 0
-                              ? "时点"
-                              : "真实时间跨度 · 拖动移动"
-                          }
-                          onPointerDown={(ev) =>
-                            startTimeDrag(ev, "events", e.id, "move")
-                          }
-                        >
-                          {x < 14 && (
-                            <span
-                              className={s.barNote}
-                              style={{ left: 14 - x }}
-                            >
-                              ‹ 起点在视野外
-                            </span>
-                          )}
-                          {item.intervalWidth !== null &&
-                            x + item.intervalWidth > timelineWidth - 14 && (
-                              <span
-                                className={s.barNote}
-                                style={{
-                                  right: Math.max(
-                                    0,
-                                    item.intervalWidth -
-                                      (timelineWidth - 14 - x),
-                                  ),
-                                }}
-                              >
-                                延续到视野外 ›
-                              </span>
-                            )}
-                          {!readonly &&
-                            data.events.some(
-                              (v) => v.id === e.id && v.line === worldId,
-                            ) &&
-                            e.duration !== null &&
-                            e.duration > 0 &&
-                            barWidth >= 36 && (
-                              <>
-                                <button
-                                  aria-label={`调整${e.title}开始`}
-                                  onPointerDown={(ev) =>
-                                    startTimeDrag(ev, "events", e.id, "start")
-                                  }
-                                />
-                                <button
-                                  aria-label={`调整${e.title}结束`}
-                                  onPointerDown={(ev) =>
-                                    startTimeDrag(ev, "events", e.id, "end")
-                                  }
-                                />
-                              </>
-                            )}
-                        </div>
-                        <EventCard
-                          event={e}
-                          expanded={openCards.has(e.id)}
-                          selected={eventSelection === e.id}
-                          hit={wHits[hitIndex] === e.id}
-                          dimmed={wDimmed(e.id)}
-                          editing={eventDraft?.id === e.id}
-                          childCount={wTree.byId.get(e.id)?.children.length ?? 0}
-                          descendantCount={wTree.byId.get(e.id) ? descendants(wTree.byId.get(e.id)!).length : 0}
-                          folded={foldedEvents.has(e.id)}
-                          placed
-                          maxAvatars={3}
-                          variant="timeline"
-                        />
-                      </MeasuredEvent>
-                    );
-                  })}
-                  {characterLayouts.map((group) => (
-                    <section
-                      key={group.id}
-                      className={s.characterLane}
-                      style={{
-                        top: group.top + Math.max(0, windowRange.y),
-                        height: group.packed.height + 32,
-                      }}
-                      aria-label={`${query.data?.characters.find((c) => c.id === group.id)?.name ?? "角色"}变化轨道`}
-                    >
-                      <div className={s.characterLaneTitle}>
+                  lanes={characterGroups.map((group) => ({
+                    id: group.id,
+                    name: `${query.data?.characters.find((c) => c.id === group.id)?.name ?? "角色"}变化轨道`,
+                    label: (
+                      <span className={s.characterLaneTitle}>
                         {chip(group.id)}
                         <span>角色变化</span>
-                      </div>
-                      {group.packed.items.map((item) => {
-                        const change = group.items.find(
-                          (c) => c.id === item.id,
-                        )!;
-                        return (
-                          <button
-                            key={item.id}
-                            className={s.characterChange}
-                            style={{
-                              left: toX(item.start),
-                              top: item.top + 22,
-                            }}
-                            onClick={() => locateEvent(change.event)}
-                          >
-                            <small>
-                              {labelTime(change.time)} · {change.dimension}
-                            </small>
-                            <span>
-                              {change.before} → {change.after}
-                            </span>
-                            <small>{change.event.title}</small>
-                          </button>
-                        );
-                      })}
-                    </section>
-                  ))}
-                </div>
+                      </span>
+                    ),
+                    items: group.items.map((change) => ({
+                      id: change.id,
+                      time: change.time,
+                      height: Math.max(94, 58 + Math.ceil((change.before.length + change.after.length + change.event.title.length) / 15) * 22),
+                      node: (
+                        <button className={s.characterChange} style={{ position: "relative", left: 0, top: 0 }} onClick={() => locateEvent(change.event)}>
+                          <small>{labelTime(change.time)} · {change.dimension}</small>
+                          <span>{change.before} → {change.after}</span>
+                          <small>{change.event.title}</small>
+                        </button>
+                      ),
+                    })),
+                  }))}
+                  onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                />
               </div>
             )}
             <div className={s.timelineFooter}>
