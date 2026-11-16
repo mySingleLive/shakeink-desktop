@@ -254,11 +254,29 @@ export function EventTimeline({
   );
   const toX = (t: number) => PAD + (t - view.start) * scale;
   const node = (id: string): TreeNode | undefined => shown.byId.get(id);
-  const mini = useMemo(() => minimapModel(tree.roots, MINIMAP_WIDTH, ctx.adapter), [tree, ctx.adapter]);
+  // The minimap is 420px, or the panel width minus margins on a narrow panel (worldline.module.css).
+  const miniWidth = width > 0 ? Math.min(MINIMAP_WIDTH, width + 2 * PAD - 24) : MINIMAP_WIDTH;
+  const mini = useMemo(() => minimapModel(tree.roots, miniWidth, ctx.adapter), [tree, ctx.adapter, miniWidth]);
   const moveMini = (px: number) => {
-    const left = Math.max(0, Math.min(MINIMAP_WIDTH, px - (miniDrag.current?.offset ?? 0)));
+    const left = Math.max(0, Math.min(miniWidth, px - (miniDrag.current?.offset ?? 0)));
     viewport.setWindow({ start: mini.toT(left) });
   };
+  // Vertical band of the plane worth rendering: one lane height above and below the visible rows, in steps.
+  const [vband, setVband] = useState<[number, number]>([-Infinity, Infinity]);
+  useLayoutEffect(() => {
+    const lane = laneRef.current;
+    if (!lane) return;
+    const update = () => {
+      const h = Math.max(300, lane.clientHeight), step = Math.max(150, h / 3);
+      const lo = Math.floor((lane.scrollTop - h) / step) * step, hi = Math.ceil((lane.scrollTop + 2 * h) / step) * step;
+      setVband((b) => (b[0] === lo && b[1] === hi ? b : [lo, hi]));
+    };
+    update();
+    lane.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(lane);
+    return () => { lane.removeEventListener("scroll", update); ro.disconnect(); };
+  }, [laneRef]);
   const frameLeft = mini.toX(view.start), frameRight = mini.toX(view.start + view.span);
 
   return (
@@ -336,6 +354,12 @@ export function EventTimeline({
       >
         <div ref={plane} data-timeline-plane="" className={s.plane} style={{ transform: `translateX(${step.translateX + PAD}px)`, height: (step.state.packed?.bottom ?? 0) + 120 }}>
           {step.elements.map((el) => {
+            // Real data (995 events, one family each) builds ~850 cards in the 7-window build range; rendering only the
+            // ones within a screen above and below the lane's scroll position keeps style recalculation off the pan
+            // path. Packing is unchanged, so no card moves; the selected / hit / editing cards are always rendered.
+            if (el.top + el.height < vband[0] || el.top > vband[1]) {
+              if (el.kind !== "card" || (el.id !== selected && el.id !== hitId && el.id !== editing)) return null;
+            }
             if (el.kind === "lane")
               return (
                 <div key={`l${el.id}`} className={s.laneItem} style={{ left: el.left, top: el.top, width: LANE_CARD_WIDTH }}>
@@ -400,7 +424,7 @@ export function EventTimeline({
         aria-valuenow={Math.round(view.start)}
         aria-valuetext={ctx.adapter.label(view.start, view.span)}
         className={s.minimap}
-        style={{ width: MINIMAP_WIDTH }}
+        style={width + 2 * PAD - 24 < MINIMAP_WIDTH ? undefined : { width: miniWidth }}
         onPointerDown={(e) => {
           e.stopPropagation();
           const r = e.currentTarget.getBoundingClientRect(), px = e.clientX - r.left;

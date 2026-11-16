@@ -176,8 +176,11 @@ test("WU-57: character lanes sit below every family in the moving plane and foll
   await tab(page, "时间线")
   const lane = page.getByRole("group", { name: "艾伦变化轨道" })
   await expect(lane).toHaveCount(1)
-  const bottom = await page.evaluate(() => Math.max(...[...document.querySelectorAll("[data-timeline-plane] [data-event-card],[data-family-frame]")].map(e => e.getBoundingClientRect().bottom)))
-  assert.ok((await lane.boundingBox())!.y >= bottom, "lane below families")
+  // Families are windowed vertically, so compare in plane coordinates (style.top) rather than rendered boxes.
+  const famBottom = await page.evaluate(() => Math.max(...[...document.querySelectorAll<HTMLElement>("[data-timeline-plane] [data-plane-left],[data-timeline-plane] [data-family-frame]")].map(e => parseFloat(e.style.top) + e.getBoundingClientRect().height)))
+  const laneTop = await lane.evaluate(e => parseFloat((e as HTMLElement).style.top))
+  assert.ok(laneTop >= famBottom, `lane ${laneTop} below families ${famBottom}`)
+  await page.locator("[data-timeline-lane]").evaluate((l, top) => { l.scrollTop = top - 40 }, laneTop)
   assert.ok(await lane.evaluate(e => !!e.closest("[data-timeline-plane]")))
   const item = page.locator("[data-timeline-plane] button", { hasText: "新身份0" })
   await expect(item).toBeVisible()

@@ -89,7 +89,8 @@ export function useFade<T extends HTMLElement>(dep: unknown) {
       if (el.scrollWidth > el.clientWidth + 1) el.setAttribute("data-fade", "");
       else el.removeAttribute("data-fade");
     };
-    check();
+    // No synchronous check: reading scrollWidth in a layout effect forces a reflow per card (≈ 870 ms for the first
+    // table render of a 995-event work). ResizeObserver reports every observed element once after layout.
     const observer = new ResizeObserver(check);
     observer.observe(el);
     return () => observer.disconnect();

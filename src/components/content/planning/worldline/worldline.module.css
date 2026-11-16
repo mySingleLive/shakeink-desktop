@@ -203,3 +203,14 @@
 /* The view always sits in the second column, also when the tree leaves the grid flow as an overlay. */
 .scroller, .timeline { grid-column: 2; grid-row: 1; }
 .tree { grid-column: 1; grid-row: 1; }
+/* The toolbar's narrow steps follow the panel width (the content area), not the window (577 §14). ≤ 640px it wraps
+ * onto a second row: one row cannot hold its controls at the ~470px width beside chat. */
+@container worldline (max-width: 1280px) { .hideNarrow1, .search kbd, .chip.zero { display: none; } }
+@container worldline (max-width: 1160px) { .iconNarrow .lbl { display: none; } }
+@container worldline (max-width: 640px) {
+  .bar { flex-wrap: wrap; row-gap: 6px; }
+  .bar .spacer { display: none; }
+  .bar .search { flex: 1 1 160px; }
+  .sep { display: none; }
+  .minimap { left: 12px; right: 12px; }
+}

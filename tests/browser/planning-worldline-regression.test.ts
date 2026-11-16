@@ -248,6 +248,9 @@ test("WU-74: years and fixed calendars render; years has no year badge or month 
 })
 
 test("E-WU90 narrow panel: at the 470px content width beside chat, table cards keep a usable width; the tree overlays", () => withWorldline(browser, f60(), async page => {
+  // Toolbar: nothing past the panel's right edge (it wraps to a second row at this width).
+  const bar = await page.getByRole("toolbar", { name: "世界线工具栏" }).evaluate(b => ({ scroll: b.scrollWidth, client: b.clientWidth }))
+  assert.ok(bar.scroll <= bar.client + 1, `toolbar overflow ${bar.scroll} > ${bar.client}`)
   await tab(page, "事件表")
   const w = await page.locator("[data-event-table] [data-event-card]").first().evaluate(e => e.getBoundingClientRect().width)
   assert.ok(w >= 200, `card width ${w}`)
@@ -261,4 +264,6 @@ test("E-WU90 narrow panel: at the 470px content width beside chat, table cards k
   await page.getByRole("radio", { name: "关键" }).check()
   await tab(page, "时间线")
   assert.ok(await page.locator("[data-timeline-plane] [data-event-card]").count() > 0)
+  const mm = (await page.getByRole("slider", { name: /全局缩略/ }).boundingBox())!, lane = (await page.locator("[data-timeline-lane]").boundingBox())!
+  assert.ok(mm.x >= lane.x - 1 && mm.x + mm.width <= lane.x + lane.width + 1, "minimap inside the panel")
 }, { width: 470 }))
