@@ -174,3 +174,55 @@ Node 24.18.0，单独运行 `node --import tsx --test tests/unit/reused-import-t
 ### 结论（2R）
 
 **有条件通过。** 没有高危问题：退役不会删除新作品的锁，旧引擎不能写入新作品，`serialize` 内调用钩子目前没有死锁。合入前需要处理中1（把检查和 `forgotten.add` 放进同一段同步代码，改动很小）和中2（修改 `open()`，或修改恢复提示并在方案中记录）。中3 需要用户或方案作者确认是否接受“会话不可回滚”；低1–低3 可以留到后续处理。建议补上述缺失用例中的 (1)(2)(3)(6)。
+
+## 补充审核 3R：本地响应释放
+
+审核范围：`desktop/service/local-response.ts`（新文件）、`desktop/service/index.ts` 中 `start()` 的改动（第 95–106 行）、`tests/unit/service-local-response-release.test.ts`。对照 docs/567「补充 3R」。未修改源码或测试。
+
+### 实测
+
+- `node --import tsx --test tests/unit/service-local-response-release.test.ts tests/unit/reused-import-target.test.ts`：22/22 通过（LR-01–LR-06 及 RT 系列）。
+- `docs/567-reused-empty-import-target-evidence/real-target-report.json`：RT-R0、RT-R0b、RT-R1、RT-R1b、RT-R2 均为 `ok: true`，其中 RT-R1/R1b 证明删除后清空的目录可以重新导入保存。这是 start() 层“读完 JSON 后释放”唯一的端到端证据。
+
+### 流式识别核对
+
+在 `desktop/handlers`、`desktop/service/dispatcher.ts`、`template-dispatcher.ts`、`src/lib` 中逐一查找 `new Response(`、`ReadableStream`、`toTextStreamResponse`/`toUIMessageStreamResponse`、`text/event-stream`：
+
+| 处理器 | 正文 | Content-Type | 判定 | 结论 |
+|---|---|---|---|---|
+| `desktop/handlers/chat/route.ts:73,529` | 延迟产生的 ReadableStream（`void run()`） | `text/event-stream` | 流式 | 正确 |
+| `desktop/handlers/novels/[id]/chapters/[chapterId]/generate/route.ts:58,74-76` | 延迟产生的 ReadableStream，`cancel()` 调用 `abort.abort()` | `text/event-stream; charset=utf-8` | 流式 | 正确，取消语义保留 |
+| `desktop/handlers/generate/test/route.ts:38` | `toTextStreamResponse()` | `text/plain; charset=utf-8` | 流式 | 正确 |
+| `desktop/handlers/novels/[id]/scenes/[sceneId]/images/[imageId]/asset/route.ts:4` | 已在内存中的 `Uint8Array`（上限 10 MiB，`workspace-assets.ts:33`） | 图片 MIME | 不超过 8 MiB 时缓冲，8–10 MiB 走超限回退 | 正确，正文已经产生，缓冲不会挂起 |
+| `desktop/handlers/admin/usage/route.ts:72` | CSV 字符串 | `text/csv; charset=utf-8` | 缓冲 | 正确 |
+| 其余处理器、`toErrorResponse`、`dispatcher.ts` 内置路由、`template-dispatcher.ts` | `Response.json` / `NextResponse.json` | `application/json` | 缓冲 | 正确 |
+
+- 没有发现被误判为非流式的长连接或延迟正文。聊天“长轮询”走 `chat/turns/[turnId]` 等 JSON 路由，读取时一次返回，不是挂起的流。
+- 没有发现以 `text/plain` 返回的 JSON。`src/lib/manuscript-export.ts:81` 的 `text/plain` 是渲染层 Blob，不经过 start()。
+- 处理器中除聊天外，没有 `void xxx()` 式的后台任务在返回 Response 后继续用 prisma。所以作用域提前结束不会使任何处理器失去数据库上下文。缓冲读取器只读内存，不访问数据库。超限回退和流式仍在作用域内读取。
+- `image-asset` RPC（`index.ts:152-163`）自行 `arrayBuffer()`，不经过 start()，不受影响。
+
+### 问题（按严重程度）
+
+**高：无。**
+
+**中1 未读正文的响应仍然永久占用 `responses` 名额（早已存在，3R 只解除了数据库占用）。** `index.ts:87` 限制 `responses.size + starting.size >= 256`。渲染层不读正文时（3R 已证实的侧边栏 DELETE 和随后的 404 GET），条目要到 `close`/`stop-tasks` 才清除。`src/lib/desktop/transport.ts:68-87` 在 Response 被丢弃时不会调用 `cancelRequest`。改动后这类条目不再占用作品槽位，所以 WORK_BUSY 已修复。但每个未读响应仍会留下一份缓冲正文（最多 8 MiB）和一个名额，同时它的 `task` 一直留在 `pendingStarts`（`index.ts:104-106`）。一次会话中累积 256 个后，所有本地请求都会报“本地请求重复或过多”。这不是本次的回归，也不阻塞合入，但缓冲后服务端已经不需要等渲染层，建议作为后续修复，任选其一：(a) 缓冲正文随头部一并返回，不进入 `responses`（需要改协议，与 3R 第 2 条“协议不变”冲突，需用户确认）；(b) 渲染层对 DELETE/HEAD 或调用方不读的响应主动 `body.cancel()`；(c) 给 `buffered` 条目加闲置超时取消（缓冲正文没有副作用，但调用方延迟读取时会读到错误，需权衡）。
+
+**中2 start() 层没有自动化测试。** 方案的测试要求是“JSON 响应在未读取时作用域已释放；事件流响应在读完前作用域仍占用”。现有 LR-01–06 只测纯函数 `bufferResponse`，`index.ts:102,105` 的两处 `await complete.promise` 没有被任何单元/集成测试覆盖，只能依赖 RT-R1 真实目标运行。建议增加一个 Workspaces 级用例：发起一个 JSON 请求但不读正文，断言 `forget()`/`retire` 不报 WORK_BUSY、`pendingStarts` 仍为 1，`cancel` 后归零；再发一个事件流请求，断言读完前 `slot.active > 0`。
+
+**低1 默认值依赖 Content-Type，没有 Content-Type 的未来流会被整体读完。** `local-response.ts:6-10` 只把 `text/event-stream` 和 `text/plain*` 视为流式。如果以后有处理器返回不带 Content-Type 的延迟 ReadableStream，它会在作用域内读到结束才发头部：渲染层看不到增量，取消只能通过 `abort.signal` 生效（`bufferResponse` 读取循环本身不检查 signal，`local-response.ts:19-36`）。现有代码没有这种处理器。建议加一条静态测试：凡是 `new Response(<ReadableStream>)` 的处理器都必须声明 `text/event-stream`；或者给流式响应加明确的标记头。反方向的误判（`new Response("字符串")` 默认是 `text/plain;charset=UTF-8`，会被当作流）只会保留旧行为，安全。
+
+**低2 缓冲期间的取消。** 非流式正文在现有处理器中都已产生，读取是瞬时的，所以 `cancel(id)` 只中止 `starting` 中的控制器（`index.ts:111`），缓冲完成后由 `index.ts:98` 检查并抛出“请求已取消”→ `headers.reject`，行为正确。超限回退在读第一段 8 MiB 时不观察 signal，但同样依赖处理器自己响应 `request.signal`，与原行为一致。
+
+**低3 内存。** 单个请求最多缓冲 `limit + 一个块`。超限回退时已读块继续保存在 `chunks` 中，直到依次交出（`local-response.ts:25-31`）。上限为 256 个请求 × 8 MiB，与中1 叠加时理论峰值约 2 GiB，实际取决于未读响应的大小（多为几十字节的 JSON）。可以接受。
+
+### 逐项结论
+
+- **超限回退字节完整性：** 已读块按原顺序先交出，再接 `source.read()`，没有丢字节或乱序（LR-04 验证）。`cancel` 传给源流（LR-05 验证）。第一次 `pull` 会多预取一个块，无害。恰好等于 8 MiB 时走缓冲（`>` 判断），符合预期。
+- **读取错误：** 作用域内读取出错时，`bufferResponse` 抛出 → 离开 `runWithGlobal` → `.catch` → `headers.reject`，不返回部分正文（LR-06 验证）。超限回退在作用域内读后续块出错时，经 `read` 的 `catch` → `cancel(id)` → `done()`，与原行为一致。
+- **pendingStarts / close：** 缓冲响应的 task 在作用域外等待 `complete`（`index.ts:105`），所以 `close`（`index.ts:205`：先 `cancel` 全部 `responses`，再 `await pendingStarts`，再 `works.close()`）和 `stop-tasks`（`index.ts:176-178`）仍会取消并等待这些请求，语义不变。`closed-work-lease-target`/`novel-import-lease-target` 的守卫（`index.ts:121-125`）要求 `responses`/`pendingStarts` 为空，只能在 close 之后调用，这时已清空，不受影响。从未读取的缓冲响应不再阻塞作品退役/`forget`（`workspaces.ts:394,414,433` 只看 `slot.active`），但仍会阻塞服务 close 直到 close 主动取消它。close 自带取消路径，所以不需要另加取消路径。
+- **作用域结束后的上下文：** 释放的是作品槽位和 inbox 槽位（`runWithGlobal` 嵌套两层 `run`，`workspaces.ts:561-576`）。作用域外只剩内存读取器，不依赖数据库上下文。
+
+### 结论（3R）
+
+**通过。** 流式识别覆盖了全部现有流式处理器，没有 JSON 被误判为流，也没有延迟正文被提前读完。错误、取消、close 语义与原实现一致，WORK_BUSY 的根因已经解除，并有真实目标 RT-R1 佐证。建议补中2 的 start() 层用例。中1 是早已存在的名额泄漏，3R 降低了它的危害但没有消除，建议另开任务并由用户确定方案。低1 可以用一条静态测试防止以后回归。

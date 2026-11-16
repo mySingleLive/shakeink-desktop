@@ -23,6 +23,7 @@ import {loadDatabaseSeed} from './database/seed'
 import {ImportAiJobs,runImportAi} from './novel-import-ai'
 import {publishNovelImport,importLeaseTarget} from './novel-import-publish'
 import {discardNovelImport} from './novel-import-discard'
+import {bufferResponse} from './local-response'
 import type {ImportAiRequest,ImportPublishInput,ImportReceipt} from '../shared/novel-import'
 import {z} from 'zod'
 
@@ -91,13 +92,17 @@ async function start(value: unknown): Promise<LocalResponse> {
     await works.runWithGlobal(workspace, () => runInDatabaseContext({...getDatabaseContext(),requestOrigin:origin},()=>runWithNewTaskDefaults(async () => {
       if (abort.signal.aborted) throw new Error("请求已取消")
       const response = await dispatcher.handle(input, abort.signal)
-      const reader = (response.body ?? new ReadableStream<Uint8Array>({ start(controller) { controller.close() } })).getReader()
+      // docs/567 3R: plain bodies are read here, so the work's database is released once headers are sent
+      // even if the window never reads the body; streams keep the scope until they are read or cancelled.
+      const {reader,buffered} = await bufferResponse(response)
       if (abort.signal.aborted) { try { await reader.cancel() } finally { reader.releaseLock() }; throw new Error("请求已取消") }
       responses.set(input.id, { reader, abort, done: () => complete.resolve(), reading: false })
       if (starting.get(input.id) === abort) starting.delete(input.id)
       headers.resolve({ id: input.id, status: response.status, headers: Object.fromEntries(response.headers) })
-      await complete.promise
+      if (!buffered) await complete.promise
     })))
+    // The request still counts as in flight (pendingStarts) until its buffered body is read or cancelled.
+    await complete.promise
   })().catch(error => { headers.reject(error) }).finally(() => { if (starting.get(input.id) === abort) starting.delete(input.id); pendingStarts.delete(task) })
   pendingStarts.add(task)
   return headers.promise

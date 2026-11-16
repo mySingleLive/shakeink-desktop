@@ -368,37 +368,60 @@ export class Workspaces {
         if (!novel || await db.novel.count() !== 1) throw new Error("作品目录与数据库不匹配")
         record.title = novel.title
       }
-      if (previous && this.slots.has(previous.id)) {
+      // docs/569 2R 中2: an older row on this folder belongs to a work whose files are no longer here (the folder
+      // now holds this other work); it leaves the list as in create(), so one folder never shows two works.
+      const stale = before.value.filter(row => row.path === canonical && row.id !== record.id)
+      await this.retireStaleWorks(stale)
+      try {
+        if (previous && this.slots.has(previous.id)) {
+          assertRegistration()
+          await this.run(previous.id, async () => { const { getDatabaseContext } = await import("./context"); await validate(getDatabaseContext().database) })
+        } else {
+          await this.retiring.get(record.id)
+          const stranded = this.failedRetirements.get(record.id)
+          if (stranded) { await this.disconnect(stranded); this.failedRetirements.delete(record.id) }
+          assertRegistration()
+          const connection = await this.connect(canonical, false,assertRegistration)
+          try { await validate(connection.db) } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
+        }
         assertRegistration()
-        await this.run(previous.id, async () => { const { getDatabaseContext } = await import("./context"); await validate(getDatabaseContext().database) })
-      } else {
-        await this.retiring.get(record.id)
-        const stranded = this.failedRetirements.get(record.id)
-        if (stranded) { await this.disconnect(stranded); this.failedRetirements.delete(record.id) }
+        for (const row of stale) await this.staleWorkHook?.(row.id)
         assertRegistration()
-        const connection = await this.connect(canonical, false,assertRegistration)
-        try { await validate(connection.db) } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
+        await this.catalog.update(before.revision, [...before.value.filter(row => row.id !== record.id && !stale.includes(row)), record],assertRegistration)
+      } catch (error) {
+        const listed = (await this.catalog.read().catch(() => before)).value
+        if (stale.some(old => listed.some(row => row.id === old.id))) for (const row of stale) this.forgotten.delete(row.id)
+        throw error
       }
-      assertRegistration()
-      await this.catalog.update(before.revision, [...before.value.filter(row => row.id !== record.id), record],assertRegistration)
       this.forgotten.delete(record.id)
       return record
     })
   }
-  /** Set by the conversation runtime: marks a work's conversations deleted when the work leaves the list. */
+  /** Set by the conversation runtime: marks a work's conversations deleted when the work leaves the list.
+   * Runs inside serialize(); code holding a conversation gate must never call create/open/forget/discard. */
   staleWorkHook?: (id: string) => Promise<void>
   /** Closes idle connections of works about to leave the list, as forget() does; a running task refuses.
    * Their folder no longer holds their files, so a failed lock release (identity checked first, never
    * the new work's lock) drops the connection instead of keeping a failed retirement. */
   private async retireStaleWorks(rows: WorkRecord[]) {
-    for (const row of rows) { await this.retiring.get(row.id); if ((this.slots.get(row.id)?.active ?? 0) > 0) throw new ContentError("WORK_BUSY", `原目录中的作品《${row.title}》仍有任务在运行，请稍后重试`, 409) }
+    // Busy checks and forgotten.add run in one synchronous block, so no run() can start between them (docs/569 2R 中1).
+    await Promise.all(rows.map(row => this.retiring.get(row.id)))
+    const busy = rows.find(row => (this.slots.get(row.id)?.active ?? 0) > 0)
+    if (busy) throw new ContentError("WORK_BUSY", `原目录中的作品《${busy.title}》仍有任务在运行，请稍后重试`, 409)
+    for (const row of rows) this.forgotten.add(row.id)
     for (const row of rows) {
-      this.forgotten.add(row.id)
       for (const slot of [this.slots.get(row.id), this.failedRetirements.get(row.id)]) {
         if (!slot) continue
         if (this.slots.get(row.id) === slot) this.slots.delete(row.id)
         if (this.failedRetirements.get(row.id) === slot) this.failedRetirements.delete(row.id)
-        await this.disconnect(slot).catch(() => undefined)
+        // Each step runs even if an earlier one fails: the lock release is expected to fail (its folder was
+        // emptied), but the engine must still close so no PGlite instance is left behind (docs/569 2R 低1).
+        const connection = await slot.connection.catch(() => null)
+        if (connection) {
+          await connection.db.$disconnect().catch(() => undefined)
+          if (!connection.engine.closed) await connection.engine.close().catch(() => undefined)
+          await connection.unlock().catch(() => undefined)
+        }
       }
     }
   }

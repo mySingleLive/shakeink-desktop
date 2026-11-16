@@ -207,3 +207,79 @@ test('RT-12: the import wizard still rejects a deleted work’s directory that k
   await assert.rejects(chooseTarget(f),/保存目录不能与来源或应用目录重叠/)
  }finally{await f.dispose()}
 })
+
+// docs/569 补充审核 2R：缺失用例
+test('RT-18: a listed work whose folder holds only foreign files stays listed; creation asks for an empty folder',{timeout:120000},async()=>{
+ const f=await fixture();try{
+  const old=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-foreign-old'})
+  await empty(f.target);await writeFile(join(f.target,'notes.txt'),'author notes')
+  await assert.rejects(f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-foreign-new'}),/创建作品需要空目录/)
+  assert.deepEqual((await f.works.list()).map(row=>row.id),[old.id])
+ }finally{await f.dispose()}
+})
+test('RT-19: a folder changed while the old work was being retired fails and restores the old work',{timeout:120000},async()=>{
+ const f=await fixture();try{
+  const old=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-race-old'})
+  await empty(f.target)
+  const internal=f.works as unknown as {retireStaleWorks:(rows:unknown[])=>Promise<void>}
+  const original=internal.retireStaleWorks.bind(f.works)
+  internal.retireStaleWorks=async rows=>{await original(rows);await writeFile(join(f.target,'late.txt'),'x')}
+  await assert.rejects(f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-race-new'}),/所选目录内容已变化/)
+  assert.deepEqual((await f.works.list()).map(row=>row.id),[old.id])
+  await assert.rejects(f.works.run(old.id,async()=>undefined),(error:Error)=>!/作品不在本地目录索引中/.test(error.message))
+ }finally{await f.dispose()}
+})
+test('RT-20: a failure after the catalog write keeps the old work removed; the same request then returns the new work',{timeout:120000},async()=>{
+ const f=await fixture();try{
+  const old=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-late-old'})
+  await empty(f.target)
+  const hash='e'.repeat(64),init=(fail:boolean)=>({importHash:hash,initialize:async()=>{},verify:async()=>{},phase:async(p:string)=>{if(fail&&p==='catalog-committed')throw Error('late failure')}})
+  await assert.rejects(f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-late-new'},undefined,init(true)),/late failure/)
+  const list=await f.works.list();assert.equal(list.length,1);assert.notEqual(list[0].id,old.id)
+  await assert.rejects(f.works.run(old.id,async()=>undefined),/作品不在本地目录索引中/)
+  const again=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-late-new'},undefined,init(false))
+  assert.equal(again.id,list[0].id)
+ }finally{await f.dispose()}
+})
+test('RT-21: open() of a folder now holding another work drops the old row for that folder',{timeout:120000},async()=>{
+ const f=await fixture();try{
+  const old=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-open-old'})
+  await empty(f.target)
+  // A finished but unregistered work in the folder: register, then remove only its row to simulate a lost catalog write.
+  const fresh=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-open-new'})
+  const internal=f.works as unknown as {catalog:{read():Promise<{revision:number;value:unknown[]}>;update(revision:number,value:unknown[]):Promise<void>}}
+  const now=await internal.catalog.read();await internal.catalog.update(now.revision,[{...(now.value[0] as object),id:old.id,novelId:old.novelId,title:old.title,requestId:old.requestId,requestHash:old.requestHash,createdAt:old.createdAt}])
+  const opened=await f.works.open(await proof(f.target))
+  assert.equal(opened.id,fresh.id);assert.deepEqual((await f.works.list()).map(row=>row.id),[fresh.id])
+ }finally{await f.dispose()}
+})
+test('RT-22: two old rows on the same folder are both retired together',{timeout:120000},async()=>{
+ const f=await fixture();try{
+  const old=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-two-old'})
+  const internal=f.works as unknown as {catalog:{read():Promise<{revision:number;value:{id:string}[]}>;update(revision:number,value:unknown[]):Promise<void>}}
+  const now=await internal.catalog.read();await internal.catalog.update(now.revision,[...now.value,{...now.value[0],id:'00000000-0000-4000-8000-000000000022',requestId:'reused-target-two-dup'}])
+  await empty(f.target)
+  const hooked:string[]=[];f.works.staleWorkHook=async id=>{hooked.push(id)}
+  const fresh=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-two-new'})
+  assert.deepEqual((await f.works.list()).map(row=>row.id),[fresh.id]);assert.deepEqual(hooked.sort(),[old.id,'00000000-0000-4000-8000-000000000022'].sort())
+ }finally{await f.dispose()}
+})
+test('RT-23: the real conversation runtime marks only the old work’s conversations deleted',{timeout:150000},async()=>{
+ const f=await fixture();const {configureConversationTransfers,conversationTransfersFor}=await import('../../desktop/service/conversation-runtime')
+ const {getDatabaseContext}=await import('../../desktop/service/context')
+ const dispose=configureConversationTransfers(f.works,async()=>{throw Error('no main')})
+ try{
+  const other=join(f.base,'other');await mkdir(other)
+  const kept=await f.works.create(await proof(other),{title:'另一作品',requestId:'reused-target-chat-other'})
+  const old=await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-chat-old'})
+  const transfers=conversationTransfersFor(f.works)!
+  for(const [work,id] of [[old,'rt23-old-chat'],[kept,'rt23-kept-chat']] as const){
+   await f.works.runWithGlobal(work.id,async()=>{await getDatabaseContext().database.conversation.create({data:{id,userId:'local-author',novelId:work.novelId,title:'合成对话'}});await transfers.current(id)})
+  }
+  await empty(f.target)
+  await f.works.create(await proof(f.target),{title:'合成作品',requestId:'reused-target-chat-new'})
+  const locations=await transfers.ledger.locations()
+  assert.equal(locations.find(row=>row.conversationId==='rt23-old-chat')?.deleted,true)
+  assert.equal(locations.find(row=>row.conversationId==='rt23-kept-chat')?.deleted,false)
+ }finally{dispose();await f.dispose()}
+})

@@ -63,3 +63,30 @@
    - 通过可选钩子 `Workspaces.onStaleWork(id)`（由 `configureConversationTransfers` 设为 `manager.forgetWorkspace`）把旧作品的会话位置标为删除；未配置（单测）时跳过。
    - 钩子失败 → 新作品不登记，抛错；旧记录与 `forgotten` 复原。
 4. 不变：`open()`、`forget()`、`discardImportCreation`、`importLeaseTarget`、目录预留记录。
+
+## 补充 3R（真实目标发现，用户 2026-11-11 选择“读完 JSON 后释放”）
+
+RT-R1 实测：清空目录后第二次导入保存报“原目录中的作品《…》仍有任务在运行”。调试输出证明旧作品的 slot `active=2`，来自两个未被读取正文的本地请求：侧边栏删除 `DELETE /api/novels/:id`（成功时不读正文）与删除后的 `GET /api/novels/:id`（404，不读正文）。`desktop/service/index.ts` 的 `start()` 在 `works.runWithGlobal(workspace, …)` 内一直等到渲染层读完正文（`complete`）才退出，所以作品数据库一直被占用，直到重启。这是早于本次修复的问题，也会让 `forget()` 报 `WORK_BUSY`。
+
+修复（只改 `start()`）：
+1. 非流式响应（`content-type` 不含 `text/event-stream`，且不是 `toTextStreamResponse` 的 `text/plain` 流）在作品作用域内一次读完正文，上限 8 MiB；超限按原流式路径处理。
+2. 读完后立即退出作用域，`responses` 中放一个读取缓冲区的读取器，`read`/`cancel` 协议与帧格式不变。
+3. 流式响应（对话、生成、测试生成）保持原行为：作用域持续到读完或取消。
+4. 读取正文失败 → 与原 `read` 失败一致，请求失败。
+
+测试：`tests/unit/service-local-response-release.test.ts`（真实 Worker 不必要；直接以导出的 `start/read` 或抽出的纯函数测试）——JSON 响应在未读取时作用域已释放；事件流响应在读完前作用域仍占用；超过上限的 JSON 走流式；帧拆分与 `done` 不变。
+
+### 2R 审核处理（docs/569 补充审核 2R）
+
+- 中1：`retireStaleWorks` 先等待全部退役，再在同一段同步代码中完成忙碌检查与 `forgotten.add`。
+- 中2：`open()` 登记时同样移除同目录、不同 id 的旧记录（同一套退役、会话钩子与失败复原）。
+- 中3（保留顺序并记录）：会话钩子仍在 `catalog.update` 之前执行，与 `forget()` 一致。若改到写入之后再失败，账本中会留下指向未登记作品的会话，`GET /api/chat/conversations` 会对全部作品报错。代价：钩子部分成功或随后登记失败时，旧记录复原但部分会话已标为删除；`forgetWorkspace` 幂等，重试可完成。旧作品的会话随旧记录一起移除，与侧边栏删除异常作品的行为一致（WN-01）。
+- 低1：退役时 `$disconnect`、`engine.close`、`unlock` 各自独立执行，任何一步失败都不跳过关闭引擎。
+- 低2：`staleWorkHook` 不得在 `gate.run` 内调用 `create`/`open`/`forget`/`discardImportCreation`（注释已写明）。
+- 低3：接受，不修改。
+
+### 3R 审核处理（docs/569 补充审核 3R）
+
+- 中1（早于本项，未处理）：从未被读取正文的响应会一直留在 `responses` 中直到关闭服务，占用 256 个请求名额之一并保留缓冲正文。需要用户决定处理方式，本项不改协议。
+- 中2：新增 LR-07/LR-08，从 `desktop/service/index.ts` 源码抽出真实 `start()` 测试：JSON 回复在正文未读时已释放作品作用域；事件流在读完前保持作用域。LR-07 对改前的 `start()` 失败。
+- 低：按 Content-Type 判定流式、缓冲期间不检查取消信号（与原行为一致）、最坏内存 256 × 8 MiB，均接受。

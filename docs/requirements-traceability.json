@@ -5213,22 +5213,35 @@
       "docs/569-reused-empty-import-target-code-review.md"
     ],
     "implementation": [
-      "desktop/service/workspaces.ts"
+      "desktop/service/workspaces.ts",
+      "desktop/service/conversation-runtime.ts",
+      "desktop/service/local-response.ts",
+      "desktop/service/index.ts",
+      "scripts/verify-reused-import-target.mjs"
     ],
     "testIds": [
-      "568-RT-01..RT-13",
+      "568-RT-01..RT-23",
       "tests/unit/reused-import-target.test.ts",
+      "567-3R LR-01..LR-08",
+      "tests/unit/service-local-response-release.test.ts",
       "568-RT-R1/RT-R2（真实目标）"
     ],
     "verificationKind": "NOVEL_IMPORT_TARGETED",
-    "status": "implemented-targeted-verified-real-target-pending",
+    "status": "implemented-targeted-verified-real-target-met",
     "evidence": [
-      "tests/unit/reused-import-target.test.ts 12/12 通过（修复前 5 项失败，RT-11 复现原报错）",
-      "/private/tmp/shakeink-reuse-567/full-1.txt（全量 npm test）"
+      "tests/unit/reused-import-target.test.ts 22/22 通过（修复前 RT-11 复现原报错）",
+      "tests/unit/service-local-response-release.test.ts 8/8 通过（LR-07 对改前 start() 失败）",
+      "docs/567-reused-empty-import-target-evidence/real-target-report.json（构建版应用、隔离数据根、仅复制正文无模型：导入→侧边栏删除→未清空仍报重叠→清空后接受→再次导入保存成功、列表仅一部作品→重启后 1 部作品 0 异常；6/6 PASS）",
+      "docs/567-reused-empty-import-target-evidence/rt-r2-not-emptied-refused.png、rt-r1-emptied-accepted.png、rt-r1-after-reimport.png",
+      "/private/tmp/shakeink-reuse-567/full-4.txt（全量 npm test 4856 项，42 项失败均在修复前基线失败集合内，无新增）"
     ],
     "verificationLimits": [
-      "目录预留记录不删除；只调整受保护目录的判定",
-      "BR-S01（backup-removal-service）在修复前已失败（importJobs is not defined），与本项无关"
+      "目录预留记录不删除；只调整受保护目录判定",
+      "普通删除后清空目录再新建作品时，旧作品记录从列表移除并删除其关联对话（用户 2026-11-11 选择）",
+      "用户手动清空仍在使用的作品目录后，该目录也可被新作品使用，旧记录随之移除",
+      "本地服务只对非流式响应提前读完正文；对话/生成等流式响应生命周期不变",
+      "失败的全量用例与修复前基线相同（docs/569 记录）；LP-29、NI-LB07 为负载敏感用例，单独运行通过",
+      "未读取正文的响应占用请求名额直到关闭服务（早于本项，docs/569 3R 中1，待用户决定）"
     ]
   }
   ],
