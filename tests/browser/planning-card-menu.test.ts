@@ -106,6 +106,8 @@ async function scenario(mode: "world" | "narrative", run: (page: Page) => Promis
     await page.addStyleTag({ content: `${await stylesheet}\n${compiled.css}` })
     await page.addScriptTag({ content: compiled.js })
     await page.evaluate(options => (window as any).mountPlanning(options.mode, options.fixture), { mode, fixture: FIXTURE })
+    // docs/581 §7 (redesign run): expand the world card under test before waiting for its menu.
+    if (mode === "world") await expandWorldCard(page, "东溪看水与抬高的桥址")
     await page.locator(`summary[aria-label="${mode === "world" ? "东溪看水与抬高的桥址" : "序列一·穷县"}更多操作"]`).waitFor()
     await run(page)
     assert.deepEqual(errors, [], "planning card menu fixture must run without page errors")
@@ -115,6 +117,12 @@ async function scenario(mode: "world" | "narrative", run: (page: Page) => Promis
   }
 }
 
+/** docs/581 §7 (H1, I3): in the redesign, world cards start collapsed and their menu is outside the DOM until expanded. */
+async function expandWorldCard(page: Page, title: string) {
+  const card = page.locator(`article[aria-label="${title}"]`).first()
+  if ((await card.getAttribute("aria-expanded")) === "false") await card.locator("h3").click()
+  await expect(card).toHaveAttribute("aria-expanded", "true")
+}
 function cardMenu(page: Page, title: string) {
   const summary = page.locator(`summary[aria-label="${title}更多操作"]`)
   const details = summary.locator("xpath=..")
@@ -152,8 +160,10 @@ test("CM-02 世界线时间线事件菜单：点击菜单外区域关闭，z-ind
 }))
 
 test("CM-03 世界线事件表事件菜单：点击菜单外区域关闭", () => scenario("world", async page => {
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
-  await expect(page.getByRole("button", { name: "事件表", exact: true })).toHaveAttribute("aria-pressed", "true")
+  // docs/581 §7: the view switch is a tab now (redesign run); the menu assertions below are unchanged.
+  await page.getByRole("tab", { name: "事件表" }).click()
+  await expect(page.getByRole("tab", { name: "事件表" })).toHaveAttribute("aria-selected", "true")
+  await expandWorldCard(page, "东宫失言案")
   const { summary, details, menu } = cardMenu(page, "东宫失言案")
   await summary.click()
   await expectMenuOpen(details, menu)
@@ -221,7 +231,8 @@ test("CM-09 菜单层内非按钮空白点击不关闭", () => scenario("narrati
 }))
 
 test("CM-10 菜单项「详情」打开对话框时菜单关闭且焦点入对话框", () => scenario("world", async page => {
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
+  await page.getByRole("tab", { name: "事件表" }).click() // docs/581 §7
+  await expandWorldCard(page, "东宫失言案")
   const { summary, details, menu } = cardMenu(page, "东宫失言案")
   await summary.click()
   await expectMenuOpen(details, menu)

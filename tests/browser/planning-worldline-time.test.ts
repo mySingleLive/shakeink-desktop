@@ -139,9 +139,10 @@ async function scenario(mode: "world" | "narrative", run: (page: Page) => Promis
 }
 
 test("WT-55 世界线事件卡：日精度只显示日期，exact 事件显示时间文字", () => scenario("world", async page => {
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
+  await page.getByRole("tab", { name: "事件表" }).click() // docs/581 §7: the view switch is a tab
   // The card is the nearest ancestor of the title heading that holds the time line (<small>).
-  const row = (title: string) => page.getByRole("heading", { name: title, exact: true }).locator("xpath=ancestor::*[./small][1]/small").first().innerText()
+  // docs/581 §7 (redesign run): cards start collapsed; expand one before reading its time row.
+  const row = async (title: string) => { const h = page.getByRole("heading", { name: title, exact: true }), card = h.locator("xpath=ancestor::article[1]"); if ((await card.getAttribute("aria-expanded")) !== "true") await h.click(); return h.locator("xpath=ancestor::*[.//small][1]//small[@data-card-time]").first().innerText() }
   const a = await row("东溪看水与抬高的桥址"), b = await row("东宫失言案"), c = await row("旧式时点"), d = await row("候选窗口")
   assert.match(a, /^1349-06-26 · 6月26日 （按先后推定） · 时点/u, a)
   assert.match(b, /^1349-06-28 · 1349年6月28日凌晨 · 时点/u, b)
@@ -150,15 +151,16 @@ test("WT-55 世界线事件卡：日精度只显示日期，exact 事件显示�
 }))
 
 test("EC-73 纪元日历：事件卡按精度显示纪年", () => scenario("world", async page => {
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
-  const row = (title: string) => page.getByRole("heading", { name: title, exact: true }).locator("xpath=ancestor::*[./small][1]/small").first().innerText()
+  await page.getByRole("tab", { name: "事件表" }).click() // docs/581 §7: the view switch is a tab
+  // docs/581 §7 (redesign run): cards start collapsed; expand one before reading its time row.
+  const row = async (title: string) => { const h = page.getByRole("heading", { name: title, exact: true }), card = h.locator("xpath=ancestor::article[1]"); if ((await card.getAttribute("aria-expanded")) !== "true") await h.click(); return h.locator("xpath=ancestor::*[.//small][1]//small[@data-card-time]").first().innerText() }
   assert.match(await row("东溪看水与抬高的桥址"), /^赤铜纪1349年6月28日 · 赤铜纪1349年6月28日凌晨 · 时点/u)
   assert.match(await row("远古旧城倾覆"), /^青石纪 · （按先后推定） · 时点/u)
   assert.match(await row("二十年前的旧案"), /^赤铜纪1329年 · 二十多年前 · 时点/u)
 }, ERA_FIXTURE))
 
 test("EC-74 纪元日历：初始时间轴对准主线，全貌包含远古事件", () => scenario("world", async page => {
-  await page.getByRole("button", { name: "时间线", exact: true }).click()
+  await page.getByRole("tab", { name: "时间线" }).click() // docs/581 §7
   const visible = async (title: RegExp) => {
     const box = await page.locator("[class*=timeline]").first().boundingBox()
     let n = 0
@@ -167,6 +169,7 @@ test("EC-74 纪元日历：初始时间轴对准主线，全貌包含远古事�
   }
   assert.ok(await visible(/^主线事件/u) >= 10, "the first view shows the main story")
   assert.equal(await visible(/^远古/u), 0, "distant backstory starts outside the first view")
-  await page.getByRole("button", { name: "全貌", exact: true }).click()
+  // docs/581 §7 (redesign run): 全貌 moved into the period picker as 全部时期（全貌） (577 §9).
+  await page.getByRole("combobox", { name: "时期" }).selectOption("__all")
   assert.ok(await visible(/^远古旧城倾覆$/u) >= 1, "全貌 includes the earlier era")
 }, ERA_FIXTURE))

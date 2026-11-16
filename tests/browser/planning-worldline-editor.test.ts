@@ -28,13 +28,14 @@ test.before(async () => { browser = await launch() })
 test.after(async () => { await browser?.close() })
 
 test("WU-09c: the editor saves category and importance; the detail dialog shows them", () => withWorldline(browser, view(), async page => {
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
+  await page.getByRole("tab", { name: "事件表" }).click()
   const card = page.locator('article[aria-label="渡口相遇"]')
   await card.locator("h3").dblclick()
   await page.getByLabel("事件类型").selectOption("揭示")
   await page.getByRole("radio", { name: "关键" }).check()
   await page.getByRole("button", { name: "保存事件", exact: true }).click()
   await expect.poll(() => page.evaluate(() => (window as any).planningState().data.events.find((e: any) => e.id === "e1"))).toMatchObject({ category: "揭示", importance: 3 })
+  await page.locator('article[aria-label="渡口相遇"] h3').click()
   await page.locator('article[aria-label="渡口相遇"]').locator("summary").click()
   await page.getByRole("button", { name: "详情", exact: true }).click()
   await expect(page.getByRole("dialog", { name: "事件详情" })).toContainText("揭示 · 关键")
@@ -42,7 +43,8 @@ test("WU-09c: the editor saves category and importance; the detail dialog shows 
 
 test("WU-09c: a frozen prehistory event's detail shows category and importance with no editable control", () => withWorldline(browser, view(), async page => {
   await page.getByRole("combobox", { name: "当前世界线" }).selectOption("fk")
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
+  await page.getByRole("tab", { name: "事件表" }).click()
+  await page.locator('article[aria-label="旧城失火"] h3').click()
   await page.locator('article[aria-label="旧城失火"]').locator("summary").click()
   await page.getByRole("button", { name: "详情", exact: true }).click()
   const dialog = page.getByRole("dialog", { name: "事件详情" })

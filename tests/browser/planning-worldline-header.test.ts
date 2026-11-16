@@ -16,7 +16,7 @@ test.after(async () => { await browser?.close() })
 
 const header = (page: import("playwright-core").Page) => page.locator('[data-worldline-header]')
 const editTitle = async (page: import("playwright-core").Page, title: string) => {
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
+  await page.getByRole("tab", { name: "事件表" }).click()
   await page.locator('article[aria-label="渡口相遇"] h3').dblclick()
   await page.getByLabel("事件标题").fill(title)
   await page.getByRole("button", { name: "保存事件", exact: true }).click()
@@ -26,7 +26,7 @@ test("WU-39d: the header shows 已保存 after a save and 保存失败 after a f
   await editTitle(page, "渡口重逢")
   await expect(header(page).locator("[data-save-state]")).toHaveText("已保存")
   await page.evaluate(() => { (window as any).failNextSave = true })
-  await page.getByRole("button", { name: "事件表", exact: true }).click()
+  await page.getByRole("tab", { name: "事件表" }).click()
   await page.locator('article[aria-label="渡口重逢"] h3').dblclick()
   await page.getByLabel("事件标题").fill("渡口离别")
   await page.getByRole("button", { name: "保存事件", exact: true }).click()
