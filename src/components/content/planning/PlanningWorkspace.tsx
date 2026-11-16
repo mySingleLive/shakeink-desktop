@@ -58,6 +58,7 @@ import {
 } from "@/lib/planning/domain";
 import type { ContentPanelProps } from "../registry";
 import s from "./planning.module.css";
+import { WorldlineHeader, type WorldlineSaveState } from "./worldline/WorldlineHeader";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS, type MaterialRef } from "@/lib/material-reference";
 
 function MeasuredEvent({
@@ -163,6 +164,8 @@ function PlanningWorkspace({
     } | null>(null),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
+    // docs/580 §7.1 (S9): save state kept apart from `message`, which also carries other notices.
+    [saveState, setSaveState] = useState<WorldlineSaveState>("idle"),
     [endTimeMode, setEndTimeMode] = useState(false),
     [startUnit, setStartUnit] = useState(1),
     [durationUnit, setDurationUnit] = useState(1),
@@ -478,6 +481,7 @@ function PlanningWorkspace({
   ) {
     if (busy) return false;
     setBusy(true);
+    setSaveState("saving");
     setMessage("");
     try {
       const r = await fetch(`/api/novels/${novelId}/planning`, {
@@ -504,11 +508,13 @@ function PlanningWorkspace({
         ].map((queryKey) => qc.invalidateQueries({ queryKey })),
       );
       setMessage("已保存");
+      setSaveState("saved");
       return true;
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "保存失败，输入已保留",
       );
+      setSaveState("failed");
       return false;
     } finally {
       setBusy(false);
@@ -4086,43 +4092,50 @@ function PlanningWorkspace({
     <div
       className={`${s.workspace} ${mode === "world" ? s.worldWorkspace : ""}`}
     >
-      <header className={s.toolbar}>
-        <h2>
-          {mode === "world"
-            ? "世界线"
-            : mode === "projection"
-              ? "大纲"
-              : "叙事线"}
-        </h2>
-        <small>
-          版本 {query.data?.version} ·{" "}
-          {mode === "projection"
-            ? "只读投影"
-            : query.data?.readonly
-              ? "只读"
-              : "修改保存到当前作品"}
-        </small>
-        {mode !== "projection" && (
-          <button
-            disabled={
-              readonly ||
-              !planningUndoTarget(
-                query.data?.history ?? [],
-                query.data?.version ?? 0,
-              )
-            }
-            onClick={async () => {
-              const h = planningUndoTarget(
-                query.data?.history ?? [],
-                query.data?.version ?? 0,
-              );
-              if (h) await save([], { action: "restore", snapshotId: h.id });
-            }}
-          >
-            撤销上次规划修改
-          </button>
-        )}
-      </header>
+      {mode === "world" ? (
+        <WorldlineHeader
+          version={query.data?.version}
+          readonly={!!query.data?.readonly}
+          saveState={saveState}
+          canUndo={!readonly && !!planningUndoTarget(query.data?.history ?? [], query.data?.version ?? 0)}
+          onUndo={async () => {
+            const h = planningUndoTarget(query.data?.history ?? [], query.data?.version ?? 0);
+            if (h) await save([], { action: "restore", snapshotId: h.id });
+          }}
+        />
+      ) : (
+        <header className={s.toolbar}>
+          <h2>{mode === "projection" ? "大纲" : "叙事线"}</h2>
+          <small>
+            版本 {query.data?.version} ·{" "}
+            {mode === "projection"
+              ? "只读投影"
+              : query.data?.readonly
+                ? "只读"
+                : "修改保存到当前作品"}
+          </small>
+          {mode !== "projection" && (
+            <button
+              disabled={
+                readonly ||
+                !planningUndoTarget(
+                  query.data?.history ?? [],
+                  query.data?.version ?? 0,
+                )
+              }
+              onClick={async () => {
+                const h = planningUndoTarget(
+                  query.data?.history ?? [],
+                  query.data?.version ?? 0,
+                );
+                if (h) await save([], { action: "restore", snapshotId: h.id });
+              }}
+            >
+              撤销上次规划修改
+            </button>
+          )}
+        </header>
+      )}
       {message && (
         <div className={s.notice} role="status">
           {message}
