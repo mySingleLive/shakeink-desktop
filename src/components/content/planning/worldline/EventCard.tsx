@@ -39,6 +39,46 @@ export function Highlight({ text, terms }: { text: string; terms: readonly strin
   return <>{parts.map((p, i) => (i % 2 ? <mark key={i}>{p}</mark> : p))}</>;
 }
 
+/** docs/577 §12 / 581 WU-66c: wraps search hits in the rendered Markdown body with <mark>, via a TreeWalker over
+ * its text nodes (the Markdown renderer owns the markup, so the marks are added after it renders and removed first). */
+export function useBodyMarks<T extends HTMLElement>(terms: readonly string[], dep: unknown) {
+  const ref = useRef<T>(null);
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const clear = () => {
+      for (const m of [...root.querySelectorAll("mark[data-search-mark]")]) m.replaceWith(document.createTextNode(m.textContent ?? ""));
+      root.normalize();
+    };
+    clear();
+    if (!terms.length) return;
+    const pattern = new RegExp(terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "giu");
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes: Text[] = [];
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n as Text);
+    for (const node of nodes) {
+      const text = node.data;
+      pattern.lastIndex = 0;
+      if (!pattern.test(text)) continue;
+      pattern.lastIndex = 0;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      for (const m of text.matchAll(pattern)) {
+        frag.append(text.slice(last, m.index));
+        const mark = document.createElement("mark");
+        mark.dataset.searchMark = "";
+        mark.textContent = m[0];
+        frag.append(mark);
+        last = m.index! + m[0].length;
+      }
+      frag.append(text.slice(last));
+      node.replaceWith(frag);
+    }
+    return clear;
+  }, [terms, dep]);
+  return ref;
+}
+
 /** Marks overflowing titles so CSS fades their last 36px (577 §11, WU-35). */
 export function useFade<T extends HTMLElement>(dep: unknown) {
   const ref = useRef<T>(null);
@@ -80,6 +120,8 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
   const ctx = useContext(WorldlineCardContext)!;
   const e = p.event;
   const titleRef = useFade<HTMLHeadingElement>(`${e.title}/${p.expanded}`);
+  const press = useRef<{ x: number; y: number } | null>(null);
+  const factRef = useBodyMarks<HTMLDivElement>(ctx.searchTerms, `${e.fact}/${p.expanded}/${p.editing}`);
   const frozen = ctx.frozen.has(e.id);
   const people = e.people.map((id) => ctx.characters.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c);
   const shown = people.slice(0, p.maxAvatars);
@@ -96,9 +138,14 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
       aria-expanded={p.expanded || p.editing}
       className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hit ? s.hit : ""}`}
       style={{ "--ec": `var(${CATEGORY_VAR[e.category]})` } as React.CSSProperties}
+      onPointerDownCapture={(ev) => { press.current = { x: ev.clientX, y: ev.clientY }; }}
       onClick={(ev) => {
         if ((ev.target as Element).closest("button,summary,a,input,select,textarea,label,[data-card-menu]")) return;
         if (p.editing) return;
+        // 581 WU-39c: a press that travelled past 4px was a time drag, not a click.
+        const at = press.current;
+        press.current = null;
+        if (at && Math.hypot(ev.clientX - at.x, ev.clientY - at.y) > 4) return;
         ctx.onToggle(e.id, ev.detail);
       }}
     >
@@ -165,7 +212,7 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
               <small data-card-time="" className={s.when}>{time}</small>
               <span>{IMPORTANCE_LABELS[e.importance - 1]}</span>
             </div>
-            <div data-markdown-preview="" className={s.fact}>
+            <div data-markdown-preview="" className={s.fact} ref={factRef}>
               <MarkdownPreview source={e.fact} />
             </div>
             {people.length > 0 && (

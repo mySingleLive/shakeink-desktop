@@ -1,7 +1,6 @@
 "use client";
 import {
   characterStatesAt,
-  constrainWindow,
   formatTime,
   timeUnit,
   timeBaseValue,
@@ -200,6 +199,8 @@ function PlanningWorkspace({
     [foldedEvents, setFoldedEvents] = useState<ReadonlySet<string>>(new Set()),
     [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<PlanningEvent["category"]>>(new Set()),
     [searchQuery, setSearchQuery] = useState(""),
+    // docs/577 §12: hits follow the box 120ms after typing stops; clearing is immediate.
+    [searchApplied, setSearchApplied] = useState(""),
     [hitIndex, setHitIndex] = useState(0),
     [tableZoom, setTableZoom] = useState(1),
     [treeOn, setTreeOn] = useState(true),
@@ -275,7 +276,7 @@ function PlanningWorkspace({
   const worldAllEvents = useMemo(() => (mode === "world" ? worldEvents(data, worldId) : []), [mode, data, worldId]),
     wTree = useMemo(() => eventTree(worldAllEvents, data), [worldAllEvents, data]),
     wAdapter = useMemo(() => adapterFor(data, worldId, timeBase || null), [data, worldId, timeBase]),
-    wTerms = useMemo(() => toSearchTerms(searchQuery), [searchQuery]),
+    wTerms = useMemo(() => toSearchTerms(searchApplied), [searchApplied]),
     wCharacters = query.data?.characters ?? EMPTY_CHARACTERS,
     wNames = useMemo(() => new Map(wCharacters.map((c) => [c.id, c.name])), [wCharacters]),
     wHits = useMemo(() => {
@@ -297,16 +298,6 @@ function PlanningWorkspace({
       onStartTimeDrag: (ev, id) => actions.current.drag(ev, id),
       renderRefs: (e) => actions.current.refs(e),
     }), [data, wAdapter, readonly, eventDraft, wCharacters, wTerms, wFrozen]);
-  const bounds = refinementRange(data, worldId, eventParent),
-    boundStart = bounds?.start,
-    boundEnd = bounds?.end;
-  useEffect(() => {
-    const bound =
-      boundStart !== undefined && boundEnd !== undefined
-        ? { start: boundStart, end: boundEnd }
-        : null;
-    setWindowRange((v) => constrainWindow(v, bound));
-  }, [boundStart, boundEnd, windowRange.start, windowRange.span]);
   useEffect(() => {
     const down = (e: PointerEvent) => {
       pointerInside.current = !!editor.current?.contains(e.target as Node);
@@ -385,11 +376,12 @@ function PlanningWorkspace({
           (e) => e.id === target || `${w.id}/${e.id}` === target,
         );
         if (e) {
-          setEventParent(e.parent);
-          const time = resolveTime(d, e);
-          if (time.start !== null)
-            setWindowRange((v) => ({ ...v, start: time.start! - 12, y: 0 }));
-          setTable(true);
+          // docs/577 §6 / 580 §7.5: the whole tree is shown, so a deep link opens the ancestors and locates the
+          // event in the current view. Marking the view as fitted keeps the first fit from overriding it.
+          fittedViews.current.add(`${w.id}/root`);
+          setEventParent(null);
+          pendingLocate.current = e.id;
+          setDeepLinkTick((n) => n + 1);
         }
       }
     } else if (card) {
@@ -457,7 +449,14 @@ function PlanningWorkspace({
   }, [dialog]);
   // docs/580 §7.2: one viewport store per panel. Legacy paths (fit, zoom buttons, locate, periods) still write
   // windowRange and are pushed in; store moves (drag, wheel, minimap) flow back once they settle, not per frame.
+  useEffect(() => {
+    if (!searchQuery) { setSearchApplied(""); return; }
+    const timer = setTimeout(() => setSearchApplied(searchQuery), 120);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const fittedViews = useRef(new Set<string>());
+  const pendingLocate = useRef<string | null>(null);
+  const [deepLinkTick, setDeepLinkTick] = useState(0);
   useEffect(() => {
     if (mode !== "world" || !query.data || !worldId) return;
     const key = `${worldId}/${eventParent ?? "root"}`;
@@ -2161,7 +2160,7 @@ function PlanningWorkspace({
     }
   }
   function navigateWorldParent(next: string | null, nextWorld = worldId) {
-    worldViews.current.set(`${worldId}/${eventParent ?? "root"}`, windowRange);
+    worldViews.current.set(`${worldId}/${eventParent ?? "root"}`, { ...viewport.current.getSnapshot(), y: windowY.current });
     if (eventDraft) {
       setMessage("请先保存或取消当前事件编辑，输入已保留。");
       return;
@@ -2200,12 +2199,13 @@ function PlanningWorkspace({
   }
   const findWorldEvent = (id: string) => worldAllEvents.find((e) => e.id === id);
   actions.current = {
-    // docs/580 §7.3 (S1): detail 1 toggles at once; detail 2 undoes that toggle and opens the editor.
+    // docs/580 §7.3 (S1) / 581 WU-32: detail 1 toggles at once; detail 2 leaves the card open and opens the editor,
+    // so the card is expanded while editing and stays expanded after save or cancel.
     toggle(id, detail) {
       setEventSelection(id);
       setPinnedCard(id);
       if (detail >= 2) {
-        setOpenCards((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+        setOpenCards((v) => (v.has(id) ? v : new Set(v).add(id)));
         const e = findWorldEvent(id);
         if (!e || readonly || wFrozen.has(id)) return;
         if (eventDraft) { setMessage("请先保存或取消当前事件编辑，输入已保留。"); return; }
@@ -2261,6 +2261,13 @@ function PlanningWorkspace({
       sc.scrollTop = top - sc.clientHeight / 3;
     }));
   }
+  useEffect(() => {
+    const id = pendingLocate.current;
+    if (!id || !wTree.byId.has(id)) return;
+    pendingLocate.current = null;
+    locateWorldEvent(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkTick, wTree]);
   function renderWorld() {
     const base = activeWorld?.timeBases?.find((b) => b.id === timeBase);
     const labelTime = worldTimeLabel;
@@ -2454,7 +2461,7 @@ function PlanningWorkspace({
           periodPicker={
             <select
               aria-label="时期"
-              className="h-7 rounded-md border border-input bg-transparent px-2 text-[0.8rem]"
+              className="h-7 w-[92px] rounded-md border border-input bg-transparent px-2 text-[0.8rem]"
               value=""
               onChange={(e) => {
                 // docs/577 §9: 全部时期（全貌） fits every placed event with fitTimelineWindow (§4, M8).
@@ -2473,9 +2480,17 @@ function PlanningWorkspace({
             >
               <option value="">时期</option>
               <option value="__all">全部时期（全貌）</option>
-              {allPeriods.map((p) => (
-                <option key={p.id} value={p.id}>{p.title}</option>
-              ))}
+              {allPeriods.map((p) => {
+                // docs/577 §9 / 581 WU-40c: swatch, range and event count; periods inside another one are indented.
+                const nested = allPeriods.some((o) => o.id !== p.id && o.start <= p.start && (o.end === null || (p.end !== null && p.end <= o.end)) && !(o.start === p.start && o.end === p.end));
+                const count = worldAllEvents.filter((x) => { const s = wTree.byId.get(x.id)?.start; return s != null && s >= p.start && (p.end === null || s <= p.end) }).length;
+                const color = `var(--chart-${([...p.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 5) + 1})`;
+                return (
+                  <option key={p.id} value={p.id} style={{ color }}>
+                    {nested ? "\u3000" : ""}■ {p.title} · {labelTime(p.start)} — {p.end === null ? (p.ongoing ? "持续中" : "未定") : labelTime(p.end)} · {count} 件
+                  </option>
+                );
+              })}
             </select>
           }
           allExpanded={worldAllEvents.length > 0 && worldAllEvents.every((e) => openCards.has(e.id))}
@@ -2487,6 +2502,7 @@ function PlanningWorkspace({
             else setWindowRange((v) => ({ ...v, ...zoomAt(v.start, v.span, dir > 0 ? 1 / 1.5 : 1.5, 0.5) }));
           }}
           query={searchQuery}
+          applied={searchApplied === searchQuery}
           onQuery={(q) => { setSearchQuery(q); setHitIndex(0); }}
           hitIndex={hitIndex}
           hitCount={wHits.length}
@@ -2712,6 +2728,8 @@ function PlanningWorkspace({
                     move(clientX, pxPerUnit) {
                       const drag = temporalDrag.current;
                       if (!drag) return false;
+                      // 581 WU-39c: under 5px a press is still a click; no preview moves the card under the pointer.
+                      if (!drag.delta && Math.abs(clientX - drag.x) < 5) return true;
                       const span = viewport.current.getSnapshot().span, plot = span * pxPerUnit;
                       drag.delta = snapTimelineDelta((clientX - drag.x) / pxPerUnit, span, plot, activeWorld?.calendar.kind === "years");
                       setTimePreview({ id: drag.id, delta: drag.delta, edge: drag.edge });

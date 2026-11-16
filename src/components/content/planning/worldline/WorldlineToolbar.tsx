@@ -18,6 +18,8 @@ export function WorldlineToolbar(p: {
   zoomLabel: string;
   onZoom(dir: -1 | 1 | 0): void;
   query: string;
+  /** The hits belong to the current box text (577 §12: they follow 120ms after typing stops). */
+  applied: boolean;
   onQuery(q: string): void;
   hitIndex: number;
   hitCount: number;
@@ -30,7 +32,7 @@ export function WorldlineToolbar(p: {
   onNewEvent: React.ReactNode;
   searchRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const active = p.query.length > 0, none = active && p.hitCount === 0;
+  const active = p.query.length > 0, none = active && p.applied && p.hitCount === 0;
   return (
     <div className={s.bar} role="toolbar" aria-label="世界线工具栏">
       <div className={s.group}>
@@ -82,7 +84,7 @@ export function WorldlineToolbar(p: {
             if (e.key === "Escape") { e.preventDefault(); p.onQuery("") }
           }}
         />
-        {active && <span className="count" data-search-count="" aria-live="polite">{p.hitCount ? `${p.hitIndex + 1} / ${p.hitCount}` : "无结果"}</span>}
+        {active && p.applied && <span className={s.count} data-search-count="" aria-live="polite">{p.hitCount ? `${p.hitIndex + 1} / ${p.hitCount}` : "无结果"}</span>}
         {active && (
           <>
             <button aria-label="上一个结果" disabled={p.hitCount < 2} onClick={() => p.onStep(-1)}>↑</button>
