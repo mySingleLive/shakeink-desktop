@@ -42,6 +42,7 @@ import {
   eventSchema,
   findEvent,
   forkChangedCount,
+  EVENT_CATEGORIES,
   planningSchema,
   planningUndoTarget,
   readingCards,
@@ -109,6 +110,8 @@ async function read(novelId: string): Promise<View> {
   return { ...body, data: planningSchema.parse(body.data) };
 }
 const uid = () => crypto.randomUUID();
+/** docs/577 §9: importance 1–3 as shown to the author. */
+const IMPORTANCE_LABELS = ["一般", "重要", "关键"] as const;
 const buttonTarget = (target: EventTarget | null) =>
   target instanceof Element &&
   !!target.closest(
@@ -1540,6 +1543,38 @@ function PlanningWorkspace({
           value={d.title}
           onChange={(e) => setEventDraft({ ...d, title: e.target.value })}
         />
+        {/* docs/580 §2 (M6): type and importance; frozen prehistory never reaches this editor (WU-71). */}
+        <div className={s.row}>
+          <label>
+            类型
+            <select
+              aria-label="事件类型"
+              value={d.category}
+              onChange={(e) =>
+                setEventDraft((v) => v && { ...v, category: e.target.value as PlanningEvent["category"] })
+              }
+            >
+              {EVENT_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <fieldset aria-label="重要程度">
+            {IMPORTANCE_LABELS.map((label, i) => (
+              <label key={label}>
+                <input
+                  type="radio"
+                  name={`importance-${d.id}`}
+                  checked={d.importance === i + 1}
+                  onChange={() => setEventDraft((v) => v && { ...v, importance: i + 1 })}
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+        </div>
         <div className={s.row}>
           <select
             aria-label="开始时间类型"
@@ -3531,6 +3566,9 @@ function PlanningWorkspace({
         >
           <section className={s.detail}>
             <h3>{event.title}</h3>
+            <p>
+              {event.category} · {IMPORTANCE_LABELS[event.importance - 1]}
+            </p>
             <p>
               {activeWorld?.name} · {time.start ?? "未定"} —{" "}
               {time.end ?? time.windowEnd ?? "未定"}{" "}
