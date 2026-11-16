@@ -64,6 +64,7 @@ import { EventTable } from "./worldline/EventTable";
 import { EventTimeline, TimelineTreeNav, ViewportRange, ViewportValue } from "./worldline/EventTimeline";
 import { createViewportStore, type ViewportStore } from "@/lib/planning/worldline-viewport";
 import { renderProbe } from "@/lib/planning/render-probe";
+import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
 import { EventTreeNav } from "./worldline/EventTree";
 import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
 import wl from "./worldline/worldline.module.css";
@@ -399,6 +400,17 @@ function PlanningWorkspace({
       if (prior?.isConnected) prior.focus();
     };
   }, [dialog]);
+  // docs/580 §7.5 / 581 WU-66i, WU-92: worldline.search belongs to the panel that holds the focus; each mounted panel
+  // registers itself, so ⌘F in panel A only focuses A's search box.
+  const worldPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (mode !== "world") return;
+    return registerDesktopCommandTarget({
+      owner: worldPanel,
+      accepts: (target) => !!target && !!worldPanel.current?.contains(target),
+      commands: { "worldline.search": () => { worldSearch.current?.focus(); worldSearch.current?.select(); } },
+    });
+  }, [mode]);
   useEffect(() => {
     if (!searchQuery) { setSearchApplied(""); return; }
     const timer = setTimeout(() => setSearchApplied(searchQuery), 120);
@@ -2186,6 +2198,15 @@ function PlanningWorkspace({
     refs(e) { return eventReferences(e); },
   };
   /** docs/580 §7.5: one locate for tree, search, rail dots, pending and deep links. */
+  /** docs/577 §13 / 581 WU-67, WU-68: the located card flashes once; CSS drops the animation under reduced motion. */
+  function flashCard(root: ParentNode | null | undefined, id: string) {
+    const el = root?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
+    if (!el) return;
+    el.removeAttribute("data-flash");
+    void el.offsetWidth;
+    el.setAttribute("data-flash", "");
+    setTimeout(() => el.removeAttribute("data-flash"), 1200);
+  }
   function locateWorldEvent(id: string) {
     setEventSelection(id);
     setFoldedEvents((v) => {
@@ -2201,6 +2222,7 @@ function PlanningWorkspace({
         const lane = timeline.current, el = lane?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
         if (!lane || !el) return;
         lane.scrollTop += el.getBoundingClientRect().top - lane.getBoundingClientRect().top - lane.clientHeight / 3;
+        flashCard(lane, id);
       }));
       return;
     }
@@ -2209,6 +2231,7 @@ function PlanningWorkspace({
       if (!sc || !el) return;
       const top = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
       sc.scrollTop = top - sc.clientHeight / 3;
+      flashCard(sc, id);
     }));
   }
   useEffect(() => {
@@ -2303,7 +2326,7 @@ function PlanningWorkspace({
     return (
       <WorldlineCardContext.Provider value={wCardContext}>
       <EventEditorContext.Provider value={renderEventEditor}>
-      <>
+      <div ref={worldPanel} data-worldline-root="" className="contents">
         {/* docs/577 §1, §14: one-row toolbar; every action of the old three rows is in it or under 更多. */}
         <WorldlineToolbar
           view={table ? "table" : "timeline"}
@@ -2704,7 +2727,7 @@ function PlanningWorkspace({
             </details>
           </>
         )}
-      </>
+      </div>
       </EventEditorContext.Provider>
       </WorldlineCardContext.Provider>
     );

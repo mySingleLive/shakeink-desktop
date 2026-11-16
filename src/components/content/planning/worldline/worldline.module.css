@@ -176,3 +176,9 @@
 
 .emptyNote { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); color: var(--muted-foreground); font-size: 13px; pointer-events: none; }
 .workspace.treeOff .tree { width: 0; min-width: 0; overflow: hidden; }
+@keyframes locateFlash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ec) 45%, transparent); } }
+.card[data-flash] { animation: locateFlash 0.6s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { .card[data-flash] { animation: none; } .railDot.d3, .railDot.hot { box-shadow: 0 0 0 1.5px var(--ec); } }
+/* docs/581 WU-44: hovering or selecting a card enlarges its rail dot (the lead already turns 1.6px via .lead.hot). */
+.railDot.hot:not(.cluster) { transform: translate(-50%, -50%) scale(1.35); }
+@media (prefers-reduced-motion: reduce) { .railDot.hot:not(.cluster) { transform: translate(-50%, -50%); } }

@@ -27,10 +27,15 @@ import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {WorldlinePanel} from './src/components/content/planning/PlanningWorkspace';
 import {applyPlanningOperations,planningSchema} from './src/lib/planning/domain';
 import {useChatStore} from './src/stores/chat';
+import {useTabsStore,buildTabId} from './src/stores/tabs';
+import {DesktopCommandController} from './src/components/desktop/DesktopCommandController';
+import {useDesktopStore} from './src/stores/desktop';import {defaultState} from './desktop/core/settings';
 globalThis.renders={};globalThis.__renderProbe=(id)=>{globalThis.renders[id]=(globalThis.renders[id]??0)+1};
 const onRender=(id)=>{globalThis.renders[id]=(globalThis.renders[id]??0)+1};
-globalThis.mountWorldline=(view)=>{
- window.desktop={};
+globalThis.mountWorldline=(view,mount={})=>{
+ window.desktop=mount.controller?{command:async()=>{},readClipboardText:async()=>'',settings:async()=>{throw Error('unexpected settings write')}}:{};
+ if(mount.controller)useDesktopStore.setState({bootstrap:{...defaultState,platform:'darwin'}});
+ globalThis.shortcutOverrides=overrides=>useDesktopStore.setState(state=>({bootstrap:{...state.bootstrap,settings:{...state.bootstrap.settings,shortcuts:{...state.bootstrap.settings.shortcuts,darwin:overrides}}}}));
  useChatStore.setState({draft:'',draftNovelId:null});
  let state={...view,data:planningSchema.parse(view.data)};
  globalThis.posts=[];
@@ -48,7 +53,9 @@ globalThis.mountWorldline=(view)=>{
  globalThis.planningState=()=>state;
  const client=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity},mutations:{retry:false}}});
  const root=createRoot(document.getElementById('app'));
- flushSync(()=>root.render(<QueryClientProvider client={client}><Profiler id="workspace" onRender={onRender}><WorldlinePanel novelId='${NOVEL}'/></Profiler></QueryClientProvider>));
+ const panel=(key)=><div key={key} data-fixture-panel={key} style={{height:mount.panels>1?'50vh':'100vh',overflow:'auto'}}><WorldlinePanel novelId='${NOVEL}' refId={mount.refId}/></div>;
+ flushSync(()=>root.render(<QueryClientProvider client={client}>{mount.controller?<DesktopCommandController/>:null}<Profiler id="workspace" onRender={onRender}>{Array.from({length:mount.panels??1},(_,i)=>panel('p'+i))}</Profiler></QueryClientProvider>));
+ globalThis.requestWorldFocus=(target)=>useTabsStore.getState().requestPanelFocus(buildTabId('worldline','${NOVEL}'),target);
  globalThis.disposeWorldline=()=>{flushSync(()=>root.unmount());client.clear()};
 };
 ` },
@@ -75,7 +82,7 @@ export function launch() {
 export interface WorldlineView { version: number; data: unknown; characters: { id: string; name: string; avatarUrl: string | null }[]; materials: unknown[]; readonly: boolean; history: unknown[]; proposals: unknown[] }
 
 /** Opens a page, mounts the panel with `view`, runs `body`, and fails on any page error. */
-export async function withWorldline(browser: Browser, view: WorldlineView, body: (page: Page) => Promise<void>, options: { profiling?: boolean; theme?: "ink" | "paper"; width?: number } = {}) {
+export async function withWorldline(browser: Browser, view: WorldlineView, body: (page: Page) => Promise<void>, options: { profiling?: boolean; theme?: "ink" | "paper"; width?: number; refId?: string; panels?: number; controller?: boolean; reducedMotion?: boolean } = {}) {
   const page = await browser.newPage({ viewport: { width: options.width ?? 1440, height: 1000 }, deviceScaleFactor: 1 })
   const errors: string[] = []
   page.setDefaultTimeout(5000)
@@ -89,8 +96,9 @@ export async function withWorldline(browser: Browser, view: WorldlineView, body:
     const compiled = await bundleWorldline({ profiling: options.profiling })
     await page.addStyleTag({ content: `${await stylesheet}\n${compiled.css}` })
     await page.addScriptTag({ content: compiled.js })
-    await page.evaluate(v => (window as any).mountWorldline(v), view)
-    await page.getByRole("heading", { name: "世界线", exact: true }).waitFor()
+    if (options.reducedMotion) await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.evaluate(([v, m]) => (window as any).mountWorldline(v, m), [view, { refId: options.refId, panels: options.panels, controller: options.controller }] as const)
+    await page.getByRole("heading", { name: "世界线", exact: true }).first().waitFor()
     await body(page)
     if (errors.length) throw Error("page errors: " + errors.join(" | "))
   } finally {

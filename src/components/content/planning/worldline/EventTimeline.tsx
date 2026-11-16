@@ -73,40 +73,6 @@ function Ruler({ ticks, toX, label }: { ticks: readonly number[]; toX(t: number)
   );
 }
 
-/** The tree as drawn: during an event time drag the dragged node (and, for a move, its subtree) is shifted by the
- * preview delta, so the card follows the pointer the way the old canvas did. */
-function shiftTree(tree: EventTree, preview: TimelineTimeDrag["preview"]): EventTree {
-  const n = preview && tree.byId.get(preview.id);
-  if (!n || !preview.delta) return tree;
-  const byId = new Map(tree.byId);
-  const d = preview.delta, edge = preview.edge;
-  const copy = (x: TreeNode, self: boolean): TreeNode => {
-    const moveStart = !self || edge !== "end", moveEnd = !self || edge !== "start";
-    const c: TreeNode = {
-      ...x,
-      start: x.start === null || !moveStart ? x.start : x.start + d,
-      end: x.end === null || !moveEnd ? x.end : x.end + d,
-      windowEnd: x.windowEnd === null || !moveEnd ? x.windowEnd : x.windowEnd + d,
-      children: [],
-    };
-    c.children = edge === "move" ? x.children.map((k) => copy(k, false)) : x.children;
-    byId.set(c.id, c);
-    return c;
-  };
-  const moved = copy(n, true);
-  const relink = (id: string | null, child: TreeNode): void => {
-    if (!id) return;
-    const p = byId.get(id)!;
-    const q = { ...p, children: p.children.map((k) => (k.id === child.id ? child : k)) };
-    byId.set(q.id, q);
-    relink(q.parent, q);
-  };
-  relink(moved.parent, moved);
-  let root: TreeNode = moved;
-  while (root.parent) root = byId.get(root.parent)!;
-  const roots = tree.roots.map((r) => (r.id === root.id ? root : r)).sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
-  return { roots, pending: tree.pending, byId };
-}
 
 /** docs/577 §4, §10–§11, §15 / docs/580 §5.2, §7.2: the timeline canvas. Families are packed in world coordinates by
  * timelineStep; panning only moves the plane (translateX) and never re-lays out, so cards keep their y. The window
@@ -163,7 +129,13 @@ export function EventTimeline({
   // (add / delete / re-time / re-parent, a drag preview). Identity checks only, so a pan frame costs nothing here.
   const open = useMemo(() => new Set([...expanded, ...(editing ? [editing] : [])]), [expanded, editing]);
   const preview = timeDrag.preview;
-  const shown = useMemo(() => shiftTree(tree, preview), [tree, preview]);
+  // 581 WU-55: a time-drag preview moves the dragged event (and, for a move, its subtree) by a transform only; the
+  // packing is not touched, so no other family moves while the pointer is down. The save repacks.
+  const shown = tree;
+  const moved = useMemo(() => {
+    const n = preview && preview.delta ? tree.byId.get(preview.id) : undefined;
+    return n ? new Set([n.id, ...(preview!.edge === "move" ? descendants(n).map((d) => d.id) : [])]) : null;
+  }, [tree, preview]);
   const inputs = [shown, open, folded, heights] as const;
   const relayout = !lastSizes.current || inputs.some((v, i) => v !== lastSizes.current![i]);
   const laneScale = width > 0 ? width / view.span : 0;
@@ -372,7 +344,10 @@ export function EventTimeline({
               );
             const n = node(el.id);
             if (!n) return null;
-            const ec = { "--ec": `var(${CATEGORY_VAR[n.event.category]})` } as React.CSSProperties;
+            const ec = {
+              "--ec": `var(${CATEGORY_VAR[n.event.category]})`,
+              ...(moved?.has(el.id) && preview!.edge !== "end" ? { transform: `translateX(${preview!.delta * scale}px)` } : {}),
+            } as React.CSSProperties;
             if (el.kind === "frame")
               return <div key={`f${el.id}`} data-family-frame="" data-family={el.family} className={s.familyFrame} style={{ ...ec, left: el.left, width: el.width, top: el.top, height: el.height }} />;
             if (el.kind === "track")

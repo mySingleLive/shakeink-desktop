@@ -88,9 +88,11 @@ export function DesktopCommandController(){
    const previewMatch=currentScope==="preview"&&active.some(command=>command.scope==="text"&&desktopCommandTargets.enabled(command.id,target)&&bindingsFor(command,overrides).some(matchesStroke))
    const keyClipboardMatch=isAPIKeyControl(target)&&active.some(command=>["text.copy","text.cut","text.paste","text.pastePlain"].includes(command.id)&&bindingsFor(command,overrides).some(matchesStroke))
    const markdownMatch=(currentScope==="markdown"||currentScope==="preview")&&active.some(command=>command.scope==="markdown"&&command.id.startsWith("md.")&&!(command as {monacoBindings?:unknown[]}).monacoBindings?.length&&desktopCommandTargets.enabled(command.id,target)&&bindingsFor(command,overrides).some(matchesStroke))
+   // docs/580 §7.5: worldline-scope commands (worldline.search) run from the worldline canvas and its search box.
+   const worldlineMatch=(currentScope==="worldline"||currentScope==="worldline-search")&&active.some(command=>command.scope==="worldline"&&desktopCommandTargets.enabled(command.id,target)&&bindingsFor(command,overrides).some(matchesStroke))
    // Chromium/Monaco retain native movement, IME, when-expressions and undo
    // for untouched local bindings. Only custom/removed keys need interception.
-   if(currentScope!=="none"&&!globalMatch&&!customized&&!composerMatch&&!markdownMatch&&!previewMatch&&!keyClipboardMatch){dispatcher.reset();return}
+   if(currentScope!=="none"&&!globalMatch&&!customized&&!composerMatch&&!markdownMatch&&!previewMatch&&!keyClipboardMatch&&!worldlineMatch){dispatcher.reset();return}
    // Monaco resolves its own untouched chords/when clauses first. A global
    // fallback may run at bubble time only if the editor did not consume it.
    if(currentScope==="markdown"&&globalMatch&&!customized&&!markdownMatch&&!pending&&!afterNative){dispatcher.reset();nativeFirst.add(event);return}
