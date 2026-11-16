@@ -211,9 +211,21 @@ export function EventTable({
   const onZoomRef = useRef(onZoom);
   onZoomRef.current = onZoom;
 
+  const [panelWidth, setPanelWidth] = useState(0);
+  useLayoutEffect(() => {
+    const host = scrollerRef.current?.closest<HTMLElement>("[data-worldline-root]") ?? scrollerRef.current?.closest<HTMLElement>("[data-worldline-panel]");
+    if (!host) return;
+    const ro = new ResizeObserver(() => setPanelWidth(host.clientWidth));
+    ro.observe(host);
+    setPanelWidth(host.clientWidth);
+    return () => ro.disconnect();
+  }, [scrollerRef]);
   const inWin = (y: number) => !virtual || (y >= lo && y <= hi);
   const hot = (ids: readonly string[]) => ids.includes(selected ?? "") || (hover !== null && ids.includes(hover));
-  const leadX = 210 + 12;
+  // The rail narrows with the panel (worldline.module.css @container ≤ 640px); leads follow the same geometry.
+  const narrow = panelWidth > 0 && panelWidth <= 640;
+  const railW = narrow ? 120 : 210, dotX = narrow ? 92 : 158;
+  const leadX = railW + 12;
   return (
     <div
       ref={scrollerRef}
@@ -261,7 +273,7 @@ export function EventTable({
                   data-rail-lead={id}
                   className={`${s.lead} ${n.parent ? s.child : ""} ${selected === id || hover === id ? s.hot : ""}`}
                   style={{ "--ec": `var(${CATEGORY_VAR[n.event.category]})` } as React.CSSProperties}
-                  d={`M165 ${y} C 190 ${y}, ${x1 - 30} ${yh}, ${x1} ${yh}`}
+                  d={`M${dotX + 7} ${y} C ${dotX + 32} ${y}, ${x1 - 30} ${yh}, ${x1} ${yh}`}
                 />
               );
             })}

@@ -182,3 +182,24 @@
 /* docs/581 WU-44: hovering or selecting a card enlarges its rail dot (the lead already turns 1.6px via .lead.hot). */
 .railDot.hot:not(.cluster) { transform: translate(-50%, -50%) scale(1.35); }
 @media (prefers-reduced-motion: reduce) { .railDot.hot:not(.cluster) { transform: translate(-50%, -50%); } }
+/* Narrow panels (the content area beside chat is often ~470px). A container cannot query itself, so the panel's
+ * root (data-worldline-root, display: contents → given a box here) is the container and the workspace adapts inside:
+ * the tree narrows first, then overlays the cards; the table rail narrows so cards keep a usable width. */
+.root { container-type: inline-size; container-name: worldline; display: block; }
+.workspace { position: relative; }
+@container worldline (max-width: 900px) { .workspace:not(.treeOff) { grid-template-columns: 200px minmax(0, 1fr); } }
+@container worldline (max-width: 640px) {
+  .workspace:not(.treeOff) { grid-template-columns: 0 minmax(0, 1fr); }
+  .workspace:not(.treeOff) .tree { position: absolute; z-index: 15; left: 0; top: 0; bottom: 0; width: 240px; background: var(--background); box-shadow: var(--shadow-2); }
+  .rail { width: 120px; }
+  .railLine, .railDot, .railBadge { left: 92px; }
+  .railTick { left: 84px; }
+  .railLabel, .railTickLabel { right: 38px; }
+  .railBreak { width: 120px; padding-right: 38px; }
+  .railPeriod { left: 104px; }
+  .cards { margin-left: 120px; padding-right: 10px; }
+  .slot, .groupBox { right: 10px; }
+}
+/* The view always sits in the second column, also when the tree leaves the grid flow as an overlay. */
+.scroller, .timeline { grid-column: 2; grid-row: 1; }
+.tree { grid-column: 1; grid-row: 1; }

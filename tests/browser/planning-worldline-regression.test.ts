@@ -246,3 +246,19 @@ test("WU-74: years and fixed calendars render; years has no year badge or month 
     await expect(page.getByRole("tree", { name: "事件目录" }).getByRole("treeitem", { name: /^开端 / })).toHaveAttribute("aria-label", /^开端 \d{1,2}-\d{2}$/)
   })
 })
+
+test("E-WU90 narrow panel: at the 470px content width beside chat, table cards keep a usable width; the tree overlays", () => withWorldline(browser, f60(), async page => {
+  await tab(page, "事件表")
+  const w = await page.locator("[data-event-table] [data-event-card]").first().evaluate(e => e.getBoundingClientRect().width)
+  assert.ok(w >= 200, `card width ${w}`)
+  // The overlay tree starts closed in a narrow panel; the switch opens it over the cards; locating closes it.
+  await expect(page.getByRole("button", { name: "显示或隐藏事件目录" })).toHaveAttribute("aria-pressed", "false")
+  await page.getByRole("button", { name: "显示或隐藏事件目录" }).click()
+  await expect(page.getByRole("tree", { name: "事件目录" })).toBeVisible()
+  await page.getByRole("tree", { name: "事件目录" }).getByRole("treeitem", { name: /^星图指向南方群岛 / }).click()
+  await expect(page.getByRole("button", { name: "显示或隐藏事件目录" })).toHaveAttribute("aria-pressed", "false")
+  await page.locator("[data-event-table] [data-event-card][data-selected] h3").dblclick()
+  await page.getByRole("radio", { name: "关键" }).check()
+  await tab(page, "时间线")
+  assert.ok(await page.locator("[data-timeline-plane] [data-event-card]").count() > 0)
+}, { width: 470 }))

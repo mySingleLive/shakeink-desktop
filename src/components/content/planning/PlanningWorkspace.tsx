@@ -403,6 +403,22 @@ function PlanningWorkspace({
   // docs/580 §7.5 / 581 WU-66i, WU-92: worldline.search belongs to the panel that holds the focus; each mounted panel
   // registers itself, so ⌘F in panel A only focuses A's search box.
   const worldPanel = useRef<HTMLDivElement>(null);
+  // Narrow panels (≤ 640px, worldline.module.css) show the tree as an overlay: it starts closed when the panel becomes
+  // narrow and closes after it locates an event, so it never covers the cards or the editor by default.
+  const narrowPanel = useRef(false);
+  useEffect(() => {
+    const el = worldPanel.current;
+    if (!el) return;
+    const check = () => {
+      const narrow = el.clientWidth > 0 && el.clientWidth <= 640;
+      if (narrow && !narrowPanel.current) setTreeOn(false);
+      narrowPanel.current = narrow;
+    };
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    check();
+    return () => ro.disconnect();
+  }, [mode, worldId]);
   useEffect(() => {
     if (mode !== "world") return;
     return registerDesktopCommandTarget({
@@ -2209,6 +2225,7 @@ function PlanningWorkspace({
   }
   function locateWorldEvent(id: string) {
     setEventSelection(id);
+    if (narrowPanel.current) setTreeOn(false);
     setFoldedEvents((v) => {
       let n: Set<string> | null = null;
       for (let p = wTree.byId.get(id)?.parent ?? null; p; p = wTree.byId.get(p)?.parent ?? null) if (v.has(p)) { n ??= new Set(v); n.delete(p); }
@@ -2326,7 +2343,7 @@ function PlanningWorkspace({
     return (
       <WorldlineCardContext.Provider value={wCardContext}>
       <EventEditorContext.Provider value={renderEventEditor}>
-      <div ref={worldPanel} data-worldline-root="" className="contents">
+      <div ref={worldPanel} data-worldline-root="" className={wl.root}>
         {/* docs/577 §1, §14: one-row toolbar; every action of the old three rows is in it or under 更多. */}
         <WorldlineToolbar
           view={table ? "table" : "timeline"}
