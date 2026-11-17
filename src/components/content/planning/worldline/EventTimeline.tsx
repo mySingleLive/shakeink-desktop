@@ -7,6 +7,7 @@ import {
   collapsedCardInput,
   collapsedCardWidth,
   descendants,
+  familyStampEnd,
   emptyTimeline,
   minimapModel,
   timelineStep,
@@ -202,6 +203,20 @@ export function EventTimeline({
     }
     return m;
   }, [shown]);
+  // docs/585: card stamps one precision finer than the axis. Recomputed only when the span's precision, the tree or the
+  // calendar changes; a pan frame (same span) or a zoom step inside one precision only looks the text up.
+  const axis = ctx.adapter.axisPrecision(view.span);
+  const stamps = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const n of shown.byId.values()) {
+      if (n.start === null) continue;
+      const head = ctx.adapter.stamp(n.start, axis, n.event.time);
+      if (!n.children.length) { m.set(n.id, head); continue; }
+      const f = familyStampEnd(n);
+      m.set(n.id, `${head} → ${ctx.adapter.stamp(f.end, axis, f.by.time)}`);
+    }
+    return m;
+  }, [shown, axis, ctx.adapter]);
 
   // Measured heights of open cards feed the next layout. One observer for the component's life; the open set
   // decides what it watches (review R9: no per-render observer churn).
@@ -417,6 +432,7 @@ export function EventTimeline({
       ref={host}
       data-timeline=""
       data-view-span={view.span}
+      data-axis-precision={axis}
       data-view-start={view.start}
       data-view-y={view.y}
       className={s.timeline}
@@ -573,11 +589,7 @@ export function EventTimeline({
             const parent = n.children.length > 0;
             return (
               <div key={`c${el.id}`} data-event={el.id} data-family={el.family} data-plane-left="" className={`${s.tcard} ${parent ? s.header : ""}`} style={{ ...ec, left: el.left, top: el.top, width: el.width }}>
-                {parent ? (
-                  <span data-family-range="" className={s.stamp}>{ctx.adapter.short(n.start!, n.event.time.precision)} → {ctx.adapter.short(famInfo.get(n.id)!.end, n.event.time.precision)}</span>
-                ) : (
-                  <span className={s.stamp}>{ctx.adapter.short(n.start!, n.event.time.precision)}</span>
-                )}
+                <span data-stamp="" {...(parent ? { "data-family-range": "" } : {})} className={s.stamp} title={stamps.get(n.id)}>{stamps.get(n.id)}</span>
                 {el.clippedStart && <span className={s.clipNote}>{CLIP_START_LABEL}</span>}
                 {el.clippedEnd && <span className={`${s.clipNote} ${s.clipEnd}`}>{CLIP_END_LABEL}</span>}
                 <EventCard

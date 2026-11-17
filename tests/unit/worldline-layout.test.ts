@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {readFileSync} from 'node:fs'
 import {civilDays,civilFromDays,ERA_YEAR_HOURS} from '../../src/lib/planning/era-calendar'
-import {fitTimelineWindow,fitDenseTimelineWindow,formatTime} from '../../src/lib/planning/timeline'
+import {fitTimelineWindow,fitDenseTimelineWindow,formatTime,axisPrecision} from '../../src/lib/planning/timeline'
 import {applyPlanningOperations,planningSchema,type PlanningData} from '../../src/lib/planning/domain'
 import * as L from '../../src/lib/planning/worldline-layout'
 
@@ -630,4 +630,96 @@ test('IC-03: shiftSelection moves only events not anchored (transitively) to ano
  applyPlanningOperations(d,ops)
  // The preview set: every moved event plus everything anchored to it, transitively.
  assert.deepEqual([...L.shiftSelection(d,['A','C'],24).follows].sort(),['A','B','C'])
+})
+
+// ---------- docs/585: timeline card stamps one precision finer than the axis ----------
+const Y24=8640,M24=720
+const ST=(a:L.CalendarAdapter,v:number,axis:'year'|'month'|'day'|'hour',precision:string,kind:'exact'|'window'='exact')=>a.stamp(v,axis,{kind,precision:precision as any})
+test('TS-01: axisPrecision boundaries per calendar',()=>{
+ const ap=(s:number,c:Cal)=>axisPrecision(s,c)
+ assert.equal(ap(3*ERA_YEAR_HOURS,ERA_CAL),'year');assert.equal(ap(3*ERA_YEAR_HOURS-1,ERA_CAL),'month')
+ assert.equal(ap(2160,ERA_CAL),'month');assert.equal(ap(2159,ERA_CAL),'day')
+ assert.equal(ap(48,ERA_CAL),'day');assert.equal(ap(47,ERA_CAL),'hour')
+ assert.equal(ap(3*Y24+1,FIXED24),'year');assert.equal(ap(3*Y24,FIXED24),'month')
+ assert.equal(ap(3*M24+1,FIXED24),'month');assert.equal(ap(3*M24,FIXED24),'day')
+ assert.equal(ap(73,FIXED24),'day');assert.equal(ap(72,FIXED24),'hour')
+ assert.equal(ap(10*Y24,{...FIXED24,monthsPerYear:null}),'month')
+ assert.equal(ap(3*ERA_YEAR_HOURS,PLAIN_CAL),'year');assert.equal(ap(2160,PLAIN_CAL),'month');assert.equal(ap(2159,PLAIN_CAL),'day')
+ assert.equal(ap(48,PLAIN_CAL),'day');assert.equal(ap(47,PLAIN_CAL),'hour')
+ assert.equal(ap(1,{kind:'years',epoch:'',hoursPerDay:24,daysPerMonth:30,monthsPerYear:12,eras:[]}),'year')
+})
+test('TS-02: era-calendar labels are unchanged below 48 hours',()=>{
+ assert.equal(formatTime(D5(1349,6,12)+5,ERA_CAL,24),'第五纪1349年6月12日')
+ assert.equal(formatTime(D5(1349,6,12)+5,ERA_CAL,24*100),'第五纪1349年6月')
+})
+test('TS-03/04/05: era calendar stamps by axis and recorded precision',()=>{
+ const a=L.createCalendarAdapter(ERA_CAL),d=D5(1349,6,12)
+ assert.equal(ST(a,d,'year','year'),'约1349年6月');assert.equal(ST(a,d,'year','day'),'1349年6月')
+ assert.equal(ST(a,d,'month','month'),'约1349年6月12日');assert.equal(ST(a,d,'month','day'),'1349年6月12日')
+ assert.equal(ST(a,d+14,'day','hour'),'1349年6月12日 14:00');assert.equal(ST(a,d+14.5,'day','hour'),'1349年6月12日 14:30')
+ assert.equal(ST(a,d,'day','day'),'1349年6月12日')
+ assert.equal(ST(a,d+9,'day','day'),'约1349年6月12日上午');assert.equal(ST(a,d+15,'day','day'),'约1349年6月12日下午')
+ assert.equal(ST(a,d,'day','month'),'约1349年6月12日')
+ assert.equal(ST(a,d+3,'hour','hour'),'1349年6月12日 03:00')
+})
+test('TS-05b: noise, minute truncation and the era year cap',()=>{
+ const a=L.createCalendarAdapter(ERA_CAL),d=D5(1349,6,12)
+ assert.equal(ST(a,d+23+59.7/60,'day','hour'),'1349年6月12日 23:59')
+ assert.equal(ST(a,d-1e-7,'day','day'),'1349年6月12日')
+ const far=FIFTH+civilDays(1_000_001,1,1)*H
+ assert.equal(ST(a,far,'year','year'),'第五纪1000000年后')
+})
+test('TS-06: fixed calendar halves and missing years',()=>{
+ const f20=L.createCalendarAdapter({...FIXED24,hoursPerDay:20}),d=5*600+11*20
+ assert.equal(ST(f20,d+9,'day','day'),'约1年6月12日上午');assert.equal(ST(f20,d+10,'day','day'),'约1年6月12日下午')
+ const noYear=L.createCalendarAdapter({...FIXED24,monthsPerYear:null})
+ assert.equal(ST(noYear,5*M24+11*24,'month','day'),'6月12日')
+})
+test('TS-07: a window event always reads 约',()=>{
+ const a=L.createCalendarAdapter(ERA_CAL)
+ assert.equal(ST(a,D5(1349,6,12)+14,'year','hour','window'),'约1349年6月')
+})
+test('TS-08: unmapped and years calendars keep the short() text',()=>{
+ const un=L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:1,zero:null})
+ assert.equal(ST(un,100,'year','day'),'未映射')
+ const yc:Cal={kind:'years',epoch:'',hoursPerDay:24,daysPerMonth:30,monthsPerYear:12,eras:[]},ya=L.createCalendarAdapter(yc)
+ assert.equal(ST(ya,12.5,'year','day'),ya.short(12.5,'day'))
+})
+test('TS-09: a scaled time base matches the base calendar and absorbs float noise',()=>{
+ // zero 0.4: month 5's start (1年6月1日, 3600 h) converts back to 3599.9999999999995; zero 0.7: 1年1月5日 14:00 (110 h)
+ // converts back to 109.99999999999999. Both are asserted noisy first, so the case really tests the de-noising.
+ const a=L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:3,zero:0.4})
+ for(const s of [10,100,3000,40000])assert.equal(a.axisPrecision(s),axisPrecision(3*s,FIXED24))
+ const v=(3600-0.4)/3
+ assert.ok(a.toDisplay(v)!<3600,'the conversion really is noisy')
+ assert.equal(ST(a,v,'day','day'),'1年6月1日')
+ const b=L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:3,zero:0.7}),w=(110-0.7)/3
+ assert.ok(b.toDisplay(w)!<110,'the conversion really is noisy')
+ assert.equal(ST(b,w,'day','hour'),'1年1月5日 14:00')
+})
+test('TS-09b: a fixed-calendar month start minus noise reads the new month',()=>{
+ assert.equal(ST(L.createCalendarAdapter(FIXED24),720-1e-7,'month','day'),'1年2月1日')
+})
+test('TS-10: familyStampEnd picks the node that gives the family end; ties go to the parent, then the finest',()=>{
+ const t1=treeOf(plan([{id:'p',at:D5(1349,6,12),precision:'day'},{id:'c',at:D5(1349,6,12)+6,precision:'month',parent:'p'}]))
+ const e1=L.familyStampEnd(t1.byId.get('p')!);assert.equal(e1.by.id,'c');assert.equal(e1.end,D5(1349,6,12)+6)
+ const t2=treeOf(plan([{id:'p',at:D5(1349,6,1),dur:240,precision:'day'},{id:'c',at:D5(1349,6,5),dur:144,precision:'month',parent:'p'}]))
+ assert.equal(L.familyStampEnd(t2.byId.get('p')!).by.id,'p')
+ const t3=treeOf(plan([{id:'p',at:D5(1349,6,1),precision:'day'},{id:'a',at:D5(1349,6,1)+6,precision:'month',parent:'p'},{id:'b',at:D5(1349,6,1)+6,precision:'hour',parent:'p'}]))
+ assert.equal(L.familyStampEnd(t3.byId.get('p')!).by.id,'b')
+})
+test('TS-11: a fractional hoursPerDay keeps whole minutes',()=>{
+ const a=L.createCalendarAdapter({...FIXED24,hoursPerDay:24.31})
+ assert.equal(ST(a,24.3,'day','hour'),'1年1月1日 24:18') // 24.3 h = 1458 min; the day holds 1458.6, so the last whole minute is 1458
+ const b=L.createCalendarAdapter({...FIXED24,hoursPerDay:0.01})
+ assert.match(ST(b,0.005,'day','hour'),/ 00:00$/)
+})
+test('TS-12: plain gregorian stamps',()=>{
+ const a=L.createCalendarAdapter({...PLAIN_CAL,epoch:'2026-01-01T00:00:00Z'})
+ assert.equal(ST(a,14,'day','hour'),'2026年1月1日 14:00')
+ assert.equal(ST(a,24*9+15,'day','day'),'约2026年1月10日下午')
+ assert.equal(ST(a,24*40,'year','day'),'2026年2月')
+})
+test('TS-13: an unmapped time base reads hour precision on the axis',()=>{
+ assert.equal(L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:1,zero:null}).axisPrecision(1e6),'hour')
 })

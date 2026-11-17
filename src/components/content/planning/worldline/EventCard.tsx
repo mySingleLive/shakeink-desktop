@@ -1,6 +1,6 @@
 "use client";
 import { createContext, memo, useContext, useLayoutEffect, useRef, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { resolveTime, type PlanningData, type PlanningEvent } from "@/lib/planning/domain";
 import { CATEGORY_VAR, type CalendarAdapter } from "@/lib/planning/worldline-layout";
@@ -201,7 +201,7 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             aria-expanded={p.expanded}
             onClick={() => ctx.onExpand(e.id)}
           >
-            {p.expanded ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+            <ChevronDown size={16} strokeWidth={2} aria-hidden className={p.expanded ? s.expandUp : undefined} />
           </button>
         )}
         <details data-card-menu="" className={s.menuHost} onClick={(ev) => {

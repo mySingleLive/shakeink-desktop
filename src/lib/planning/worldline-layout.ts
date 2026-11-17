@@ -2,11 +2,13 @@
  * docs/580 §4–§5: pure layout functions for the redesigned worldline panel (event table and timeline).
  * No DOM and no React: every position the panel draws comes from here, so it can be unit tested (docs/581 §2).
  */
-import { civilDays, civilFromDays, type EraPrecision } from "./era-calendar";
+import { civilDays, civilFromDays, eraLabel, ERA_MAX_YEAR, type EraPrecision } from "./era-calendar";
 import {
   fitDenseTimelineWindow,
   fitTimelineWindow,
   formatTime,
+  axisPrecision,
+  type AxisPrecision,
   timeBaseValue,
   type Calendar,
 } from "./timeline";
@@ -90,11 +92,21 @@ export interface CalendarAdapter {
   railLabel(value: number, precision: EraPrecision, yearShown?: boolean): string;
   /** Directory short time: M-DD, or the era name for era precision. */
   short(value: number, precision?: EraPrecision): string;
+  /** docs/585 §1: the precision the axis reads at a window span (in worldline units). */
+  axisPrecision(span: number): AxisPrecision;
+  /** docs/585 §3: timeline card stamp, one precision finer than the axis; 约 when finer than the record. */
+  stamp(value: number, axis: AxisPrecision, time: StampTime): string;
   yearText(value: number): string;
   monthText(value: number): string;
   /** The era holding the value, in worldline units; null on calendars without eras or before the first era. */
   eraOf(value: number): { name: string; start: number; end: number | null } | null;
 }
+export interface StampTime {
+  kind: "exact" | "window" | "unknown";
+  precision: EraPrecision;
+}
+const PRECISION_RANK: Readonly<Record<EraPrecision, number>> = { era: 0, year: 1, month: 2, day: 3, hour: 4 };
+const FINER: Readonly<Record<AxisPrecision, "month" | "day" | "hour">> = { year: "month", month: "day", day: "hour", hour: "hour" };
 export interface TimeBaseInput {
   calendar: Calendar;
   scale: number;
@@ -260,6 +272,45 @@ export function createCalendarAdapter(
       if (precision === "month") return `${c.month}月`;
       return `${c.month}-${String(c.day).padStart(2, "0")}`;
     },
+    axisPrecision(span) {
+      return zero === null ? "hour" : axisPrecision(span * scale, cal);
+    },
+    stamp(value, axis, time) {
+      const shown = FINER[axis];
+      const d = toDisplay(value);
+      if (d === null) return unmapped;
+      // Frame origin and day length of the label calendar; null keeps the short() text (years, no months).
+      let origin: number | null = null;
+      if (cal.kind === "gregorian") {
+        if (eras.length) {
+          const i = eraAt(d);
+          if (i < 0) return adapter.short(value, time.precision);
+          origin = eras[i].start;
+        } else if (epochHours !== null) origin = -epochHours;
+      } else if (cal.kind === "fixed" && fixedDay && fixedMonth) origin = 0;
+      if (origin === null) return adapter.short(value, time.precision);
+      const dayLen = cal.kind === "fixed" ? fixedDay! : 24;
+      // §3 step 1–3: day with the dayIndex tolerance, minutes de-noised on their own, then civil() on the quantised value.
+      const h = d - origin;
+      const day = Math.floor(Math.round((h / dayLen) * 1e6) / 1e6);
+      const tod = Math.max(0, h - day * dayLen);
+      const minute = Math.min(Math.max(0, Math.ceil(dayLen * 60) - 1), Math.max(0, Math.floor(Math.round(tod * 60 * 1e3) / 1e3)));
+      const c = civil(origin + day * dayLen + minute / 60);
+      if (!c) return adapter.short(value, time.precision);
+      if (c.era !== null && c.year !== null && c.year > ERA_MAX_YEAR) return eraLabel(d, eras, "year");
+      // What is actually shown: an hour stamp of a coarser record without a time of day stays at the day.
+      const half = minute < (dayLen * 60) / 2 ? "上午" : "下午";
+      const exactHour = time.precision === "hour";
+      const reached: EraPrecision = shown === "hour" && !exactHour && minute === 0 ? "day" : shown;
+      const about = time.kind === "window" || PRECISION_RANK[reached] > PRECISION_RANK[time.precision];
+      let text = `${c.year === null ? "" : `${c.year}年`}${c.month}月`;
+      if (shown !== "month") text += `${c.day}日`;
+      if (shown === "hour")
+        text += exactHour
+          ? ` ${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`
+          : minute === 0 ? "" : half;
+      return about ? `约${text}` : text;
+    },
     yearText(value) {
       const d = toDisplay(value),
         c = d === null ? null : civil(d);
@@ -385,6 +436,23 @@ export function familyEnd(node: TreeNode | string, tree?: EventTree): number {
   let end = nodeEnd(n);
   for (const c of n.children) end = Math.max(end, familyEnd(c));
   return end;
+}
+/** docs/585 §4: the family end and the node that gives it (for the end stamp's 约). Ties within 1e-6 day go to the
+ * parent, then to the finest recorded precision, then to the first found. */
+export function familyStampEnd(node: TreeNode): { end: number; by: PlanningEvent } {
+  const own = node.end ?? node.start ?? 0;
+  let end = own,
+    by = node.event;
+  const eps = 24e-6;
+  for (const x of descendants(node)) {
+    const v = x.end ?? x.start ?? node.start ?? 0;
+    if (v > end + eps) (end = v), (by = x.event);
+    else if (v >= end - eps && by !== node.event && PRECISION_RANK[x.event.time.precision ?? "hour"] > PRECISION_RANK[by.time.precision ?? "hour"]) {
+      end = Math.max(end, v);
+      by = x.event;
+    }
+  }
+  return { end, by };
 }
 export function descendants(node: TreeNode): TreeNode[] {
   return node.children.flatMap((c) => [c, ...descendants(c)]);

@@ -51,6 +51,18 @@ export type Calendar = PlanningData["worlds"][number]["calendar"];
 export function timeUnit(calendar: Calendar) {
   return calendar.kind === "years" ? "年" : "小时";
 }
+export type AxisPrecision = "year" | "month" | "day" | "hour";
+/** docs/585 §1: the precision the timeline axis reads at a window span. Era calendars use formatTime's thresholds;
+ * fixed calendars use its strict ones; plain gregorian follows the tick spacing (its labels only switch minute/day). */
+export function axisPrecision(span: number, calendar: Calendar): AxisPrecision {
+  if (calendar.kind === "years") return "year";
+  if (calendar.kind === "gregorian")
+    return span >= ERA_YEAR_HOURS * 3 ? "year" : span >= 24 * 90 ? "month" : span >= 48 ? "day" : "hour";
+  const day = calendar.hoursPerDay,
+    month = day && calendar.daysPerMonth ? day * calendar.daysPerMonth : null,
+    year = month && calendar.monthsPerYear ? month * calendar.monthsPerYear : null;
+  return year && span > year * 3 ? "year" : month && span > month * 3 ? "month" : day && span > day * 3 ? "day" : "hour";
+}
 export function formatTime(
   value: number,
   calendar: Calendar,
@@ -65,11 +77,7 @@ export function formatTime(
       calendar.eras,
       precision && precision !== "hour"
         ? precision
-        : span >= ERA_YEAR_HOURS * 3
-          ? "year"
-          : span >= 24 * 90
-            ? "month"
-            : "day",
+        : ((p) => (p === "hour" ? "day" : p))(axisPrecision(span, calendar)),
     );
   if (calendar.kind === "gregorian") {
     const epoch = Date.parse(calendar.epoch);
