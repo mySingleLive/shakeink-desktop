@@ -68,8 +68,9 @@ import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
 import { EventTreeNav } from "./worldline/EventTree";
 import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
 import wl from "./worldline/worldline.module.css";
-import { adapterFor, descendants, dimmedBy, eventTree, matchEvent, searchTerms as toSearchTerms, ZOOM_MAX, ZOOM_MIN } from "@/lib/planning/worldline-layout";
+import { adapterFor, descendants, dimmedBy, eventTree, matchEvent, searchTerms as toSearchTerms, shiftSelection, ZOOM_MAX, ZOOM_MIN } from "@/lib/planning/worldline-layout";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS, type MaterialRef } from "@/lib/material-reference";
+import { useDesktopStore } from "@/stores/desktop";
 
 
 type View = {
@@ -105,6 +106,9 @@ export function NarrativePanel(props: ContentPanelProps) {
 export function OutlineProjectionPanel(props: ContentPanelProps) {
   return <PlanningWorkspace {...props} mode="projection" />;
 }
+/** docs/583: an open card collapses after the double-click interval so the second click still finds it. */
+const COLLAPSE_DELAY_MS = 260;
+
 function PlanningWorkspace({
   novelId,
   refId,
@@ -114,6 +118,7 @@ function PlanningWorkspace({
   refId?: string;
   mode: "world" | "narrative" | "projection";
 }) {
+  const desktopPlatform = useDesktopStore((state) => state.bootstrap?.platform);
   const focusRequest = useTabsStore((v) => v.panelFocus),
     consumeFocus = useTabsStore((v) => v.consumePanelFocus);
   const qc = useQueryClient(),
@@ -136,6 +141,8 @@ function PlanningWorkspace({
     [dialog, setDialog] = useState<{
       kind: string;
       id?: string;
+      /** docs/584: several events for a batch delete. */
+      ids?: string[];
       before?: string | null;
       volume?: string;
       rangeDraft?: { start: number; end: number | null };
@@ -160,6 +167,8 @@ function PlanningWorkspace({
     [dragId, setDragId] = useState<string | null>(null),
     // docs/580 §1 interface state of the worldline redesign; never written to the work (WU-09e).
     [openCards, setOpenCards] = useState<ReadonlySet<string>>(new Set()),
+    // docs/584 R2: timeline multi-selection; eventSelection stays the primary (detail button, tree highlight).
+    [selectionRaw, setSelection] = useState<ReadonlySet<string>>(new Set()),
     [pinnedCard, setPinnedCard] = useState<string | null>(null),
     [foldedEvents, setFoldedEvents] = useState<ReadonlySet<string>>(new Set()),
     [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<PlanningEvent["category"]>>(new Set()),
@@ -177,17 +186,37 @@ function PlanningWorkspace({
   renderProbe("PlanningWorkspace");
   const viewport = useRef<ViewportStore>(null!);
   viewport.current ??= createViewportStore({ start: 0, span: 240 });
-  const windowY = useRef(0);
   type WindowValue = { start: number; span: number; y: number };
+  // docs/584 R1: y (the plane's vertical offset) lives in the store with start and span.
   const setWindowRange = useCallback((next: WindowValue | ((v: WindowValue) => WindowValue)) => {
     const w = viewport.current.getSnapshot();
-    const v = typeof next === "function" ? next({ start: w.start, span: w.span, y: windowY.current }) : next;
-    windowY.current = v.y;
-    viewport.current.setWindow({ start: v.start, span: v.span });
+    const v = typeof next === "function" ? next({ start: w.start, span: w.span, y: w.y }) : next;
+    viewport.current.setWindow({ start: v.start, span: v.span, y: v.y });
   }, []);
+  const selectionRef = useRef<ReadonlySet<string>>(new Set());
+  const openCardsRef = useRef(openCards);
+  openCardsRef.current = openCards;
+  const pendingCollapse = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const takePendingCollapse = () => {
+    const p = pendingCollapse.current;
+    if (p) clearTimeout(p.timer);
+    pendingCollapse.current = null;
+    return p;
+  };
+  useEffect(() => () => { if (pendingCollapse.current) clearTimeout(pendingCollapse.current.timer); }, []);
   const tableScroller = useRef<HTMLDivElement>(null),
     worldSearch = useRef<HTMLInputElement>(null),
-    actions = useRef<{ toggle(id: string, detail: number): void; menu: WorldlineCardContextValue["onMenu"]; drag(ev: React.PointerEvent, id: string): void; refs(e: PlanningEvent): ReactNode }>(null!);
+    actions = useRef<{
+      toggle(id: string, detail: number): void;
+      select: WorldlineCardContextValue["onSelect"];
+      expand(id: string): void;
+      boxSelect(ids: string[], additive: boolean): void;
+      clearSelection(): void;
+      deleteSelection(): void;
+      menu: WorldlineCardContextValue["onMenu"];
+      drag(ev: React.PointerEvent, id: string): void;
+      refs(e: PlanningEvent): ReactNode;
+    }>(null!);
   const editor = useRef<HTMLDivElement>(null),
     timeline = useRef<HTMLDivElement>(null),
     pan = useRef<{ x: number; y: number; start: number; top: number } | null>(
@@ -228,6 +257,11 @@ function PlanningWorkspace({
   // docs/580 §5, §7: worldline redesign derived values (one tree for both views).
   const worldAllEvents = useMemo(() => (mode === "world" ? worldEvents(data, worldId) : []), [mode, data, worldId]),
     wTree = useMemo(() => eventTree(worldAllEvents, data), [worldAllEvents, data]),
+    // docs/584 R2: ids no longer in this world (deleted, other world) drop out of the selection.
+    selection = useMemo<ReadonlySet<string>>(() => {
+      const kept = [...selectionRaw].filter((id) => wTree.byId.has(id));
+      return kept.length === selectionRaw.size ? selectionRaw : new Set(kept);
+    }, [selectionRaw, wTree]),
     wAdapter = useMemo(() => adapterFor(data, worldId, timeBase || null), [data, worldId, timeBase]),
     wTerms = useMemo(() => toSearchTerms(searchApplied), [searchApplied]),
     wCharacters = query.data?.characters ?? EMPTY_CHARACTERS,
@@ -247,10 +281,14 @@ function PlanningWorkspace({
     wCardContext = useMemo<WorldlineCardContextValue>(() => ({
       data, adapter: wAdapter, readonly, hasDraft: !!eventDraft, characters: wCharacters, searchTerms: wTerms, frozen: wFrozen,
       onToggle: (id, detail) => actions.current.toggle(id, detail),
+      onSelect: (id, detail, mods) => actions.current.select(id, detail, mods),
+      onExpand: (id) => actions.current.expand(id),
       onMenu: (action, id) => actions.current.menu(action, id),
       onStartTimeDrag: (ev, id) => actions.current.drag(ev, id),
       renderRefs: (e) => actions.current.refs(e),
     }), [data, wAdapter, readonly, eventDraft, wCharacters, wTerms, wFrozen]);
+  // Card callbacks are stable (actions ref), so they read the latest selection here.
+  selectionRef.current = selection;
   useEffect(() => {
     const down = (e: PointerEvent) => {
       pointerInside.current = !!editor.current?.contains(e.target as Node);
@@ -454,6 +492,8 @@ function PlanningWorkspace({
       ),
       y: 0,
     });
+    // docs/584 R1: the first open centres the packed cards once the timeline knows their layout.
+    viewport.current.requestCenter();
   }, [mode, worldId, eventParent, query.data]);
   useEffect(() => {
     setEndTimeMode(false);
@@ -674,12 +714,15 @@ function PlanningWorkspace({
     );
   }
   function quotePlanning(
-    title: string,
-    id: string,
-    kind: "世界事件" | "叙事卡片",
+    titleOrItems: string | readonly (readonly [string, string])[],
+    idOrKind: string,
+    kind?: "世界事件" | "叙事卡片",
   ) {
+    // docs/584 A2: several events quote at once, one line each, in the given order.
+    const items = typeof titleOrItems === "string" ? [[titleOrItems, idOrKind] as const] : titleOrItems;
+    const k = (typeof titleOrItems === "string" ? kind : idOrKind) as "世界事件" | "叙事卡片";
     const current = useChatStore.getState().draft;
-    const quote = `【${kind}：${title}；ID=${id}；作品=${novelId}】请通过 getNovelPlanning 读取当前资料。`;
+    const quote = items.map(([title, id]) => `【${k}：${title}；ID=${id}；作品=${novelId}】请通过 getNovelPlanning 读取当前资料。`).join("\n");
     useChatStore.setState({
       draftNovelId: novelId,
       draft: current.trim() ? `${current.trimEnd()}\n${quote}` : quote,
@@ -2026,19 +2069,20 @@ function PlanningWorkspace({
     x: number;
     edge: "move" | "start" | "end";
     delta: number;
+    /** docs/584 A3: a multi-selection moved together. */
+    group?: string[];
   } | null>(null);
   const [timePreview, setTimePreview] = useState<{
     id: string;
     delta: number;
     edge: "move" | "start" | "end";
+    /** Every event the preview shifts (moved + anchored to them, transitively). */
+    follows?: ReadonlySet<string>;
   } | null>(null);
   useEffect(() => {
     const cancel = () => {
       const origin = pan.current;
-      if (origin) {
-        setWindowRange((v) => ({ ...v, start: origin.start, y: -origin.top }));
-        if (timeline.current) timeline.current.scrollTop = origin.top;
-      }
+      if (origin) setWindowRange((v) => ({ ...v, start: origin.start, y: -origin.top }));
       pan.current = null;
       temporalDrag.current = null;
       setTimePreview(null);
@@ -2058,6 +2102,7 @@ function PlanningWorkspace({
     collection: "events" | "periods",
     id: string,
     edge: "move" | "start" | "end",
+    group?: string[],
   ) {
     if (
       readonly ||
@@ -2065,10 +2110,11 @@ function PlanningWorkspace({
       !data[collection].some((e) => e.id === id && e.line === worldId)
     )
       return;
+    if (group && group.some((g) => wFrozen.has(g))) { setMessage("所选事件中有冻结前史，不能整体调整时间"); return; }
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     suppressPeriodClick.current = false;
-    temporalDrag.current = { collection, id, x: e.clientX, edge, delta: 0 };
+    temporalDrag.current = { collection, id, x: e.clientX, edge, delta: 0, group };
   }
   async function finishTimeDrag() {
     const drag = temporalDrag.current;
@@ -2081,6 +2127,13 @@ function PlanningWorkspace({
     )
       return;
     suppressPeriodClick.current = true;
+    if (drag.collection === "events" && drag.group) {
+      // docs/584 A3: one save for the whole selection; anchored events follow their anchors without a put.
+      const { moved } = shiftSelection(data, drag.group, drag.delta);
+      if (moved.length > 200) { setMessage("一次最多调整 200 个事件"); return; }
+      await save(moved.map((value) => ({ kind: "put" as const, collection: "events" as const, value })));
+      return;
+    }
     if (drag.collection === "events") {
       const original = data.events.find(
         (e) => e.id === drag.id && e.line === worldId,
@@ -2138,7 +2191,7 @@ function PlanningWorkspace({
     }
   }
   function navigateWorldParent(next: string | null, nextWorld = worldId) {
-    worldViews.current.set(`${worldId}/${eventParent ?? "root"}`, { ...viewport.current.getSnapshot(), y: windowY.current });
+    worldViews.current.set(`${worldId}/${eventParent ?? "root"}`, { ...viewport.current.getSnapshot() });
     if (eventDraft) {
       setMessage("请先保存或取消当前事件编辑，输入已保留。");
       return;
@@ -2171,9 +2224,7 @@ function PlanningWorkspace({
         y: 0,
       },
     );
-    requestAnimationFrame(() => {
-      if (timeline.current) timeline.current.scrollTop = -(saved?.y ?? 0);
-    });
+    setSelection(new Set());
   }
   const findWorldEvent = (id: string) => worldAllEvents.find((e) => e.id === id);
   actions.current = {
@@ -2182,6 +2233,12 @@ function PlanningWorkspace({
     toggle(id, detail) {
       setEventSelection(id);
       setPinnedCard(id);
+      // docs/583 R1: a collapsed card is as wide as its title, so collapsing at once would move the card out from
+      // under the second click of a double click. An open card collapses after the double-click interval instead.
+      // A double click on the same card cancels its pending collapse; any other click carries it out first.
+      const pend = takePendingCollapse();
+      const keep = !!pend && pend.id === id && detail >= 2;
+      if (pend && !keep) setOpenCards((v) => { if (!v.has(pend.id)) return v; const n = new Set(v); n.delete(pend.id); return n; });
       if (detail >= 2) {
         setOpenCards((v) => (v.has(id) ? v : new Set(v).add(id)));
         const e = findWorldEvent(id);
@@ -2191,11 +2248,63 @@ function PlanningWorkspace({
         setEventDraft(structuredClone(e));
         return;
       }
+      if (openCardsRef.current.has(id) && pend?.id !== id) {
+        pendingCollapse.current = { id, timer: setTimeout(() => {
+          pendingCollapse.current = null;
+          setOpenCards((v) => { if (!v.has(id)) return v; const n = new Set(v); n.delete(id); return n; });
+        }, COLLAPSE_DELAY_MS) };
+        return;
+      }
+      setOpenCards((v) => (v.has(id) ? v : new Set(v).add(id)));
+    },
+    // docs/584 R2: timeline clicks select; ⌘/Ctrl toggles, Shift adds; a double click opens the editor (and expands).
+    select(id, detail, mods) {
+      const selection = selectionRef.current;
+      if (detail >= 2) { actions.current.toggle(id, 2); setSelection(new Set([id])); return; }
+      setPinnedCard(id);
+      if (mods.toggle) {
+        const next = new Set(selection);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        setSelection(next);
+        setEventSelection((primary) => (next.has(id) ? id : primary === id ? ([...next].at(-1) ?? null) : primary));
+      } else if (mods.add) {
+        setSelection(new Set([...selection, id]));
+        setEventSelection(id);
+      } else {
+        setSelection(new Set([id]));
+        setEventSelection(id);
+      }
+    },
+    expand(id) {
+      setPinnedCard(id);
       setOpenCards((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    },
+    boxSelect(ids, additive) {
+      const selection = selectionRef.current;
+      const next = new Set(additive ? [...selection, ...ids] : ids);
+      setSelection(next);
+      setEventSelection((primary) => (primary && next.has(primary) ? primary : ([...next].at(-1) ?? null)));
+    },
+    clearSelection() { setSelection(new Set()); setEventSelection(null); },
+    deleteSelection() {
+      const ids = [...selection];
+      if (!ids.length || readonly || eventDraft) return;
+      // Frozen history belongs to the fork source and cannot be deleted here (same rule as the single 删除).
+      if (ids.some((x) => wFrozen.has(x))) { setMessage("所选事件中有冻结前史，不能删除"); return; }
+      if (ids.length === 1) { setDialog({ kind: "delete-event", id: ids[0] }); return; }
+      if (ids.length > 200) { setMessage("一次最多删除 200 个事件"); return; }
+      setDialog({ kind: "delete-event", ids });
     },
     menu(action, id) {
       const e = findWorldEvent(id);
       if (!e) return;
+      if (action === "quoteSelection") {
+        const chosen = [...selection].map((x) => wTree.byId.get(x)).filter((n): n is NonNullable<typeof n> => !!n)
+          .sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity));
+        quotePlanning(chosen.map((n) => [n.event.title, `${worldId}/${n.id}`] as const), "世界事件");
+        return;
+      }
+      if (action === "deleteSelection") { actions.current.deleteSelection(); return; }
       if (action === "quote") quotePlanning(e.title, `${worldId}/${e.id}`, "世界事件");
       else if (action === "detail") setDialog({ kind: "event-detail", id: e.id });
       else if (action === "edit") setEventDraft(structuredClone(e));
@@ -2210,7 +2319,11 @@ function PlanningWorkspace({
         if (first) locateWorldEvent(first.id);
       }
     },
-    drag(ev, id) { startTimeDrag(ev, "events", id, "move"); },
+    drag(ev, id) {
+      // docs/584 A3: a title drag on a card of a ≥ 2 selection moves the whole selection.
+      if (selection.size >= 2 && selection.has(id)) startTimeDrag(ev, "events", id, "move", [...selection]);
+      else startTimeDrag(ev, "events", id, "move");
+    },
     refs(e) { return eventReferences(e); },
   };
   /** docs/580 §7.5: one locate for tree, search, rail dots, pending and deep links. */
@@ -2232,13 +2345,15 @@ function PlanningWorkspace({
       return n ?? v;
     });
     if (!table) {
-      // Timeline: pan the window to the event and scroll the lane to its card (review R5).
+      // Timeline: pan the window to the event and move the plane so its card sits a third down (review R5, 584 y).
+      viewport.current.cancelCenterRequest();
       const n = wTree.byId.get(id);
       if (n?.start != null) setWindowRange((v) => ({ ...v, start: n.start! - v.span * 0.08 }));
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const lane = timeline.current, el = lane?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
         if (!lane || !el) return;
-        lane.scrollTop += el.getBoundingClientRect().top - lane.getBoundingClientRect().top - lane.clientHeight / 3;
+        const v = viewport.current.getSnapshot();
+        viewport.current.setWindow({ y: v.y - (el.getBoundingClientRect().top - lane.getBoundingClientRect().top - lane.clientHeight / 3) });
         flashCard(lane, id);
       }));
       return;
@@ -2275,6 +2390,11 @@ function PlanningWorkspace({
           ]
         : [];
     const plotWidth = Math.max(1, timelineWidth - 28);
+    // docs/584 R1: 复位 / 全貌 / the empty-view button fit every placed event and centre the cards (横纵).
+    const resetTimeline = () => {
+      setWindowRange({ ...fitTimelineWindow(placed.map((x) => { const t = resolveTime(data, x); return { start: t.start!, end: t.end } }), plotWidth), y: 0 });
+      viewport.current.requestCenter();
+    };
     const allPeriods = [
       ...(fork?.periods ?? []),
       ...data.periods.filter((p) => p.line === worldId),
@@ -2335,9 +2455,10 @@ function PlanningWorkspace({
           y: 0,
         }));
       else setTable(true);
+      viewport.current.cancelCenterRequest();
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const lane = timeline.current, el = lane?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(e.id)}"]`);
-        if (lane && el) lane.scrollTop += el.getBoundingClientRect().top - lane.getBoundingClientRect().top - 24;
+        if (lane && el) { const v = viewport.current.getSnapshot(); viewport.current.setWindow({ y: v.y - (el.getBoundingClientRect().top - lane.getBoundingClientRect().top - 24) }); }
       }));
     };
     return (
@@ -2375,7 +2496,7 @@ function PlanningWorkspace({
               onChange={(e) => {
                 // docs/577 §9: 全部时期（全貌） fits every placed event with fitTimelineWindow (§4, M8).
                 if (e.target.value === "__all") {
-                  setWindowRange({ ...fitTimelineWindow(placed.map((x) => { const t = resolveTime(data, x); return { start: t.start!, end: t.end } }), plotWidth), y: 0 });
+                  resetTimeline();
                   setMessage("已显示全貌");
                   return;
                 }
@@ -2403,11 +2524,11 @@ function PlanningWorkspace({
             </select>
           }
           allExpanded={worldAllEvents.length > 0 && worldAllEvents.every((e) => openCards.has(e.id))}
-          onToggleAll={() => setOpenCards((v) => (worldAllEvents.length > 0 && worldAllEvents.every((e) => v.has(e.id)) ? new Set() : new Set(worldAllEvents.map((e) => e.id))))}
+          onToggleAll={() => { takePendingCollapse(); setOpenCards((v) => (worldAllEvents.length > 0 && worldAllEvents.every((e) => v.has(e.id)) ? new Set() : new Set(worldAllEvents.map((e) => e.id)))); }}
           zoomLabel={table ? `${Math.round(tableZoom * 100)}%` : <ViewportValue store={viewport.current} render={(w) => `${Math.round(w.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`} />}
           onZoom={(dir) => {
             if (table) setTableZoom((z) => (dir === 0 ? 1 : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * (dir > 0 ? 1.25 : 0.8) * 100) / 100))));
-            else if (dir === 0) setWindowRange((v) => ({ ...v, ...fitTimelineWindow(placed.map((e) => { const t = resolveTime(data, e); return { start: t.start!, end: t.end } }), plotWidth) }));
+            else if (dir === 0) resetTimeline();
             else setWindowRange((v) => ({ ...v, ...zoomAt(v.start, v.span, dir > 0 ? 1 / 1.5 : 1.5, 0.5) }));
           }}
           query={searchQuery}
@@ -2467,6 +2588,7 @@ function PlanningWorkspace({
             onSolo={(c) => setHiddenTypes(new Set(EVENT_CATEGORIES.filter((x) => x !== c)))}
             range={<ViewportRange store={viewport.current} label={labelTime} />}
             total={worldAllEvents.length}
+            selected={table ? 0 : selection.size}
           />
         )}
         {fork && (
@@ -2642,7 +2764,7 @@ function PlanningWorkspace({
                       if (!drag.delta && Math.abs(clientX - drag.x) < 5) return true;
                       const span = viewport.current.getSnapshot().span, plot = span * pxPerUnit;
                       drag.delta = snapTimelineDelta((clientX - drag.x) / pxPerUnit, span, plot, activeWorld?.calendar.kind === "years");
-                      setTimePreview({ id: drag.id, delta: drag.delta, edge: drag.edge });
+                      setTimePreview({ id: drag.id, delta: drag.delta, edge: drag.edge, ...(drag.group ? { follows: shiftSelection(data, drag.group, drag.delta).follows } : {}) });
                       return true;
                     },
                     end: () => { void finishTimeDrag(); },
@@ -2676,13 +2798,17 @@ function PlanningWorkspace({
                     })),
                   }))}
                   onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                  selection={selection}
+                  onBoxSelect={(ids, additive) => actions.current.boxSelect(ids, additive)}
+                  onClearSelection={() => actions.current.clearSelection()}
+                  onDeleteSelection={() => actions.current.deleteSelection()}
+                  onReset={resetTimeline}
                 />
               </div>
             )}
             <div className={s.timelineFooter}>
               <span>
-                拖动空白处平移 · Ctrl + 滚轮缩放 · Shift + 滚轮横移 ·
-                双击卡片原位编辑
+                拖动空白处移动画布 · 滚轮缩放 · Shift + 滚轮横移 · {desktopPlatform === "darwin" ? "⌘/⌥" : "Alt"} + 滚轮竖移 · 双击卡片原位编辑
               </span>
               <button
                 disabled={!eventSelection}
@@ -2946,7 +3072,7 @@ function PlanningWorkspace({
       ];
     }
     if (dialog.kind === "delete-event")
-      ops = [{ kind: "delete", collection: "events", id }];
+      ops = dialog.ids ? dialog.ids.map((x) => ({ kind: "delete" as const, collection: "events" as const, id: x })) : [{ kind: "delete", collection: "events", id }];
     if (dialog.kind === "fork")
       ops = [
         { kind: "fork", id: uid(), source: worldId, event: id, name: title },
@@ -2987,7 +3113,11 @@ function PlanningWorkspace({
         },
       ];
     }
-    if (await save(ops)) {
+    const saved = await save(ops);
+    // docs/584: a blocked batch delete closes with nothing deleted; the error stays in the header and the selection stays.
+    if (!saved && dialog.kind === "delete-event" && dialog.ids) { setDialog(null); return; }
+    if (saved) {
+      if (dialog.kind === "delete-event" && dialog.ids) setSelection(new Set());
       if (dialog.kind === "group") setSelected([id]);
       if (dialog.kind === "line") {
         setLine(id);
@@ -3500,7 +3630,9 @@ function PlanningWorkspace({
           )}
           {dialog.kind.startsWith("delete") && (
             <p>
-              {dialog.kind === "delete-event"
+              {dialog.kind === "delete-event" && dialog.ids
+                ? `删除 ${dialog.ids.length} 个事件：${dialog.ids.slice(0, 5).map((x) => findWorldEvent(x)?.title ?? x).join("、")}${dialog.ids.length > 5 ? ` 等 ${dialog.ids.length} 个` : ""}。存在叙事引用、子事件或时间依赖时会阻止删除，一个都不会删除。删除后可撤销恢复。`
+                : dialog.kind === "delete-event"
                 ? "删除该事件；存在叙事引用、子事件或时间依赖时会阻止删除。删除后可撤销恢复。"
                 : "父卡片的直接子卡片会提升一级；共享事件、正文和历史保留。"}
             </p>

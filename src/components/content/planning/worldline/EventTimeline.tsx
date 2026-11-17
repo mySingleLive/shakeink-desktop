@@ -4,6 +4,8 @@ import {
   CATEGORY_VAR,
   CLIP_END_LABEL,
   CLIP_START_LABEL,
+  collapsedCardInput,
+  collapsedCardWidth,
   descendants,
   emptyTimeline,
   minimapModel,
@@ -48,7 +50,7 @@ export interface TimelineTimeDrag {
   end(): void;
   cancel(): void;
   /** Event being dragged and its offset in worldline units (moves the card while dragging). */
-  preview: { id: string; delta: number; edge: "move" | "start" | "end" } | null;
+  preview: { id: string; delta: number; edge: "move" | "start" | "end"; follows?: ReadonlySet<string> } | null;
   onPeriodClick(id: string): void;
 }
 /** The legacy period colour: a stable hash of the id, so a period keeps its colour when the list changes. */
@@ -92,6 +94,11 @@ export function EventTimeline({
   timeDrag,
   laneRef,
   onFold,
+  selection,
+  onBoxSelect,
+  onClearSelection,
+  onDeleteSelection,
+  onReset,
 }: {
   tree: EventTree;
   viewport: ViewportStore;
@@ -106,9 +113,19 @@ export function EventTimeline({
   /** Character-change lanes under the families (显示角色变化); each item is drawn at its time. */
   lanes?: readonly TimelineLaneGroup[];
   timeDrag: TimelineTimeDrag;
-  /** The vertical scroll container (the workspace measures its width and scrolls it to located cards). */
+  /** The lane (the workspace measures its width). docs/584: it never scrolls; the store's y moves the plane. */
   laneRef: React.RefObject<HTMLDivElement | null>;
   onFold(id: string): void;
+  /** docs/584 R2: the multi-selection (the primary is `selected`). */
+  selection: ReadonlySet<string>;
+  /** A finished box selection (ids by layout, rendered or not); `additive` with ⌘/Ctrl or Shift. */
+  onBoxSelect(ids: string[], additive: boolean): void;
+  /** A left click on empty canvas. */
+  onClearSelection(): void;
+  /** Delete / Backspace on the canvas with a non-empty selection. */
+  onDeleteSelection(): void;
+  /** The 复位 action (fit + centre), also behind the empty-view button. */
+  onReset(): void;
 }) {
   const ctx = useContext(WorldlineCardContext)!;
   const view = useSyncExternalStore(viewport.subscribe, viewport.getSnapshot, viewport.getSnapshot);
@@ -134,9 +151,22 @@ export function EventTimeline({
   const shown = tree;
   const moved = useMemo(() => {
     const n = preview && preview.delta ? tree.byId.get(preview.id) : undefined;
-    return n ? new Set([n.id, ...(preview!.edge === "move" ? descendants(n).map((d) => d.id) : [])]) : null;
+    if (!n) return null;
+    // docs/584 A3: a group drag shifts every moved event, what is anchored to it, and their subtrees (deduplicated).
+    const roots = preview!.follows ? [...preview!.follows].map((id) => tree.byId.get(id)).filter((x): x is TreeNode => !!x) : [n];
+    return new Set(roots.flatMap((r) => [r.id, ...(preview!.edge === "move" ? descendants(r).map((d) => d.id) : [])]));
   }, [tree, preview]);
-  const inputs = [shown, open, folded, heights] as const;
+  // docs/583 R1: collapsed widths follow the rendered head (found people, descendants), so the character list is a
+  // relayout input too: adding or deleting a character resizes cards and repacks.
+  const widthOf = useMemo(() => {
+    const cache = new Map<string, number>(), known = new Set(ctx.characters.map((c) => c.id));
+    return (n: TreeNode) => {
+      let w = cache.get(n.id);
+      if (w === undefined) cache.set(n.id, (w = collapsedCardWidth(collapsedCardInput(n, known, shown))));
+      return w;
+    };
+  }, [shown, ctx.characters]);
+  const inputs = [shown, open, folded, heights, widthOf] as const;
   const relayout = !lastSizes.current || inputs.some((v, i) => v !== lastSizes.current![i]);
   const laneScale = width > 0 ? width / view.span : 0;
   const lanePack = useMemo(() => {
@@ -157,7 +187,7 @@ export function EventTimeline({
   }, [lanes, laneScale]);
   // timelineStep is pure; its state and the relayout inputs are committed in a layout effect, so a render React
   // throws away (StrictMode, an interrupted concurrent render) leaves no trace (review R10).
-  const step = timelineStep(state.current, { tree: shown, view, width, expanded: open, folded, heights, pinned, relayout, lane: lanePack.items });
+  const step = timelineStep(state.current, { tree: shown, view, width, expanded: open, folded, heights, widthOf, pinned, relayout, lane: lanePack.items });
   useLayoutEffect(() => {
     state.current = step.state;
     lastSizes.current = inputs;
@@ -206,47 +236,102 @@ export function EventTimeline({
     root.querySelectorAll<HTMLElement>("[data-event-card][aria-expanded='true']").forEach((el) => ro.observe(el));
   }, [openKey]);
 
-  // Canvas pan: the window moves through the store; Esc, blur and pointercancel restore the start (§7.2, WU-56d).
-  // Time drags (event cards, periods) are owned by the workspace and take precedence on move / up / cancel.
-  const drag = useRef<{ x: number; start: number; active: boolean } | null>(null);
+  // docs/584 R2: a pan (middle button, or Space + left) moves start and y through the store; a left drag on the canvas
+  // draws a selection box kept here only (no PlanningWorkspace render per frame, IC-21b). Esc, blur and
+  // pointercancel restore a pan's start and y and drop a box. Time drags are owned by the workspace.
+  const drag = useRef<{ x: number; y: number; start: number; top: number; active: boolean } | null>(null);
+  const box = useRef<{ x: number; y: number; additive: boolean; active: boolean; onCard: boolean } | null>(null);
+  const [rect, setRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const space = useRef(false);
   const miniDrag = useRef<{ offset: number } | null>(null);
   const td = useRef(timeDrag);
   td.current = timeDrag;
   useEffect(() => {
     const cancel = () => {
-      if (drag.current?.active) viewport.setWindow({ start: drag.current.start });
+      if (drag.current?.active) restorePan(drag.current);
       drag.current = null;
+      box.current = null;
+      setRect(null);
       miniDrag.current = null;
+      space.current = false;
+      host.current?.removeAttribute("data-space");
       td.current.cancel();
     };
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape" && (drag.current || miniDrag.current)) cancel(); };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape" && (drag.current || box.current || miniDrag.current)) cancel(); };
     const blur = cancel;
     window.addEventListener("keydown", key, true);
     window.addEventListener("blur", blur);
     return () => { window.removeEventListener("keydown", key, true); window.removeEventListener("blur", blur); };
   }, [viewport]);
 
-  // Ctrl + wheel zooms around the window centre, Shift + wheel or a horizontal wheel pans. A native non-passive
-  // listener is needed to stop the page zoom / scroll (React's onWheel is passive).
+  // docs/583 R3 wheel rules, first match wins: a scrollable child inside the lane (not the lane itself) keeps the wheel
+  // until its end unless Ctrl is held; ⌘ (macOS) / Alt scroll the lane only; Shift pans only (deltaY, or the deltaX
+  // macOS turns it into); a mostly horizontal trackpad swipe pans; everything else (wheel, Ctrl + wheel, pinch) zooms
+  // around the time and the card under the pointer. Deltas are summed per animation frame: every zoom step changes the
+  // scale and so repacks (worldline-layout timelineStep), at most once a frame. A native non-passive listener is needed
+  // to stop the page scroll and the browser zoom (React's onWheel is passive).
   const live = useRef({ view, width });
   live.current = { view, width };
+  const zoomAnchor = useRef<{ id: string; y: number } | null>(null);
   useEffect(() => {
     const el = host.current;
     if (!el) return;
+    let frame = 0;
+    let acc = { zoom: 0, pan: 0, scroll: 0, x: 0, y: 0 };
+    const flush = () => {
+      frame = 0;
+      const a = acc;
+      acc = { zoom: 0, pan: 0, scroll: 0, x: a.x, y: a.y };
+      const lane = laneRef.current;
+      const v = viewport.getSnapshot(), w = live.current.width;
+      if (a.scroll) viewport.setWindow({ y: viewport.getSnapshot().y - a.scroll });
+      if (a.zoom && lane && w > 0) {
+        const r = lane.getBoundingClientRect();
+        const ratio = Math.min(1, Math.max(0, (a.x - r.left - PAD) / w));
+        const span = Math.min(1e12, Math.max(1, v.span * Math.pow(1.2, a.zoom)));
+        const at = v.start + ratio * v.span;
+        // Keep the card under the pointer at its screen y once the new scale is packed (layout effect below).
+        const card = document.elementFromPoint(a.x, a.y)?.closest<HTMLElement>("[data-timeline-plane] [data-event-card]");
+        zoomAnchor.current = card ? { id: card.dataset.eventId!, y: card.getBoundingClientRect().top } : null;
+        viewport.setWindow({ start: at - ratio * span + (a.pan / Math.max(1, w)) * span, span });
+        // At the span bounds nothing changes and nothing re-renders; a stale anchor would later undo a scroll.
+        if (viewport.getSnapshot() === v) zoomAnchor.current = null;
+      } else if (a.pan) viewport.setWindow({ start: v.start + (a.pan / Math.max(1, w)) * v.span });
+    };
+    const px = (e: WheelEvent, d: number) => (e.deltaMode === 1 ? d * 16 : e.deltaMode === 2 ? d * (laneRef.current?.clientHeight ?? 600) : d);
     const wheel = (e: WheelEvent) => {
-      const { view: v, width: w } = live.current;
-      if (e.ctrlKey) {
-        e.preventDefault();
-        const f = e.deltaY > 0 ? 1.2 : 1 / 1.2, mid = v.start + v.span / 2, span = Math.min(1e12, Math.max(1, v.span * f));
-        viewport.setWindow({ start: mid - span / 2, span });
-      } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        e.preventDefault();
-        viewport.setWindow({ start: v.start + ((e.shiftKey ? e.deltaY : e.deltaX) / Math.max(1, w)) * v.span });
+      const dx = px(e, e.deltaX), dy = px(e, e.deltaY);
+      const vertical = e.metaKey || e.altKey;
+      // Shift means horizontal: a scrollable table under the pointer takes Shift + wheel before the canvas pans.
+      const [ydx, ydy] = vertical ? [0, dy || dx] : e.shiftKey ? [dy || dx, 0] : [dx, dy];
+      const owner = e.ctrlKey ? null : yieldsTo(e.target as Element | null, laneRef.current, ydx, ydy);
+      if (owner) {
+        // Not every platform turns Shift + wheel into a horizontal scroll, so the child is scrolled here.
+        if (e.shiftKey && !vertical && !dx) { e.preventDefault(); owner.scrollLeft += ydx; }
+        return;
       }
+      e.preventDefault();
+      acc.x = e.clientX; acc.y = e.clientY;
+      if (vertical) acc.scroll += dy || dx;
+      else if (e.shiftKey) acc.pan += dy || dx;
+      else if (!e.ctrlKey && Math.abs(dx) > Math.abs(dy)) acc.pan += dx;
+      else if (dy) acc.zoom += Math.abs(dy) >= 50 ? Math.sign(dy) : dy / 100;
+      if (!frame) frame = requestAnimationFrame(flush);
     };
     el.addEventListener("wheel", wheel, { passive: false });
-    return () => el.removeEventListener("wheel", wheel);
-  }, [viewport]);
+    return () => { el.removeEventListener("wheel", wheel); cancelAnimationFrame(frame); };
+  }, [viewport, laneRef]);
+  useLayoutEffect(() => {
+    const a = zoomAnchor.current, lane = laneRef.current;
+    if (!a || !lane) return;
+    zoomAnchor.current = null;
+    const card = plane.current?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(a.id)}"]`);
+    if (card) viewport.setWindow({ y: viewport.getSnapshot().y - (card.getBoundingClientRect().top - a.y) });
+  });
+  const restorePan = (d: { start: number; top: number }) => {
+    viewport.setWindow({ start: d.start, y: d.top });
+    host.current?.removeAttribute("data-panning");
+  };
 
   const ticks = useMemo(
     () => (width > 0 ? timelineTicks(view.start, view.span, ctx.adapter.calendar, width) : []),
@@ -262,21 +347,69 @@ export function EventTimeline({
     viewport.setWindow({ start: mini.toT(left) });
   };
   // Vertical band of the plane worth rendering: one lane height above and below the visible rows, in steps.
-  const [vband, setVband] = useState<[number, number]>([-Infinity, Infinity]);
+  // docs/584: the visible plane rows are [−y, −y + lane height]; recomputed in steps from the store, never on scroll.
+  const [laneH, setLaneH] = useState(0);
   useLayoutEffect(() => {
     const lane = laneRef.current;
     if (!lane) return;
-    const update = () => {
-      const h = Math.max(300, lane.clientHeight), step = Math.max(150, h / 3);
-      const lo = Math.floor((lane.scrollTop - h) / step) * step, hi = Math.ceil((lane.scrollTop + 2 * h) / step) * step;
-      setVband((b) => (b[0] === lo && b[1] === hi ? b : [lo, hi]));
-    };
-    update();
-    lane.addEventListener("scroll", update, { passive: true });
-    const ro = new ResizeObserver(update);
+    // overflow: clip cannot scroll, but focus / scrollIntoView on other engines might: keep the lane at 0 (IC-11b).
+    const zero = () => { if (lane.scrollTop || lane.scrollLeft) { lane.scrollTop = 0; lane.scrollLeft = 0; } };
+    lane.addEventListener("scroll", zero, { passive: true });
+    const ro = new ResizeObserver(() => setLaneH(lane.clientHeight));
     ro.observe(lane);
-    return () => { lane.removeEventListener("scroll", update); ro.disconnect(); };
+    setLaneH(lane.clientHeight);
+    return () => { lane.removeEventListener("scroll", zero); ro.disconnect(); };
   }, [laneRef]);
+  const vband = useMemo<[number, number]>(() => {
+    const h = Math.max(300, laneH), step = Math.max(150, h / 3), top = -view.y;
+    return [Math.floor((top - h) / step) * step, Math.ceil((top + 2 * h) / step) * step];
+  }, [laneH, view.y]);
+  // docs/584 R1: the lane cannot scroll, so when the in-place editor opens (or grows) partly outside the lane, the
+  // canvas moves just enough to show it, as a scroll container used to (TL-R1, IC-11b).
+  useLayoutEffect(() => {
+    if (!editing) return;
+    const lane = laneRef.current, el = plane.current?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(editing)}"]`);
+    if (!lane || !el) return;
+    // Fully visible when it fits; taller than the lane, its bottom (the save / cancel buttons) is kept in view.
+    const reveal = () => {
+      const l = lane.getBoundingClientRect(), r = el.getBoundingClientRect(), m = 12;
+      let dy = 0;
+      if (r.height + 2 * m > l.height) dy = l.bottom - m - r.bottom;
+      else if (r.top < l.top + m) dy = l.top + m - r.top;
+      else if (r.bottom > l.bottom - m) dy = l.bottom - m - r.bottom;
+      if (Math.abs(dy) > 0.5) viewport.setWindow({ y: viewport.getSnapshot().y + dy });
+    };
+    reveal();
+    const ro = new ResizeObserver(reveal);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [editing, laneRef, viewport]);
+  // docs/584 R1: centre the packed cards once on the first open (a one-shot store request; a locate cancels it).
+  useLayoutEffect(() => {
+    if (!step.state.packed || !(laneH > 0) || !(width > 0)) return;
+    // Keep the request until cards are packed, so an empty first layout does not swallow it.
+    const cards = step.elements.filter((e) => e.kind === "card");
+    if (!cards.length || !viewport.takeCenterRequest()) return;
+    // The fitted window already spans the stretch to show; centre the cards that fall inside it (the packed range is
+    // up to seven windows wide), horizontally by their pixel box, vertically when they fit the lane.
+    const tx = step.translateX + PAD, plot = width + 2 * PAD;
+    const inside = cards.filter((c) => c.left + tx + c.width > 0 && c.left + tx < plot);
+    const pool = inside.length ? inside : cards;
+    const left = Math.max(0, Math.min(...pool.map((c) => c.left + tx))), right = Math.min(plot, Math.max(...pool.map((c) => c.left + c.width + tx)));
+    const top = Math.min(...pool.map((c) => c.top)), bottom = Math.max(...pool.map((c) => c.top + c.height));
+    const dx = (left + right) / 2 - plot / 2;
+    const v = viewport.getSnapshot();
+    viewport.setWindow({
+      start: v.start + dx / (width / v.span),
+      y: bottom - top <= laneH ? laneH / 2 - (top + bottom) / 2 : 24 - top,
+    });
+  });
+  // docs/584 R1: nothing packed falls inside the lane → offer 复位. Checked on the visible rows only.
+  const emptyView = tree.roots.length > 0 && laneH > 0 && width > 0 && !step.elements.some((c) => {
+    if (c.kind !== "card") return false;
+    const x = c.left + step.translateX + PAD, y = c.top + view.y;
+    return x + c.width > 0 && x < width + 2 * PAD && y + c.height > 0 && y < laneH;
+  });
   const frameLeft = mini.toX(view.start), frameRight = mini.toX(view.start + view.span);
 
   return (
@@ -284,19 +417,57 @@ export function EventTimeline({
       ref={host}
       data-timeline=""
       data-view-span={view.span}
+      data-view-start={view.start}
+      data-view-y={view.y}
       className={s.timeline}
       tabIndex={0}
       aria-label="世界时间线"
       onKeyDown={(e) => {
+        // docs/584: Space arms a pan anywhere in the timeline except in controls (a focused button keeps its Space).
+        if (e.key === " " && !typing(e.target) && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          if (!e.repeat) { space.current = true; e.currentTarget.setAttribute("data-space", ""); }
+          return;
+        }
+        if ((e.key === "Delete" || e.key === "Backspace") && !typing(e.target) && selection.size > 0) {
+          e.preventDefault();
+          onDeleteSelection();
+          return;
+        }
         if (e.target !== e.currentTarget) return;
         if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
           e.preventDefault();
           viewport.setWindow({ start: view.start + ((e.key === "ArrowRight" ? 1 : -1) * view.span) / 10 });
         } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
           e.preventDefault();
-          laneRef.current?.scrollBy({ top: e.key === "ArrowDown" ? 80 : -80 });
+          viewport.setWindow({ y: view.y + (e.key === "ArrowDown" ? -80 : 80) });
         }
       }}
+      onKeyUp={(e) => { if (e.key === " ") { space.current = false; e.currentTarget.removeAttribute("data-space"); } }}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) { space.current = false; e.currentTarget.removeAttribute("data-space"); } }}
+      onPointerDownCapture={(e) => {
+        // docs/584 R2 routing, before card titles and periods: the middle button, or Space + left, pans from anywhere
+        // in the timeline (periods sit outside the lane) except the minimap.
+        if ((e.target as Element).closest("[data-minimap]")) return;
+        const pan = e.button === 1 || (e.button === 0 && space.current);
+        if (!pan) return;
+        if (e.button === 1) e.preventDefault();
+        e.stopPropagation();
+        const root = e.currentTarget;
+        if (!typing(e.target)) root.focus({ preventScroll: true });
+        drag.current = { x: e.clientX, y: e.clientY, start: view.start, top: view.y, active: false };
+        root.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (!d || scale <= 0) return;
+        if (!d.active && Math.hypot(e.clientX - d.x, e.clientY - d.y) < PAN_THRESHOLD) return;
+        if (!d.active) { d.active = true; e.currentTarget.setAttribute("data-panning", ""); getSelection()?.removeAllRanges(); }
+        viewport.setWindow({ start: d.start - (e.clientX - d.x) / scale, y: d.top + (e.clientY - d.y) });
+      }}
+      onPointerUp={(e) => { if (drag.current) { drag.current = null; e.currentTarget.removeAttribute("data-panning"); } }}
+      onPointerCancel={() => { if (drag.current?.active) restorePan(drag.current); drag.current = null; }}
+      onAuxClickCapture={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); } }}
     >
       <Ruler ticks={ticks} toX={toX} label={(t) => ctx.adapter.label(t, view.span)} />
       <div className={s.periodsRow}>
@@ -311,14 +482,14 @@ export function EventTimeline({
               data-period={p.id}
               className={`${s.periodBand} ${p.end === null ? s.periodOpen : ""}`}
               style={{ left: l, width: r - l, "--pc": `var(--chart-${periodColor(p.id)})`, borderLeftStyle: clippedStart ? "dashed" : "solid", borderRightStyle: clippedEnd ? "dashed" : "solid" } as React.CSSProperties}
-              onPointerDown={(ev) => { if (p.mutable && ev.button === 0) timeDrag.startPeriod(ev, p.id, "move"); }}
+              onPointerDown={(ev) => { if (p.mutable && ev.button === 0 && !space.current) timeDrag.startPeriod(ev, p.id, "move"); }}
               onPointerMove={(ev) => { if (scale > 0) timeDrag.move(ev.clientX, scale); }}
               onPointerUp={() => timeDrag.end()}
               onPointerCancel={() => timeDrag.cancel()}
               onClick={() => timeDrag.onPeriodClick(p.id)}
             >
               {p.mutable && !clippedStart && roomy && (
-                <button aria-label={`调整${p.title}开始`} className={s.periodEdge} onPointerDown={(ev) => timeDrag.startPeriod(ev, p.id, "start")}>│</button>
+                <button aria-label={`调整${p.title}开始`} className={s.periodEdge} onPointerDown={(ev) => { if (ev.button === 0 && !space.current) timeDrag.startPeriod(ev, p.id, "start"); }}>│</button>
               )}
               <button className={s.periodTitle} title={p.title}>
                 {clippedStart ? "‹ " : ""}
@@ -326,7 +497,7 @@ export function EventTimeline({
                 {p.end === null ? (p.ongoing ? " · 持续中 ›" : " · 结束未定") : clippedEnd ? " ›" : ""}
               </button>
               {p.mutable && p.end !== null && !clippedEnd && roomy && (
-                <button aria-label={`调整${p.title}结束`} className={`${s.periodEdge} ${s.periodEdgeEnd}`} onPointerDown={(ev) => timeDrag.startPeriod(ev, p.id, "end")}>│</button>
+                <button aria-label={`调整${p.title}结束`} className={`${s.periodEdge} ${s.periodEdgeEnd}`} onPointerDown={(ev) => { if (ev.button === 0 && !space.current) timeDrag.startPeriod(ev, p.id, "end"); }}>│</button>
               )}
             </div>
           );
@@ -337,28 +508,49 @@ export function EventTimeline({
         className={s.lane}
         ref={laneRef}
         onPointerDown={(e) => {
-          if (e.button !== 0 || (e.target as Element).closest("[data-event-card],button,summary,input,select,[data-minimap]")) return;
-          drag.current = { x: e.clientX, start: view.start, active: false };
-          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          // docs/584 R2: a left press on the canvas or on a card outside its title / controls may become a box selection
+          // (≥ 5px) or stays a click (cards select themselves; empty canvas clears). No preventDefault: focus moves here.
+          if (e.button !== 0 || (e.target as Element).closest("button,summary,input,select,textarea,a,[data-minimap],[data-card-title],[data-card-menu]")) return;
+          box.current = { x: e.clientX, y: e.clientY, additive: e.metaKey || e.ctrlKey || e.shiftKey, active: false, onCard: !!(e.target as Element).closest("[data-event-card]") };
+          if (!typing(e.target)) host.current?.focus({ preventScroll: true });
+          e.currentTarget.setPointerCapture(e.pointerId);
         }}
         onPointerMove={(e) => {
           if (scale > 0 && timeDrag.move(e.clientX, scale)) return;
-          const d = drag.current;
-          if (!d || scale <= 0) return;
-          if (!d.active && Math.abs(e.clientX - d.x) < PAN_THRESHOLD) return;
-          d.active = true;
-          viewport.setWindow({ start: d.start - (e.clientX - d.x) / scale });
+          const b = box.current;
+          if (!b) return;
+          if (!b.active && Math.hypot(e.clientX - b.x, e.clientY - b.y) < PAN_THRESHOLD) return;
+          if (!b.active) { b.active = true; e.currentTarget.setAttribute("data-panning", ""); getSelection()?.removeAllRanges(); }
+          const r = e.currentTarget.getBoundingClientRect();
+          setRect({ x: Math.min(b.x, e.clientX) - r.left, y: Math.min(b.y, e.clientY) - r.top, w: Math.abs(e.clientX - b.x), h: Math.abs(e.clientY - b.y) });
         }}
-        onPointerUp={() => { drag.current = null; timeDrag.end(); }}
-        onPointerCancel={() => { if (drag.current?.active) viewport.setWindow({ start: drag.current.start }); drag.current = null; timeDrag.cancel(); }}
+        onPointerUp={(e) => {
+          const b = box.current;
+          box.current = null;
+          e.currentTarget.removeAttribute("data-panning");
+          timeDrag.end();
+          if (!b) return;
+          if (b.active) {
+            // The box from the press and the release point (not the last rendered rect, which may lag a frame).
+            // Hit test on layout coordinates, so cards outside the rendered band are selected too.
+            const lr = e.currentTarget.getBoundingClientRect();
+            const box = { x: Math.min(b.x, e.clientX) - lr.left, y: Math.min(b.y, e.clientY) - lr.top, w: Math.abs(e.clientX - b.x), h: Math.abs(e.clientY - b.y) };
+            const tx = step.translateX + PAD;
+            const hit = step.elements.filter((c) => c.kind === "card" && c.left + tx < box.x + box.w && c.left + tx + c.width > box.x && c.top + view.y < box.y + box.h && c.top + c.height + view.y > box.y).map((c) => c.id);
+            setRect(null);
+            onBoxSelect([...new Set(hit)], b.additive);
+          } else if (!b.onCard && !b.additive) onClearSelection();
+          setRect(null);
+        }}
+        onPointerCancel={() => { box.current = null; setRect(null); timeDrag.cancel(); }}
       >
-        <div ref={plane} data-timeline-plane="" className={s.plane} style={{ transform: `translateX(${step.translateX + PAD}px)`, height: (step.state.packed?.bottom ?? 0) + 120 }}>
+        <div ref={plane} data-timeline-plane="" className={s.plane} style={{ transform: `translate(${step.translateX + PAD}px, ${view.y}px)`, height: (step.state.packed?.bottom ?? 0) + 120 }}>
           {step.elements.map((el) => {
             // Real data (995 events, one family each) builds ~850 cards in the 7-window build range; rendering only the
             // ones within a screen above and below the lane's scroll position keeps style recalculation off the pan
             // path. Packing is unchanged, so no card moves; the selected / hit / editing cards are always rendered.
             if (el.top + el.height < vband[0] || el.top > vband[1]) {
-              if (el.kind !== "card" || (el.id !== selected && el.id !== hitId && el.id !== editing)) return null;
+              if (el.kind !== "card" || (el.id !== selected && el.id !== hitId && el.id !== editing && !selection.has(el.id))) return null;
             }
             if (el.kind === "lane")
               return (
@@ -391,7 +583,7 @@ export function EventTimeline({
                 <EventCard
                   event={n.event}
                   expanded={expanded.has(n.id)}
-                  selected={selected === n.id}
+                  selected={selected === n.id || selection.has(n.id)}
                   hit={hitId === n.id}
                   dimmed={dimmed(n.id)}
                   editing={editing === n.id}
@@ -401,6 +593,7 @@ export function EventTimeline({
                   placed
                   maxAvatars={3}
                   variant="timeline"
+                  selectionSize={selection.has(n.id) && selection.size >= 2 ? selection.size : undefined}
                   onFold={onFold}
                 />
               </div>
@@ -412,7 +605,14 @@ export function EventTimeline({
             </div>
           ))}
         </div>
+        {rect && <div data-select-rect="" className={s.selectRect} style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
         {!tree.roots.length && <p className={s.emptyNote}>当前世界线还没有已定位事件。添加事件，或为待定位事件设置时间。</p>}
+        {emptyView && (
+          <div data-empty-view="" className={s.emptyView}>
+            视图内没有事件
+            <button type="button" onClick={onReset}>复位</button>
+          </div>
+        )}
       </div>
       <div
         data-minimap=""
@@ -482,4 +682,25 @@ export function TimelineTreeNav(props: Omit<React.ComponentProps<typeof EventTre
 export function ViewportValue({ store, render }: { store: ViewportStore; render(w: { start: number; span: number }): React.ReactNode }) {
   const w = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   return <>{render(w)}</>;
+}
+
+/** docs/583 R3 rule 0: true when an element between the wheel target and the lane (the lane itself and the timeline
+ * root excluded) can still scroll in the wheel's direction, so it keeps the wheel; at its end the canvas takes over. */
+function yieldsTo(target: Element | null, lane: HTMLElement | null, dx: number, dy: number): HTMLElement | null {
+  const horizontal = Math.abs(dx) > Math.abs(dy), d = horizontal ? dx : dy;
+  if (!d) return null;
+  for (let el = target; el && el !== lane; el = el.parentElement) {
+    if (!(el instanceof HTMLElement) || el.matches("[data-timeline]")) return null;
+    const cs = getComputedStyle(el);
+    if (horizontal) {
+      if (/(auto|scroll)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1 && (d > 0 ? el.scrollLeft + el.clientWidth < el.scrollWidth - 1 : el.scrollLeft > 0)) return el;
+    } else if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1 && (d > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0)) return el;
+  }
+  return null;
+}
+
+/** Text controls keep their keys and Space (docs/584 R2). */
+function typing(target: EventTarget | null) {
+  const el = target as HTMLElement | null;
+  return !!el?.closest?.("input,textarea,select,button,summary,[contenteditable=''],[contenteditable='true'],[role=button],[role=textbox]");
 }

@@ -1,6 +1,6 @@
 "use client";
 import { createContext, memo, useContext, useLayoutEffect, useRef, type ReactNode } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { resolveTime, type PlanningData, type PlanningEvent } from "@/lib/planning/domain";
 import { CATEGORY_VAR, type CalendarAdapter } from "@/lib/planning/worldline-layout";
@@ -19,7 +19,11 @@ export interface WorldlineCardContextValue {
   frozen: ReadonlySet<string>;
   /** Stable callbacks (one identity for the panel's lifetime). */
   onToggle(id: string, detail: number): void;
-  onMenu(action: "quote" | "detail" | "edit" | "locateChildren" | "newChild" | "copy" | "delete" | "fork", id: string): void;
+  /** docs/584: timeline clicks select (⌘/Ctrl toggles, Shift adds); a double click (detail ≥ 2) edits. */
+  onSelect(id: string, detail: number, mods: { toggle: boolean; add: boolean }): void;
+  /** Toggles the expanded state at once (the timeline's expand button). */
+  onExpand(id: string): void;
+  onMenu(action: "quote" | "detail" | "edit" | "locateChildren" | "newChild" | "copy" | "delete" | "fork" | "quoteSelection" | "deleteSelection", id: string): void;
   onStartTimeDrag(event: React.PointerEvent, id: string): void;
   renderRefs(event: PlanningEvent): ReactNode;
 }
@@ -112,6 +116,8 @@ export interface EventCardProps {
   /** Avatar limit: 4 in the table, 3 on the timeline (577 §12). */
   maxAvatars: number;
   variant: "table" | "timeline";
+  /** docs/584: on the timeline, the number of selected events when this card is one of ≥ 2 (batch menu items). */
+  selectionSize?: number;
   onFold?(id: string): void;
 }
 
@@ -147,7 +153,8 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
         const at = press.current;
         press.current = null;
         if (at && Math.hypot(ev.clientX - at.x, ev.clientY - at.y) > 4) return;
-        ctx.onToggle(e.id, ev.detail);
+        if (p.variant === "timeline") ctx.onSelect(e.id, ev.detail, { toggle: ev.metaKey || ev.ctrlKey, add: ev.shiftKey });
+        else ctx.onToggle(e.id, ev.detail);
       }}
     >
       <div className={s.head}>
@@ -168,7 +175,7 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
           data-card-title=""
           className={s.title}
           title={e.title}
-          onPointerDown={(ev) => !frozen && !ctx.readonly && ctx.onStartTimeDrag(ev, e.id)}
+          onPointerDown={(ev) => ev.button === 0 && !frozen && !ctx.readonly && ctx.onStartTimeDrag(ev, e.id)}
         >
           <Highlight text={e.title} terms={ctx.searchTerms} />
         </h3>
@@ -185,6 +192,18 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             {p.expanded ? `${p.childCount} 个子事件` : `▸ ${p.descendantCount}`}
           </span>
         )}
+        {p.variant === "timeline" && (
+          <button
+            type="button"
+            data-card-expand=""
+            className={s.expand}
+            aria-label={`${p.expanded ? "收起" : "展开"}${e.title}`}
+            aria-expanded={p.expanded}
+            onClick={() => ctx.onExpand(e.id)}
+          >
+            {p.expanded ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+          </button>
+        )}
         <details data-card-menu="" className={s.menuHost} onClick={(ev) => {
           if ((ev.target as Element).closest("button")) (ev.currentTarget as HTMLDetailsElement).open = false;
         }}>
@@ -193,12 +212,14 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
           </summary>
           <div className={s.menu}>
             <button onClick={() => ctx.onMenu("quote", e.id)}>引用到对话</button>
+            {(p.selectionSize ?? 0) >= 2 && <button onClick={() => ctx.onMenu("quoteSelection", e.id)}>引用所选 {p.selectionSize} 个事件到对话</button>}
             <button onClick={() => ctx.onMenu("detail", e.id)}>详情</button>
             <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("edit", e.id)}>编辑</button>
             {p.childCount > 0 && <button onClick={() => ctx.onMenu("locateChildren", e.id)}>定位子事件</button>}
             <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("newChild", e.id)}>新建子事件</button>
             <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("copy", e.id)}>复制</button>
             <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("delete", e.id)}>删除</button>
+            {(p.selectionSize ?? 0) >= 2 && <button disabled={ctx.readonly || ctx.hasDraft || frozen} onClick={() => ctx.onMenu("deleteSelection", e.id)}>删除所选 {p.selectionSize} 个事件</button>}
             <button disabled={ctx.readonly} onClick={() => ctx.onMenu("fork", e.id)}>从此分叉</button>
           </div>
         </details>

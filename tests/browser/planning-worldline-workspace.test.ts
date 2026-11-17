@@ -87,12 +87,15 @@ for (const width of [1440, 1280, 1160, 1024, 900]) {
   }, { width }))
 }
 
-test("WU-39c: pressing the title and moving 3px is a click; 10px is a time drag that keeps the expanded state", () => withWorldline(browser, f60(), async page => {
+test("WU-39c: pressing the title and moving 3px is a click (select); 10px is a time drag that keeps the expanded state", () => withWorldline(browser, f60(), async page => {
   await tab(page, "时间线")
   const c = tlCard(page, "学徒在旧书中发现星图")
   await c.scrollIntoViewIfNeeded()
   const b = (await c.locator("h3").boundingBox())!
   await page.mouse.move(b.x + 20, b.y + b.height / 2); await page.mouse.down(); await page.mouse.move(b.x + 23, b.y + b.height / 2); await page.mouse.up()
+  // docs/584: on the timeline a click selects; expanding is the head button.
+  await expect(c).toHaveAttribute("data-selected", "")
+  await c.locator("[data-card-expand]").click()
   await expect(c).toHaveAttribute("aria-expanded", "true")
   const before = await c.getAttribute("aria-expanded")
   const h = (await c.locator("h3").boundingBox())!
@@ -168,8 +171,10 @@ test("WU-56i: Shift + wheel, a horizontal wheel and ← → pan; ↑ ↓ scroll 
   await page.keyboard.press("ArrowRight")
   await expect.poll(() => viewWindow(page)).not.toBe(v)
   assert.equal(await page.locator("[data-timeline-plane] [data-event-card]").first().evaluate(e => e.getBoundingClientRect().top), y0)
+  const y0View = await page.locator("[data-timeline]").evaluate(e => Number(e.getAttribute("data-view-y")))
   await page.keyboard.press("ArrowDown")
-  await expect.poll(() => lane.evaluate(l => l.scrollTop)).toBeGreaterThan(0)
+  // docs/584: ↓ moves the canvas up (store y decreases); the lane itself never scrolls.
+  await expect.poll(() => page.locator("[data-timeline]").evaluate(e => Number(e.getAttribute("data-view-y")))).toBeLessThan(y0View)
 }))
 
 test("WU-57: character lanes sit below every family in the moving plane and follow a pan", () => withWorldline(browser, withChanges(), async page => {
@@ -180,7 +185,14 @@ test("WU-57: character lanes sit below every family in the moving plane and foll
   const famBottom = await page.evaluate(() => Math.max(...[...document.querySelectorAll<HTMLElement>("[data-timeline-plane] [data-plane-left],[data-timeline-plane] [data-family-frame]")].map(e => parseFloat(e.style.top) + e.getBoundingClientRect().height)))
   const laneTop = await lane.evaluate(e => parseFloat((e as HTMLElement).style.top))
   assert.ok(laneTop >= famBottom, `lane ${laneTop} below families ${famBottom}`)
-  await page.locator("[data-timeline-lane]").evaluate((l, top) => { l.scrollTop = top - 40 }, laneTop)
+  // docs/584: bring the lanes into view by moving the canvas (store y) instead of scrolling the lane.
+  const tl = page.locator("[data-timeline]"), lb = (await page.locator("[data-timeline-lane]").boundingBox())!
+  const yNow = Number(await tl.getAttribute("data-view-y"))
+  // A middle-button drag up by (laneTop − 40 + y) puts the lane top 40px below the lane's top edge.
+  const dy = -(laneTop - 40 + yNow)
+  await page.mouse.move(lb.x + 30, lb.y + lb.height / 2); await page.mouse.down({ button: "middle" })
+  for (let k = 1; k <= 10; k++) await page.mouse.move(lb.x + 30, lb.y + lb.height / 2 + dy * k / 10)
+  await page.mouse.up({ button: "middle" })
   assert.ok(await lane.evaluate(e => !!e.closest("[data-timeline-plane]")))
   const item = page.locator("[data-timeline-plane] button", { hasText: "新身份0" })
   await expect(item).toBeVisible()

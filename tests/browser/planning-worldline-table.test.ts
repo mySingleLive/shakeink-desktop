@@ -113,3 +113,23 @@ test("WU-37: expand all / collapse all", () => withWorldline(browser, f60(), asy
   await expect(toggle).toHaveText(/全部收起/)
   assert.ok(await page.locator('[data-event-table] [data-event-card][aria-expanded="false"]').count() === 0)
 }))
+
+test("WU-31b: the expanded body sits flush under the time row with no document-page padding", () => withWorldline(browser, f60(), async page => {
+  await table(page)
+  const c = card(page, "学徒在旧书中发现星图")
+  await c.locator("[data-card-title]").click()
+  await expect(c.locator("[data-markdown-preview]")).toBeVisible()
+  const g = await c.evaluate(card => {
+    const meta = card.querySelector("[data-card-tag]")!.parentElement!.getBoundingClientRect()
+    const preview = card.querySelector("[data-text-preview]")!
+    const first = preview.firstElementChild!.getBoundingClientRect()
+    const last = preview.lastElementChild!.getBoundingClientRect()
+    const next = card.querySelector("[data-markdown-preview]")!.nextElementSibling?.getBoundingClientRect()
+    const cardBox = card.getBoundingClientRect()
+    return { top: first.top - meta.bottom, left: first.left - meta.left, bottom: (next?.top ?? cardBox.bottom) - last.bottom, width: preview.getBoundingClientRect().width, cardWidth: cardBox.width }
+  })
+  assert.ok(g.top <= 12, `gap above body ${JSON.stringify(g)}`)
+  assert.ok(Math.abs(g.left) <= 1, `body indented ${JSON.stringify(g)}`)
+  assert.ok(g.bottom <= 18, `gap below body ${JSON.stringify(g)}`)
+  assert.ok(g.width >= g.cardWidth - 60, `body narrowed ${JSON.stringify(g)}`)
+}))

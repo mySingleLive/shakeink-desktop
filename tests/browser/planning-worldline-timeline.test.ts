@@ -38,9 +38,10 @@ async function emptyPoint(page: Page) {
 }
 async function drag(page: Page, dx: number, steps = 24, each?: () => Promise<void>) {
   const p = (await emptyPoint(page))!
-  await page.mouse.move(p.x, p.y); await page.mouse.down()
+  // docs/584: the canvas pans with the middle button.
+  await page.mouse.move(p.x, p.y); await page.mouse.down({ button: "middle" })
   for (let k = 1; k <= steps; k++) { await page.mouse.move(p.x + (dx * k) / steps, p.y); if (each) await each() }
-  await page.mouse.up()
+  await page.mouse.up({ button: "middle" })
 }
 
 test("WU-50: a parent is a header bar at least as wide as its family range; children stay inside the frame", () => withWorldline(browser, f60(), async page => {
@@ -62,10 +63,11 @@ test("WU-50: a parent is a header bar at least as wide as its family range; chil
   await expect(page.locator("[data-family-range]").first()).toContainText("→")
 }))
 
-test("WU-51: dragging the canvas 24 frames moves no visible card vertically, overlaps nothing and keeps scrollTop", () => withWorldline(browser, f60(), async page => {
+test("WU-51: dragging the canvas 24 frames moves no visible card vertically, overlaps nothing and keeps y", () => withWorldline(browser, f60(), async page => {
   await open(page)
-  await page.locator("[data-timeline-lane]").evaluate(l => { l.scrollTop = 160 })
-  const top0 = await page.locator("[data-timeline-lane]").evaluate(l => l.scrollTop)
+  // docs/584: the vertical offset is the store's y (data-view-y), not the lane's scrollTop.
+  const yOf = () => page.locator("[data-timeline]").evaluate(e => Number(e.getAttribute("data-view-y")))
+  const top0 = await yOf()
   let before = await snap(page), moved = 0, worst = 0
   await drag(page, -720, 24, async () => {
     const now = await snap(page), by = new Map(now.map(c => [c.id, c]))
@@ -75,21 +77,23 @@ test("WU-51: dragging the canvas 24 frames moves no visible card vertically, ove
   })
   assert.equal(moved, 0, "vertical moves while panning")
   assert.equal(worst, 0, "overlaps while panning")
-  assert.equal(await page.locator("[data-timeline-lane]").evaluate(l => l.scrollTop), top0)
+  assert.equal(await yOf(), top0)
 }))
 
 test("WU-52/WU-53: expanding keeps that card in place and moves no other family; dragging away and back restores every card", () => withWorldline(browser, f60(), async page => {
   await open(page)
   const pre = await snap(page)
   const target = pre.find(c => c.vis && c.y < 500)!
-  await page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${target.id}"] h3`).click()
+  await page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${target.id}"] [data-card-expand]`).click()
   await page.mouse.move(5, 5)
   await expect(page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${target.id}"]`)).toHaveAttribute("aria-expanded", "true")
   const post = await snap(page), t1 = post.find(c => c.id === target.id)!
   assert.ok(Math.abs(t1.y - target.y) < 1 && Math.abs(t1.x - target.x) < 1, "expanded card stays")
   assert.equal(overlaps(post), 0)
-  await page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${target.id}"] h3`).click()
+  await page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${target.id}"] [data-card-expand]`).click()
   await page.mouse.move(5, 5)
+  // docs/583: an open card collapses after the double-click interval.
+  await expect(page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${target.id}"]`)).toHaveAttribute("aria-expanded", "false")
   const a = await snap(page)
   await drag(page, -1100, 12); await drag(page, 1100, 12)
   const b = await snap(page), by = new Map(b.map(c => [c.id, c]))
@@ -131,10 +135,10 @@ test("WU-56d: Esc during a drag restores the window", () => withWorldline(browse
   await open(page)
   const range0 = await page.locator("[data-range]").innerText()
   const p = (await emptyPoint(page))!
-  await page.mouse.move(p.x, p.y); await page.mouse.down()
+  await page.mouse.move(p.x, p.y); await page.mouse.down({ button: "middle" })
   await page.mouse.move(p.x - 300, p.y, { steps: 6 })
   await page.keyboard.press("Escape")
-  await page.mouse.up()
+  await page.mouse.up({ button: "middle" })
   await expect(page.locator("[data-range]")).toHaveText(range0)
 }))
 

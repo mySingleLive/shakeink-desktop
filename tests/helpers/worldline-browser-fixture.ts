@@ -38,6 +38,7 @@ globalThis.mountWorldline=(view,mount={})=>{
  globalThis.shortcutOverrides=overrides=>useDesktopStore.setState(state=>({bootstrap:{...state.bootstrap,settings:{...state.bootstrap.settings,shortcuts:{...state.bootstrap.settings.shortcuts,darwin:overrides}}}}));
  useChatStore.setState({draft:'',draftNovelId:null});
  let state={...view,data:planningSchema.parse(view.data)};
+ const snapshots=new Map();
  globalThis.posts=[];
  window.fetch=async(input,init)=>{
   const path=String(input),method=(init&&init.method)||'GET';
@@ -46,7 +47,9 @@ globalThis.mountWorldline=(view,mount={})=>{
   const body=JSON.parse(init.body);globalThis.posts.push(body);
   if(body.expectedVersion!==state.version)return Response.json({error:'版本已变化'},{status:409});
   if(globalThis.failNextSave){globalThis.failNextSave=false;return Response.json({error:'保存失败（固定数据）'},{status:500})}
-  const data=body.action==='restore'?state.data:applyPlanningOperations(state.data,body.operations);
+  // docs/584 IC-24: a restore returns the data saved before that version (the fixture keeps every snapshot).
+  const data=body.action==='restore'?(snapshots.get(body.snapshotId)??state.data):applyPlanningOperations(state.data,body.operations);
+  snapshots.set('h'+state.version,state.data);
   state={...state,version:state.version+1,data,history:[{id:'h'+state.version,version:state.version,reason:body.action==='restore'?'恢复规划版本：'+state.version:'修改'},...state.history]};
   return Response.json(state);
  };
@@ -57,6 +60,8 @@ globalThis.mountWorldline=(view,mount={})=>{
  flushSync(()=>root.render(<QueryClientProvider client={client}>{mount.controller?<DesktopCommandController/>:null}<Profiler id="workspace" onRender={onRender}>{Array.from({length:mount.panels??1},(_,i)=>panel('p'+i))}</Profiler></QueryClientProvider>));
  globalThis.requestWorldFocus=(target)=>useTabsStore.getState().requestPanelFocus(buildTabId('worldline','${NOVEL}'),target);
  globalThis.disposeWorldline=()=>{flushSync(()=>root.unmount());client.clear()};
+ globalThis.refetchWorldline=()=>client.invalidateQueries();
+ globalThis.chatDraft=()=>useChatStore.getState().draft;
 };
 ` },
     bundle: true, write: false, platform: "browser", format: "iife", tsconfig: "tsconfig.json",

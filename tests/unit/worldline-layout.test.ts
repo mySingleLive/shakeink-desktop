@@ -3,7 +3,7 @@ import {test} from 'node:test'
 import {readFileSync} from 'node:fs'
 import {civilDays,civilFromDays,ERA_YEAR_HOURS} from '../../src/lib/planning/era-calendar'
 import {fitTimelineWindow,fitDenseTimelineWindow,formatTime} from '../../src/lib/planning/timeline'
-import {planningSchema,type PlanningData} from '../../src/lib/planning/domain'
+import {applyPlanningOperations,planningSchema,type PlanningData} from '../../src/lib/planning/domain'
 import * as L from '../../src/lib/planning/worldline-layout'
 
 /* docs/581 §2 (WU-10 … WU-21b): worldline layout pure functions. Synthetic data only. */
@@ -559,3 +559,75 @@ function F885(){
  for(let i=0;i<34;i++)events.push({id:`a${i}`,at:D4(5,1,1)+i*10*H,precision:'year',title:`远古${i}`})
  return {data:plan(events,ERA_CAL),events}
 }
+
+/* docs/583 R1: collapsed timeline card width follows the title, from the rendered head (CW-01 … CW-05). */
+const cw=(o:Partial<L.CollapsedCardInput>={})=>L.collapsedCardWidth({title:'',depth:0,importance:1,avatars:0,more:0,kids:null,...o})
+test('CW-01: a longer title gives a wider card until the cap; a 4-character root title is narrower than 260',()=>{
+ let last=0
+ for(let n=1;n<=40;n++){const w=cw({title:'事'.repeat(n)});if(w>L.COLLAPSED_MIN_WIDTH&&w<L.ROOT_CARD_WIDTH)assert.ok(w>last,`n=${n} ${w}<=${last}`);else assert.ok(w===L.COLLAPSED_MIN_WIDTH||w===L.ROOT_CARD_WIDTH,`n=${n} ${w}`);assert.ok(w>=last);last=w}
+ assert.ok(cw({title:'事'.repeat(10)})>L.COLLAPSED_MIN_WIDTH&&cw({title:'事'.repeat(10)})<L.ROOT_CARD_WIDTH,'10 characters lie between the bounds')
+ assert.ok(cw({title:'王立大学'})<260)
+ assert.ok(cw({title:'a'.repeat(16)})<cw({title:'事'.repeat(16)}),'latin is narrower than CJK')
+})
+test('CW-02: caps at 340 (root) and 300 (child); an empty title is the 150 minimum',()=>{
+ assert.equal(L.ROOT_CARD_WIDTH,340);assert.equal(L.CHILD_CARD_WIDTH,300)
+ assert.equal(cw({title:'长'.repeat(80)}),340)
+ assert.equal(cw({title:'长'.repeat(80),depth:1}),300)
+ assert.equal(cw({title:''}),L.COLLAPSED_MIN_WIDTH);assert.equal(L.COLLAPSED_MIN_WIDTH,150)
+})
+test('CW-03: head parts add their CSS widths plus one 9px gap each',()=>{
+ const title='港口商会签下秘密契约'
+ const base=cw({title})
+ // fold button 20 + badge (14 padding + 2 border + ▸ 11 + space 3.5 + digits 6.2 each) + 2 gaps.
+ assert.ok(Math.abs(cw({title,kids:5})-base-(20+9+(16+11+3.5+6.2)+9))<=1,`kids ${cw({title,kids:5})-base}`)
+ const kidsW=cw({title,kids:5}),kids12=cw({title,kids:12})
+ assert.ok(kids12>kidsW,'two digits are wider')
+ // avatars: 4 left padding + 16 + 11 per extra, plus one gap.
+ assert.equal(cw({title,avatars:1})-base,4+16+9)
+ assert.equal(cw({title,avatars:3})-base,4+16+2*11+9)
+ assert.equal(cw({title,avatars:3,more:2})-cw({title,avatars:3}),11)
+ assert.equal(cw({title:'长'.repeat(80),avatars:3,more:2,kids:9}),340)
+})
+test('CW-04: buildFamilies uses widthOf for collapsed leaves; open 420; parents at least max(own, 260)',()=>{
+ const d=plan([{id:'p',at:0,title:'父事件'},{id:'c',at:2,parent:'p',title:'很短'},{id:'solo',at:500,title:'一个独立的根事件'}],FIXED24)
+ const tree=treeOf(d),scale=1
+ const widthOf=(n:L.TreeNode)=>L.collapsedCardWidth(L.collapsedCardInput(n,[],tree))
+ const fams=L.buildFamilies(tree.roots,{scale,widthOf})
+ const card=(id:string)=>fams.flatMap(f=>f.pieces).find(p=>p.kind==='card'&&p.id===id)!
+ assert.equal(card('c').width,widthOf(tree.byId.get('c')!))
+ assert.equal(card('solo').width,widthOf(tree.byId.get('solo')!))
+ assert.ok(card('p').width>=Math.max(widthOf(tree.byId.get('p')!),L.PARENT_BAR_MIN_WIDTH))
+ const open=L.buildFamilies(tree.roots,{scale,widthOf,expanded:new Set(['solo'])})
+ assert.equal(open.flatMap(f=>f.pieces).find(p=>p.kind==='card'&&p.id==='solo')!.width,L.OPEN_CARD_WIDTH)
+})
+test('CW-05: people missing from the character list are not counted',()=>{
+ const d=plan([{id:'a',at:0,title:'事件',people:['x','y','gone']}],FIXED24)
+ const tree=treeOf(d),n=tree.byId.get('a')!
+ const chars=[{id:'x'},{id:'y'}]
+ assert.deepEqual(L.collapsedCardInput(n,chars,tree),{title:'事件',depth:0,importance:1,avatars:2,more:0,kids:null,expandButton:true})
+ assert.equal(L.collapsedCardInput(n,[],tree).avatars,0)
+ const many=treeOf(plan([{id:'m',at:0,people:['1','2','3','4','5']}],FIXED24)).byId.get('m')!
+ assert.deepEqual([L.collapsedCardInput(many,['1','2','3','4','5'].map(id=>({id})),tree).avatars,L.collapsedCardInput(many,['1','2','3','4','5'].map(id=>({id})),tree).more],[3,2])
+})
+
+/* docs/584: the timeline head gains an expand button; a multi-selection shifts by one Δ along anchor chains. */
+test('IC-02: a timeline card with the expand button is 33px wider (24px .expand + 9px gap) until the cap',()=>{
+ const title='港口商会签下秘密契约'
+ assert.equal(cw({title,expandButton:true})-cw({title}),33)
+ assert.equal(cw({title:'长'.repeat(80),expandButton:true}),340)
+})
+test('IC-03: shiftSelection moves only events not anchored (transitively) to another selected event',()=>{
+ const anchored=(id:string,anchor:string,value:number)=>({id,line:'w',title:id,fact:'',parent:null,category:'其他',importance:1,people:[],ongoing:false,duration:0,time:{kind:'exact',value,end:null,precision:'hour',label:'',anchor,boundary:'start'}})
+ const base=plan([{id:'A',at:100},{id:'P',at:500},{id:'K',at:520,parent:'P'},{id:'W',at:800,kind:'window',end:900,dur:0}],FIXED24)
+ const d=planningSchema.parse({...base,events:[...base.events,anchored('B','A',10),anchored('C','B',5)]})
+ const ids=(r:ReturnType<typeof L.shiftSelection>)=>r.moved.map(e=>e.id).sort()
+ assert.deepEqual(ids(L.shiftSelection(d,['A','C'],24)),['A'])
+ assert.deepEqual(ids(L.shiftSelection(d,['B','C'],24)),['B'])
+ assert.deepEqual(ids(L.shiftSelection(d,['P','K'],24)),['K','P'])
+ const w=L.shiftSelection(d,['W'],24).moved[0]
+ assert.equal(w.time.value,824);assert.equal(w.time.end,924);assert.equal(w.duration,0)
+ const ops=L.shiftSelection(d,['A','C','P','K','W'],24).moved.map(value=>({kind:'put',collection:'events',value}))
+ applyPlanningOperations(d,ops)
+ // The preview set: every moved event plus everything anchored to it, transitively.
+ assert.deepEqual([...L.shiftSelection(d,['A','C'],24).follows].sort(),['A','B','C'])
+})

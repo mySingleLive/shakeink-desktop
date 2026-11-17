@@ -63,7 +63,7 @@ export function WorldlineToolbar(p: {
           <span aria-hidden>{p.allExpanded ? "⌃" : "⌄"}</span>
           <span className={s.lbl}>{p.allExpanded ? "全部收起" : "全部展开"}</span>
         </Button>
-        <div className="inline-flex h-7 items-center rounded-md border border-input" title="缩放时间轴间距（也可 Ctrl + 滚轮）">
+        <div className="inline-flex h-7 items-center rounded-md border border-input" title={p.view === "timeline" ? "缩放时间轴间距（也可滚轮）" : "缩放时间轴间距（也可 Ctrl + 滚轮）"}>
           <Button size="icon-xs" variant="ghost" aria-label="缩小" onClick={() => p.onZoom(-1)}>−</Button>
           <span className="min-w-[46px] text-center text-xs tabular-nums" data-zoom-value="">{p.zoomLabel}</span>
           <Button size="icon-xs" variant="ghost" aria-label="放大" onClick={() => p.onZoom(1)}>＋</Button>
@@ -109,19 +109,22 @@ export function WorldlineToolbar(p: {
 }
 
 /** docs/577 §8–§9: type legend with counts (click hides, double-click solos) and the importance size key. */
-export function WorldlineLegend({ counts, hidden, onToggle, onSolo, range, total }: {
+export function WorldlineLegend({ counts, hidden, onToggle, onSolo, range, total, selected = 0 }: {
   counts: Record<EventCategory, number>;
   hidden: ReadonlySet<EventCategory>;
   onToggle(c: EventCategory): void;
   onSolo(c: EventCategory): void;
   range: React.ReactNode;
   total: number;
+  /** docs/584: the timeline multi-selection size (shown from 2). */
+  selected?: number;
 }) {
   renderProbe("WorldlineLegend");
   return (
     <div className={s.status}>
       <span data-range="">{range}</span>
       <span>{total} 件事件</span>
+      {selected >= 2 && <span data-selection-count="">已选 {selected} 个事件</span>}
       <span className={s.legend} aria-label="类型图例（点击隐藏或显示，双击只看这一类）">
         <span>类型</span>
         {EVENT_CATEGORIES.map((c) => (

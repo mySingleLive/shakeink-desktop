@@ -23,16 +23,21 @@ const world = (extra: Record<string, unknown> = {}, events: unknown[] = [], peri
 test("WU-36b: card widths in the table and on the timeline", () => withWorldline(browser, f60(), async page => {
   await tab(page, "事件表")
   const w = (l: ReturnType<Page["locator"]>) => l.evaluate(e => Math.round(e.getBoundingClientRect().width))
-  assert.ok(await w(page.locator("[data-event-table] [data-event-card]").first()) <= 760)
+  assert.ok(await w(page.locator("[data-event-table] [data-event-card]").first()) <= 880)
   await tableCard(page, "学徒在旧书中发现星图").locator("h3").click()
   assert.ok(await w(tableCard(page, "学徒在旧书中发现星图")) <= 920)
-  assert.ok(await w(page.locator("[data-event-group]").first()) <= 820)
+  assert.ok(await w(page.locator("[data-event-group]").first()) <= 940)
   await tableCard(page, "学徒在旧书中发现星图").locator("h3").click()
+  // docs/583: an open card collapses after the double-click interval.
+  await expect(tableCard(page, "学徒在旧书中发现星图")).toHaveAttribute("aria-expanded", "false")
   await tab(page, "时间线")
-  assert.equal(await w(tlCard(page, "学徒在旧书中发现星图")), 260)
-  assert.equal(await w(tlCard(page, "港口商会签下秘密契约·先遣人员抵达现场")), 230)
+  // docs/583 R1: collapsed widths follow the title within [150, 340] (root) / [150, 300] (child).
+  const root = await w(tlCard(page, "学徒在旧书中发现星图")), child = await w(tlCard(page, "港口商会签下秘密契约·先遣人员抵达现场"))
+  assert.ok(root >= 150 && root <= 340, `root ${root}`)
+  assert.ok(child >= 150 && child <= 300, `child ${child}`)
   assert.ok(await w(tlCard(page, "港口商会签下秘密契约")) >= 260)
-  await tlCard(page, "学徒在旧书中发现星图").locator("h3").click()
+  // docs/584: timeline cards expand with the head button; a click only selects.
+  await tlCard(page, "学徒在旧书中发现星图").locator("[data-card-expand]").click()
   await expect.poll(() => w(tlCard(page, "学徒在旧书中发现星图"))).toBe(420)
 }))
 
@@ -42,8 +47,9 @@ test("WU-55: dragging a card title changes its time and saves; other families st
   await page.getByRole("tree", { name: "事件目录" }).getByRole("treeitem", { name: /^学徒在旧书中发现星图 / }).click()
   const c = tlCard(page, "学徒在旧书中发现星图")
   await expect(c).toBeVisible()
-  // Locating scrolls the lane after two animation frames; wait until the lane stops moving.
-  await expect.poll(async () => { const a = await page.locator("[data-timeline-lane]").evaluate(l => l.scrollTop); await page.waitForTimeout(120); return a === await page.locator("[data-timeline-lane]").evaluate(l => l.scrollTop) }).toBe(true)
+  // Locating moves the canvas (store y, docs/584) after two animation frames; wait until it stops moving.
+  const yOf = () => page.locator("[data-timeline]").evaluate(e => e.getAttribute("data-view-y"))
+  await expect.poll(async () => { const a = await yOf(); await page.waitForTimeout(120); return a === await yOf() }).toBe(true)
   const id = (await c.getAttribute("data-event-id"))!
   const before = await page.evaluate(i => (window as any).planningState().data.events.find((e: any) => e.id === i).time.value, id)
   const others = () => page.evaluate(i => [...document.querySelectorAll<HTMLElement>("[data-timeline-plane] [data-event-card]")].filter(e => !e.closest(`[data-family="${i}"]`)).map(e => e.getBoundingClientRect().top), id)
@@ -68,7 +74,8 @@ test("WU-56e: a query refresh and a measured height during a drag do not jump th
     return null
   })
   assert.ok(p && lane)
-  await page.mouse.move(p!.x, p!.y); await page.mouse.down()
+  // docs/584: the canvas pans with the middle button.
+  await page.mouse.move(p!.x, p!.y); await page.mouse.down({ button: "middle" })
   await page.mouse.move(p!.x - 200, p!.y, { steps: 6 })
   const mid = await page.locator("[data-range]").innerText()
   // A save (query refresh) while the pointer is still down.
@@ -78,7 +85,7 @@ test("WU-56e: a query refresh and a measured height during a drag do not jump th
   await page.mouse.move(p!.x - 260, p!.y, { steps: 2 })
   const last = await page.locator("[data-range]").innerText()
   assert.notEqual(last, mid)
-  await page.mouse.up()
+  await page.mouse.up({ button: "middle" })
   await page.waitForTimeout(250)
   assert.equal(await page.locator("[data-range]").innerText(), last)
 }))
@@ -219,7 +226,7 @@ test("WU-72: a time base relabels the ruler, card time and tree short time; fami
   await expect.poll(ruler).not.toBe(r0)
   await expect.poll(tree).not.toBe(t0)
   assert.deepEqual(await lefts(), l0)
-  await tlCard(page, "开端").locator("h3").click()
+  await tlCard(page, "开端").locator("[data-card-expand]").click()
   await expect(tlCard(page, "开端").locator("[data-card-time]")).not.toHaveText("")
 }))
 

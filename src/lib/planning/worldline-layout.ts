@@ -38,9 +38,10 @@ export const TICK_LABEL_GAP = 44;
 export const SEGMENT_BADGE_OFFSET = 22;
 export const BREAK_DAYS = 30;
 export const BREAK_MEDIAN_FACTOR = 20;
-/** Timeline card widths (577 §12). */
-export const ROOT_CARD_WIDTH = 260;
-export const CHILD_CARD_WIDTH = 230;
+/** Timeline card widths (577 §12; docs/583 R1: collapsed cards follow the title up to these caps). */
+export const ROOT_CARD_WIDTH = 340;
+export const CHILD_CARD_WIDTH = 300;
+export const COLLAPSED_MIN_WIDTH = 150;
 export const OPEN_CARD_WIDTH = 420;
 export const PARENT_BAR_MIN_WIDTH = 260;
 export const FAMILY_H_GAP = 14;
@@ -786,16 +787,99 @@ export interface FamilyOptions {
   expanded?: ReadonlySet<string>;
   folded?: ReadonlySet<string>;
   heights?: Readonly<Record<string, number | undefined>>;
+  /** Collapsed card width (docs/583 R1); defaults to the title-only estimate. */
+  widthOf?: (n: TreeNode) => number;
 }
-const cardWidth = (n: TreeNode, open: boolean) =>
-  open ? OPEN_CARD_WIDTH : n.depth ? CHILD_CARD_WIDTH : ROOT_CARD_WIDTH;
+/** What the collapsed card head renders (EventCard.tsx head; docs/583 R1). */
+export interface CollapsedCardInput {
+  title: string;
+  depth: number;
+  importance: number;
+  /** Avatars drawn (people found in the character list, at most 3 on the timeline). */
+  avatars: number;
+  /** Found people beyond those drawn (the +N chip). */
+  more: number;
+  /** N of the ▸ N badge; null without children. */
+  kids: number | null;
+  /** docs/584: the timeline head's expand button (24px .expand, like the 「…」 summary). */
+  expandButton?: boolean;
+}
+/** Head sizes from worldline.module.css: .card border, .head padding/gap (:66), .fold (:84), .expand (:86), .dot (:69-71),
+ * .avatars padding (:76) and 16px timeline avatars overlapping 5px (:77, :82), .kids padding + border (:83), summary (:87). */
+const HEAD = { border: 2, padLeft: 14, padRight: 6, gap: 9, fold: 20, expand: 24, menu: 24, avatarsPad: 4, avatar: 16, overlap: 5, badgePad: 16, arrow: 11, space: 3.5, digit: 6.2 };
+const DOT = [6, 9, 12];
+const TITLE_SLACK = 2;
+const WIDE = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6\u00b7\u2014\u2026\u201c\u201d\u3000-\u303f]|[\u{20000}-\u{3fffd}]/u;
+/** Title width at the card's 13px: full-width characters (CJK, full-width punctuation, ·) 13px, others 7.4px. */
+function titleWidth(title: string) {
+  let w = 0;
+  for (const ch of title) w += WIDE.test(ch) ? 13 : 7.4;
+  return w;
+}
+/** docs/583 R1: collapsed timeline card width from the rendered head, clamped to [150, cap]. Pure; no DOM. */
+export function collapsedCardWidth(c: CollapsedCardInput): number {
+  const parts: number[] = [];
+  if (c.kids !== null) parts.push(HEAD.fold);
+  parts.push(DOT[Math.min(3, Math.max(1, c.importance)) - 1]);
+  parts.push(titleWidth(c.title) + TITLE_SLACK);
+  if (c.avatars > 0) parts.push(HEAD.avatarsPad + HEAD.avatar + (c.avatars - 1 + (c.more > 0 ? 1 : 0)) * (HEAD.avatar - HEAD.overlap));
+  if (c.kids !== null) parts.push(HEAD.badgePad + HEAD.arrow + HEAD.space + String(c.kids).length * HEAD.digit);
+  if (c.expandButton) parts.push(HEAD.expand);
+  parts.push(HEAD.menu);
+  const w = HEAD.border + HEAD.padLeft + HEAD.padRight + parts.reduce((a, b) => a + b, 0) + HEAD.gap * (parts.length - 1);
+  const cap = c.depth ? CHILD_CARD_WIDTH : ROOT_CARD_WIDTH;
+  return Math.min(cap, Math.max(COLLAPSED_MIN_WIDTH, Math.ceil(w)));
+}
+export const TIMELINE_MAX_AVATARS = 3;
+/** The collapsed head input with the counts EventCard renders: people found in `characters` (EventCard.tsx:127-128)
+ * and, for a parent, all its descendants in `tree` (EventTimeline famInfo). */
+export function collapsedCardInput(n: TreeNode, characters: readonly { id: string }[] | ReadonlySet<string>, tree: EventTree): CollapsedCardInput {
+  const known = characters instanceof Set ? characters : new Set((characters as readonly { id: string }[]).map((c) => c.id));
+  const found = n.event.people.filter((id) => known.has(id)).length;
+  const avatars = Math.min(TIMELINE_MAX_AVATARS, found);
+  const node = tree.byId.get(n.id) ?? n;
+  return { title: n.event.title, depth: n.depth, importance: n.event.importance, avatars, more: found - avatars, kids: node.children.length ? descendants(node).length : null, expandButton: true };
+}
+const fallbackWidth = (n: TreeNode) =>
+  collapsedCardWidth({ title: n.event.title, depth: n.depth, importance: n.event.importance, avatars: 0, more: 0, kids: n.children.length ? descendants(n).length : null, expandButton: true });
+
+/**
+ * docs/584 A2/A3: one drag moves a multi-selection by Δ. An event whose time is anchored, directly or through a chain,
+ * to another selected event already moves with that anchor, so only the others get Δ (`moved`). `follows` is what
+ * the preview shifts: every moved event and every event anchored to one of them, transitively. Window events move
+ * their upper edge too; durations are unchanged.
+ */
+export function shiftSelection(data: PlanningData, ids: readonly string[], delta: number) {
+  const byId = new Map(data.events.map((e) => [e.id, e]));
+  const chosen = new Set(ids.filter((id) => byId.has(id)));
+  const anchoredToChosen = (e: PlanningEvent) => {
+    const seen = new Set<string>();
+    for (let a: string | null | undefined = e.time.anchor; a && !seen.has(a); a = byId.get(a)?.time.anchor) {
+      if (chosen.has(a)) return true;
+      seen.add(a);
+    }
+    return false;
+  };
+  const moved = [...chosen].map((id) => byId.get(id)!).filter((e) => !anchoredToChosen(e)).map((e) => ({
+    ...e,
+    time: { ...e.time, value: e.time.value + delta, end: e.time.kind === "window" && e.time.end !== null ? e.time.end + delta : e.time.end },
+  }));
+  const follows = new Set(moved.map((e) => e.id));
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const e of data.events) if (!follows.has(e.id) && e.time.anchor && follows.has(e.time.anchor)) { follows.add(e.id); grew = true; }
+  }
+  return { moved, follows };
+}
 
 /** One family per root: the root, its unfolded descendants, frames, tracks and bars, all in world px. */
 export function buildFamilies(roots: readonly TreeNode[], options: FamilyOptions): FamilyBox[] {
   const { scale } = options,
     expanded = options.expanded ?? EMPTY_SET,
     folded = options.folded ?? EMPTY_SET,
-    heights = options.heights ?? {};
+    heights = options.heights ?? {},
+    widthOf = options.widthOf ?? fallbackWidth;
+  const cardWidth = (n: TreeNode, open: boolean) => (open ? OPEN_CARD_WIDTH : widthOf(n));
   const wx = (t: number) => t * scale;
   const h = (n: TreeNode) =>
     expanded.has(n.id) ? (heights[n.id] ?? estimateCardHeight(n.event)) : CARD_HEIGHT;
@@ -878,9 +962,13 @@ const collides = (y: number, f: FamilyBox, o: PackedFamily) =>
   y < o.y + o.box.h + FAMILY_V_GAP && y + f.h + FAMILY_V_GAP > o.y;
 /** Lowest y ≥ from where the family fits beside the placed ones; candidates are `from` and bottoms of overlapping ones. */
 function settle(f: FamilyBox, placed: readonly PackedFamily[], from: number) {
-  const cols = placed.filter((o) => o.box.left < f.right && o.box.right > f.left);
-  const cands = [from, ...cols.map((o) => o.y + o.box.h + FAMILY_V_GAP).filter((y) => y > from)].sort((a, b) => a - b);
-  return cands.find((y) => !cols.some((o) => collides(y, f, o)))!;
+  // Same result as trying `from` and every column bottom in ascending order, in one pass by column top: y moves down
+  // only to the bottom of a column it hits, and every value it skips hits that column. Once the family fits above a
+  // column, later columns start lower still, so y is final. O(c log c) instead of O(c²); every zoom step repacks.
+  const cols = placed.filter((o) => o.box.left < f.right && o.box.right > f.left).sort((a, b) => a.y - b.y);
+  let y = from;
+  for (const o of cols) if (collides(y, f, o)) y = o.y + o.box.h + FAMILY_V_GAP;
+  return y;
 }
 /**
  * §5.2 ①: first-fit packing on unclipped world boxes. A new scale or width packs everything again and records home y.
@@ -1032,6 +1120,7 @@ export interface TimelineInput {
   expanded?: ReadonlySet<string>;
   folded?: ReadonlySet<string>;
   heights?: Readonly<Record<string, number | undefined>>;
+  widthOf?: (n: TreeNode) => number;
   /** Event whose family keeps its y after an expand/collapse. */
   pinned?: string | null;
   /** Card sizes changed (expand, collapse, measured height, fold): rebuild and repack incrementally. */
@@ -1099,7 +1188,7 @@ export function timelineStep(state: TimelineState, input: TimelineInput): Timeli
     const roots = tree.roots.filter(
       (r) => r.start !== null && familyEnd(r) >= build!.lo && r.start <= build!.hi,
     );
-    const families = buildFamilies(roots, { scale, expanded: input.expanded, folded: input.folded, heights: input.heights });
+    const families = buildFamilies(roots, { scale, expanded: input.expanded, folded: input.folded, heights: input.heights, widthOf: input.widthOf });
     packed = packFamilies(families, full ? null : packed, { scale, width, pinned: rootOf(tree, input.pinned) });
     packMode = packed.mode;
   }

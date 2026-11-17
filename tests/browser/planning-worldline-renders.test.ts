@@ -36,9 +36,10 @@ test("WU-56c: 30 drag frames render PlanningWorkspace 0 times; the tree is throt
   await reset(page)
   const p = await emptyPoint(page)
   const t0 = Date.now()
-  await page.mouse.move(p.x, p.y); await page.mouse.down()
+  // docs/584: the canvas pans with the middle button.
+  await page.mouse.move(p.x, p.y); await page.mouse.down({ button: "middle" })
   for (let k = 1; k <= 30; k++) await page.mouse.move(p.x - k * 12, p.y)
-  await page.mouse.up()
+  await page.mouse.up({ button: "middle" })
   const dur = Date.now() - t0
   const during = await renders(page)
   assert.equal(during.PlanningWorkspace ?? 0, 0, "workspace renders during drag")
@@ -73,17 +74,19 @@ test("WU-64: the tree's in-view count follows a pan; hovering the tree stops aut
 test("WU-82 (B): each drag frame takes under 16ms", () => withWorldline(browser, f60(), async page => {
   await page.getByRole("tab", { name: "时间线" }).click()
   const p = await emptyPoint(page)
-  await page.mouse.move(p.x, p.y); await page.mouse.down()
+  // docs/584: the pan is a middle-button drag owned by the timeline root (pointer capture there).
+  await page.mouse.move(p.x, p.y); await page.mouse.down({ button: "middle" })
   const times: number[] = []
   for (let k = 1; k <= 30; k++) {
     const t = await page.evaluate(([x, y]) => new Promise<number>(res => {
       const start = performance.now()
-      document.querySelector("[data-timeline-lane]")!.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y, bubbles: true, pointerId: 1 }))
+      document.querySelector("[data-timeline]")!.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y, bubbles: true, pointerId: 1, buttons: 4 }))
       requestAnimationFrame(() => res(performance.now() - start))
     }), [p.x - k * 12, p.y])
     times.push(t)
   }
-  await page.mouse.up()
+  await page.mouse.up({ button: "middle" })
+  assert.notEqual(await page.locator("[data-timeline]").getAttribute("data-view-start"), null)
   times.sort((a, b) => a - b)
   const p95 = times[Math.floor(times.length * 0.95) - 1]
   assert.ok(p95 < 16 || times[Math.floor(times.length / 2)] < 16, `frame times ${times.map(t => t.toFixed(1)).join(",")}`)
