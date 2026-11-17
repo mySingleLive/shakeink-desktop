@@ -37,7 +37,7 @@ export function createPlanningTools(scope: StoryScope): ToolSet {
             execution: "采用提案、读取新状态、提出下一份建议是有先后依赖的真实工具调用。先等待applyNovelPlanningProposal成功回执，再单独调用getNovelPlanning读取已保存版本，最后才调用proposeNovelPlanning；不得并行、预估版本加一，或仅在文字中声称已调用/已落库。",
             worlds: "世界线。worldId可关联getWorlds返回的已建世界实体ID；不是另建世界观实体。",
             lines: "叙事线；只在铺陈讲述顺序时创建。事件line引用worlds.id，卡片line引用lines.id，tellings.refs.line也引用worlds.id。",
-            time: "统一为小时：第30天value=720，持续90天duration=2160。precision=day/year只是显示精度。父事件用exact+duration包含子事件；window是发生时刻不确定范围，不是持续区间。",
+            time: "统一为小时：第30天value=720，持续90天duration=2160。precision=day/month/year/era只是显示精度（era=只知道所在纪元）。gregorian世界线的calendar.eras是小说纪年（按起点排列，start为该纪元第1年1月1日的小时值），显示为“纪元+年月日”；修改世界线时须原样带上eras。父事件用exact+duration包含子事件；window是发生时刻不确定范围，不是持续区间。",
             materials: "事件和telling的materialRefs引用本书已有setting/item/scene/foreshadow档案：kind、id、role、note；普通资料role=use，伏笔role=plant/mention/payoff。先建伏笔再规划；首次埋入须同一telling.refs引用的世界事件也有同一伏笔plant，事件note记客观安排、telling.note仅写本次可见线索。未来提及/回收可按需补，不能把规划引用登记成正文触点。",
             narrative: "卡片树按读者讲述顺序展开，不照搬世界事件发生顺序；回忆/预叙须明确标记并有回到当前场景的衔接。refs.reveal只写本次视角确实获知、允许读者知道的内容，不能复制含凶手身份的客观事实后又在withheld声称隐藏身份。narrateSummary=false的父卡只组织层级，其事实不会自动成为正文；必要情节须进入实际讲述的叶卡。分章前按目标章数细化行动卡，不能把少量摘要硬拆成无内容章节。进入正文的章（卷章大纲已分章）每张实际讲述卡的每个视角必须带 beats 段落节拍：按段落顺序逐拍给出 type（事件/人物/环境/回忆/心理/分析/对话/动作/感受/过渡）与 summary（这一段写什么，具体到人、事、信息点），粒度约每300-400字一拍；章节拍总数应覆盖该章字数范围，生成正文前 checkChapterNarrative 会检查节拍是否足够。",
           },

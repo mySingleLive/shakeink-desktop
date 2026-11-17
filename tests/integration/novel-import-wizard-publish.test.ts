@@ -9,7 +9,7 @@ import {prisma} from '../../src/lib/db'
 import {publishNovelImport,readNovelImportRecord} from '../../desktop/service/novel-import-publish'
 import {resolveReferenceAnchor} from '../../src/lib/foreshadow-reference'
 import {validatePlanning} from '../../src/lib/planning/domain'
-import {fixture,filesF,rosterAi,toTree,toStep,linesAi,touchesAi,entityResult,entityName,type Ai} from '../helpers/novel-import-wizard-fixture'
+import {fixture,filesF,rosterAi,toTree,toStep,linesAi,timelineCatalog,touchesAi,entityResult,entityName,type Ai} from '../helpers/novel-import-wizard-fixture'
 import type {ImportPublishInput,ImportSession} from '../../desktop/shared/novel-import'
 
 /* Synthetic fixture only: drive the real controller to step 21, then publish into a disposable PGlite
@@ -68,4 +68,57 @@ test('NIW-S14: the import initializer has an asset store',{timeout:60000},async(
  const target=await realpath(await mkdtemp(join(root,'assets-'))),s=await stat(target,{bigint:true})
  const work=await works.create({path:target,device:String(s.dev),inode:String(s.ino)},{title:'资产上下文',requestId:'niw-assets-context-01'},()=>{},{importHash:'a'.repeat(64),verify:async()=>{},initialize:async()=>{const {currentWorkAssets}=await import('../../desktop/service/image-assets');currentWorkAssets()}})
  assert.ok(work.id);assert.ok((await readdir(target)).length>0)
+})
+/** docs/571: one event per chapter that the batch covers (the default fixture gives one per batch). */
+function chapterEvents(base:Ai):Ai{return async r=>{
+ if(!(r.phase==='analyze'&&!r.intent&&r.kind==='worldline'))return base(r)
+ const chapters=r.chapters!.map((c,i)=>({c,i})).filter(({c})=>r.units.some(u=>u.start<c.end&&u.end>c.start))
+ return {artifacts:chapters.map(({c,i})=>{const u=r.units.find(u=>u.start<=c.start&&u.end>c.start)??r.units.find(u=>u.start<c.end&&u.end>c.start)!,from=Math.max(0,c.start-u.start);return {id:'ev-'+i,kind:'worldline' as const,name:'第'+i+'章事件',text:'发生了一件事。',facts:{lineId:'main',lineName:'主世界线',timeKind:'unknown',people:'[]',reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(from,from+6)}],sourceUnitIds:[u.id],origin:'inferred' as const}})}
+}}
+/** docs/571: only characters and the worldline, so the flow does not depend on scene, item or world steps. */
+async function worldlineWork(ai:(f:Awaited<ReturnType<typeof fixture>>)=>Ai){
+ const f=await fixture(filesF(),rosterAi());f.setAi(ai(f))
+ let captured:ImportPublishInput|undefined
+ f.options.publish=async input=>{captured=structuredClone(input) as ImportPublishInput;return publishNovelImport(works,input)}
+ await f.act('choose',{mode:'files'});await f.act('wizard-next');await f.act('set-title',{title:'合成世界线作品'});await f.act('choose-target');await f.act('wizard-next')
+ await f.act('classify',{mode:'ai',consent:true});await f.settle()
+ await f.act('select',{selected:['body'],targets:['character','worldline'],infer:true});await f.act('wizard-next',{consent:true});await f.settle()
+ await f.act('wizard-next',{consent:true});await toStep(f,'verify')
+ await f.act('wizard-next');const done=await f.settle();assert.equal(done.phase,'completed',done.error??done.wizard?.stepError)
+ return {f,session:captured!.session as ImportSession,novelId:done.publication!.novelId!,workId:done.publication!.workId!}
+}
+test('WT-30/WT-50/WT-51: step 17 places every event on the one worldline, published in time order',{timeout:180000},async()=>{
+ const w=await worldlineWork(f=>chapterEvents(linesAi(richAi(f.handler()))))
+ try{
+  const timeline=w.f.requests.filter(r=>r.intent==='timeline'),batches=w.f.requests.filter(r=>r.phase==='analyze'&&!r.intent&&r.kind==='worldline')
+  assert.equal(timeline.length,1,'one timeline request');assert.ok(w.f.requests.indexOf(timeline[0])>Math.max(...batches.map(r=>w.f.requests.indexOf(r))),'after every batch')
+  assert.deepEqual(timeline[0].units,[]);assert.equal(timeline[0].executionLane,undefined)
+  const events=w.session.artifacts.filter(a=>a.kind==='worldline')
+  assert.ok(events.length>1,String(events.length));assert.ok(events.every(a=>a.facts.lineId==='import-main-worldline'&&a.facts.lineName==='主世界线'&&a.facts.timeKind==='exact'))
+  assert.deepEqual(w.session.wizard!.worldTimeline,{version:1,calendar:'fixed',epoch:'故事开始',events:events.length})
+  const planning=await works.run(w.workId,async()=>validatePlanning((await prisma.planningDocument.findUnique({where:{novelId:w.novelId}}))!.data))
+  assert.deepEqual(planning.worlds.map(x=>[x.id,x.name,x.calendar.kind]),[['import-world-import-main-worldline','主世界线','fixed']])
+  const values=planning.events.map(e=>e.time.value);assert.ok(planning.events.every(e=>e.time.kind==='exact'&&e.time.precision==='hour'))
+  assert.deepEqual(values,values.map((_,i)=>i*24),'saved in strictly increasing time, one day per rank')
+ }finally{await w.f.controller.close();await rm(w.f.root,{recursive:true,force:true})}
+})
+test('EC-70/EC-71/WT-51b: a calendar reply gives an era worldline with event precisions and era periods',{timeout:180000},async()=>{
+ // Reverse reading order: the first ranked event is in an earlier era, the second has a present-era date, the rest are undated.
+ const calendar={eras:[{name:'青石纪',aliases:[],years:null,startAgo:null},{name:'赤铜纪',aliases:['赤铜纪元'],years:null,startAgo:null}],present:{era:'赤铜纪',year:1349}}
+ const dated=(f:Awaited<ReturnType<typeof fixture>>):Ai=>{const inner=chapterEvents(linesAi(richAi(f.handler())));return async r=>r.intent==='timeline'?{calendar,timeline:timelineCatalog(r).reverse().map((e,order)=>({id:e.id,order,...(order===0?{era:'青石纪'}:order===1?{era:'赤铜纪元',year:1349,month:6,day:26}:{})}))}:inner(r)}
+ const w=await worldlineWork(dated)
+ try{
+  const planning=await works.run(w.workId,async()=>validatePlanning((await prisma.planningDocument.findUnique({where:{novelId:w.novelId}}))!.data))
+  assert.equal(planning.worlds.length,1);const world=planning.worlds[0]
+  assert.equal(world.calendar.kind,'gregorian');assert.deepEqual(world.calendar.eras.map(e=>e.name),['青石纪','赤铜纪']);assert.equal(world.calendar.eras[1].start,0)
+  const t=w.session.wizard!.worldTimeline!;assert.equal(t.calendar,'gregorian')
+  const precisions=t.calendar==='gregorian'?t.precisions:{}
+  assert.ok(planning.events.every(e=>e.time.precision===precisions[e.id.slice('import-event-'.length)]),'event precision follows the timeline')
+  assert.equal(planning.events[0].time.precision,'era');assert.equal(planning.events[1].time.precision,'day')
+  assert.ok(planning.events[0].time.value<world.calendar.eras[1].start&&planning.events[0].time.value>=world.calendar.eras[0].start)
+  const values=planning.events.map(e=>e.time.value);assert.ok(values.every((v,i)=>i===0||v>values[i-1]))
+  const catalog=w.session.artifacts.filter(a=>a.kind==='worldline');assert.equal(planning.events[0].id,'import-event-'+catalog[0].id,'the session also lists events in story order')
+  assert.ok(planning.events.slice(2).every(e=>e.time.label.endsWith('（按先后推定）')),'undated events are marked as inferred')
+  assert.deepEqual(planning.periods.map(p=>[p.id,p.title,p.line,p.start,p.end,p.ongoing]),[['import-era-0','青石纪',world.id,world.calendar.eras[0].start,0,false],['import-era-1','赤铜纪',world.id,0,null,true]])
+ }finally{await w.f.controller.close();await rm(w.f.root,{recursive:true,force:true})}
 })

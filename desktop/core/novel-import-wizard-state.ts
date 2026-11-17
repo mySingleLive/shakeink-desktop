@@ -1,3 +1,6 @@
+import type {WorldTimelineState} from './novel-import-wizard-timeline'
+import {ERA_EPOCH} from './novel-import-wizard-timeline'
+import {civilDays} from '../../src/lib/planning/era-calendar'
 import {z} from 'zod'
 import {sceneIdentityLedgerSchema,sceneCleanupStateSchema,type SceneIdentityLedger,type SceneCleanupState} from '../shared/novel-import-scene-identity'
 import {assertSceneIdentityLedger} from './novel-import-scene-identity'
@@ -31,7 +34,11 @@ export interface ImportWizardState {
  returnStep?:WizardStep;returnState?:WizardStepState;returnPhase?:'paused'|'select'|'running'|'conflicts'
  /** Step 20 batch proposals and the planned planning links (written at publish). */
  /** docs/517 3R3-3: shape repairs kept per line step until the step is adopted. */
- lineRepairs?:Partial<Record<'worldline'|'narrative'|'outline',{droppedEvidence:number;droppedLinks:number;droppedEntries?:number}>>
+ /** docs/570: written when step 17 has placed every inferred event on the one worldline. */
+ /** docs/570 4R: chapters without an event were asked once more in this step 17. */
+ worldGapsAsked?:true
+ worldTimeline?:WorldTimelineState
+ lineRepairs?:Partial<Record<'worldline'|'narrative'|'outline',{droppedEvidence:number;droppedLinks:number;droppedEntries?:number;droppedGrades?:number}>>
  touchStash?:{foreshadowKey:string;title:string;content:string;order?:number;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string}}[]
  foreshadowRefs?:{target:'event'|'telling';targetId:string;foreshadowId:string;role:'plant'|'mention'|'payoff';note:string}[]
  /** Per-batch roster results kept until the recognition step finishes. */
@@ -55,7 +62,7 @@ const candidate=z.object({id:candidateId,kind:z.enum(['character','scene','item'
 const stepState=z.enum(['pending','running','waiting','done','skipped','failed'])
 const task=z.object({id:taskId,kind:z.enum(['entity','image','settings']),candidateId:candidateId.optional(),imageKind:z.enum(WIZARD_IMAGE_KINDS).optional(),settingsKind:z.enum(['theme','style','goldenFinger','trope']).optional(),dependsOn:taskId.optional(),state:z.enum(['waiting','running','done','failed','paused','skipped']),attempts:index.max(1000),error:text(400).optional(),resultSha256:z.string().regex(/^[0-9a-f]{64}$/u).optional(),image:z.object({mime:z.enum(['image/png','image/jpeg','image/webp']),bytes:index.max(WIZARD_LIMITS.imageBytes),prompt:text(8000)}).strict().optional()}).strict()
 const record=z.object({taskId,label:text(400)}).strict()
-const lineRepair=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000)}).strict()
+const lineRepair=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000),droppedGrades:z.number().int().nonnegative().max(1_000_000).optional()}).strict()
 const dropped=z.object({kind:z.enum(['touch','materialRef','missingTarget','relationship','parent','settings','lines','verify','roster']),label:text(400),reason:text(400),rosterKind:z.enum(['character','scene','item','world']).optional(),invalid:index.max(1_000_000).optional(),unlocatable:index.max(1_000_000).optional(),unfinishedUnits:index.max(1_000_000).optional()}).strict().refine(d=>d.kind==='roster'?!!d.rosterKind:!d.rosterKind&&d.invalid===undefined&&d.unlocatable===undefined&&d.unfinishedUnits===undefined)
 const structureItem=z.object({start:index,end:index,title:text(300).min(1),volume:text(300).optional()}).strict()
 export const importWizardStateSchema=z.object({
@@ -73,17 +80,32 @@ export const importWizardStateSchema=z.object({
  checks:z.array(z.object({key:text(80),ok:z.boolean(),detail:text(400)}).strict()).max(20).optional(),
  verify:z.object({failedPackets:z.array(z.object({unitIds:z.array(text(200)).min(1).max(5000),error:text(400),attempts:index.max(1_000_000)}).strict()).max(5000),repairs:z.array(z.object({conflictId:text(200),attempts:index.max(1_000_000)}).strict()).max(WIZARD_LIMITS.records),fixed:z.array(z.object({label:text(400),field:text(200)}).strict()).max(WIZARD_LIMITS.records),droppedConflicts:index.max(1_000_000),outlineAttempts:index.max(1_000_000),repairable:z.boolean().optional()}).strict().optional(),
  returnStep:z.enum(WIZARD_STEPS).optional(),returnState:stepState.optional(),returnPhase:z.enum(['paused','select','running','conflicts']).optional(),
+ worldGapsAsked:z.literal(true).optional(),
+ // docs/579 #5: a docs/570 gregorian timeline is upgraded on read (see upgradeLegacyWorldTimeline).
+ worldTimeline:z.preprocess(upgradeLegacyWorldTimeline,z.union([z.object({version:z.literal(1),calendar:z.literal('fixed'),epoch:text(40).min(1),events:z.number().int().nonnegative().max(1_000_000)}).strict(),z.object({version:z.literal(1),calendar:z.literal('gregorian'),epoch:text(40).min(1),events:z.number().int().nonnegative().max(1_000_000),eras:z.array(z.object({name:text(40),start:z.number().finite()}).strict()).min(1).max(20).refine(l=>l.every((e,i)=>i===0||e.start>l[i-1].start),'纪元起点必须严格递增'),precisions:z.record(text(200).min(1),z.enum(['day','month','year','era'])).refine(r=>Object.keys(r).length<=5000,'精度记录过多')}).strict()]).optional()),
  lineRepairs:z.object({worldline:lineRepair.optional(),narrative:lineRepair.optional(),outline:lineRepair.extend({droppedEntries:z.number().int().nonnegative().max(1_000_000).optional()}).strict().optional()}).strict().optional(),
  touchStash:z.array(z.object({foreshadowKey:text(300).min(1),title:text(300).min(1),content:text(4000),order:index.optional(),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:index,summary:text(200),quote:text(200).min(1),eventId:text(200).optional(),narrativeId:text(200).optional()}).strict()}).strict()).max(50000).optional(),
  foreshadowRefs:z.array(z.object({target:z.enum(['event','telling']),targetId:text(200).min(1),foreshadowId:text(200).min(1),role:z.enum(['plant','mention','payoff']),note:text(500).min(1)}).strict()).max(50000).optional(),
  rosterStash:z.partialRecord(z.enum(['character','scene','item','world']),z.array(z.object({unitId:text(200).optional(),name:text(300).min(1),aliases:z.array(text(300)).max(50),roleType:z.enum(['PROTAGONIST','SUPPORTING','ANTAGONIST']).optional(),parent:text(300).optional(),itemType:text(100).optional(),important:z.boolean().optional(),category:z.enum(['item','character','place','organization','concept','other']).optional(),parallel:z.boolean().optional(),settings:z.array(z.object({settingType,name:text(300).min(1)}).strict()).max(50).optional()}).strict()).max(50000)).optional(),
 }).strict()
 
+/** docs/579 #5: a docs/570 gregorian timeline (no eras) counts hours from its own ISO epoch date. It becomes one unnamed
+ * era starting on that date, so a session that already began saving still publishes the same dates. Other shapes pass. */
+export function upgradeLegacyWorldTimeline(v:unknown):unknown{
+ if(!v||typeof v!=='object'||(v as {calendar?:unknown}).calendar!=='gregorian'||'eras' in v)return v
+ const old=v as {version:1;epoch?:unknown;events?:unknown},m=typeof old.epoch==='string'?/^(\d{4})-(\d{2})-(\d{2})/u.exec(old.epoch):null
+ if(!m)return undefined
+ // Hour 0 of the old timeline is the epoch date, so the single era starts that many days before it.
+ const start=civilDays(Number(m[1]),Number(m[2]),Number(m[3]))*24
+ return {version:1,calendar:'gregorian',epoch:ERA_EPOCH,events:old.events,eras:[{name:'',start:-start}],precisions:{}}
+}
 export class ImportWizardStateError extends Error {constructor(message='导入向导状态无效，请保留原草稿'){super(message)}}
 /** Journal guard: wizard state exists only on wizard sessions and is internally consistent. */
 export function validateImportWizardState(s:{wizardVersion?:unknown;wizard?:unknown}){
  if(s.wizardVersion===undefined){if(s.wizard!==undefined)throw new ImportWizardStateError();return}
  if(s.wizardVersion!==1)throw new ImportWizardStateError()
+ // docs/579 #5: the journal object itself is upgraded, so resume and publish read the new shape.
+ if(s.wizard&&typeof s.wizard==='object'&&'worldTimeline' in s.wizard){const w=s.wizard as {worldTimeline?:unknown},up=upgradeLegacyWorldTimeline(w.worldTimeline);if(up===undefined)delete w.worldTimeline;else w.worldTimeline=up}
  const parsed=importWizardStateSchema.safeParse(s.wizard)
  // Debug runs name the failing field paths only, never values.
  if(!parsed.success){if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('wizard state issues',parsed.error.issues.slice(0,5).map(i=>i.path.map(p=>typeof p==='number'?'#':String(p)).join('.')+':'+i.code));throw new ImportWizardStateError()}

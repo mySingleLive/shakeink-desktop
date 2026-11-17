@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {WORLDLINE_CATEGORY_VALUES,WORLDLINE_IMPORTANCE_VALUES} from './novel-import-worldline-facts'
 import {positionError} from '../../src/lib/creation-wizard/position'
 import {normalizeContent,type SettingContent,type LevelNode,type LevelPathway} from '../../src/components/content/setting-content'
 import {importHash,safeImportBoundary,validateImportEvidence} from './novel-import'
@@ -42,9 +43,9 @@ export interface ImportMissingTarget {kind:ImportTarget;unitIds:string[];evidenc
 export interface ImportReviewProjection {artifactId:string;semanticHash:string;fullTextLength:number;fullFactKeys:string[];fields:string[];textRange?:{start:number;end:number}}
 export interface ImportRosterEntry {name:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';parent?:string;itemType?:string;important?:boolean;category?:'item'|'character'|'place'|'organization'|'concept'|'other';parallel?:boolean;settings?:{settingType:ImportWorldSettingType;name:string}[];evidence:ImportEvidence}
 export interface ImportTouchEntry {foreshadowKey:string;title:string;content:string;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string};evidence:ImportEvidence}
-export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];sceneRosterRecords?:SceneMentionRecord[];sceneIdentityDecisions?:SceneIdentityDecision[];sceneCleanup?:SceneCleanupDecision[];touches?:ImportTouchEntry[];sceneParents?:{id:string;parentId?:string;evidence:ImportEvidence}[]}
+export interface ImportSemanticResult {artifactEdits?:ImportArtifactEdit[];missingTargets?:ImportMissingTarget[];roster?:ImportRosterEntry[];sceneRosterRecords?:SceneMentionRecord[];sceneIdentityDecisions?:SceneIdentityDecision[];sceneCleanup?:SceneCleanupDecision[];touches?:ImportTouchEntry[];/** docs/570: story-time ranks of the wizard events. */timeline?:{id:string;order:number;phase?:'前史'|'主线';era?:string;year?:number;month?:number;day?:number;ago?:number}[];/** docs/572: the novel's eras, when it has a calendar. */calendar?:{eras:{name:string;aliases?:string[];years?:number|null;startAgo?:number|null}[];present?:{era:string;year:number}|null}|null;sceneParents?:{id:string;parentId?:string;evidence:ImportEvidence}[]}
 export interface ImportSemanticEntity {id:string;kind:ImportTarget;name:string;unitIds?:string[];parentId?:string;entityType?:'PLACE'|'WORLD'|'SETTING';worldId?:string;settingType?:ImportWorldSettingType}
-export interface ImportSemanticRequestFields {semanticVersion?:1;intent?:'reconcile'|'structure'|'roster'|'entity'|'touches';entityTarget?:{id:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';evidenceOptions?:ImportEvidence[]};sceneIdentity?:SceneIdentityRequestContext;sceneParentTargets?:string[];reconcile?:ImportReconcileContext;selectedTargets?:ImportTarget[];semanticLocks?:ImportSemanticLock[];entities?:ImportSemanticEntity[];reviewProjection?:ImportReviewProjection[]}
+export interface ImportSemanticRequestFields {semanticVersion?:1;intent?:'reconcile'|'structure'|'roster'|'entity'|'touches'|'timeline';entityTarget?:{id:string;aliases:string[];roleType?:'PROTAGONIST'|'SUPPORTING'|'ANTAGONIST';evidenceOptions?:ImportEvidence[]};sceneIdentity?:SceneIdentityRequestContext;sceneParentTargets?:string[];reconcile?:ImportReconcileContext;selectedTargets?:ImportTarget[];semanticLocks?:ImportSemanticLock[];entities?:ImportSemanticEntity[];reviewProjection?:ImportReviewProjection[]}
 export type ImportSemanticAiRequest=ImportAiRequest&ImportSemanticRequestFields
 export type ImportSemanticAiResult=ImportAiResult&ImportSemanticResult
 
@@ -91,6 +92,11 @@ export const IMPORT_SEMANTIC_V2_FIELDS:Partial<Record<ImportTarget,readonly stri
  theme:IMPORT_THEME_PROFILE_FIELDS,
 }
 /** Field table for one artifact; legacy artifacts keep the exact v1 table. */
+/** docs/580 §3: fields accepted on an artifact beyond the prompt's field list. Kept apart from IMPORT_SEMANTIC_FACT_FIELDS,
+ * which every semantic prompt prints and whose bytes baseline hashes protect; the worldline grade is described to the
+ * model only in worldline contracts (worldlineGradeContract, referenceContract, wizardLinesContract). */
+export const IMPORT_EXTRA_FACT_FIELDS:Partial<Record<ImportTarget,readonly string[]>>={worldline:['category','importance']}
+export function importAcceptedFactFields(kind:ImportTarget,schema?:2):readonly string[]{const extra=IMPORT_EXTRA_FACT_FIELDS[kind];return extra?[...importFactFields(kind,schema),...extra]:importFactFields(kind,schema)}
 export function importFactFields(kind:ImportTarget,schema?:2):readonly string[]{return schema===2?[...IMPORT_SEMANTIC_FACT_FIELDS[kind],...(IMPORT_SEMANTIC_V2_FIELDS[kind]??[])]:IMPORT_SEMANTIC_FACT_FIELDS[kind]}
 const hashString=z.string().regex(/^[a-f0-9]{64}$/u),safeOffset=z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),projectionKeys=z.array(z.string()).refine(keys=>new Set(keys).size===keys.length)
 export const importReviewProjectionSchema=z.array(z.object({artifactId:z.string().min(1),semanticHash:hashString,fullTextLength:safeOffset,fullFactKeys:projectionKeys,fields:projectionKeys,textRange:z.object({start:safeOffset,end:safeOffset}).strict().optional()}).strict())
@@ -229,7 +235,7 @@ function themePositionValid(p:{channel:string;genre:string;tags:string[]}){retur
 function validateImportSemanticArtifactV1(a:ImportArtifact,mode:ImportSemanticMode):ImportSemanticArtifact{
  validateShape(a);if(mode!=='strict'&&mode!=='source-copy')return fail('导入语义映射模式无效')
  if(mode==='source-copy'&&a.origin!=='source')return fail('原资料复制模式不能用于推断或确认产物')
- const f=a.facts,mappingWarnings:ImportMappingWarning[]=[],warn=(fields:string[],reason:string)=>mappingWarnings.push({artifactId:a.id,fields,reason}),unsupported=Object.keys(f).filter(key=>!importFactFields(a.kind,a.schema).includes(key))
+ const f=a.facts,mappingWarnings:ImportMappingWarning[]=[],warn=(fields:string[],reason:string)=>mappingWarnings.push({artifactId:a.id,fields,reason}),unsupported=Object.keys(f).filter(key=>!importAcceptedFactFields(a.kind,a.schema).includes(key))
  if(unsupported.length){if(mode==='strict')return fail('导入语义含未支持的业务字段，不能静默映射');warn(unsupported,'原资料字段尚未映射；完整材料保留')}
  const result:ImportSemanticArtifact={native:null,knowledge:knowledge(f,mode==='strict'&&(a.kind==='worldline'||a.kind==='narrative')),mappingWarnings,inferred:mode==='strict'&&a.origin==='inferred'}
  if(a.kind==='character'){
@@ -265,6 +271,9 @@ function validateImportSemanticArtifactV1(a:ImportArtifact,mode:ImportSemanticMo
   if(mode==='strict'&&(!f.lineId?.trim()||!f.lineName?.trim()||f.people===undefined||!['unknown','exact','window'].includes(f.timeKind)))return fail('世界事件缺少类型、时间或角色结构')
   if(f.people!==undefined)json(z.array(nonempty),f.people,'世界事件角色引用')
   if(f.eventId!==undefined&&f.eventId!==a.id)return fail('世界事件ID引用不一致')
+  // docs/580 §3: replies are normalised first (normalizeWorldlineGrade), so an invalid value here is a real fault.
+  if(f.category!==undefined&&!WORLDLINE_CATEGORY_VALUES.includes(f.category))return fail('世界事件类型无效')
+  if(f.importance!==undefined&&!(WORLDLINE_IMPORTANCE_VALUES as readonly string[]).includes(f.importance))return fail('世界事件重要程度无效')
   if(f.timeKind!==undefined&&!['unknown','exact','window'].includes(f.timeKind))return fail('事件时间类型无效')
   if(f.timeKind==='unknown'&&(has(f,'timeValue')||has(f,'timeEnd')))return fail('未知事件时间不得制造数值')
   if(f.timeKind==='exact'||f.timeKind==='window'){if(!f.timeValue?.trim()||!Number.isFinite(Number(f.timeValue)))return fail('事件时间数值无效');if(f.timeKind==='window'&&(!f.timeEnd?.trim()||!Number.isFinite(Number(f.timeEnd))||Number(f.timeEnd)<Number(f.timeValue)))return fail('事件时间范围无效');if(f.timeKind==='exact'&&has(f,'timeEnd'))return fail('确定事件时间不能混入候选窗口')}

@@ -1,6 +1,6 @@
 import {IMPORT_LABELS,type ImportArtifact,type ImportConflict,type ImportConflictDetail,type ImportConflictChoice,type ImportSession} from '../shared/novel-import'
 import {importFieldLabel} from '../shared/novel-import-field-labels'
-import {importFactFields,stripImportKnowledgeAnnotations,validateImportSemanticArtifact} from './novel-import-semantics'
+import {importFactFields,importAcceptedFactFields,stripImportKnowledgeAnnotations,validateImportSemanticArtifact} from './novel-import-semantics'
 import {importNativeMappings} from './novel-import-semantic-state'
 import {selectedImportUnits,workingImportUnits} from './novel-import'
 import {projectDetailedOutlines,validateDetailedOutlines} from './novel-import-outline'
@@ -8,6 +8,8 @@ import {projectDetailedOutlines,validateDetailedOutlines} from './novel-import-o
 /** docs/557: wizard step-21 conflicts. Pure helpers shared by the controller (decisions) and the public view (details). */
 export const WIZARD_REVIEW_TEXT=2000,WIZARD_REVIEW_FACT=1500
 /** docs/541-2: identity, ownership, ordering and link fields are never rewritten by an automatic repair. */
+/** docs/570 R6: the placed worldline time and line are never changed automatically; the author may still decide. */
+export const WIZARD_REVIEW_NO_AUTO_REPAIR:ReadonlySet<string>=new Set(['lineName','timeKind','timeValue','timeEnd'])
 export const WIZARD_REVIEW_STRUCTURAL:ReadonlySet<string>=new Set(['entityType','settingType','worldId','parentId','chapterIndex','order','refs','people','narrator','touches','status','relationships','characterId','sceneId','itemId','eventId','lineId','tropeKind','content','aliases','roleType','reliability','attribution','temporalScope'])
 const REFERENCE_FIELDS=new Set(['parentId','sceneId','characterId','itemId','worldId','eventId','lineId'])
 const ENTITY_ID=/\b[a-z]{1,2}-[0-9a-f]{16}\b/gu
@@ -25,7 +27,7 @@ const isJson=(value:string)=>{const v=value.trim();if(!/^[[{]/u.test(v))return f
 export function withField(a:ImportArtifact,field:string,value:string):ImportArtifact{
  const next=structuredClone(a)
  if(field==='text')next.text=value
- else{if(!importFactFields(next.kind,next.schema).includes(field))throw Error('冲突字段不能映射到当前业务类型');next.facts[field]=value}
+ else{if(!importAcceptedFactFields(next.kind,next.schema).includes(field))throw Error('冲突字段不能映射到当前业务类型');next.facts[field]=value}
  return next
 }
 /** Same gates the save path runs: the artifact on its own, then the whole set when the field can affect references. */
@@ -45,7 +47,7 @@ export function inferredValue(c:ImportConflict,other:ImportConflict['candidate']
 export function conflictChoiceOptions(s:Pick<ImportSession,'artifacts'>&Partial<Pick<ImportSession,'chapters'>>,c:ImportConflict):ImportConflictChoice[]{
  const {artifact:a,other}=conflictTarget(s,c)
  if(!a)return [{choice:'inferred',available:false,reason:'这处矛盾没有对应的已导入设定'},{choice:'source',available:true},{choice:'merge',available:false,reason:'这处矛盾没有对应的已导入设定'}]
- const current=fieldValue(a,c.field),fieldKnown=c.field==='text'||importFactFields(a.kind,a.schema).includes(c.field)
+ const current=fieldValue(a,c.field),fieldKnown=c.field==='text'||importAcceptedFactFields(a.kind,a.schema).includes(c.field)
  const inferred=((): ImportConflictChoice=>{
   const value=inferredValue(c,other)
   if(!fieldKnown)return {choice:'inferred',available:false,reason:'这个字段不能由导入修改'}

@@ -1,12 +1,14 @@
 import {assertImportChapterVersion,importVolumeGroups} from '../core/novel-import-chapters'
+import {worldlineGradeFromFacts} from '../core/novel-import-worldline-facts'
 import {verifiedImportStructureVolumeCuts} from '../core/novel-import-structure'
+import {WORLD_TIMELINE_LINE_ID} from '../core/novel-import-wizard-timeline'
 import {sourceTextSummary} from '../core/novel-import-pdf-source-text'
 import {pdfReviewAudit,validatePdfStoredFields} from '../core/novel-import-pdf'
 import type {ImportPdfPageReviewAudit} from '../shared/novel-import'
 import {prisma} from '../../src/lib/db'
 import {ContentError} from '../../src/lib/content-errors'
 import {lockContentOperation} from '../../src/lib/services/content-commit'
-import {emptyPlanning,validatePlanning,eventSchema,worldlineSchema,lineSchema,volumeSchema,chapterSchema,cardSchema} from '../../src/lib/planning/domain'
+import {emptyPlanning,validatePlanning,eventSchema,worldlineSchema,periodSchema,lineSchema,volumeSchema,chapterSchema,cardSchema} from '../../src/lib/planning/domain'
 import {importChapters,importHash,importPlanHash,importBudgetAudit,sourceBody,sourceImportArtifacts,safeImportBoundary,validateImportCoverage,validateImportEvidence} from '../core/novel-import'
 import {validateImportBudgetState} from '../core/novel-import-budget-policy'
 import {validateDetailedOutlines} from '../core/novel-import-outline'
@@ -149,13 +151,22 @@ export async function publishNovelImport(works:Workspaces,input:ImportPublishInp
    }
    const eventMap=new Map(byKind('worldline').map(a=>[a.id,{id:'import-event-'+a.id,line:'import-world-'+(a.facts.lineId||a.id)}]))
    const list=(value:string|undefined):unknown[]=>{if(!value)return [];const parsed:unknown=JSON.parse(value);if(!Array.isArray(parsed))throw Error('导入实体引用格式无效');return parsed}
-   for(const a of byKind('worldline')){
+   // docs/570 §3: the wizard's one worldline carries its calendar; its events are written in time order with day precision on a gregorian calendar.
+   const timeline=s.wizardVersion===1?s.wizard?.worldTimeline:undefined,mainLine='import-world-'+WORLD_TIMELINE_LINE_ID
+   const worldEventsInOrder=timeline?byKind('worldline').map((a,k)=>({a,k})).sort((x,y)=>{const t=(a:ImportArtifact)=>a.facts.timeKind==='exact'&&a.facts.lineId===WORLD_TIMELINE_LINE_ID?Number(a.facts.timeValue):Number.POSITIVE_INFINITY;return t(x.a)-t(y.a)||x.k-y.k}).map(({a})=>a):byKind('worldline')
+   for(const a of worldEventsInOrder){
     const f=a.facts,event=eventMap.get(a.id)!,known=f.timeKind==='exact'||f.timeKind==='window'
     if(a.origin==='inferred'&&(!f.lineId||!f.lineName||!['unknown','exact','window'].includes(f.timeKind)))throw Error('推断世界线缺少结构事实')
-    if(!data.worlds.some(w=>w.id===event.line))data.worlds.push(worldlineSchema.parse({id:event.line,name:f.lineName||a.name}))
+    // docs/572: a gregorian timeline carries the novel's eras and a precision per event (day when absent).
+    const onMain=!!timeline&&event.line===mainLine,era=onMain&&timeline!.calendar==='gregorian'?timeline!:undefined,precision=era?(era.precisions[a.id]??'day'):'hour' as const
+    if(!data.worlds.some(w=>w.id===event.line)){
+     data.worlds.push(worldlineSchema.parse({id:event.line,name:f.lineName||a.name,...(onMain?{calendar:era?{kind:'gregorian',epoch:era.epoch,eras:era.eras}:{kind:'fixed',epoch:timeline!.epoch}}:{})}))
+     // Named eras also become periods on the line (display only; the calendar's eras stay authoritative).
+     if(era)for(const [i,e] of era.eras.entries())if(e.name)data.periods.push(periodSchema.parse({id:'import-era-'+i,line:event.line,title:e.name,start:e.start,end:i+1<era.eras.length?era.eras[i+1].start:null,ongoing:i+1===era.eras.length}))
+    }
     const people=list(f.people).map(name=>{const id=typeof name==='string'?characterReference(name):undefined;if(!id)throw Error('世界线角色引用无效');return id})
     const parent=f.parentId?eventMap.get(f.parentId):undefined;if(f.parentId&&!parent)throw Error('世界线父事件引用无效')
-    for(const [part,text] of chunks(nativeText(a),100000).entries()){const fact=text;data.events.push(eventSchema.parse({id:part?event.id+'-part-'+part:event.id,line:event.line,parent:part?event.id:parent?.id,title:continuation(a.name,part),fact,people,time:{kind:!part&&known?f.timeKind:'unknown',value:!part&&known?Number(f.timeValue):0,end:!part&&f.timeKind==='window'?Number(f.timeEnd):null,label:f.time??''}}))}
+    for(const [part,text] of chunks(nativeText(a),100000).entries()){const fact=text;data.events.push(eventSchema.parse({id:part?event.id+'-part-'+part:event.id,line:event.line,parent:part?event.id:parent?.id,title:continuation(a.name,part),fact,people,...worldlineGradeFromFacts(f),time:{kind:!part&&known?f.timeKind:'unknown',value:!part&&known?Number(f.timeValue):0,end:!part&&f.timeKind==='window'?Number(f.timeEnd):null,precision,label:f.time??''}}))}
    }
    const actualChapters=data.chapters
    for(const [i,a] of byKind('narrative').entries()){

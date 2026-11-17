@@ -4,7 +4,7 @@ import {toast} from "sonner"
 import {useDesktopStore,updateDesktopSettings} from "@/stores/desktop"
 import {useTabsStore} from "@/stores/tabs"
 import {ShortcutDispatcher} from "@desktop/core/shortcut-dispatch"
-import {bindingsFor,canonicalKey,capturedKey} from "@desktop/core/shortcuts"
+import {shortcutScopeEnables,bindingsFor,canonicalKey,capturedKey} from "@desktop/core/shortcuts"
 import {desktopCommandCatalog,desktopCommandTargets,desktopCommandTarget,desktopEditorTarget,rememberDesktopCommandTarget} from "@/lib/desktop/command-runtime"
 import {useDesktopCommands} from "@/lib/desktop/use-command-target"
 import {installInputCommands,isAPIKeyControl} from "@/lib/desktop/input-commands"
@@ -48,7 +48,11 @@ export function DesktopCommandController(){
    // Native menus retain the prior editor target. A modal barrier must also
    // apply here, otherwise a menu click edits content behind the dialog.
    if(document.querySelector(dialogSelector)&&(!id.startsWith("text.")||!target?.closest(dialogSelector)))return
-   if((id.startsWith("md.")||id.startsWith("monaco."))&&!["markdown","preview"].includes(scope(target)))return
+   // docs/580 §7.5 (N2): a menu click on 编辑 > 查找 while the worldline panel has focus searches its events.
+   // Only a mouse click reaches here for it: the window ignores menu accelerators, so Cmd/Ctrl+F is resolved by keydown.
+   const current=scope(target)
+   if(id==="md.find"&&(current==="worldline"||current==="worldline-search")){run("worldline.search",target);return}
+   if((id.startsWith("md.")||id.startsWith("monaco."))&&!["markdown","preview"].includes(current))return
    run(id,target)
   }
   const keydown=(event:KeyboardEvent,afterNative=false)=>{
@@ -73,7 +77,7 @@ export function DesktopCommandController(){
    const modal=!!document.querySelector(dialogSelector)
    const pending=dispatcher.waitingFor({commands,overrides,platform:bootstrap.platform,scope:currentScope,focus:target,modal})
    const matchesStroke=(binding:string)=>{const strokes=canonicalKey(binding).split(" ");return strokes[0]===normalized||pending&&strokes.includes(normalized)}
-   const active=commands.filter(command=>command.scope==="global"&&!modal||command.scope===currentScope||command.scope==="markdown"&&currentScope==="preview"||command.scope==="text"&&currentScope!=="none")
+   const active=commands.filter(command=>shortcutScopeEnables(currentScope,command.scope,modal))
    const globalMatch=active.some(command=>command.scope==="global"&&bindingsFor(command,overrides).some(matchesStroke))
    const customized=active.some(command=>{
     if(!Object.hasOwn(overrides,command.id))return false
@@ -84,9 +88,11 @@ export function DesktopCommandController(){
    const previewMatch=currentScope==="preview"&&active.some(command=>command.scope==="text"&&desktopCommandTargets.enabled(command.id,target)&&bindingsFor(command,overrides).some(matchesStroke))
    const keyClipboardMatch=isAPIKeyControl(target)&&active.some(command=>["text.copy","text.cut","text.paste","text.pastePlain"].includes(command.id)&&bindingsFor(command,overrides).some(matchesStroke))
    const markdownMatch=(currentScope==="markdown"||currentScope==="preview")&&active.some(command=>command.scope==="markdown"&&command.id.startsWith("md.")&&!(command as {monacoBindings?:unknown[]}).monacoBindings?.length&&desktopCommandTargets.enabled(command.id,target)&&bindingsFor(command,overrides).some(matchesStroke))
+   // docs/580 §7.5: worldline-scope commands (worldline.search) run from the worldline canvas and its search box.
+   const worldlineMatch=(currentScope==="worldline"||currentScope==="worldline-search")&&active.some(command=>command.scope==="worldline"&&desktopCommandTargets.enabled(command.id,target)&&bindingsFor(command,overrides).some(matchesStroke))
    // Chromium/Monaco retain native movement, IME, when-expressions and undo
    // for untouched local bindings. Only custom/removed keys need interception.
-   if(currentScope!=="none"&&!globalMatch&&!customized&&!composerMatch&&!markdownMatch&&!previewMatch&&!keyClipboardMatch){dispatcher.reset();return}
+   if(currentScope!=="none"&&!globalMatch&&!customized&&!composerMatch&&!markdownMatch&&!previewMatch&&!keyClipboardMatch&&!worldlineMatch){dispatcher.reset();return}
    // Monaco resolves its own untouched chords/when clauses first. A global
    // fallback may run at bubble time only if the editor did not consume it.
    if(currentScope==="markdown"&&globalMatch&&!customized&&!markdownMatch&&!pending&&!afterNative){dispatcher.reset();nativeFirst.add(event);return}

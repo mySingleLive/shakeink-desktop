@@ -180,7 +180,7 @@ export interface ImportRosterRepairs {droppedInvalid:number;droppedUnlocatable:n
 /** docs/514: repair counts of a wizard other-setting batch (unlocatable quotes, dropped items, cleared reliability). */
 export interface ImportSettingsRepairs {droppedEvidence:number;droppedArtifacts:number;clearedReliability:number;/** docs/542: theme position fields cleared by repair. */clearedPosition?:number}
 /** docs/517 3R3-3: shape repairs of one wizard lines-lane reply; reported to the author. */
-export interface ImportLinesRepairs {droppedEvidence:number;droppedLinks:number;droppedEntries?:number}
+export interface ImportLinesRepairs {droppedEvidence:number;droppedLinks:number;droppedEntries?:number;droppedGrades?:number}
 /** docs/539: review-lane conflicts dropped as unusable (no artifact kind or no locatable quote). */
 export interface ImportReviewRepairs {droppedConflicts:number}
 /** Staged wizard images travel with the publish request; the worker re-checks every digest. */

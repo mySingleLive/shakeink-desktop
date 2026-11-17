@@ -1,0 +1,233 @@
+/* Table view: tree | rail + cards (one scroller). */
+.table { min-height: 0; min-width: 0; display: grid; grid-template-columns: 1fr; }
+.tree { overflow: auto; padding: 10px 10px 40px 0; border-right: 1px solid var(--line-soft); scrollbar-width: thin; }
+.tree-search { position: sticky; top: -10px; z-index: 2; padding: 10px 0 8px; margin-top: -10px; background: var(--bg); }
+.tree-search input { width: 100%; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-soft); background: var(--panel); outline: none; }
+.tree-search input:focus { border-color: var(--accent); }
+.tree-row { position: relative; display: flex; align-items: center; gap: 6px; height: 28px; padding-right: 8px; border-radius: 7px; cursor: pointer; color: var(--muted); }
+.tree-row:hover { background: var(--card); color: var(--text); }
+.tree-row.cur { background: var(--card-2); color: var(--text); }
+.tree-row.cur::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--ec); }
+.tree-row.sel { color: var(--text); font-weight: 600; }
+.tree-row.dim { opacity: .35; }
+.tree-row .tw { flex: none; width: 16px; text-align: center; color: var(--faint); font-size: 10px; transition: transform .15s; }
+.tree-row .tw.fold { transform: rotate(-90deg); }
+.tree-row .td { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ec); }
+.tree-row .tt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.tree-row .ts { flex: none; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tree-group { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px 6px; color: var(--faint); font-size: 11px; letter-spacing: .1em; }
+.tree-group::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+
+.scroller { position: relative; overflow: auto; scrollbar-width: thin; }
+.sticky-year { position: sticky; top: 0; z-index: 6; height: 0; }
+.sticky-year span { position: absolute; left: 14px; top: 8px; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--text);
+  background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line-soft); }
+.rail { position: absolute; left: 0; top: 0; width: 210px; pointer-events: none; }
+.rail-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+.rail-line { position: absolute; left: 158px; width: 2px; margin-left: -1px; border-radius: 1px;
+  background: linear-gradient(transparent, var(--line) 18px, var(--line) calc(100% - 18px), transparent); }
+.rail-line::after { content: ""; position: absolute; inset: 0 -3px; border-radius: 4px; background: inherit; filter: blur(4px); opacity: .5; }
+.tick { position: absolute; left: 150px; width: 8px; height: 1px; background: var(--line); }
+.tick-label { position: absolute; right: 66px; transform: translateY(-50%); color: var(--faint); font-size: 10px; white-space: nowrap; }
+.year { position: absolute; left: 130px; transform: translateY(-50%); }
+.year span { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--accent-2);
+  background: var(--bg); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); transform: translateX(-50%); margin-left: 28px; white-space: nowrap; }
+.dot { --ec: var(--accent); position: absolute; left: 158px; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%;
+  background: var(--ec); border: 2px solid var(--bg); box-shadow: 0 0 0 1.5px var(--ec), 0 0 10px color-mix(in srgb, var(--ec) 70%, transparent);
+  pointer-events: auto; cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .15s; }
+.dot.window { background: var(--bg); box-shadow: 0 0 0 1.5px var(--ec); border-style: dashed; }
+.dot.hot { transform: scale(1.45); box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 6px color-mix(in srgb, var(--ec) 18%, transparent), 0 0 18px var(--ec); }
+.dot.cluster { width: 18px; height: 18px; margin: -9px 0 0 -9px; border-width: 0; color: var(--bg); font-size: 10px; font-weight: 800; line-height: 18px; text-align: center;
+  background: conic-gradient(var(--cl)); box-shadow: 0 0 0 2px var(--bg), 0 0 12px rgba(0,0,0,.4); }
+.dot.dim, .dlabel.dim, .dur.dim { opacity: .2; }
+.dur { position: absolute; left: 158px; width: 5px; margin-left: -2.5px; border-radius: 3px; background: linear-gradient(var(--ec), transparent); opacity: .55; }
+.dur.window { background: none; border: 1px dashed var(--ec); }
+.dlabel { position: absolute; right: 66px; transform: translateY(-50%); white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);
+  padding: 1px 7px; border-radius: 5px; transition: color .15s, background .15s; }
+.dlabel b { color: var(--text); font-weight: 600; }
+.dlabel.hot { color: #fff; background: var(--ec); } .dlabel.hot b { color: #fff; }
+.break { position: absolute; left: 0; width: 210px; display: flex; align-items: center; justify-content: flex-end; padding-right: 66px; color: var(--faint); font-size: 11px; font-style: italic; }
+.break::before, .break::after { content: ""; position: absolute; left: 150px; width: 16px; height: 2px; background: var(--faint); transform: rotate(-24deg); }
+.break::before { top: calc(50% - 4px); } .break::after { top: calc(50% + 3px); }
+.cards { position: relative; margin-left: 210px; padding: 10px 24px 80px 12px; }
+.cards .ev { max-width: 760px; margin-top: 6px; } .cards .ev.open { max-width: 920px; margin: 10px 0; }
+.lead { fill: none; stroke: color-mix(in srgb, var(--ec) 35%, var(--line-soft)); stroke-width: 1; transition: stroke .15s; }
+.lead.hot { stroke: var(--ec); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--ec)); }
+.lead.dim { opacity: .15; }
+
+/* Timeline view. */
+.canvas { min-height: 0; min-width: 0; position: relative; overflow: hidden; }
+.ruler { position: absolute; left: 0; right: 0; top: 0; height: 32px; background: linear-gradient(var(--panel), transparent); }
+.ruler span { position: absolute; top: 9px; transform: translateX(-50%); color: var(--muted); font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ruler span.major { color: var(--accent-2); font-weight: 700; }
+.grid i { position: absolute; top: 32px; bottom: 0; width: 1px; background: linear-gradient(var(--line-soft), transparent 85%); }
+.periods { position: absolute; left: 0; right: 0; top: 36px; height: 24px; }
+.period { position: absolute; height: 20px; padding: 0 10px; border-radius: 10px; font-size: 11px; line-height: 20px; white-space: nowrap; overflow: hidden; color: var(--text);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 26%, transparent), color-mix(in srgb, var(--pc) 8%, transparent)); border: 1px solid color-mix(in srgb, var(--pc) 35%, transparent); }
+.lane { position: absolute; left: 0; right: 0; top: 66px; bottom: 0; overflow: auto; }
+.tcard { position: absolute; }
+.tcard .bar-x { position: absolute; left: 0; top: -9px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--ec), transparent); }
+.tcard .tstamp { position: absolute; left: 10px; top: -22px; font-size: 10px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tcard .pin { position: absolute; left: -4px; top: -12px; width: 9px; height: 9px; border-radius: 50%; background: var(--ec); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--ec), 0 0 8px var(--ec); }
+.tcard .stem { position: absolute; left: 0; top: -4px; width: 1px; height: 6px; background: var(--ec); opacity: .6; }
+.hint { position: absolute; left: 14px; bottom: 10px; color: var(--faint); font-size: 11px; }
+.minimap { position: absolute; right: 14px; bottom: 10px; width: 260px; height: 26px; border-radius: 6px; border: 1px solid var(--line-soft); background: var(--panel); overflow: hidden; }
+.minimap i { position: absolute; top: 6px; width: 2px; height: 14px; border-radius: 1px; background: var(--ec); opacity: .8; }
+.minimap b { position: absolute; top: 0; bottom: 0; border: 1px solid var(--accent); border-radius: 5px; background: var(--accent-soft); }
+
+/* ---------- v3: importance (dot size), hierarchy, periods, zoom ---------- */
+/* Importance: 1 一般 / 2 重要 / 3 关键 — dot size only; color stays the type. */
+.dot.i1 { width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; }
+.dot.i2 { width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; }
+.dot.i3 { width: 17px; height: 17px; margin: -8.5px 0 0 -8.5px; border-width: 3px;
+  box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 5px color-mix(in srgb, var(--ec) 16%, transparent), 0 0 16px var(--ec); }
+.dot.i3::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--ec) 40%, transparent); animation: pulse 2.4s ease-out infinite; }
+@keyframes pulse { from { transform: scale(.6); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
+.ev-dot.i1 { width: 6px; height: 6px; } .ev-dot.i2 { width: 9px; height: 9px; }
+.ev-dot.i3 { width: 12px; height: 12px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 22%, transparent), 0 0 10px var(--ec); }
+.tcard .pin.i1 { width: 7px; height: 7px; left: -3px; top: -11px; }
+.tcard .pin.i3 { width: 13px; height: 13px; left: -6px; top: -14px; box-shadow: 0 0 0 1px var(--ec), 0 0 0 4px color-mix(in srgb, var(--ec) 18%, transparent), 0 0 12px var(--ec); }
+.legend .sizes { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--line-soft); color: var(--faint); }
+.legend .sizes i { display: inline-block; border-radius: 50%; background: var(--muted); }
+
+/* Hierarchy in the event table: a parent and its children share one group box; a tree connector joins them. */
+.group { position: relative; margin: 10px 0; padding: 0 0 8px; border-radius: 12px; max-width: 820px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 7%, transparent), transparent 80%);
+  border: 1px solid color-mix(in srgb, var(--ec) 22%, var(--line-soft)); }
+.group > .ev { margin-top: 0; max-width: none; border-color: transparent; border-radius: 11px 11px 9px 9px; }
+.group > .ev.open { margin: 0 0 4px; }
+.group .group { margin: 6px 10px 2px 26px; max-width: none; }
+.children { position: relative; padding: 2px 10px 0 26px; }
+.children::before { content: ""; position: absolute; left: 15px; top: -4px; bottom: 18px; width: 1.5px; border-radius: 1px; background: color-mix(in srgb, var(--ec) 55%, transparent); }
+.children > .ev, .children > .group { position: relative; }
+.children > .ev { margin-top: 6px; max-width: none; }
+.children > .ev::after, .children > .group::after { content: ""; position: absolute; left: -11px; top: 16px; width: 10px; height: 1.5px; background: color-mix(in srgb, var(--pe) 55%, transparent); }
+.children > .group::after { top: 22px; }
+.group-head-meta { flex: none; display: inline-flex; align-items: center; gap: 6px; color: var(--faint); font-size: 11px; }
+.fold-btn { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: var(--muted); transition: transform .15s, background .15s; }
+.fold-btn:hover { background: var(--accent-soft); color: var(--text); } .fold-btn.closed { transform: rotate(-90deg); }
+.span-bar { display: inline-block; width: 46px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ec) 25%, transparent); overflow: hidden; }
+.span-bar i { display: block; height: 100%; background: var(--ec); }
+.dur.parent { width: 9px; margin-left: -4.5px; opacity: 1; border-radius: 5px; background: color-mix(in srgb, var(--ec) 16%, transparent); border: 1px solid color-mix(in srgb, var(--ec) 45%, transparent); }
+.lead.child { stroke-dasharray: 3 3; }
+
+/* Hierarchy in the timeline: the parent's real span becomes a bracket above its children. */
+.bracket { position: absolute; height: 0; pointer-events: none; }
+.bracket::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 10px; border: 1.5px solid color-mix(in srgb, var(--ec) 60%, transparent); border-bottom: 0; border-radius: 8px 8px 0 0; }
+.bracket-fill { position: absolute; left: 0; right: 0; top: 0; border-radius: 10px; background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 9%, transparent), transparent); }
+.tcard.child .ev { border-style: dashed; border-color: color-mix(in srgb, var(--ec) 35%, var(--line-soft)); }
+.tcard.child .pin { box-shadow: 0 0 0 1px var(--ec); }
+.tcard .depth { position: absolute; right: 6px; top: -20px; font-size: 10px; color: var(--faint); }
+
+/* Period picker and toolbar toggles. */
+.picker { position: relative; }
+.picker .btn { display: inline-flex; align-items: center; gap: 8px; }
+.picker .btn i { width: 10px; height: 10px; border-radius: 3px; background: var(--pc, var(--accent)); }
+.pop { position: absolute; left: 0; top: 36px; z-index: 60; width: 300px; padding: 6px; border-radius: 12px; background: var(--card-2); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.pop button { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border-radius: 8px; text-align: left; }
+.pop button:hover, .pop button.cur { background: var(--accent-soft); }
+.pop button i { width: 10px; height: 10px; border-radius: 3px; background: var(--pc); }
+.pop button small { color: var(--faint); font-size: 11px; }
+.pop .depth1 { padding-left: 26px; }
+.toggle-all { display: inline-flex; align-items: center; gap: 6px; }
+.toggle-all svg { width: 14px; height: 14px; }
+.zoom { display: inline-flex; align-items: center; gap: 2px; height: 30px; padding: 0 4px; border-radius: 8px; border: 1px solid var(--line-soft); background: var(--card); }
+.zoom button { width: 24px; height: 24px; border-radius: 6px; color: var(--muted); } .zoom button:hover { background: var(--accent-soft); color: var(--text); }
+.zoom span { min-width: 44px; text-align: center; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.period-band { position: absolute; left: 172px; width: 3px; border-radius: 2px; background: var(--pc); opacity: .7; }
+.period-band span { position: absolute; left: 8px; top: 0; writing-mode: vertical-rl; font-size: 10px; letter-spacing: .2em; color: var(--pc); white-space: nowrap; }
+.period-flash { animation: pflash 1.4s ease-out; } @keyframes pflash { 0%, 50% { box-shadow: 0 0 0 3px var(--accent), 0 0 18px var(--accent); } 100% { box-shadow: none; } }
+.toast { position: absolute; left: 50%; top: 150px; z-index: 70; transform: translateX(-50%); padding: 6px 14px; border-radius: 16px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 12px; box-shadow: var(--shadow); transition: opacity .3s; }
+.group-head-meta .compact { display: none; padding: 0 6px; border-radius: 8px; border: 1px solid var(--line-soft); }
+.tcard .ev:not(.open) .group-head-meta .full { display: none; }
+.tcard .ev:not(.open) .group-head-meta .compact { display: inline; }
+.tcard .fold-btn { width: 16px; }
+
+/* ---------- v4: avatars in collapsed cards, interactive minimap ---------- */
+/* Overlapping 18px avatars inside the 32px head row: no extra card height. */
+.avs { flex: none; display: inline-flex; align-items: center; padding-left: 4px; }
+.avs i { display: grid; place-items: center; width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; font-style: normal; font-size: 10px; font-weight: 600;
+  color: #fff; border: 1.5px solid var(--card); box-shadow: 0 0 0 .5px var(--line); }
+.avs i:first-child { margin-left: 0; }
+.avs i.more { width: auto; min-width: 18px; padding: 0 4px; border-radius: 9px; background: var(--card-2); color: var(--muted); font-weight: 500; }
+.ev:hover .avs i { border-color: var(--card-2); }
+.tcard .avs i { width: 16px; height: 16px; font-size: 9px; }
+
+.minimap { width: 300px; height: 28px; cursor: pointer; user-select: none; touch-action: none; }
+.minimap:hover { border-color: var(--line); }
+.minimap.dragging { cursor: grabbing; }
+.minimap u { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; background: var(--card); }
+.minimap s { position: absolute; top: 9px; width: 1px; height: 10px; background: var(--faint); transform: skewX(-24deg); box-shadow: 3px 0 0 var(--faint); }
+.minimap b { cursor: grab; box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent); }
+.minimap.dragging b { cursor: grabbing; background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.minimap { z-index: 5; background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(8px); box-shadow: var(--shadow); }
+.hint { z-index: 5; padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.lane { padding-bottom: 56px; }
+
+/* ---------- v5: parent = header bar spanning its time range ---------- */
+.frame { position: absolute; border-radius: 12px; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 10%, transparent), color-mix(in srgb, var(--ec) 3%, transparent) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ec) 26%, transparent); border-top: 0; }
+.frame::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ec) 30%, transparent), transparent); }
+.tcard.header .ev { border-radius: 12px 12px 6px 6px; border-color: color-mix(in srgb, var(--ec) 45%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 34%, var(--card)), color-mix(in srgb, var(--ec) 16%, var(--card)) 60%, color-mix(in srgb, var(--ec) 8%, var(--card)));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--ec) 16%, transparent); }
+.tcard.header .ev::before { top: 0; bottom: 0; left: 0; width: 4px; border-radius: 12px 0 0 6px; }
+.tcard.header .ev-head { min-height: 34px; }
+.tcard.header .ev-title { font-weight: 600; }
+.tcard.header.child .ev { border-style: solid; border-radius: 9px 9px 5px 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 26%, var(--card)), color-mix(in srgb, var(--ec) 10%, var(--card))); box-shadow: none; }
+.tstamp.range { left: 12px; color: var(--ec); font-weight: 600; }
+.tcard.header .group-head-meta .full { display: inline; } .tcard.header .group-head-meta .compact { display: none; }
+.tcard.header .track { position: absolute; left: 0; bottom: -1px; height: 3px; border-radius: 0 2px 2px 6px; pointer-events: none;
+  background: linear-gradient(90deg, var(--ec), color-mix(in srgb, var(--ec) 60%, transparent)); box-shadow: 0 0 8px var(--ec); }
+.tcard.header .track::after { content: ""; position: absolute; right: -3px; top: -2px; width: 7px; height: 7px; border-radius: 50%; background: var(--ec); box-shadow: 0 0 6px var(--ec); }
+
+/* ---------- v6: toolbar search, larger minimap ---------- */
+.search { position: relative; display: flex; align-items: center; gap: 2px; width: 260px; height: 30px; padding: 0 6px 0 9px; border-radius: 9px;
+  border: 1px solid var(--line-soft); background: var(--panel); transition: width .2s, border-color .15s, box-shadow .15s; }
+.search:focus-within, .search.active { width: 400px; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.search.none { border-color: var(--c0); }
+.search svg { flex: none; width: 14px; height: 14px; color: var(--faint); }
+.search input { flex: 1; min-width: 0; height: 100%; padding: 0 6px; border: 0; outline: none; background: none; }
+.search input::placeholder { color: var(--faint); }
+.search .count { flex: none; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; padding: 0 4px; }
+.search.none .count { color: var(--c0); }
+.search button { flex: none; width: 22px; height: 22px; border-radius: 6px; color: var(--muted); display: none; }
+.search.active button { display: block; }
+.search button:hover:not(:disabled) { background: var(--accent-soft); color: var(--text); } .search button:disabled { opacity: .35; cursor: default; }
+.search kbd { flex: none; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line-soft); color: var(--faint); font: 10px/16px inherit; }
+.search.active kbd, .search:focus-within kbd { display: none; }
+mark { padding: 0 1px; border-radius: 3px; color: inherit; background: color-mix(in srgb, var(--c1) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--c1) 50%, transparent); }
+.ev.hit { box-shadow: 0 0 0 2px var(--c1), 0 0 14px color-mix(in srgb, var(--c1) 50%, transparent); }
+.tree-search { display: none; }
+#treeRows { padding-top: 0; }
+
+.minimap { width: 420px; height: 52px; border-radius: 9px; bottom: 12px; right: 16px; }
+.minimap u { top: 4px; bottom: 16px; border-radius: 5px; }
+.minimap i { width: 2.5px; border-radius: 1.5px; }
+.minimap s { top: 14px; height: 12px; }
+.minimap b { top: 2px; bottom: 2px; border-radius: 7px; border-width: 1.5px; }
+.minimap em { position: absolute; bottom: 2px; font-style: normal; font-size: 9px; line-height: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; pointer-events: none; }
+.lane { padding-bottom: 80px; }
+
+/* ---------- v7: one event tree shared by both views ---------- */
+.workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(0, 1fr); border-top: 1px solid var(--line-soft); transition: grid-template-columns .2s; }
+.workspace.tree-off { grid-template-columns: 0 minmax(0, 1fr); }
+.workspace.tree-off .tree { visibility: hidden; padding: 0; border: 0; }
+.tree { padding-top: 0; }
+.tree-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: baseline; justify-content: space-between; padding: 12px 4px 8px 6px; background: var(--bg); }
+.tree-head b { font-size: 12px; color: var(--muted); letter-spacing: .08em; font-weight: 600; }
+.tree-head span { font-size: 11px; color: var(--faint); }
+/* Timeline: rows whose events are inside the current window get a type-colored mark, so the tree shows the window's coverage. */
+.tree-row.inview .td { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ec) 25%, transparent), 0 0 6px var(--ec); }
+.tree-row.inview { color: var(--text); }
+.tree-row.inview::after { content: ""; position: absolute; right: 2px; top: 8px; bottom: 8px; width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--ec) 60%, transparent); }
+.btn.icon { width: 30px; padding: 0; display: grid; place-items: center; }
+.btn.icon svg { width: 15px; height: 15px; }
+.btn.icon[aria-pressed="false"] { color: var(--faint); }
+.family { position: absolute; left: 0; top: 0; width: 0; height: 0; transition: top .18s ease; }
+
+/* v9: one translated plane for all families; measure box is off-screen but laid out. */
+#plane { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+#measure { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; }
+#spacer { position: absolute; left: 0; width: 1px; height: 1px; }

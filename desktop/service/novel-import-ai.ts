@@ -1,4 +1,5 @@
 import {isAbsolute} from 'node:path'
+import {normalizeWorldlineGrade} from '../core/novel-import-worldline-facts'
 import {randomBytes} from 'node:crypto'
 import {sharedSourceRequestError} from '../core/novel-import-shared-source'
 import {types} from 'node:util'
@@ -383,6 +384,12 @@ function repairableRosterSchema(entry:z.ZodTypeAny){
 /** docs/535 3R-5: an over-long summary or content is cut by code points to at most `max` UTF-16 units, so no lone surrogate remains. Shape fix only. */
 export function trimWellFormed(value:string,max:number){if(value.length<=max)return value;let out='';for(const ch of value){if(out.length+ch.length>max)break;out+=ch}return out}
 const touchSchema=z.object({foreshadowKey:rosterName,title:rosterName,content:z.string().default('').transform(v=>trimWellFormed(v,4000)),touch:z.object({kind:z.enum(['PLANT','MENTION','PAYOFF']),chapterIndex:z.number().int().nonnegative(),summary:z.string().transform(v=>trimWellFormed(v,200)),quote:z.string().min(1).max(200),eventId:z.string().min(1).optional(),narrativeId:z.string().min(1).optional()}).strict(),evidence:rosterEvidence}).strict()
+// docs/570: one story-time rank per catalogue event; dates are checked by the wizard, not here.
+// docs/572: calendar parts are checked by the wizard (unknown eras, impossible dates); here only their shape and size.
+// docs/574 #5: the prompt says present.year is null when the text gives no year, so null is accepted and read as absent.
+const timelineNumber=z.number().finite().nullable().optional().transform(v=>v??undefined)
+const timelineSchema=z.object({id:z.string().min(1).max(200),order:z.number().int().nonnegative().max(1_000_000),phase:z.enum(['前史','主线']).optional(),era:z.string().max(40).nullable().optional().transform(v=>v||undefined),year:timelineNumber,month:timelineNumber,day:timelineNumber,ago:timelineNumber}).strict()
+const timelineCalendarSchema=z.object({eras:z.array(z.object({name:z.string().max(40),aliases:z.array(z.string().max(40)).max(5).optional(),years:z.number().finite().nullable().optional(),startAgo:z.number().finite().nullable().optional()}).strict()).max(20),present:z.object({era:z.string().max(40),year:timelineNumber}).strict().nullable().optional()}).strict().nullable().optional()
 const structureSchema=z.object({chapterCuts:z.array(z.object({start:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),title:structureTitle,volume:structureTitle.optional(),candidateId:z.string().min(1).max(512).optional()}).strict()).max(5000),ignoredStarts:z.array(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)).max(20000)}).strict()
 function characterEntityRequest(request:Pick<ImportAiRequest,'semanticVersion'|'phase'|'intent'|'kind'>){return request.semanticVersion===1&&request.phase==='analyze'&&request.intent==='entity'&&request.kind==='character'}
 // Items share the verified quote-option protocol since docs/500.
@@ -507,6 +514,7 @@ export function importAiResponseSchema(request:ImportSemanticAiRequest):z.ZodTyp
  if(request.intent==='structure')return structureSchema
  if(request.intent==='roster'){const entry=rosterEntrySchemas[request.kind as keyof typeof rosterEntrySchemas];if(!entry)throw Error('当前识别类别无效');return (request.kind==='scene'?z.object({roster:z.array(entry).max(2000)}).strict():repairableRosterSchema(entry)) as unknown as z.ZodType<ImportSemanticAiResult>}
  if(request.intent==='touches')return z.object({touches:z.array(touchSchema).max(2000)}).strict() as unknown as z.ZodType<ImportSemanticAiResult>
+ if(request.intent==='timeline')return z.object({calendar:timelineCalendarSchema,timeline:z.array(timelineSchema).max(5000)}).strict() as unknown as z.ZodType<ImportSemanticAiResult>
  const base=request.semanticVersion===1?semanticSchema:schema
  if(request.phase==='classify'){
   const unitIds=new Set(request.units.map(unit=>unit.id))
@@ -671,7 +679,7 @@ function reportAnchorDiagnostics(request:ImportSemanticAiRequest,candidate:Ancho
 /** docs/528 M2: counts only (no ref values or text), written when import debugging is on. */
 function sceneRosterCounter(kind:'ref-invalid'|'span'){if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('scene-roster-'+kind+' {"count":1}')}
 type ImportTextGeneration=NonNullable<Parameters<typeof GenerateImportJSON>[1]>['generateText']
-const USAGE_ENUMS={phase:['classify','analyze','review','patch'],intent:['reconcile','structure','roster','entity','touches'],kind:[...IMPORT_TARGETS],mode:['roster','links','cleanup','ownership'],lane:['scene-review-wave-v1','wizard-settings-v1','wizard-lines-v1','wizard-review-v1'],finishReason:['stop','length','content-filter','tool-calls','error','other','unknown']} as const
+const USAGE_ENUMS={phase:['classify','analyze','review','patch'],intent:['reconcile','structure','roster','entity','touches','timeline'],kind:[...IMPORT_TARGETS],mode:['roster','links','cleanup','ownership'],lane:['scene-review-wave-v1','wizard-settings-v1','wizard-lines-v1','wizard-review-v1'],finishReason:['stop','length','content-filter','tool-calls','error','other','unknown']} as const
 const usageEnum=(list:readonly string[],value:unknown)=>value===undefined||value===null?null:typeof value==='string'&&list.includes(value)?value:'?'
 const usageCount=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null
 /** docs/522 §1: wraps the raw text generation and writes one counts-only line per returned generation,
@@ -909,7 +917,7 @@ export async function generateImportAiJson(request:ImportSemanticAiRequest,conte
 const lockSchema=z.object({artifactId:nonempty,field:nonempty,value:z.string()}).strict()
 const reconcileSchema=z.object({targetIds:uniqueIds.refine(ids=>ids.length>0),locks:z.array(lockSchema),decisionHash:nonempty,workingRevision:z.number().int().nonnegative(),decisions:z.array(z.object({conflictId:nonempty,choice:nonempty,explanation:z.string().optional(),hash:nonempty}).strict()).optional(),fragments:z.array(z.object({artifactId:nonempty,baseHash:nonempty,start:z.number().int().nonnegative(),end:z.number().int().nonnegative(),fields:uniqueIds}).strict()).optional()}).strict()
 const entityTargetSchema=z.object({id:nonempty,aliases:z.array(nonempty).max(50),roleType:z.enum(['PROTAGONIST','SUPPORTING','ANTAGONIST']).optional(),evidenceOptions:z.array(evidence.extend({quote:z.string().min(1).max(512).refine(value=>!!value.trim()&&value.isWellFormed())}).strict()).min(1).max(8).optional()}).strict()
-const semanticContextSchema=z.object({semanticVersion:z.literal(1),intent:z.enum(['reconcile','structure','roster','entity','touches']).optional(),entityTarget:entityTargetSchema.optional(),sceneIdentity:sceneIdentityRequestContextSchema.optional(),sceneParentTargets:sceneParentTargetIdsSchema.optional(),reconcile:reconcileSchema.optional(),semanticLocks:z.array(lockSchema).optional(),selectedTargets:z.array(target).refine(values=>new Set(values).size===values.length).optional(),reviewProjection:importReviewProjectionSchema.optional()}).strict()
+const semanticContextSchema=z.object({semanticVersion:z.literal(1),intent:z.enum(['reconcile','structure','roster','entity','touches','timeline']).optional(),entityTarget:entityTargetSchema.optional(),sceneIdentity:sceneIdentityRequestContextSchema.optional(),sceneParentTargets:sceneParentTargetIdsSchema.optional(),reconcile:reconcileSchema.optional(),semanticLocks:z.array(lockSchema).optional(),selectedTargets:z.array(target).refine(values=>new Set(values).size===values.length).optional(),reviewProjection:importReviewProjectionSchema.optional()}).strict()
 const entitySchema=z.object({id:nonempty,kind:target,name:nonempty,unitIds:z.array(nonempty).optional(),parentId:nonempty.optional(),entityType:z.enum(['PLACE','WORLD','SETTING']).optional(),worldId:nonempty.optional(),settingType:z.enum(IMPORT_WORLD_SETTING_TYPES).optional()}).strict()
 function selectedEntityTarget(request:ImportSemanticAiRequest){
  if(request.intent!=='entity'){if(request.entityTarget!==undefined)throw Error('单实体目标只能用于entity阶段');return undefined}
@@ -947,8 +955,8 @@ function validateSemanticRequest(request:ImportSemanticAiRequest){
  for(const lock of semanticLocks(request)){const a=request.artifacts.find(a=>a.id===lock.artifactId),key=lock.artifactId+'\0'+lock.field;if(!a||lock.field!=='text'&&!importFactFields(a.kind,a.schema).includes(lock.field)||(lock.field==='text'?a.text:a.facts[lock.field])!==lock.value||values.has(key)&&values.get(key)!==lock.value)throw Error('语义锁定字段或基础版本无效');values.set(key,lock.value)}
 }
 function validateSemanticStage(request:ImportSemanticAiRequest,result:ImportSemanticAiResult){
- const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneIdentity?.mode==='cleanup'?'sceneCleanup':request.sceneParentTargets!==undefined?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'?(request.intent==='reconcile'?'reconcile':request.intent==='roster'?'roster':request.intent==='touches'?'touches':'analyze'):request.phase,allowed:Record<string,string[]>={classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:request.sceneIdentity?.mode==='roster'?['roster','sceneRosterRecords']:['roster'],sceneLinks:['sceneIdentityDecisions'],sceneCleanup:['sceneCleanup'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']}
- for(const field of ['classifications','artifacts','artifactEdits','conflicts','patches','missingTargets','chapterCuts','ignoredStarts','roster','sceneRosterRecords','sceneIdentityDecisions','sceneCleanup','touches','sceneParents'] as const)if(result[field]?.length&&!allowed[stage].includes(field))throw Error('当前语义阶段包含越权结果：'+field)
+ const stage=request.sceneIdentity?.mode==='links'?'sceneLinks':request.sceneIdentity?.mode==='cleanup'?'sceneCleanup':request.sceneParentTargets!==undefined?'sceneParents':request.intent==='structure'?'structure':request.phase==='analyze'?(request.intent==='reconcile'?'reconcile':request.intent==='roster'?'roster':request.intent==='touches'?'touches':request.intent==='timeline'?'timeline':'analyze'):request.phase,allowed:Record<string,string[]>={timeline:['timeline'],classify:['classifications'],structure:['chapterCuts','ignoredStarts'],roster:request.sceneIdentity?.mode==='roster'?['roster','sceneRosterRecords']:['roster'],sceneLinks:['sceneIdentityDecisions'],sceneCleanup:['sceneCleanup'],sceneParents:['sceneParents'],touches:['touches'],analyze:['artifacts'],reconcile:['artifactEdits','conflicts'],review:['conflicts','missingTargets'],patch:['patches']}
+ for(const field of ['classifications','artifacts','artifactEdits','conflicts','patches','missingTargets','chapterCuts','ignoredStarts','roster','sceneRosterRecords','sceneIdentityDecisions','sceneCleanup','touches','timeline','sceneParents'] as const)if(result[field]?.length&&!allowed[stage].includes(field))throw Error('当前语义阶段包含越权结果：'+field)
  if(Object.hasOwn(result,'sceneCleanup')&&stage!=='sceneCleanup')throw Error('当前语义阶段包含越权结果：sceneCleanup')
  if(stage==='sceneCleanup'&&(Reflect.ownKeys(result).length!==1||!Array.isArray(result.sceneCleanup)))throw Error('场景清单整理返回结构无效')
  if(result.notFound===true&&stage!=='analyze')throw Error('当前语义阶段不能返回notFound')
@@ -1191,7 +1199,7 @@ export async function runImportAi(request:ImportSemanticAiRequest&{executionBudg
  if(request.semanticVersion===1&&request.sceneParentTargets===undefined)validateSemanticLinks(request,result.artifacts??[])
  const eventParents=new Map([...request.artifacts,...(result.artifacts??[])].filter(a=>a.kind==='worldline').map(a=>[a.id,a.facts.parentId]))
  for(const id of eventParents.keys()){const visited=new Set<string>();let cursor:string|undefined=id;while(cursor){if(visited.has(cursor))throw Error('模型事件父级引用形成循环');visited.add(cursor);cursor=eventParents.get(cursor)}}
- if(request.phase==='analyze'&&!['reconcile','roster','touches'].includes(request.intent??'')&&!(result.artifacts?.length)&&result.notFound!==true)throw Error('未找到内容时必须明确返回 notFound')
+ if(request.phase==='analyze'&&!['reconcile','roster','touches','timeline'].includes(request.intent??'')&&!(result.artifacts?.length)&&result.notFound!==true)throw Error('未找到内容时必须明确返回 notFound')
  // Roster and touch entries whose quote cannot be located are dropped, never guessed.
  const located=<T extends {evidence:ImportEvidence}>(entries:T[]|undefined)=>entries?.flatMap(entry=>{try{return [{...entry,evidence:anchorEvidence([entry.evidence],request.units)[0]}]}catch{return []}})
  const rosterBeforeLocation=result.roster?.length??0
@@ -1236,7 +1244,7 @@ export function stripArtifactAnnotations(item:ImportArtifact){
 function stripJsonStrings(value:unknown):unknown{return typeof value==='string'?stripImportKnowledgeAnnotations(value):Array.isArray(value)?value.map(stripJsonStrings):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,stripJsonStrings(v)])):value}
 /** docs/514 3R2: counts of the accepted generation's item repairs; only wizard other-setting batches may carry them. */
 const settingsRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedArtifacts:z.number().int().nonnegative().max(1_000_000),clearedReliability:z.number().int().nonnegative().max(1_000_000),clearedPosition:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>(c.clearedPosition??0)+c.droppedEvidence+c.droppedArtifacts+c.clearedReliability>0)
-const linesRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000),droppedEntries:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>c.droppedEvidence+c.droppedLinks+(c.droppedEntries??0)>0)
+const linesRepairsSchema=z.object({droppedEvidence:z.number().int().nonnegative().max(1_000_000),droppedLinks:z.number().int().nonnegative().max(1_000_000),droppedEntries:z.number().int().nonnegative().max(1_000_000).optional(),droppedGrades:z.number().int().nonnegative().max(1_000_000).optional()}).strict().refine(c=>c.droppedEvidence+c.droppedLinks+(c.droppedEntries??0)+(c.droppedGrades??0)>0)
 const reviewRepairsSchema=z.object({droppedConflicts:z.number().int().positive().max(1_000_000)}).strict()
 function takeReviewRepairs(request:ImportSemanticAiRequest,generated:unknown):{raw:unknown;repairs?:ImportReviewRepairs}{
  if(!generated||typeof generated!=='object'||Array.isArray(generated)||!Object.hasOwn(generated,'reviewRepairs'))return {raw:generated}
@@ -1409,7 +1417,7 @@ function settingsItemValid(request:ImportSemanticAiRequest,single:z.ZodType<Impo
 export function normalizeLinesReply(request:ImportSemanticAiRequest,text:string,parse:<T>(text:string,schema:z.ZodType<T>)=>T):{text:string;counts?:ImportLinesRepairs}|undefined{
  let value:unknown;try{value=parse(text,z.unknown())}catch{return undefined}
  if(!value||typeof value!=='object'||Array.isArray(value)||!Array.isArray((value as {artifacts?:unknown}).artifacts))return undefined
- const root=value as {artifacts:unknown[]},ids=new Set(request.units.map(u=>u.id)),counts={droppedEvidence:0,droppedLinks:0}
+ const root=value as {artifacts:unknown[]},ids=new Set(request.units.map(u=>u.id)),counts:ImportLinesRepairs={droppedEvidence:0,droppedLinks:0}
  const entities=request.entities??[],characters=entities.filter(e=>e.kind==='character')
  // A character reference as its id: an id stays, a unique name maps to its id, anything else is not a link.
  const characterId=(v:unknown):string|undefined=>{if(typeof v!=='string')return undefined;if(characters.some(e=>e.id===v))return v;const named=characters.filter(e=>e.name===v);return named.length===1?named[0].id:undefined}
@@ -1433,6 +1441,8 @@ export function normalizeLinesReply(request:ImportSemanticAiRequest,text:string,
     if(f.eventId!==undefined)delete f.eventId
     if(f.timeKind===undefined)f.timeKind=f.timeValue!==undefined||f.timeEnd!==undefined?'invalid':'unknown'
     if(f.people===undefined)f.people='[]'
+    // docs/580 §3: category / importance shape fix; dropped values are counted, never reported as mapping warnings.
+    {const g=normalizeWorldlineGrade(f);for(const k of ['category','importance'])if(k in g.facts)f[k]=g.facts[k];else delete f[k];if(g.dropped)counts.droppedGrades=(counts.droppedGrades??0)+g.dropped}
     const bad=f.timeKind==='invalid'||f.timeKind==='unknown'?f.timeValue!==undefined||f.timeEnd!==undefined:f.timeKind==='exact'?!finite(f.timeValue)||f.timeEnd!==undefined:f.timeKind==='window'?!finite(f.timeValue)||!finite(f.timeEnd)||Number(f.timeEnd)<Number(f.timeValue):false
     if(bad){const label=[...new Set([f.time,f.timeValue,f.timeEnd].filter((v):v is string=>typeof v==='string'&&!!v.trim()))];if(label.length)f.time=label.join(' — ');delete f.timeValue;delete f.timeEnd;f.timeKind='unknown'}
     if(typeof f.people==='string')try{const list:unknown=JSON.parse(f.people);if(Array.isArray(list)){const kept=[...new Set(list.map(characterId).filter((v):v is string=>!!v))];counts.droppedLinks+=list.length-list.filter(v=>characterId(v)).length;f.people=JSON.stringify(kept)}}catch{/* invalid JSON stays for the strict schema */}
@@ -1468,7 +1478,7 @@ export function normalizeLinesReply(request:ImportSemanticAiRequest,text:string,
  // An empty list is an explicit nothing-found answer.
  const next=JSON.stringify({...root,artifacts,...(!artifacts.length&&(root as {notFound?:unknown}).notFound===undefined?{notFound:true}:{})})
  if(next===JSON.stringify(root))return undefined
- return {text:next,...(counts.droppedEvidence||counts.droppedLinks?{counts}:{})}
+ return {text:next,...(counts.droppedEvidence||counts.droppedLinks||counts.droppedGrades?{counts}:{})}
 }
 
 /** AbortSignals stay in this worker. RPC callers only send operationId. */
