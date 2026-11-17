@@ -1,5 +1,5 @@
 "use client";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Minus, PanelLeft, Plus, Search } from "lucide-react";
 import { EVENT_CATEGORIES, type EventCategory } from "@/lib/planning/domain";
 import { CATEGORY_VAR } from "@/lib/planning/worldline-layout";
 import s from "./worldline.module.css";
@@ -38,19 +38,13 @@ export function WorldlineToolbar(p: {
   return (
     <div className={s.bar} role="toolbar" aria-label="世界线工具栏">
       <div className={s.group}>
-        <Button size="icon-sm" variant="ghost" aria-pressed={p.treeOn} aria-label="显示或隐藏事件目录" onClick={p.onTree}>
-          ▤
-        </Button>
-        {p.worldSelect}
-        <div role="tablist" aria-label="视图" className="inline-flex h-7 items-center rounded-lg bg-muted p-[3px]">
+        <button type="button" className={`${s.tb} ${s.icon}`} aria-pressed={p.treeOn} aria-label="显示或隐藏事件目录" title="显示或隐藏事件目录" onClick={p.onTree}>
+          <PanelLeft aria-hidden />
+        </button>
+        <span className={s.select}>{p.worldSelect}<ChevronDown aria-hidden /></span>
+        <div role="tablist" aria-label="视图" className={s.seg}>
           {(["timeline", "table"] as const).map((v) => (
-            <button
-              key={v}
-              role="tab"
-              aria-selected={p.view === v}
-              className={`h-[22px] rounded-md px-2.5 text-[0.8rem] font-medium ${p.view === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-              onClick={() => p.onView(v)}
-            >
+            <button key={v} type="button" role="tab" aria-selected={p.view === v} onClick={() => p.onView(v)}>
               {v === "timeline" ? "时间线" : "事件表"}
             </button>
           ))}
@@ -58,21 +52,22 @@ export function WorldlineToolbar(p: {
       </div>
       <span className={s.sep} />
       <div className={s.group}>
-        {p.periodPicker}
-        <Button size="sm" variant="outline" data-toggle-all="" className={s.iconNarrow} onClick={p.onToggleAll} title="展开或收起全部事件卡片">
-          <span aria-hidden>{p.allExpanded ? "⌃" : "⌄"}</span>
+        <span className={`${s.select} ${s.period}`}>{p.periodPicker}<ChevronDown aria-hidden /></span>
+        <button type="button" data-toggle-all="" className={`${s.tb} ${s.iconNarrow}`} onClick={p.onToggleAll} title="展开或收起全部事件卡片">
+          {p.allExpanded ? <ChevronsDownUp aria-hidden /> : <ChevronsUpDown aria-hidden />}
           <span className={s.lbl}>{p.allExpanded ? "全部收起" : "全部展开"}</span>
-        </Button>
-        <div className="inline-flex h-7 items-center rounded-md border border-input" title={p.view === "timeline" ? "缩放时间轴间距（也可滚轮）" : "缩放时间轴间距（也可 Ctrl + 滚轮）"}>
-          <Button size="icon-xs" variant="ghost" aria-label="缩小" onClick={() => p.onZoom(-1)}>−</Button>
-          <span className="min-w-[46px] text-center text-xs tabular-nums" data-zoom-value="">{p.zoomLabel}</span>
-          <Button size="icon-xs" variant="ghost" aria-label="放大" onClick={() => p.onZoom(1)}>＋</Button>
-          <Button size="xs" variant="ghost" className={s.hideNarrow1} onClick={() => p.onZoom(0)}>复位</Button>
+        </button>
+        <div className={s.zoom} title={p.view === "timeline" ? "缩放时间轴间距（也可滚轮）" : "缩放时间轴间距（也可 Ctrl + 滚轮）"}>
+          <button type="button" aria-label="缩小" onClick={() => p.onZoom(-1)}><Minus aria-hidden /></button>
+          <span className={s.value} data-zoom-value="">{p.zoomLabel}</span>
+          <button type="button" aria-label="放大" onClick={() => p.onZoom(1)}><Plus aria-hidden /></button>
+          <span className={`${s.div} ${s.hideNarrow1}`} aria-hidden />
+          <button type="button" className={`${s.reset} ${s.hideNarrow1}`} onClick={() => p.onZoom(0)}>复位</button>
         </div>
       </div>
       <span className={s.spacer} />
       <div className={`${s.search} ${active ? s.active : ""} ${none ? s.none : ""}`} role="search">
-        <span aria-hidden>⌕</span>
+        <Search aria-hidden />
         <input
           ref={p.searchRef}
           type="search"

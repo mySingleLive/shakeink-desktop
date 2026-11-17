@@ -10,8 +10,40 @@
 .bar > * { flex: none; }
 .spacer { flex: 1 1 0; min-width: 8px; }
 .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border); }
-.group { display: inline-flex; align-items: center; gap: 4px; }
-.chip { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: calc(var(--radius) * 0.8); border: 1px solid var(--input); color: var(--muted-foreground); font-size: 12.8px; }
+.group { display: inline-flex; align-items: center; gap: 6px; }
+/* Toolbar controls. planning.module.css styles every `.workspace button/select` (0,1,1: border, 5px 9px padding, card
+ * background), which beat the Tailwind utilities and left inner borders and off-centre labels. Every rule below is
+ * scoped `.bar .x` (≥ 0,2,0) so the toolbar owns its own look in both themes. */
+.bar .tb, .bar .select select, .bar .chip, .bar .primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 28px; margin: 0; padding: 0 10px;
+  border: 1px solid var(--input); border-radius: calc(var(--radius) * 1.33); background: transparent; color: var(--foreground);
+  font-size: 12.8px; font-weight: 500; line-height: 1; white-space: nowrap; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.bar .tb:hover, .bar .select select:hover, .bar .chip:hover { background: var(--muted); }
+.bar .tb svg, .bar .primary svg { width: 14px; height: 14px; flex: none; }
+.bar .tb.icon { width: 28px; padding: 0; border-color: transparent; color: var(--muted-foreground); }
+.bar .tb.icon:hover { color: var(--foreground); }
+.bar .tb.icon[aria-pressed="true"] { color: var(--foreground); background: var(--muted); }
+.bar .select { position: relative; display: inline-flex; align-items: center; }
+.bar .select select { appearance: none; -webkit-appearance: none; justify-content: flex-start; padding: 0 26px 0 10px; cursor: pointer; }
+.bar .select > svg { position: absolute; right: 8px; width: 13px; height: 13px; pointer-events: none; color: var(--muted-foreground); }
+.bar .select.period select { width: 96px; }
+.bar .seg { display: inline-flex; align-items: center; gap: 2px; height: 28px; padding: 3px; border-radius: calc(var(--radius) * 1.66); background: var(--muted); }
+.bar .seg button { height: 22px; margin: 0; padding: 0 12px; border: 0; border-radius: calc(var(--radius) * 1.33); background: transparent; color: var(--muted-foreground); font-size: 12.8px; font-weight: 500; line-height: 22px; transition: background-color 0.15s, color 0.15s; }
+.bar .seg button:hover { color: var(--foreground); }
+.bar .seg button[aria-selected="true"] { background: var(--background); color: var(--foreground); box-shadow: 0 0 0 1px var(--input); }
+.bar .zoom { display: inline-flex; align-items: center; gap: 0; height: 28px; padding: 0 2px; border: 1px solid var(--input); border-radius: calc(var(--radius) * 1.33); }
+.bar .zoom button { display: inline-grid; place-items: center; width: 24px; height: 22px; margin: 0; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--muted-foreground); line-height: 1; }
+.bar .zoom button:hover { background: var(--muted); color: var(--foreground); }
+.bar .zoom button svg { width: 13px; height: 13px; }
+.bar .zoom .reset { width: auto; padding: 0 7px; font-size: 12px; }
+.bar .zoom .value { min-width: 54px; padding: 0 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--foreground); white-space: nowrap; }
+.bar .zoom .div { width: 1px; height: 14px; margin: 0 2px; background: var(--border); }
+.bar .primary { border-color: transparent; background: var(--primary); color: var(--primary-foreground); }
+.bar .primary:hover { background: color-mix(in srgb, var(--primary) 85%, transparent); }
+.bar .primary:disabled { opacity: 0.5; }
+.chip { color: var(--muted-foreground); }
+.bar .chip { color: var(--muted-foreground); }
 .chip b { color: var(--foreground); font-weight: 600; }
 .chip.zero { opacity: 0.5; }
 .search { display: flex; align-items: center; gap: 2px; flex: 0 1 240px; min-width: 120px; height: 28px; padding: 0 6px 0 9px; border-radius: var(--radius); border: 1px solid var(--input); transition: flex-basis 0.2s; }
@@ -20,11 +52,13 @@
 .search input { flex: 1; min-width: 0; height: 100%; padding: 0 6px; border: 0; outline: none; background: none; color: inherit; font-size: 13px; }
 .search .count { color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums; padding: 0 4px; white-space: nowrap; }
 .search.none .count { color: var(--event-conflict); }
-.search button { width: 22px; height: 22px; border-radius: 6px; color: var(--muted-foreground); }
+.search > svg { width: 14px; height: 14px; flex: none; color: var(--muted-foreground); }
+.bar .search button { display: inline-grid; place-items: center; width: 22px; height: 22px; margin: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted-foreground); line-height: 1; }
+.bar .search button:hover:not(:disabled) { background: var(--muted); color: var(--foreground); }
 .search kbd { padding: 0 5px; border-radius: 4px; border: 1px solid var(--border); color: var(--muted-foreground); font-size: 10px; }
 .search.active kbd, .search:focus-within kbd { display: none; }
-@media (max-width: 1280px) { .hideNarrow1, .search kbd, .chip.zero { display: none; } }
-@media (max-width: 1160px) { .iconNarrow .lbl { display: none; } }
+@media (max-width: 1280px) { .hideNarrow1, .bar .zoom .hideNarrow1, .search kbd, .chip.zero, .bar .chip.zero { display: none; } }
+@media (max-width: 1160px) { .iconNarrow .lbl { display: none; } .bar .tb.iconNarrow { width: 28px; padding: 0; } }
 
 /* ---------- status line and legend ---------- */
 .status { display: flex; align-items: center; gap: 14px; margin: 0 0 8px; color: var(--muted-foreground); font-size: 12px; flex-wrap: wrap; }
@@ -90,6 +124,8 @@
   color: var(--muted-foreground); outline: none; }
 .head .expand:hover { color: var(--foreground); }
 .head .expand:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.expand svg { display: block; transition: transform 0.15s; }
+.expand svg.expandUp { transform: rotate(180deg); }
 .menuHost { position: relative; flex: none; }
 .menuHost summary { list-style: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; color: var(--muted-foreground); cursor: pointer; }
 .menuHost summary::-webkit-details-marker { display: none; }
@@ -124,8 +160,6 @@
 .rail { position: absolute; left: 0; top: 0; width: 210px; pointer-events: none; }
 .railLine { position: absolute; left: 158px; width: 2px; margin-left: -1px; border-radius: 1px; background: linear-gradient(transparent, var(--input) 18px, var(--input) calc(100% - 18px), transparent); }
 .railDot { --ec: var(--event-other); position: absolute; left: 158px; border-radius: 50%; background: var(--ec); border: 2px solid var(--background); box-shadow: 0 0 0 1.5px var(--ec); pointer-events: auto; cursor: pointer; transform: translate(-50%, -50%); }
-.expand svg { display: block; transition: transform 0.15s; }
-.expand svg.expandUp { transform: rotate(180deg); }
 .railDot.d1 { width: 9px; height: 9px; }
 .railDot.d2 { width: 13px; height: 13px; }
 .railDot.d3 { width: 17px; height: 17px; border-width: 3px; box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 5px color-mix(in srgb, var(--ec) 16%, transparent); }
@@ -237,8 +271,8 @@
 .tree { grid-column: 1; grid-row: 1; }
 /* The toolbar's narrow steps follow the panel width (the content area), not the window (577 §14). ≤ 640px it wraps
  * onto a second row: one row cannot hold its controls at the ~470px width beside chat. */
-@container worldline (max-width: 1280px) { .hideNarrow1, .search kbd, .chip.zero { display: none; } }
-@container worldline (max-width: 1160px) { .iconNarrow .lbl { display: none; } }
+@container worldline (max-width: 1280px) { .hideNarrow1, .bar .zoom .hideNarrow1, .search kbd, .chip.zero, .bar .chip.zero { display: none; } }
+@container worldline (max-width: 1160px) { .iconNarrow .lbl { display: none; } .bar .tb.iconNarrow { width: 28px; padding: 0; } }
 @container worldline (max-width: 640px) {
   .bar { flex-wrap: wrap; row-gap: 6px; }
   .bar .spacer { display: none; }

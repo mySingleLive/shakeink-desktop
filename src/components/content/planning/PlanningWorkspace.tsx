@@ -2474,7 +2474,6 @@ function PlanningWorkspace({
           worldSelect={
                 <select
                   aria-label="当前世界线"
-                  className="h-7 rounded-md border border-input bg-transparent px-2 text-[0.8rem]"
                   value={worldId}
                   onChange={(e) => {
                     navigateWorldParent(null, e.target.value);
@@ -2491,7 +2490,6 @@ function PlanningWorkspace({
           periodPicker={
             <select
               aria-label="时期"
-              className="h-7 w-[92px] rounded-md border border-input bg-transparent px-2 text-[0.8rem]"
               value=""
               onChange={(e) => {
                 // docs/577 §9: 全部时期（全貌） fits every placed event with fitTimelineWindow (§4, M8).
@@ -2573,6 +2571,7 @@ function PlanningWorkspace({
           onNewEvent={
             <Button
               size="sm"
+              className={wl.primary}
               disabled={readonly || !!eventDraft || !worldId}
               onClick={() => setEventDraft(eventSchema.parse({ id: uid(), line: worldId, parent: null, title: "未命名事件", time: { kind: "unknown" } }))}
             >
