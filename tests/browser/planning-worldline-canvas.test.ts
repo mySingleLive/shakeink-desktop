@@ -311,7 +311,7 @@ test("CP-08: footer and zoom-control hints describe the new wheel rules per plat
     await expect(page.getByText("拖动空白处移动画布 · 滚轮缩放 · Shift + 滚轮横移 · ⌘/⌥ + 滚轮竖移 · 双击卡片原位编辑")).toBeVisible()
     await expect(page.locator("[title='缩放时间轴间距（也可滚轮）']")).toHaveCount(1)
     await tab(page, "事件表")
-    await expect(page.locator("[title='缩放时间轴间距（也可 Ctrl + 滚轮）']")).toHaveCount(1)
+    await expect(page.locator("[title='缩放时间轴（也可 Ctrl + 滚轮）']")).toHaveCount(1)
   }, { controller: true })
   await withWorldline(browser, f60(), async page => {
     await openTimeline(page)

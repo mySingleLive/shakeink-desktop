@@ -179,7 +179,7 @@ test("WU-69: minimap aria values, dot labels, reduced motion and paper contrast 
     document.documentElement.className = "paper"
     const probe = document.createElement("i"); document.body.append(probe)
     const out: number[] = []
-    for (const v of ["--card", "--event-conflict", "--event-scheme", "--event-reveal", "--event-relation", "--event-growth", "--event-upheaval", "--event-other"]) {
+    for (const v of ["--card", "--event-conflict", "--event-scheme", "--event-reveal", "--event-relation", "--event-growth", "--event-change", "--event-other"]) {
       probe.style.color = `var(${v})`
       const rgb = getComputedStyle(probe).color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 })
       out.push(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2])
@@ -239,7 +239,7 @@ test("WU-73: an era calendar shows 第五纪1349年12月1日 and an era-precisio
   await expect(c.locator("[data-card-time]")).toContainText("第五纪")
 }))
 
-test("WU-74: years and fixed calendars render; years has no year badge or month ticks; fixed tree time is M-DD", async () => {
+test("WU-74: years and fixed calendars render; years has no year badge or month ticks; fixed tree time is M月D日", async () => {
   await withWorldline(browser, world({ calendar: { kind: "years", epoch: "建城", hoursPerDay: null, daysPerMonth: null, monthsPerYear: null } },
     [{ id: "a", line: "w", title: "建城", time: { kind: "exact", value: 0 } }, { id: "b", line: "w", title: "迁都", time: { kind: "exact", value: 300 } }]), async page => {
     await tab(page, "事件表")
@@ -250,7 +250,7 @@ test("WU-74: years and fixed calendars render; years has no year badge or month 
   })
   await withWorldline(browser, world({ calendar: { kind: "fixed", epoch: "元年", hoursPerDay: 24, daysPerMonth: 30, monthsPerYear: 12 } },
     [{ id: "a", line: "w", title: "开端", time: { kind: "exact", value: 3 * M + 4 * H, precision: "day" } }]), async page => {
-    await expect(page.getByRole("tree", { name: "事件目录" }).getByRole("treeitem", { name: /^开端 / })).toHaveAttribute("aria-label", /^开端 \d{1,2}-\d{2}$/)
+    await expect(page.getByRole("tree", { name: "事件目录" }).getByRole("treeitem", { name: /^开端 / })).toHaveAttribute("aria-label", /^开端 \d{1,2}月\d{1,2}日$/)
   })
 })
 
@@ -274,3 +274,39 @@ test("E-WU90 narrow panel: at the 470px content width beside chat, table cards k
   const mm = (await page.getByRole("slider", { name: /全局缩略/ }).boundingBox())!, lane = (await page.locator("[data-timeline-lane]").boundingBox())!
   assert.ok(mm.x >= lane.x - 1 && mm.x + mm.width <= lane.x + lane.width + 1, "minimap inside the panel")
 }, { width: 470 }))
+
+test("WU-75: the event directory fades long titles, always shows month and day, and pins the current year", () => withWorldline(browser, world({
+  calendar: { kind: "gregorian", epoch: "0001-01-01T00:00:00Z", hoursPerDay: 24, daysPerMonth: null, monthsPerYear: 12, eras: [{ name: "第五纪", start: 0 }] },
+}, [
+  { id: "a", line: "w", title: "西里斯与海纳斯将安提哥努斯家族的笔记交给了一位从未谋面的学徒", time: { kind: "exact", value: 1348 * 365.2425 * 24 + 160 * 24, precision: "day" } },
+  { id: "b", line: "w", title: "短标题", time: { kind: "exact", value: 1348 * 365.2425 * 24 + 200 * 24, precision: "month" } },
+  { id: "c", line: "w", title: "整年事件", time: { kind: "exact", value: 1348 * 365.2425 * 24 + 300 * 24, precision: "year" } },
+  ...Array.from({ length: 60 }, (_, i) => ({ id: `n${i}`, line: "w", title: `次年事件${i}`, time: { kind: "exact", value: 1349 * 365.2425 * 24 + 10 * 24 + i * 24, precision: "day" } })),
+]), async page => {
+  const tree = page.getByRole("tree", { name: "事件目录" })
+  await expect(tree).toContainText("第五纪1349年")
+  const row = (id: string) => tree.locator(`[data-tree-id="${id}"]`)
+  await expect(row("a").locator("[data-tree-title]")).toHaveAttribute("data-fade", "")
+  await expect(row("b").locator("[data-tree-title]")).not.toHaveAttribute("data-fade", "")
+  assert.notEqual(await row("a").locator("[data-tree-title]").evaluate(e => getComputedStyle(e).maskImage), "none")
+  // Every row shows month and day; a coarser record reads 约; the year stays in the header.
+  await expect(row("a").locator('[class*="treeTime"]')).toHaveText(/^\d{1,2}月\d{1,2}日$/)
+  await expect(row("b").locator('[class*="treeTime"]')).toHaveText(/^约\d{1,2}月\d{1,2}日$/)
+  await expect(row("c").locator('[class*="treeTime"]')).toHaveText(/^约\d{1,2}月\d{1,2}日$/)
+  const time = await row("a").locator('[class*="treeTime"]').evaluate(e => { const b = e.getBoundingClientRect(); return { w: b.width, right: b.right, nav: e.closest("nav")!.getBoundingClientRect().right } })
+  assert.ok(time.w > 0 && time.right <= time.nav, JSON.stringify(time))
+  // The header pinned under the directory head is the year of the rows below it.
+  const nav = page.locator('nav[aria-label="事件目录"]')
+  const pinned = () => nav.evaluate(n => {
+    const head = n.querySelector('[class*="treeHead"]')!.getBoundingClientRect().bottom
+    const hits = [...n.querySelectorAll<HTMLElement>("[data-tree-year]")].filter(g => g.getBoundingClientRect().top <= head + 12)
+    return hits.length ? hits[hits.length - 1].textContent : null
+  })
+  assert.equal(await pinned(), "第五纪1349年")
+  await nav.evaluate(n => { n.scrollTop = 40 })
+  assert.equal(await pinned(), "第五纪1349年")
+  await nav.evaluate(n => { n.scrollTop = n.scrollHeight })
+  assert.equal(await pinned(), "第五纪1350年")
+  await nav.evaluate(n => { n.scrollTop = 0 })
+  assert.equal(await pinned(), "第五纪1349年")
+}))

@@ -66,14 +66,21 @@ test("WU-44: hovering a card thickens its lead to 1.6, enlarges its dot and show
   await expect.poll(() => lead.evaluate(e => getComputedStyle(e).strokeWidth)).toBe("1.6px")
   await expect.poll(size).toBeGreaterThan(w0 + 1)
   await expect(page.locator(`[data-label-for~="${id}"]`)).toBeVisible()
+  // Design views.css .dlabel.hot: white text on the dot's type color (the label used to have no --ec: dark on transparent).
+  const label = page.locator(`[data-label-for~="${id}"]`)
+  const dotColor = await dot.evaluate(e => getComputedStyle(e).backgroundColor)
+  await expect.poll(() => label.evaluate(e => getComputedStyle(e).backgroundColor)).toBe(dotColor)
+  await expect.poll(() => label.evaluate(e => getComputedStyle(e).color)).toBe("rgb(255, 255, 255)")
+  assert.notEqual(await lead.evaluate(e => getComputedStyle(e).filter), "none")
   await page.mouse.move(5, 5)
   await expect.poll(() => lead.evaluate(e => getComputedStyle(e).strokeWidth)).toBe("1px")
 }))
 
-test("WU-45 / WU-47 (pointer anchor): Ctrl + wheel zooms in with the card under the pointer fixed; max 400%; 复位 returns 100%", () => withWorldline(browser, f885(), async page => {
+test("WU-45 / WU-47 (pointer anchor): Ctrl + wheel zooms in with the card under the pointer fixed; stops at the finest scale; 复位 returns the reset level", () => withWorldline(browser, f885(), async page => {
   await table(page)
   const zoomValue = page.locator("[data-zoom-value]")
-  await expect(zoomValue).toHaveText("100%")
+  // docs/586: F885 resets at k ≈ 1.30 px/h, the 日 level.
+  await expect(zoomValue).toHaveText("日")
   await setScroll(page, 12000)
   await settle(page)
   const at = (await cardAtMiddle(page))!
@@ -88,20 +95,36 @@ test("WU-45 / WU-47 (pointer anchor): Ctrl + wheel zooms in with the card under 
   for (let i = 0; i < 5; i++) { await page.mouse.wheel(0, -100); await page.waitForTimeout(80) }
   await page.keyboard.up("Control")
   await settle(page)
-  const z = Number((await zoomValue.textContent())!.replace("%", ""))
-  assert.ok(z > 100, `zoom ${z}`)
+  // Five wheel steps take k to about 2.6: the 上下午 level.
+  await expect(zoomValue).toHaveText("上下午")
   const y1 = (await cardY(page, at.id))!
   assert.ok(Math.abs(y1 + 17 - at.y + (await scroller(page).boundingBox())!.y) < 2, `pointer card moved: ${at.y} → ${y1}`)
   assert.ok(await gap() > gap0 + 1, `root spacing grows: ${gap0} → ${await gap()}`)
+  // docs/586 RL-B6: wheel until the + button is disabled (about 29 steps), then more wheel changes nothing.
   await page.keyboard.down("Control")
-  for (let i = 0; i < 15; i++) { await page.mouse.wheel(0, -100); await page.waitForTimeout(40) }
+  for (let i = 0; i < 60 && await page.getByRole("button", { name: "放大" }).isEnabled(); i++) { await page.mouse.wheel(0, -100); await page.waitForTimeout(30) }
   await page.keyboard.up("Control")
-  await expect(zoomValue).toHaveText("400%")
-  await page.keyboard.down("Control"); await page.mouse.wheel(0, -100); await page.keyboard.up("Control")
-  await page.waitForTimeout(100)
-  await expect(zoomValue).toHaveText("400%")
+  await expect(page.getByRole("button", { name: "放大" })).toBeDisabled()
+  await expect(zoomValue).toHaveText("时分")
+  await settle(page)
+  const atMax = await cardY(page, at.id)
+  await page.keyboard.down("Control")
+  for (let i = 0; i < 3; i++) { await page.mouse.wheel(0, -100); await page.waitForTimeout(60) }
+  await page.keyboard.up("Control")
+  await settle(page)
+  await expect(zoomValue).toHaveText("时分")
+  assert.equal(await cardY(page, at.id), atMax, "wheel at the bound moves nothing")
+  // No stale anchor: scroll away, expand a visible card; the view must not jump back to the wheel card.
+  await setScroll(page, (await scroller(page).evaluate(e => e.scrollTop)) + 600)
+  await settle(page)
+  const other = (await cardAtMiddle(page))!
+  const otherY = (await cardY(page, other.id))!
+  await cardById(page, other.id).locator("[data-card-title]").click()
+  await settle(page)
+  const otherAfter = await cardY(page, other.id)
+  assert.ok(otherAfter !== null && Math.abs(otherAfter - otherY) < 2, `expanded card moved ${otherY} → ${otherAfter}`)
   await page.getByRole("button", { name: "复位" }).click()
-  await expect(zoomValue).toHaveText("100%")
+  await expect(zoomValue).toHaveText("日")
 }))
 
 test("WU-46: the sticky block shows the last year badge scrolled past and is empty back at the top", () => withWorldline(browser, f885(), async page => {
@@ -296,4 +319,29 @@ test("E-WU82: the timeline renders only the vertical band near the scroll positi
   const p1 = await pos()
   const shared = Object.keys(p0).filter(k => k in p1)
   assert.ok(shared.every(k => p0[k][0] === p1[k][0] && p0[k][1] === p1[k][1]), "plane positions unchanged")
+}))
+
+test("WU-44b: hovering a rail dot highlights its time label, lead and card; leaving clears them", () => withWorldline(browser, f60(), async page => {
+  await table(page)
+  const id = await page.evaluate(() => {
+    const labelled = new Set([...document.querySelectorAll<HTMLElement>("[data-rail-label]")].flatMap(l => l.dataset.labelFor!.split(" ")))
+    const dot = [...document.querySelectorAll<HTMLElement>("[data-rail-dot]:not([data-cluster])")].reverse().find(d => labelled.has(d.dataset.eventId!))
+    return dot?.dataset.eventId ?? null
+  })
+  assert.ok(id, "a labelled single dot exists in F60")
+  const dot = page.locator(`[data-rail-dot][data-event-id="${id}"]`), lead = page.locator(`[data-rail-lead="${id}"]`)
+  const label = page.locator(`[data-label-for~="${id}"]`), card = cardById(page, id!)
+  await dot.scrollIntoViewIfNeeded()
+  const border0 = await card.evaluate(e => getComputedStyle(e).borderColor)
+  await dot.hover()
+  await expect(dot).toHaveClass(/hot/)
+  await expect(label).toHaveClass(/hot/)
+  await expect.poll(() => lead.evaluate(e => getComputedStyle(e).strokeWidth)).toBe("1.6px")
+  await expect(card).toHaveAttribute("data-hot", "")
+  await expect.poll(() => card.evaluate(e => getComputedStyle(e).borderColor)).not.toBe(border0)
+  assert.notEqual(await card.evaluate(e => getComputedStyle(e).boxShadow), "none")
+  await page.mouse.move(5, 5)
+  await expect(card).not.toHaveAttribute("data-hot", "")
+  await expect(dot).not.toHaveClass(/hot/)
+  await expect.poll(() => lead.evaluate(e => getComputedStyle(e).strokeWidth)).toBe("1px")
 }))

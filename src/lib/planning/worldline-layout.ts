@@ -26,11 +26,10 @@ export const GROUP_PADDING = 10;
 export const TABLE_INDENT = 18;
 export const TREE_INDENT = 16;
 export const BREAK_HEIGHT = 46;
-/** Event table zoom: extra px between adjacent roots = min(ZOOM_GAP_MAX, Δdays × ZOOM_GAP_PER_DAY × (zoom − 1)). */
-export const ZOOM_GAP_MAX = 240;
-export const ZOOM_GAP_PER_DAY = 6;
-export const ZOOM_MIN = 1;
-export const ZOOM_MAX = 4;
+/** docs/586 §1: event-table time stretch. Block starts of adjacent roots are at least min(GAP_MAX, Δt × k) apart. */
+export const GAP_MAX = 240;
+/** docs/586 §1: the finest table scale, in px per hour of the label calendar (1 minute = 1 px). */
+export const TABLE_SCALE_MAX = 60;
 /** Rail: dots closer than this merge into a cluster; labels closer than LABEL_MIN_GAP are skipped (WU-13, WU-14). */
 export const CLUSTER_PX = 4;
 export const LABEL_MIN_GAP = 18;
@@ -64,7 +63,7 @@ export const CATEGORY_VAR: Readonly<Record<EventCategory, string>> = {
   揭示: "--event-reveal",
   关系: "--event-relation",
   成长: "--event-growth",
-  变故: "--event-upheaval",
+  变故: "--event-change",
   其他: "--event-other",
 };
 
@@ -92,15 +91,25 @@ export interface CalendarAdapter {
   railLabel(value: number, precision: EraPrecision, yearShown?: boolean): string;
   /** Directory short time: M-DD, or the era name for era precision. */
   short(value: number, precision?: EraPrecision): string;
+  /** Event-directory time: always the month and day (6月28日, 6月28日 14:05 for hour records), 约 when finer than
+   * the record; the year is dropped when the directory's year header already shows it. */
+  treeTime(value: number, precision: EraPrecision, yearShown: boolean): string;
   /** docs/585 §1: the precision the axis reads at a window span (in worldline units). */
   axisPrecision(span: number): AxisPrecision;
   /** docs/585 §3: timeline card stamp, one precision finer than the axis; 约 when finer than the record. */
   stamp(value: number, axis: AxisPrecision, time: StampTime): string;
+  /** docs/586 §2: rail units in worldline units (`hour` is one label-calendar hour); null without months. */
+  readonly railUnits: { year: number | null; month: number; day: number; hour: number } | null;
+  /** docs/586 §3: event-table rail label at a zoom level; `compact` drops the month before 上午/下午 or a time. */
+  railText(value: number, level: RailLevel, time: StampTime, compact?: boolean): string;
+  /** docs/586 §3: `${year}年` without the era name, the dedup key of a year badge; empty without years. */
+  yearKey(value: number): string;
   yearText(value: number): string;
   monthText(value: number): string;
   /** The era holding the value, in worldline units; null on calendars without eras or before the first era. */
   eraOf(value: number): { name: string; start: number; end: number | null } | null;
 }
+export type RailLevel = "year" | "month" | "day" | "half" | "minute";
 export interface StampTime {
   kind: "exact" | "window" | "unknown";
   precision: EraPrecision;
@@ -233,6 +242,45 @@ export function createCalendarAdapter(
   }
 
   const unmapped = "未映射";
+  /** docs/585 §3 step 1–3 (shared with docs/586): civil parts and minute of a value, float noise removed. */
+  type Quantised =
+    | { kind: "unmapped" }
+    | { kind: "short" }
+    | { kind: "cap"; text: string }
+    | { kind: "ok"; c: CivilParts; minute: number; dayLen: number };
+  function quantised(value: number): Quantised {
+    const d = toDisplay(value);
+    if (d === null) return { kind: "unmapped" };
+    // Frame origin and day length of the label calendar; null keeps the short() text (years, no months).
+    let origin: number | null = null;
+    if (cal.kind === "gregorian") {
+      if (eras.length) {
+        const i = eraAt(d);
+        if (i < 0) return { kind: "short" };
+        origin = eras[i].start;
+      } else if (epochHours !== null) origin = -epochHours;
+    } else if (cal.kind === "fixed" && fixedDay && fixedMonth) origin = 0;
+    if (origin === null) return { kind: "short" };
+    const dayLen = cal.kind === "fixed" ? fixedDay! : 24;
+    // Day with the dayIndex tolerance, minutes de-noised on their own, then civil() on the quantised value.
+    const h = d - origin;
+    const day = Math.floor(Math.round((h / dayLen) * 1e6) / 1e6);
+    const tod = Math.max(0, h - day * dayLen);
+    const minute = Math.min(Math.max(0, Math.ceil(dayLen * 60) - 1), Math.max(0, Math.floor(Math.round(tod * 60 * 1e3) / 1e3)));
+    const c = civil(origin + day * dayLen + minute / 60);
+    if (!c) return { kind: "short" };
+    if (c.era !== null && c.year !== null && c.year > ERA_MAX_YEAR) return { kind: "cap", text: eraLabel(d, eras, "year") };
+    return { kind: "ok", c, minute, dayLen };
+  }
+  // docs/586 §2: label-calendar units in worldline units. Gregorian months and years take their longest length.
+  const railUnits: CalendarAdapter["railUnits"] =
+    zero === null
+      ? null
+      : civilGregorian
+        ? { year: 8784 / scale, month: 744 / scale, day: 24 / scale, hour: 1 / scale }
+        : fixedDay && fixedMonth
+          ? { year: fixedYear ? fixedYear / scale : null, month: fixedMonth / scale, day: fixedDay / scale, hour: 1 / scale }
+          : null;
   const adapter: CalendarAdapter = {
     calendar: cal,
     hasEras,
@@ -272,32 +320,28 @@ export function createCalendarAdapter(
       if (precision === "month") return `${c.month}月`;
       return `${c.month}-${String(c.day).padStart(2, "0")}`;
     },
+    treeTime(value, precision, yearShown) {
+      if (precision === "era") return adapter.short(value, "era");
+      const q = quantised(value);
+      if (q.kind === "unmapped") return unmapped;
+      if (q.kind === "short") return adapter.short(value, precision);
+      if (q.kind === "cap") return q.text;
+      const { c, minute } = q;
+      const year = yearShown || c.year === null ? "" : `${c.year}年`;
+      const day = `${year}${c.month}月${c.day}日`;
+      if (precision === "hour") return `${day} ${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+      return precision === "day" ? day : `约${day}`;
+    },
     axisPrecision(span) {
       return zero === null ? "hour" : axisPrecision(span * scale, cal);
     },
     stamp(value, axis, time) {
       const shown = FINER[axis];
-      const d = toDisplay(value);
-      if (d === null) return unmapped;
-      // Frame origin and day length of the label calendar; null keeps the short() text (years, no months).
-      let origin: number | null = null;
-      if (cal.kind === "gregorian") {
-        if (eras.length) {
-          const i = eraAt(d);
-          if (i < 0) return adapter.short(value, time.precision);
-          origin = eras[i].start;
-        } else if (epochHours !== null) origin = -epochHours;
-      } else if (cal.kind === "fixed" && fixedDay && fixedMonth) origin = 0;
-      if (origin === null) return adapter.short(value, time.precision);
-      const dayLen = cal.kind === "fixed" ? fixedDay! : 24;
-      // §3 step 1–3: day with the dayIndex tolerance, minutes de-noised on their own, then civil() on the quantised value.
-      const h = d - origin;
-      const day = Math.floor(Math.round((h / dayLen) * 1e6) / 1e6);
-      const tod = Math.max(0, h - day * dayLen);
-      const minute = Math.min(Math.max(0, Math.ceil(dayLen * 60) - 1), Math.max(0, Math.floor(Math.round(tod * 60 * 1e3) / 1e3)));
-      const c = civil(origin + day * dayLen + minute / 60);
-      if (!c) return adapter.short(value, time.precision);
-      if (c.era !== null && c.year !== null && c.year > ERA_MAX_YEAR) return eraLabel(d, eras, "year");
+      const q = quantised(value);
+      if (q.kind === "unmapped") return unmapped;
+      if (q.kind === "short") return adapter.short(value, time.precision);
+      if (q.kind === "cap") return q.text;
+      const { c, minute, dayLen } = q;
       // What is actually shown: an hour stamp of a coarser record without a time of day stays at the day.
       const half = minute < (dayLen * 60) / 2 ? "上午" : "下午";
       const exactHour = time.precision === "hour";
@@ -310,6 +354,40 @@ export function createCalendarAdapter(
           ? ` ${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`
           : minute === 0 ? "" : half;
       return about ? `约${text}` : text;
+    },
+    railUnits,
+    railText(value, level, time, compact = false) {
+      if (time.precision === "era") return adapter.railLabel(value, "era");
+      const q = quantised(value);
+      if (q.kind === "unmapped") return unmapped;
+      if (q.kind === "short") return adapter.railLabel(value, time.precision);
+      if (q.kind === "cap") return q.text;
+      const { c, minute, dayLen } = q;
+      const exactHour = time.precision === "hour";
+      let text: string, reached: EraPrecision;
+      if (level === "year") (text = c.year === null ? "" : `${c.year}年`), (reached = "year");
+      else if (level === "month") (text = `${c.year === null ? "" : `${c.year}年`}${c.month}月`), (reached = "month");
+      else {
+        const day = `${c.month}月${c.day}日`;
+        let tail = "";
+        reached = "day";
+        if (level === "minute" && exactHour) {
+          tail = ` ${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+          reached = "hour";
+        } else if ((level === "half" || level === "minute") && (exactHour || minute !== 0)) {
+          // §3: a coarser record at 0:00 has no time of day, so it stays at the day.
+          tail = minute < (dayLen * 60) / 2 ? "上午" : "下午";
+          reached = "hour";
+        }
+        text = tail ? `${compact ? `${c.day}日` : day}${tail}` : day;
+      }
+      const about = time.kind === "window" || PRECISION_RANK[reached] > PRECISION_RANK[time.precision];
+      return text && about ? `约${text}` : text;
+    },
+    yearKey(value) {
+      const d = toDisplay(value),
+        c = d === null ? null : civil(d);
+      return c?.year == null ? "" : `${c.year}年`;
     },
     yearText(value) {
       const d = toDisplay(value),
@@ -503,6 +581,7 @@ export interface TableCard {
   expanded: boolean;
   importance: number;
   precision: EraPrecision;
+  kind: StampTime["kind"];
 }
 export interface TableGroup {
   id: string;
@@ -567,20 +646,44 @@ export function estimateCardHeight(event: PlanningEvent): number {
     EST_PADDING
   );
 }
-const clampZoom = (zoom: number) =>
-  Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number.isFinite(zoom) ? zoom : ZOOM_MIN));
-/** Extra px between two adjacent roots of one segment at a table zoom. */
-export function zoomGap(dt: number, zoom: number, adapter: CalendarAdapter) {
-  const z = clampZoom(zoom);
-  if (z === 1 || !(dt > 0)) return 0;
-  return Math.min(ZOOM_GAP_MAX, (dt / adapter.ownDayHours) * ZOOM_GAP_PER_DAY * (z - 1));
+/** docs/586 §2: the rail label level at a table scale k (px per worldline hour): the finest unit at least
+ * LABEL_MIN_GAP px long, else the coarsest one (year, or month without years). Null on calendars without months. */
+export function railLevel(k: number, adapter: CalendarAdapter): RailLevel | null {
+  const u = adapter.railUnits;
+  if (!u) return null;
+  const fits = (len: number) => len * k >= LABEL_MIN_GAP - 1e-9;
+  if (fits(u.hour)) return "minute";
+  if (fits(u.day / 2)) return "half";
+  if (fits(u.day)) return "day";
+  if (fits(u.month) || u.year === null) return "month";
+  return "year";
+}
+export interface TableZoomBounds {
+  /** Reset scale: the mean stacked slope of the main segment (px per worldline hour). */
+  fit: number;
+  min: number;
+  max: number;
+}
+/** docs/586 §1: reset scale and zoom range of the event table, all in px per worldline hour. */
+export function tableZoomBounds(tree: EventTree, adapter: CalendarAdapter): TableZoomBounds {
+  let main: RailSegment | null = null;
+  for (const s of railSegments(tree.roots, adapter))
+    if (s.t1 > s.t0 && (!main || s.roots.length > main.roots.length)) main = s;
+  const u = adapter.railUnits;
+  let fit = main ? ((main.roots.length - 1) * (CARD_HEIGHT + CARD_GAP)) / (main.t1 - main.t0) : u ? LABEL_MIN_GAP / u.month : 0;
+  if (!(fit > 0) || !Number.isFinite(fit)) fit = 0;
+  if (!u) return { fit, min: fit / 8, max: fit * 8 };
+  const min = LABEL_MIN_GAP / (8 * (u.year ?? u.month)),
+    max = TABLE_SCALE_MAX / u.hour;
+  return { fit, min: Math.min(min, fit), max: Math.max(max, fit) };
 }
 
-/** Card tops, groups, rail segments and breaks of the event table; no DOM. `heights` holds measured expanded heights. */
+/** Card tops, groups, rail segments and breaks of the event table; no DOM. `heights` holds measured expanded heights.
+ * docs/586 §1: `scale` is k in px per worldline hour; 0 is pure stacking. */
 export function tableLayout(
   tree: EventTree,
   heights: Readonly<Record<string, number | undefined>>,
-  zoom: number,
+  scale: number,
   adapter: CalendarAdapter,
   options: TableOptions = {},
 ): TableLayout {
@@ -593,9 +696,13 @@ export function tableLayout(
     first = true;
   const cardHeight = (n: TreeNode) =>
     expanded.has(n.id) ? (heights[n.id] ?? estimateCardHeight(n.event)) : CARD_HEIGHT;
-  const block = (n: TreeNode, depth: number, segment: number) => {
+  const k = Number.isFinite(scale) && scale > 0 ? scale : 0;
+  /** Returns the block start (card top, or group top for a parent). `atLeast` is the stretched start of a root. */
+  const block = (n: TreeNode, depth: number, segment: number, atLeast = -Infinity): number => {
     if (!first) y += CARD_GAP;
     first = false;
+    if (atLeast > y) y = atLeast;
+    const start = y;
     const left = depth * TABLE_INDENT;
     const push = () => {
       const card: TableCard = {
@@ -609,11 +716,15 @@ export function tableLayout(
         expanded: expanded.has(n.id),
         importance: n.event.importance,
         precision: n.event.time.precision,
+        kind: n.event.time.kind,
       };
       cards.push(card);
       y += card.height;
     };
-    if (!n.children.length) return push();
+    if (!n.children.length) {
+      push();
+      return start;
+    }
     const group: TableGroup = { id: n.id, top: y, bottom: 0, left, depth };
     groups.push(group);
     y += GROUP_PADDING;
@@ -621,17 +732,18 @@ export function tableLayout(
     if (!folded.has(n.id)) for (const c of n.children) block(c, depth + 1, segment);
     y += GROUP_PADDING;
     group.bottom = y;
+    return start;
   };
   const segs = railSegments(tree.roots, adapter);
-  segs.forEach((s, k) => {
-    if (k) {
-      breaks.push({ kind: "gap", top: y, height: BREAK_HEIGHT, from: k - 1, to: k, gap: s.t0 - familyEndOf(segs[k - 1]) });
+  segs.forEach((s, j) => {
+    if (j) {
+      breaks.push({ kind: "gap", top: y, height: BREAK_HEIGHT, from: j - 1, to: j, gap: s.t0 - familyEndOf(segs[j - 1]) });
       y += BREAK_HEIGHT;
       first = true;
     }
+    let prev = 0;
     s.roots.forEach((r, i) => {
-      if (i) y += zoomGap(r.start! - s.roots[i - 1].start!, zoom, adapter);
-      block(r, 0, s.index);
+      prev = block(r, 0, s.index, i ? prev + Math.min(GAP_MAX, (r.start! - s.roots[i - 1].start!) * k) : -Infinity);
     });
   });
   if (tree.pending.length) {
@@ -679,6 +791,8 @@ export interface RailLabel {
   ids: string[];
   text: string;
   visible: boolean;
+  /** docs/586: the zoom level the text was written at; null on the precision-only path. */
+  level: RailLevel | null;
 }
 export interface RailBadge {
   kind: "era" | "year";
@@ -717,6 +831,34 @@ export interface RailOptions {
   /** The selected event always shows its label (WU-14). */
   selected: string | null;
   periods: readonly { id: string; start: number; end: number | null }[];
+  /** docs/586 §2: labels follow this zoom level; absent or null keeps the record-precision labels. */
+  level: RailLevel | null;
+  /** docs/586 §3: narrow rail (panel ≤ 640px). */
+  compact: boolean;
+}
+/** docs/586 §3: one entry of railVisibility, in y order. A badge only sets the last key. */
+export interface RailVisibilityItem {
+  y: number;
+  /** The dedup key source: the wide-rail text (约 is dropped here). */
+  text: string;
+  badge?: boolean;
+  selected?: boolean;
+}
+/** docs/586 §3: a label shows when its key differs from the last visible key (or badge) and it is at least
+ * LABEL_MIN_GAP below the last visible label; the selected one always shows. Badges return false. */
+export function railVisibility(items: readonly RailVisibilityItem[]): boolean[] {
+  let prev = "",
+    last = -Infinity;
+  return items.map((it) => {
+    const key = it.text.replace(/^约/, "");
+    if (it.badge) {
+      prev = key;
+      return false;
+    }
+    const show = !!key && (!!it.selected || (key !== prev && it.y - last >= LABEL_MIN_GAP));
+    if (show) (prev = key), (last = it.y);
+    return show;
+  });
 }
 /** y of a time inside a segment, strictly proportional between its earliest and latest head. */
 export function segmentY(s: TableSegment, t: number) {
@@ -806,6 +948,32 @@ export function railMarks(
     group.push(d);
   }
   flush();
+  if (options.level) {
+    const level = options.level;
+    const time = (id: string): StampTime => ({ kind: cards.get(id)?.kind ?? "exact", precision: precision(id) });
+    type Item = RailVisibilityItem & { at: number };
+    const bySeg = new Map<number, Item[]>();
+    const add = (seg: number, e: Item) => {
+      const list = bySeg.get(seg) ?? [];
+      list.push(e);
+      bySeg.set(seg, list);
+    };
+    for (const b of badges) if (b.kind === "year") add(b.segment, { y: b.y, text: adapter.yearKey(b.t), badge: true, at: -1 });
+    dots.forEach((d, i) => {
+      const selected = options.selected != null && d.ids.includes(options.selected);
+      const t = time(d.lead);
+      labels.push({ y: d.y, ids: d.ids, text: adapter.railText(d.t, level, t, options.compact), visible: false, level });
+      add(d.segment, { y: d.y, text: options.compact ? adapter.railText(d.t, level, t, false) : labels[i].text, selected, at: i });
+    });
+    for (const list of bySeg.values()) {
+      // A badge goes before a label at the same y (a segment's first badge is above its first card anyway).
+      list.sort((a, b) => a.y - b.y || (b.badge ? 1 : 0) - (a.badge ? 1 : 0));
+      railVisibility(list).forEach((v, j) => {
+        if (list[j].at >= 0) labels[list[j].at].visible = v;
+      });
+    }
+    return { points, dots, labels, badges, ticks, periods, lines };
+  }
   let lastLabel = -Infinity;
   for (const d of dots) {
     const p = precision(d.lead);
@@ -818,7 +986,7 @@ export function railMarks(
     const selected = options.selected != null && d.ids.includes(options.selected);
     const visible = !!text && (selected || d.y - lastLabel >= LABEL_MIN_GAP);
     if (visible) lastLabel = d.y;
-    labels.push({ y: d.y, ids: d.ids, text, visible });
+    labels.push({ y: d.y, ids: d.ids, text, visible, level: null });
   }
   return { points, dots, labels, badges, ticks, periods, lines };
 }

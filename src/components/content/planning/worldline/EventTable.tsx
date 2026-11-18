@@ -6,9 +6,8 @@ import {
   railMarks,
   tableLayout,
   descendants,
-  ZOOM_MAX,
-  ZOOM_MIN,
   type EventTree,
+  type RailLevel,
   type TableLayout,
   type TreeNode,
 } from "@/lib/planning/worldline-layout";
@@ -25,7 +24,10 @@ export function EventTable({
   editing,
   hitId,
   dimmed,
-  zoom,
+  scale,
+  level,
+  canZoomIn,
+  canZoomOut,
   periods,
   onFold,
   onZoom,
@@ -39,10 +41,16 @@ export function EventTable({
   editing: string | null;
   hitId: string | null;
   dimmed: (id: string) => boolean;
-  zoom: number;
+  /** docs/586 §1: k, px per worldline hour (0 is pure stacking). */
+  scale: number;
+  /** docs/586 §2: the rail label level at this scale; null keeps the record-precision labels. */
+  level: RailLevel | null;
+  canZoomIn: boolean;
+  canZoomOut: boolean;
   periods: readonly { id: string; start: number; end: number | null }[];
   onFold(id: string): void;
-  onZoom(next: number, anchor: { id: string; offset: number } | null): void;
+  /** docs/586 §1: a wheel step in log scale (± ln 1.15); the parent adds it and clamps. */
+  onZoom(stepLog: number, anchor: { id: string; offset: number } | null): void;
   onScrollTop(firstVisibleId: string | null): void;
   scrollerRef: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -50,21 +58,27 @@ export function EventTable({
   const [heights, setHeights] = useState<Record<string, number>>({});
   const open = useMemo(() => new Set([...expanded, ...(editing ? [editing] : [])]), [expanded, editing]);
   const layout: TableLayout = useMemo(
-    () => tableLayout(tree, heights, zoom, ctx.adapter, { expanded: open, folded }),
-    [tree, heights, zoom, ctx.adapter, open, folded],
+    () => tableLayout(tree, heights, scale, ctx.adapter, { expanded: open, folded }),
+    [tree, heights, scale, ctx.adapter, open, folded],
   );
+  const [panelWidth, setPanelWidth] = useState(0);
+  // The rail narrows with the panel (worldline.module.css @container ≤ 640px); leads follow the same geometry.
+  const narrow = panelWidth > 0 && panelWidth <= 640;
   const marks = useMemo(
-    () => railMarks(layout, layout.segments, ctx.adapter, { selected, periods }),
-    [layout, ctx.adapter, selected, periods],
+    () => railMarks(layout, layout.segments, ctx.adapter, { selected, periods, level, compact: narrow }),
+    [layout, ctx.adapter, selected, periods, level, narrow],
   );
   // §5.1 [R3]: virtualize when the worldline has more than VIRTUAL_MIN events in total (pending included, folding
   // ignored), so folding never switches modes. The window is one screen above and below the viewport, in steps.
   const virtual = tree.byId.size > VIRTUAL_MIN;
   const [win, setWin] = useState<readonly [number, number]>([-Infinity, Infinity]);
   const [sticky, setSticky] = useState("");
-  const [hover, setHover] = useState<string | null>(null);
-  const live = useRef({ layout, zoom, virtual, marks });
-  live.current = { layout, zoom, virtual, marks };
+  // Hovered events: one card, or every event of a hovered rail dot (a cluster holds several).
+  const [hover, setHover] = useState<readonly string[]>([]);
+  const hovered = (id: string) => hover.includes(id);
+  const hoverOn = (ids: readonly string[]) => setHover((h) => (h.length === ids.length && h.every((x, i) => x === ids[i]) ? h : ids));
+  const live = useRef({ layout, virtual, marks, canZoomIn, canZoomOut });
+  live.current = { layout, virtual, marks, canZoomIn, canZoomOut };
   const sync = useRef(() => {});
   sync.current = () => {
     const sc = scrollerRef.current;
@@ -117,6 +131,7 @@ export function EventTable({
           event={n.event}
           expanded={expanded.has(c.id)}
           selected={selected === c.id}
+          hot={hovered(c.id)}
           hit={hitId === c.id}
           dimmed={dimmed(c.id)}
           editing={editing === c.id}
@@ -195,14 +210,15 @@ export function EventTable({
     const wheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
-      const { layout: l, zoom: z } = live.current;
-      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * (e.deltaY > 0 ? 1 / 1.15 : 1.15) * 100) / 100));
-      if (next === z) return;
+      const { layout: l, canZoomIn: up, canZoomOut: down } = live.current;
+      // docs/586 §1: at a bound nothing changes, so no anchor is left behind for a later layout.
+      if (e.deltaY > 0 ? !down : !up) return;
+      const step = e.deltaY > 0 ? -Math.log(1.15) : Math.log(1.15);
       const y = e.clientY - sc.getBoundingClientRect().top + sc.scrollTop;
       const under = l.cards.find((c) => c.top + c.height > y) ?? null;
       zoomAnchor.current = under ? { id: under.id, until: performance.now() + 400 } : null;
       anchorNow(under?.id ?? null);
-      onZoomRef.current(next, under ? { id: under.id, offset: under.top - sc.scrollTop } : null);
+      onZoomRef.current(step, under ? { id: under.id, offset: under.top - sc.scrollTop } : null);
     };
     sc.addEventListener("wheel", wheel, { passive: false });
     return () => sc.removeEventListener("wheel", wheel);
@@ -211,7 +227,6 @@ export function EventTable({
   const onZoomRef = useRef(onZoom);
   onZoomRef.current = onZoom;
 
-  const [panelWidth, setPanelWidth] = useState(0);
   useLayoutEffect(() => {
     const host = scrollerRef.current?.closest<HTMLElement>("[data-worldline-root]") ?? scrollerRef.current?.closest<HTMLElement>("[data-worldline-panel]");
     if (!host) return;
@@ -221,9 +236,7 @@ export function EventTable({
     return () => ro.disconnect();
   }, [scrollerRef]);
   const inWin = (y: number) => !virtual || (y >= lo && y <= hi);
-  const hot = (ids: readonly string[]) => ids.includes(selected ?? "") || (hover !== null && ids.includes(hover));
-  // The rail narrows with the panel (worldline.module.css @container ≤ 640px); leads follow the same geometry.
-  const narrow = panelWidth > 0 && panelWidth <= 640;
+  const hot = (ids: readonly string[]) => ids.includes(selected ?? "") || ids.some(hovered);
   const railW = narrow ? 120 : 210, dotX = narrow ? 92 : 158;
   const leadX = railW + 12;
   return (
@@ -232,7 +245,7 @@ export function EventTable({
       data-table-scroller=""
       className={s.scroller}
       style={{ overflowAnchor: "none" }}
-      title="Ctrl + 滚轮缩放时间轴间距"
+      title="Ctrl + 滚轮缩放时间轴"
       onScroll={(e) => {
         sync.current();
         onScrollTop(firstVisible(layout, e.currentTarget.scrollTop));
@@ -271,7 +284,7 @@ export function EventTable({
                 <path
                   key={id}
                   data-rail-lead={id}
-                  className={`${s.lead} ${n.parent ? s.child : ""} ${selected === id || hover === id ? s.hot : ""}`}
+                  className={`${s.lead} ${n.parent ? s.child : ""} ${selected === id || hovered(id) ? s.hot : ""}`}
                   style={{ "--ec": `var(${CATEGORY_VAR[n.event.category]})` } as React.CSSProperties}
                   d={`M${dotX + 7} ${y} C ${dotX + 32} ${y}, ${x1 - 30} ${yh}, ${x1} ${yh}`}
                 />
@@ -293,26 +306,40 @@ export function EventTable({
                 style={{ top: d.y, "--ec": `var(${CATEGORY_VAR[lead.event.category]})` } as React.CSSProperties}
                 aria-label={`${lead.event.title} ${ctx.adapter.label(d.t, 1, lead.event.time.precision)} ${["一般", "重要", "关键"][d.importance - 1]}`}
                 title={d.cluster ? d.ids.map((id) => node(id)?.event.title).join("\n") : undefined}
+                onPointerEnter={() => hoverOn(d.ids)}
+                onPointerLeave={() => hoverOn([])}
               >
                 {d.cluster ? d.count : null}
               </b>
             );
           })}
-          {marks.labels.map((l, i) =>
-            (l.visible && inWin(l.y)) || (l.text && hot(l.ids)) ? (
-              <span key={`lb${i}`} data-rail-label="" data-label-for={l.ids.join(" ")} className={`${s.railLabel} ${hot(l.ids) ? s.hot : ""}`} style={{ top: l.y }}>{l.text}</span>
-            ) : null,
-          )}
+          {marks.labels.map((l, i) => {
+            if (!((l.visible && inWin(l.y)) || (l.text && hot(l.ids)))) return null;
+            // Labels are built one per dot, in the same order: the label takes its dot's type color (design .dlabel --ec).
+            const lead = node(marks.dots[i]?.lead ?? l.ids[0]);
+            return (
+              <span
+                key={`lb${i}`}
+                data-rail-label=""
+                data-rail-level={l.level ?? ""}
+                data-label-for={l.ids.join(" ")}
+                className={`${s.railLabel} ${hot(l.ids) ? s.hot : ""}`}
+                style={{ top: l.y, ...(lead ? { "--ec": `var(${CATEGORY_VAR[lead.event.category]})` } : {}) } as React.CSSProperties}
+              >
+                {l.text}
+              </span>
+            );
+          })}
         </div>
         <div
           ref={cardsRef}
           className={s.cards}
           style={{ height: layout.height }}
           onPointerOver={(e) => {
-            const id = (e.target as Element).closest<HTMLElement>("[data-event-card]")?.dataset.eventId ?? null;
-            if (id !== hover) setHover(id);
+            const id = (e.target as Element).closest<HTMLElement>("[data-event-card]")?.dataset.eventId;
+            hoverOn(id ? [id] : []);
           }}
-          onPointerLeave={() => setHover(null)}
+          onPointerLeave={() => hoverOn([])}
         >
           {cardNodes}
         </div>

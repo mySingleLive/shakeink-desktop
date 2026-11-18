@@ -125,11 +125,12 @@ test('WU-12: railSegments breaks only when a gap beats both 30 days and 20 × th
 
 
 const leafRoots=(t:L.EventTree)=>t.roots.filter(r=>!r.children.length)
-test('WU-19c: tableLayout tops increase, unmeasured expanded cards use the estimate, zoom adds min(240, Δdays × 6 × (zoom − 1))',()=>{
+test('WU-19c: tableLayout tops increase, unmeasured expanded cards use the estimate, a scale k stretches roots to min(240, Δt × k)',()=>{
  const f=F885(),tree=treeOf(f.data),era=L.createCalendarAdapter(ERA_CAL)
  const open=new Set(['n10','n11','n12'])
  const heights={n10:120,n11:200}
- for(const zoom of [1,2.5]){
+ // docs/586: F885 roots are about 31 h apart, so k = 3 really stretches.
+ for(const zoom of [0,3]){
   const lay=L.tableLayout(tree,heights,zoom,era,{expanded:open})
   const tops=lay.cards.map(c=>c.top)
   for(let i=1;i<tops.length;i++)assert.ok(tops[i]>tops[i-1],`top ${i} at zoom ${zoom}`)
@@ -144,27 +145,24 @@ test('WU-19c: tableLayout tops increase, unmeasured expanded cards use the estim
   for(let i=0;i+1<roots.length;i++){
    const a=lay.byId.get(roots[i].id)!,b=lay.byId.get(roots[i+1].id)!
    if(a.segment!==b.segment)continue
-   const days=(roots[i+1].start!-roots[i].start!)/24
-   const extra=zoom===1?0:Math.min(240,days*6*(zoom-1))
+   const extra=Math.max(0,Math.min(240,(roots[i+1].start!-roots[i].start!)*zoom)-a.height-L.CARD_GAP)
    assert.ok(Math.abs(b.top-(a.top+a.height+L.CARD_GAP)-extra)<1e-9,`${roots[i].id}→${roots[i+1].id}`)
    checked++
   }
   assert.ok(checked>800)
  }
- // A large gap is capped at 240.
- const two=treeOf(plan([{id:'a',at:0},{id:'b',at:40*24},{id:'c',at:40.5*24}],FIXED24))
- const z=L.tableLayout(two,{},2.5,L.createCalendarAdapter(FIXED24))
- assert.equal(z.byId.get('b')!.top-(z.byId.get('a')!.top+L.CARD_HEIGHT+L.CARD_GAP),240)
- assert.equal(z.byId.get('c')!.top-(z.byId.get('b')!.top+L.CARD_HEIGHT+L.CARD_GAP),0.5*6*1.5)
- // Zoom is clamped to 1–4.
- assert.deepEqual(L.tableLayout(two,{},9,L.createCalendarAdapter(FIXED24)),L.tableLayout(two,{},4,L.createCalendarAdapter(FIXED24)))
+ // A large gap is capped at 240 px between block starts; a small one stays stacked.
+ const two=treeOf(plan([{id:'a',at:0},{id:'b',at:960},{id:'c',at:972}],FIXED24))
+ const z=L.tableLayout(two,{},1,L.createCalendarAdapter(FIXED24))
+ assert.equal(z.byId.get('b')!.top-z.byId.get('a')!.top,240)
+ assert.equal(z.byId.get('c')!.top-z.byId.get('b')!.top,40)
 })
 
 test('WU-19j: layout constants: card 34, gap 6, group padding 10, child indent 18, break 46',()=>{
  assert.deepEqual([L.CARD_HEIGHT,L.CARD_GAP,L.GROUP_PADDING,L.TABLE_INDENT,L.TREE_INDENT,L.BREAK_HEIGHT],[34,6,10,18,16,46])
  // Roots 3 days apart, then one 5000 days later: a single break before 'far'.
  const d=plan([{id:'p',at:0,dur:48},{id:'c1',at:6,parent:'p'},{id:'c2',at:12,parent:'p'},{id:'q',at:3*24},{id:'r',at:6*24},{id:'far',at:5000*24}],FIXED24)
- const lay=L.tableLayout(treeOf(d),{},1,L.createCalendarAdapter(FIXED24))
+ const lay=L.tableLayout(treeOf(d),{},0,L.createCalendarAdapter(FIXED24))
  const c=(id:string)=>lay.byId.get(id)!
  for(const id of ['p','c1','c2','q','r','far'])assert.equal(c(id).height,34)
  const g=lay.groups.find(x=>x.id==='p')!
@@ -178,7 +176,7 @@ test('WU-19j: layout constants: card 34, gap 6, group padding 10, child indent 1
  assert.equal(br.height,46);assert.equal(br.top,c('r').top+34);assert.equal(c('far').top,br.top+46)
  assert.equal(lay.height,c('far').top+34)
  // Folding drops the children from the layout, the group keeps its padding.
- const folded=L.tableLayout(treeOf(d),{},1,L.createCalendarAdapter(FIXED24),{folded:new Set(['p'])})
+ const folded=L.tableLayout(treeOf(d),{},0,L.createCalendarAdapter(FIXED24),{folded:new Set(['p'])})
  assert.equal(folded.byId.has('c1'),false)
  assert.equal(folded.groups[0].bottom-folded.byId.get('p')!.top,34+10)
 })
@@ -187,7 +185,7 @@ test('WU-19j: layout constants: card 34, gap 6, group padding 10, child indent 1
 const rowPlan=(n:number,stepDays:number,extra:Ev[]=[],cal:Cal=FIXED24)=>plan([...Array.from({length:n},(_,i)=>({id:`r${i}`,at:i*stepDays*24,precision:'day'})),...extra],cal)
 function marksOf(d:PlanningData,cal:Cal,opts:Partial<L.RailOptions>={}){
  const tree=treeOf(d),a=L.createCalendarAdapter(cal)
- const lay=L.tableLayout(tree,{},1,a)
+ const lay=L.tableLayout(tree,{},0,a)
  return {tree,lay,a,m:L.railMarks(lay,lay.segments,a,opts)}
 }
 test('WU-13: railMarks places dots strictly by time and merges dots within 4px into one cluster of 5 with one label',()=>{
@@ -722,4 +720,134 @@ test('TS-12: plain gregorian stamps',()=>{
 })
 test('TS-13: an unmapped time base reads hour precision on the axis',()=>{
  assert.equal(L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:1,zero:null}).axisPrecision(1e6),'hour')
+})
+
+// ---------- docs/586: event-table rail labels follow the zoom (time stretch) ----------
+const RT=(a:L.CalendarAdapter,v:number,level:L.RailLevel,precision:string,o:{kind?:'exact'|'window';compact?:boolean}={})=>a.railText(v,level,{kind:o.kind??'exact',precision:precision as any},o.compact??false)
+const gaps=(lay:L.TableLayout,ids:string[])=>ids.slice(1).map((id,i)=>lay.byId.get(id)!.top-lay.byId.get(ids[i])!.top)
+test('RL-01: railLevel boundaries per calendar, with a float tolerance',()=>{
+ const era=L.createCalendarAdapter(ERA_CAL),f=L.createCalendarAdapter(FIXED24)
+ assert.equal(L.railLevel(18/744,era),'month');assert.equal(L.railLevel(18/744-1e-9,era),'year')
+ assert.equal(L.railLevel(0.75,era),'day');assert.equal(L.railLevel(0.7499,era),'month')
+ assert.equal(L.railLevel(1.5,era),'half');assert.equal(L.railLevel(1.4999,era),'day')
+ assert.equal(L.railLevel(18,era),'minute');assert.equal(L.railLevel(17.99,era),'half')
+ assert.equal(L.railLevel(18/720,f),'month');assert.equal(L.railLevel(0.75,f),'day')
+ const noYear=L.createCalendarAdapter({...FIXED24,monthsPerYear:null})
+ assert.equal(L.railLevel(0.75,noYear),'day');assert.equal(L.railLevel(1e-6,noYear),'month')
+ assert.equal(L.railLevel(1,L.createCalendarAdapter({...FIXED24,daysPerMonth:null})),null)
+ assert.equal(L.railLevel(1,L.createCalendarAdapter({kind:'years',epoch:'',hoursPerDay:24,daysPerMonth:30,monthsPerYear:12,eras:[]})),null)
+ assert.equal(L.railLevel(1,L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:1,zero:null})),null)
+ const based=L.createCalendarAdapter(FIXED24,{calendar:ERA_CAL,scale:3,zero:FIFTH})
+ for(const k of [0.001,0.05,0.3,2,4,9,40,80])assert.equal(L.railLevel(k,based),L.railLevel(k/3,era),`k ${k}`)
+ assert.equal(L.railLevel(18/744*3,based),'month')
+})
+test('RL-02: the stretch layout takes max(stacked, previous block + min(240, Δt·k)) per block start',()=>{
+ const a=L.createCalendarAdapter(FIXED24),ids=Array.from({length:20},(_,i)=>`r${i}`)
+ const even=treeOf(rowPlan(20,2))
+ assert.deepEqual(L.tableLayout(even,{},0,a),L.tableLayout(even,{},-1,a))
+ for(const [k,gap] of [[0,40],[40/48,40],[80/48,80],[6,240],[20/48,40]] as const)
+  assert.ok(gaps(L.tableLayout(even,{},k,a),ids).every(g=>Math.abs(g-gap)<1e-9),`k ${k}`)
+ // Uneven: 18 gaps of 48 h, then 480 h (no break: the limit is max(720, 20 × 48)).
+ const uneven=treeOf(plan([...Array.from({length:19},(_,i)=>({id:`r${i}`,at:i*48,precision:'day'})),{id:'r19',at:18*48+480,precision:'day'}],FIXED24))
+ const fit=L.tableZoomBounds(uneven,a).fit
+ assert.ok(Math.abs(fit-19*40/1344)<1e-12)
+ const g=gaps(L.tableLayout(uneven,{},fit,a),ids)
+ assert.ok(g.slice(0,18).every(x=>Math.abs(x-40)<1e-9));assert.equal(g[18],240)
+ // A grouped root: p (0 h) with children at 6 h and 12 h is 134 px high; q at 72 h.
+ const grouped=treeOf(plan([{id:'p',at:0,dur:24},{id:'c1',at:6,parent:'p'},{id:'c2',at:12,parent:'p'},{id:'q',at:72}],FIXED24))
+ const qTop=(k:number)=>{const l=L.tableLayout(grouped,{},k,a);return l.byId.get('q')!.top-l.groups[0].top}
+ assert.equal(L.tableLayout(grouped,{},0,a).groups[0].bottom-L.tableLayout(grouped,{},0,a).groups[0].top,134)
+ assert.equal(qTop(1),140);assert.equal(qTop(3),216);assert.equal(qTop(4),240)
+ // An expanded card measured at 120 px.
+ const two=treeOf(plan([{id:'a',at:0},{id:'b',at:48}],FIXED24)),open={expanded:new Set(['a'])}
+ assert.equal(L.tableLayout(two,{a:120},1,a,open).byId.get('b')!.top,126)
+ assert.equal(L.tableLayout(two,{a:120},4,a,open).byId.get('b')!.top,192)
+})
+test('RL-03: tableZoomBounds gives the reset scale and the zoom range',()=>{
+ const even=treeOf(rowPlan(20,2)),b=L.tableZoomBounds(even,L.createCalendarAdapter(FIXED24))
+ assert.ok(Math.abs(b.fit-40/48)<1e-12);assert.equal(b.max,60);assert.ok(Math.abs(b.min-18/(8*8640))<1e-15)
+ const s3=L.tableZoomBounds(even,L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:3,zero:0}))
+ assert.ok(Math.abs(s3.fit-40/48)<1e-12);assert.equal(s3.max,180);assert.ok(Math.abs(s3.min-3*18/(8*8640))<1e-15)
+ const single=treeOf(plan([{id:'x',at:D5(1349,6,1),precision:'day'}]))
+ const era=L.createCalendarAdapter(ERA_CAL),sb=L.tableZoomBounds(single,era)
+ assert.equal(sb.fit,18/744);assert.equal(L.railLevel(sb.fit,era),'month')
+ assert.ok(Math.abs(sb.min-18/(8*8784))<1e-15)
+ const based=L.createCalendarAdapter(ERA_CAL,{calendar:ERA_CAL,scale:3,zero:0}),bb=L.tableZoomBounds(single,based)
+ assert.ok(Math.abs(bb.fit-54/744)<1e-15);assert.equal(L.railLevel(bb.fit,based),'month')
+ const un=L.tableZoomBounds(even,L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:1,zero:null}))
+ assert.ok(Math.abs(un.fit-40/48)<1e-12);assert.ok(Math.abs(un.min-un.fit/8)<1e-12);assert.ok(Math.abs(un.max-un.fit*8)<1e-12)
+ const yc:Cal={kind:'years',epoch:'',hoursPerDay:24,daysPerMonth:30,monthsPerYear:12,eras:[]}
+ const yb=L.tableZoomBounds(treeOf(plan([{id:'a',at:0},{id:'b',at:1},{id:'c',at:2}],yc)),L.createCalendarAdapter(yc))
+ assert.ok(Math.abs(yb.fit-40)<1e-12);assert.ok(Math.abs(yb.min-5)<1e-12);assert.ok(Math.abs(yb.max-320)<1e-12)
+ assert.deepEqual(L.tableZoomBounds(treeOf(plan([{id:'a',at:0}],yc)),L.createCalendarAdapter(yc)),{fit:0,min:0,max:0})
+})
+test('RL-04: railText per level, recorded precision, window and narrow rail',()=>{
+ const a=L.createCalendarAdapter(ERA_CAL),d=D5(1349,6,12)
+ assert.equal(RT(a,d,'year','year'),'1349年')
+ assert.equal(RT(a,d,'month','year'),'约1349年6月');assert.equal(RT(a,d,'month','month'),'1349年6月')
+ assert.equal(RT(a,d,'day','year'),'约6月12日');assert.equal(RT(a,d,'day','day'),'6月12日')
+ assert.equal(RT(a,d+15,'half','day'),'约6月12日下午');assert.equal(RT(a,d+9,'half','day'),'约6月12日上午');assert.equal(RT(a,d,'half','day'),'6月12日')
+ assert.equal(RT(a,d,'half','year'),'约6月12日');assert.equal(RT(a,d+14,'half','hour'),'6月12日下午')
+ assert.equal(RT(a,d+14.5,'minute','hour'),'6月12日 14:30');assert.equal(RT(a,d+9,'minute','hour'),'6月12日 09:00')
+ assert.equal(RT(a,d+23+59.7/60,'minute','hour'),'6月12日 23:59')
+ assert.equal(RT(a,d+15,'minute','day'),'约6月12日下午');assert.equal(RT(a,d-1e-5,'minute','day'),'6月12日')
+ assert.equal(RT(a,d+14,'day','hour',{kind:'window'}),'约6月12日')
+ assert.equal(RT(a,d+15,'half','day',{compact:true}),'约12日下午');assert.equal(RT(a,d+14.5,'minute','hour',{compact:true}),'12日 14:30')
+ assert.equal(RT(a,d,'half','year',{compact:true}),'约6月12日');assert.equal(RT(a,d,'day','day',{compact:true}),'6月12日')
+ const f20=L.createCalendarAdapter({...FIXED24,hoursPerDay:20}),v=5*600+11*20
+ assert.equal(RT(f20,v+9,'half','day'),'约6月12日上午');assert.equal(RT(f20,v+10,'half','day'),'约6月12日下午')
+ const plain=L.createCalendarAdapter({...PLAIN_CAL,epoch:'2026-01-01T00:00:00Z'})
+ assert.equal(RT(plain,24*9,'day','day'),'1月10日')
+ assert.equal(RT(a,D4(80000,6,1),'day','era'),'第四纪')
+ assert.equal(a.yearKey(d+5),'1349年');assert.equal(a.yearText(d+5),'第五纪1349年');assert.equal(L.createCalendarAdapter(FIXED24).yearKey(10),'1年')
+})
+test('RL-05: railVisibility drops repeats of the last visible key, keeps the 18 px rule and the selected label',()=>{
+ const vis=(items:L.RailVisibilityItem[])=>L.railVisibility(items)
+ assert.deepEqual(vis([{y:0,text:'1349年',badge:true},{y:22,text:'1349年'}]),[false,false])
+ assert.deepEqual(vis([{y:0,text:'6月1日'},{y:10,text:'6月2日'},{y:30,text:'6月2日'}]),[true,false,true])
+ assert.deepEqual(vis([{y:0,text:'6月'},{y:40,text:'6月',selected:true},{y:80,text:'6月'}]),[true,true,false])
+ assert.deepEqual(vis([{y:0,text:''},{y:40,text:'6月'}]),[false,true])
+ assert.deepEqual(vis([{y:0,text:'约6月1日'},{y:40,text:'6月1日'}]),[true,false])
+ // End to end on a narrow rail: 1月12日下午 and 2月12日下午 share the compact text but not the key.
+ const d=plan([{id:'a',at:11*24+15,precision:'day'},{id:'b',at:11*24+15+720,precision:'day'}],FIXED24),a=L.createCalendarAdapter(FIXED24)
+ assert.equal(L.railLevel(2,a),'half')
+ const lay=L.tableLayout(treeOf(d),{},2,a),m=L.railMarks(lay,lay.segments,a,{level:'half',compact:true})
+ assert.deepEqual(m.labels.map(l=>[l.text,l.visible]),[['约12日下午',true],['约12日下午',true]])
+})
+test('RL-06: railMarks labels and visibility at each level',()=>{
+ const a=L.createCalendarAdapter(FIXED24),tree=treeOf(rowPlan(20,2))
+ const at=(k:number,level:L.RailLevel)=>{const lay=L.tableLayout(tree,{},k,a);return L.railMarks(lay,lay.segments,a,{level}).labels}
+ const days=[...Array.from({length:15},(_,i)=>`1月${1+2*i}日`),...Array.from({length:5},(_,i)=>`2月${1+2*i}日`)]
+ for(const [k,level] of [[40/48,'day'],[80/48,'half']] as const){
+  assert.equal(L.railLevel(k,a),level)
+  const ls=at(k,level);assert.deepEqual(ls.map(l=>l.text),days);assert.ok(ls.every(l=>l.visible&&l.level===level))
+ }
+ assert.equal(L.railLevel(20/48,a),'month')
+ assert.deepEqual(at(20/48,'month').filter(l=>l.visible).map(l=>l.text),['1年1月','1年2月'])
+ assert.equal(L.railLevel(0.8/48,a),'year')
+ assert.deepEqual(at(0.8/48,'year').filter(l=>l.visible),[])
+ const era=L.createCalendarAdapter(ERA_CAL),et=treeOf(plan(Array.from({length:20},(_,i)=>({id:`e${i}`,at:D5(1349,1,1)+i*48,precision:'day'}))))
+ const el=L.tableLayout(et,{},0.01,era),em=L.railMarks(el,el.segments,era,{level:'year'})
+ assert.equal(em.labels[0].text,'1349年');assert.deepEqual(em.labels.filter(l=>l.visible),[])
+})
+test('RL-07: without a level railMarks keeps the old labels; era records keep the era name',()=>{
+ const d=plan([{id:'old',at:D4(80000,6,1),precision:'era'},{id:'o2',at:D4(80000,9,1),precision:'day'},{id:'new',at:D5(1349,1,1),precision:'day'}])
+ const era=L.createCalendarAdapter(ERA_CAL),lay=L.tableLayout(treeOf(d),{},0,era)
+ assert.ok(L.railMarks(lay,lay.segments,era).labels.every(l=>l.level===null))
+ for(const level of ['year','month','day','half','minute'] as const)
+  assert.equal(L.railMarks(lay,lay.segments,era,{level}).labels.find(l=>l.ids.includes('old'))!.text,'第四纪')
+})
+test('TT-01: directory time always shows month and day, 约 when finer than the record, no year under its header',()=>{
+ const a=L.createCalendarAdapter(ERA_CAL),v=D5(1349,6,28)
+ assert.equal(a.treeTime(v,'day',true),'6月28日')
+ assert.equal(a.treeTime(v,'day',false),'1349年6月28日')
+ assert.equal(a.treeTime(v,'month',true),'约6月28日')
+ assert.equal(a.treeTime(v,'year',true),'约6月28日')
+ assert.equal(a.treeTime(v,'year',false),'约1349年6月28日')
+ assert.equal(a.treeTime(v+14+5/60,'hour',true),'6月28日 14:05')
+ assert.equal(a.treeTime(v,'era',true),'第五纪')
+ const f=L.createCalendarAdapter(FIXED24)
+ assert.equal(f.treeTime(3*30*24+4,'day',true),'4月1日')
+ const un=L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:1,zero:null})
+ assert.equal(un.treeTime(100,'day',true),'未映射')
 })

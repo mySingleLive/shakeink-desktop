@@ -5243,6 +5243,43 @@
       "失败的全量用例与修复前基线相同（docs/569 记录）；LP-29、NI-LB07 为负载敏感用例，单独运行通过",
       "未读取正文的响应占用请求名额直到关闭服务（早于本项，docs/569 3R 中1，待用户决定）"
     ]
+  },
+  {
+    "id": "WL-586",
+    "requirement": "世界线事件表视图中时间轴标签不应只显示到年，应根据时间轴缩放程度显示到年、月、日、上午/下午或时分（用户 2026-11-18）；缩放改为按时间拉伸（用户同日选择）",
+    "source": [
+      "docs/586-worldline-table-rail-precision-plan.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/WorldlineToolbar.tsx",
+      "src/components/content/planning/worldline/worldline.module.css",
+      "src/components/content/planning/PlanningWorkspace.tsx"
+    ],
+    "testIds": [
+      "586-RL-01..RL-07",
+      "tests/unit/worldline-layout.test.ts",
+      "586-RL-B1..RL-B5",
+      "tests/browser/planning-worldline-table-rail.test.ts",
+      "WU-19c/WU-19j/WU-45/WU-47b/CP-08（迁移）",
+      "586-E 层 rail-586（真实目标）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "tests/unit/worldline-layout.test.ts 52/52 通过",
+      "tests/browser/planning-worldline-table-rail.test.ts 5/5，planning-worldline-table-scale 与 canvas 合计 24/24 通过",
+      "世界线与卡片菜单浏览器用例 138 项中仅 CM-02/03/06/10 失败，改前 HEAD 同样失败",
+      "全量 npm test 4997 项、43 项失败；失败文件在改前 HEAD（链接生成的 Prisma 客户端后）同样失败，无新增",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/rail-586/<label>/result.json 与截图（构建版应用、隔离根、两份《诡秘之主》第 1 卷导入、无模型调用）：复位为上下午档，放大到时分、缩小到年，档位单调，主段相邻可见标签不重复，年档只剩年徽章，正常退出"
+    ],
+    "verificationLimits": [
+      "档位按整张表统一按 k 选；圆点仍按段内首尾线性插值，实际密度与 k 有偏差（docs/586 已知取舍）",
+      "单个时间间隔拉伸封顶 240px",
+      "一次渲染前多次 Ctrl + 滚轮越过边界可能留下滚动锚点（改前已存在，未处理）",
+      "窄栏 5 位以上年份的月档文字约超出 4px"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

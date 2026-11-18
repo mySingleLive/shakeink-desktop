@@ -65,10 +65,10 @@ import { EventTimeline, TimelineTreeNav, ViewportRange, ViewportValue } from "./
 import { createViewportStore, type ViewportStore } from "@/lib/planning/worldline-viewport";
 import { renderProbe } from "@/lib/planning/render-probe";
 import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
-import { EventTreeNav } from "./worldline/EventTree";
+import { EventTreeNav, TreeResizer } from "./worldline/EventTree";
 import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
 import wl from "./worldline/worldline.module.css";
-import { adapterFor, descendants, dimmedBy, eventTree, matchEvent, searchTerms as toSearchTerms, shiftSelection, ZOOM_MAX, ZOOM_MIN } from "@/lib/planning/worldline-layout";
+import { adapterFor, descendants, dimmedBy, eventTree, matchEvent, searchTerms as toSearchTerms, railLevel, shiftSelection, tableZoomBounds, type RailLevel } from "@/lib/planning/worldline-layout";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS, type MaterialRef } from "@/lib/material-reference";
 import { useDesktopStore } from "@/stores/desktop";
 
@@ -90,6 +90,8 @@ async function read(novelId: string): Promise<View> {
 }
 const uid = () => crypto.randomUUID();
 const EMPTY_CHARACTERS: { id: string; name: string; avatarUrl: string | null }[] = [];
+/** docs/586 §4: the event-table zoom value shows the rail level. */
+const RAIL_LEVEL_NAME: Readonly<Record<RailLevel, string>> = { year: "年", month: "月", day: "日", half: "上下午", minute: "时分" };
 /** docs/577 §9: importance 1–3 as shown to the author. */
 const IMPORTANCE_LABELS = ["一般", "重要", "关键"] as const;
 const buttonTarget = (target: EventTarget | null) =>
@@ -176,8 +178,11 @@ function PlanningWorkspace({
     // docs/577 §12: hits follow the box 120ms after typing stops; clearing is immediate.
     [searchApplied, setSearchApplied] = useState(""),
     [hitIndex, setHitIndex] = useState(0),
-    [tableZoom, setTableZoom] = useState(1),
+    // docs/586 §1: event-table zoom in log scale around the reset scale (0 = reset); never rounded.
+    [tableZoom, setTableZoom] = useState(0),
     [treeOn, setTreeOn] = useState(true),
+    // Dragged event-directory width, shared by both views; null keeps the CSS default (260px, 200px when narrow).
+    [treeWidth, setTreeWidth] = useState<number | null>(null),
     [currentRow, setCurrentRow] = useState<string | null>(null);
   // docs/580 §7.2 / 581 WU-56c: one viewport store per panel is the only window state. PlanningWorkspace does not
   // subscribe to it (a pan never re-renders the workspace); the views, ruler, tree, status line and window-dependent
@@ -263,6 +268,7 @@ function PlanningWorkspace({
       return kept.length === selectionRaw.size ? selectionRaw : new Set(kept);
     }, [selectionRaw, wTree]),
     wAdapter = useMemo(() => adapterFor(data, worldId, timeBase || null), [data, worldId, timeBase]),
+    wZoom = useMemo(() => tableZoomBounds(wTree, wAdapter), [wTree, wAdapter]),
     wTerms = useMemo(() => toSearchTerms(searchApplied), [searchApplied]),
     wCharacters = query.data?.characters ?? EMPTY_CHARACTERS,
     wNames = useMemo(() => new Map(wCharacters.map((c) => [c.id, c.name])), [wCharacters]),
@@ -287,6 +293,16 @@ function PlanningWorkspace({
       onStartTimeDrag: (ev, id) => actions.current.drag(ev, id),
       renderRefs: (e) => actions.current.refs(e),
     }), [data, wAdapter, readonly, eventDraft, wCharacters, wTerms, wFrozen]);
+  // docs/586 §1: event-table scale k = fit × exp(e), e clamped to the bounds of the current tree and calendar.
+  const tableView = useMemo(() => {
+    const { fit, min, max } = wZoom;
+    const lo = fit > 0 ? Math.log(min / fit) : 0,
+      hi = fit > 0 ? Math.log(max / fit) : 0;
+    const clamp = (e: number) => Math.min(hi, Math.max(lo, Number.isFinite(e) ? e : 0));
+    const e = clamp(tableZoom),
+      k = fit * Math.exp(e);
+    return { clamp, k, level: railLevel(k, wAdapter), canIn: e < hi - 1e-9, canOut: e > lo + 1e-9 };
+  }, [wZoom, wAdapter, tableZoom]);
   // Card callbacks are stable (actions ref), so they read the latest selection here.
   selectionRef.current = selection;
   useEffect(() => {
@@ -2523,9 +2539,11 @@ function PlanningWorkspace({
           }
           allExpanded={worldAllEvents.length > 0 && worldAllEvents.every((e) => openCards.has(e.id))}
           onToggleAll={() => { takePendingCollapse(); setOpenCards((v) => (worldAllEvents.length > 0 && worldAllEvents.every((e) => v.has(e.id)) ? new Set() : new Set(worldAllEvents.map((e) => e.id)))); }}
-          zoomLabel={table ? `${Math.round(tableZoom * 100)}%` : <ViewportValue store={viewport.current} render={(w) => `${Math.round(w.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`} />}
+          zoomLabel={table ? (tableView.level ? RAIL_LEVEL_NAME[tableView.level] : "按事件") : <ViewportValue store={viewport.current} render={(w) => `${Math.round(w.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`} />}
+          canZoomIn={tableView.canIn}
+          canZoomOut={tableView.canOut}
           onZoom={(dir) => {
-            if (table) setTableZoom((z) => (dir === 0 ? 1 : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * (dir > 0 ? 1.25 : 0.8) * 100) / 100))));
+            if (table) setTableZoom((e) => (dir === 0 ? 0 : tableView.clamp(tableView.clamp(e) + dir * Math.log(1.25))));
             else if (dir === 0) resetTimeline();
             else setWindowRange((v) => ({ ...v, ...zoomAt(v.start, v.span, dir > 0 ? 1 / 1.5 : 1.5, 0.5) }));
           }}
@@ -2695,7 +2713,7 @@ function PlanningWorkspace({
               renderEventEditor()}
             {table ? (
               <>
-                  <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420 }}>
+                  <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420, ...(treeWidth === null ? {} : { "--tree-w": `${treeWidth}px` }) } as React.CSSProperties}>
                     <EventTreeNav
                       tree={wTree}
                       folded={foldedEvents}
@@ -2706,6 +2724,7 @@ function PlanningWorkspace({
                       onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
                       onLocate={locateWorldEvent}
                     />
+                    <TreeResizer width={treeWidth} onChange={setTreeWidth} />
                     <EventTable
                       tree={wTree}
                       expanded={openCards}
@@ -2714,17 +2733,20 @@ function PlanningWorkspace({
                       editing={eventDraft && worldAllEvents.some((e) => e.id === eventDraft.id) ? eventDraft.id : null}
                       hitId={wHits[hitIndex] ?? null}
                       dimmed={wDimmed}
-                      zoom={tableZoom}
+                      scale={tableView.k}
+                      level={tableView.level}
+                      canZoomIn={tableView.canIn}
+                      canZoomOut={tableView.canOut}
                       periods={allPeriods.map((p) => ({ id: p.id, start: p.start ?? 0, end: p.end }))}
                       onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
-                      onZoom={(z) => setTableZoom(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100)))}
+                      onZoom={(step) => setTableZoom((e) => tableView.clamp(tableView.clamp(e) + step))}
                       onScrollTop={setCurrentRow}
                       scrollerRef={tableScroller}
                     />
                   </div>
               </>
             ) : (
-              <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420 }}>
+              <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420, ...(treeWidth === null ? {} : { "--tree-w": `${treeWidth}px` }) } as React.CSSProperties}>
                 <TimelineTreeNav
                   viewport={viewport.current}
                   tree={wTree}
@@ -2735,6 +2757,7 @@ function PlanningWorkspace({
                   onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
                   onLocate={locateWorldEvent}
                 />
+                <TreeResizer width={treeWidth} onChange={setTreeWidth} />
                 <EventTimeline
                   tree={wTree}
                   viewport={viewport.current}

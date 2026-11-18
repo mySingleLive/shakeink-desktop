@@ -1,7 +1,13 @@
 /* docs/580 §7.1: worldline redesign styles. Only theme variables from globals.css (玄墨 .ink / 宣纸 .paper) and the
  * --event-* type colours; sizes from the approved design v9. No colour literals here (WU-79b). */
 .panel { display: flex; flex-direction: column; min-height: 0; height: 100%; }
-.workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(0, 1fr); border-top: 1px solid var(--border); }
+.workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--tree-w, 260px) minmax(0, 1fr); border-top: 1px solid var(--border); }
+/* The splitter straddles the tree's right border; it stays out of the grid flow. */
+.treeResizer { position: absolute; z-index: 16; top: 0; bottom: 0; left: calc(var(--tree-w, 260px) - 4px); width: 8px; cursor: col-resize; touch-action: none; }
+.treeResizer::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background 0.15s; }
+.treeResizer:hover::after, .treeResizer:focus-visible::after, .treeResizer[data-dragging]::after { background: var(--primary); }
+.treeResizer:focus-visible { outline: none; }
+.workspace.treeOff .treeResizer { display: none; }
 .workspace.treeOff { grid-template-columns: 0 minmax(0, 1fr); }
 .workspace.treeOff .tree { visibility: hidden; padding: 0; border: 0; }
 
@@ -72,8 +78,8 @@
 
 /* ---------- tree ---------- */
 .tree { overflow: auto; padding: 0 10px 40px 0; border-right: 1px solid var(--border); }
-.treeHead { position: sticky; top: 0; z-index: 2; display: flex; align-items: baseline; justify-content: space-between; padding: 12px 4px 8px 6px; background: var(--background); font-size: 12px; color: var(--muted-foreground); }
-.treeRow { position: relative; display: flex; align-items: center; gap: 6px; height: 28px; padding-right: 8px; border-radius: 7px; cursor: pointer; color: var(--muted-foreground); font-size: 13px; }
+.treeHead { position: sticky; top: 0; z-index: 2; box-sizing: border-box; height: 36px; display: flex; align-items: baseline; justify-content: space-between; padding: 12px 4px 8px 6px; background: var(--background); font-size: 12px; color: var(--muted-foreground); }
+.treeRow { position: relative; scroll-margin-top: 64px; display: flex; align-items: center; gap: 6px; height: 28px; padding-right: 8px; border-radius: 7px; cursor: pointer; color: var(--muted-foreground); font-size: 13px; }
 .treeRow:hover { background: var(--hover-wash); color: var(--foreground); }
 .treeRow.current { background: var(--active-wash); color: var(--foreground); }
 .treeRow.selectedRow { color: var(--foreground); font-weight: 600; }
@@ -83,8 +89,10 @@
 .treeTwist.closed { transform: rotate(-90deg); }
 .treeDot { flex: none; border-radius: 50%; background: var(--ec); }
 .treeTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.treeTitle[data-fade] { mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
 .treeTime { flex: none; font-size: 11px; font-variant-numeric: tabular-nums; }
-.treeGroup { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px 6px; font-size: 11px; letter-spacing: 0.1em; color: var(--muted-foreground); }
+/* Year headers stick under the directory head; the next header pushes over the previous one. */
+.treeGroup { position: sticky; top: 36px; z-index: 1; display: flex; align-items: center; gap: 6px; margin: 10px 0 4px; padding: 4px 0 4px 6px; background: var(--background); font-size: 11px; letter-spacing: 0.1em; color: var(--muted-foreground); }
 .treeGroup::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
 /* ---------- card ---------- */
@@ -92,6 +100,8 @@
   background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 13%, var(--card)), var(--card) 46%); transition: border-color 0.15s, opacity 0.15s; }
 .card::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--ec); }
 .card:hover { border-color: color-mix(in srgb, var(--ec) 40%, var(--border)); }
+/* Hovering an event rail dot: its card takes a stronger border and glow so it is easy to find. */
+.card.hot:not(.selected) { border-color: color-mix(in srgb, var(--ec) 70%, var(--border)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ec) 22%, transparent); }
 .card.selected { border-color: color-mix(in srgb, var(--ec) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 14%, transparent); }
 .card.hit { box-shadow: 0 0 0 2px var(--event-scheme); }
 .card.dim { opacity: 0.3; }
@@ -159,22 +169,23 @@
 .scroller { position: relative; min-height: 0; overflow: auto; }
 .rail { position: absolute; left: 0; top: 0; width: 210px; pointer-events: none; }
 .railLine { position: absolute; left: 158px; width: 2px; margin-left: -1px; border-radius: 1px; background: linear-gradient(transparent, var(--input) 18px, var(--input) calc(100% - 18px), transparent); }
-.railDot { --ec: var(--event-other); position: absolute; left: 158px; border-radius: 50%; background: var(--ec); border: 2px solid var(--background); box-shadow: 0 0 0 1.5px var(--ec); pointer-events: auto; cursor: pointer; transform: translate(-50%, -50%); }
+.railDot { --ec: var(--event-other); position: absolute; left: 158px; border-radius: 50%; background: var(--ec); border: 2px solid var(--background); box-shadow: 0 0 0 1.5px var(--ec); pointer-events: auto; cursor: pointer; transform: translate(-50%, -50%); transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s; }
 .railDot.d1 { width: 9px; height: 9px; }
 .railDot.d2 { width: 13px; height: 13px; }
 .railDot.d3 { width: 17px; height: 17px; border-width: 3px; box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 5px color-mix(in srgb, var(--ec) 16%, transparent); }
-.railDot.hot { box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 6px color-mix(in srgb, var(--ec) 18%, transparent); }
+.railDot.hot { box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 6px color-mix(in srgb, var(--ec) 18%, transparent), 0 0 18px var(--ec); }
 .railDot.cluster { width: 18px; height: 18px; border-width: 0; color: var(--background); font-size: 10px; font-weight: 800; line-height: 18px; text-align: center; background: var(--ec); }
 .railDot.dim, .railLabel.dim { opacity: 0.2; }
-.railLabel { position: absolute; right: 66px; transform: translateY(-50%); white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); padding: 1px 7px; border-radius: 5px; }
-.railLabel.hot { color: var(--primary-foreground); background: var(--ec); }
+.railLabel { --ec: var(--event-other); position: absolute; right: 66px; transform: translateY(-50%); white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); padding: 1px 7px; border-radius: 5px; transition: color 0.15s, background 0.15s; }
+/* Design views.css .dlabel.hot: white text on the event type color. */
+.railLabel.hot { color: #fff; background: var(--ec); }
 .railBadge { position: absolute; left: 158px; transform: translate(-50%, -50%); padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; color: var(--primary); background: var(--background); border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--input)); }
 .railTick { position: absolute; left: 150px; width: 8px; height: 1px; background: var(--input); }
 .railTickLabel { position: absolute; right: 66px; transform: translateY(-50%); font-size: 10px; color: var(--muted-foreground); }
 .railBreak { position: absolute; left: 0; width: 210px; display: flex; align-items: center; justify-content: flex-end; padding-right: 66px; font-size: 11px; font-style: italic; color: var(--muted-foreground); }
 .railPeriod { position: absolute; left: 172px; width: 3px; border-radius: 2px; background: var(--chart-2); opacity: 0.7; }
-.lead { fill: none; stroke: color-mix(in srgb, var(--ec) 35%, var(--border)); stroke-width: 1; }
-.lead.hot { stroke: var(--ec); stroke-width: 1.6; }
+.lead { fill: none; stroke: color-mix(in srgb, var(--ec) 35%, var(--border)); stroke-width: 1; transition: stroke 0.15s; }
+.lead.hot { stroke: var(--ec); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--ec)); }
 .lead.child { stroke-dasharray: 3 3; }
 .cards { position: relative; margin-left: 210px; padding: 0 24px 80px 12px; }
 .slot { position: absolute; left: 12px; right: 24px; max-width: 880px; }
@@ -245,22 +256,27 @@
 @keyframes locateFlash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ec) 45%, transparent); } }
 .card[data-flash] { animation: locateFlash 0.6s ease-out 2; }
 @media (prefers-reduced-motion: reduce) { .card[data-flash] { animation: none; } .railDot.d3, .railDot.hot { box-shadow: 0 0 0 1.5px var(--ec); } }
-/* docs/581 WU-44: hovering or selecting a card enlarges its rail dot (the lead already turns 1.6px via .lead.hot). */
-.railDot.hot:not(.cluster) { transform: translate(-50%, -50%) scale(1.35); }
+/* docs/581 WU-44: hovering or selecting a card enlarges its rail dot (design views.css .dot.hot scale 1.45). */
+.railDot.hot:not(.cluster) { transform: translate(-50%, -50%) scale(1.45); }
 @media (prefers-reduced-motion: reduce) { .railDot.hot:not(.cluster) { transform: translate(-50%, -50%); } }
 /* Narrow panels (the content area beside chat is often ~470px). A container cannot query itself, so the panel's
  * root (data-worldline-root, display: contents → given a box here) is the container and the workspace adapts inside:
  * the tree narrows first, then overlays the cards; the table rail narrows so cards keep a usable width. */
 .root { container-type: inline-size; container-name: worldline; display: block; }
 .workspace { position: relative; }
-@container worldline (max-width: 900px) { .workspace:not(.treeOff) { grid-template-columns: 200px minmax(0, 1fr); } }
+@container worldline (max-width: 900px) {
+  .workspace:not(.treeOff) { grid-template-columns: var(--tree-w, 200px) minmax(0, 1fr); }
+  .treeResizer { left: calc(var(--tree-w, 200px) - 4px); }
+}
 @container worldline (max-width: 640px) {
   .workspace:not(.treeOff) { grid-template-columns: 0 minmax(0, 1fr); }
+  .treeResizer { display: none; }
   .workspace:not(.treeOff) .tree { position: absolute; z-index: 15; left: 0; top: 0; bottom: 0; width: 240px; background: var(--background); box-shadow: var(--shadow-2); }
   .rail { width: 120px; }
   .railLine, .railDot, .railBadge { left: 92px; }
   .railTick { left: 84px; }
   .railLabel, .railTickLabel { right: 38px; }
+  .railLabel { padding: 1px 4px; }
   .railBreak { width: 120px; padding-right: 38px; }
   .railPeriod { left: 104px; }
   .cards { margin-left: 120px; padding-right: 10px; }

@@ -106,6 +106,8 @@ export interface EventCardProps {
   event: PlanningEvent;
   expanded: boolean;
   selected: boolean;
+  /** Hovered here or through its rail dot: the card takes its hover border. */
+  hot?: boolean;
   hit: boolean;
   dimmed: boolean;
   editing: boolean;
@@ -141,9 +143,10 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
       {...(p.placed ? { "data-placed": "" } : {})}
       {...(p.selected ? { "data-selected": "" } : {})}
       {...(p.hit ? { "data-hit": "" } : {})}
+      {...(p.hot ? { "data-hot": "" } : {})}
       aria-label={e.title}
       aria-expanded={p.expanded || p.editing}
-      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hit ? s.hit : ""}`}
+      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hot ? s.hot : ""} ${p.hit ? s.hit : ""}`}
       style={{ "--ec": `var(${CATEGORY_VAR[e.category]})` } as React.CSSProperties}
       onPointerDownCapture={(ev) => { press.current = { x: ev.clientX, y: ev.clientY }; }}
       onClick={(ev) => {

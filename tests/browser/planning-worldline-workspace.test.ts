@@ -215,6 +215,40 @@ test("WU-60b: the tree switch hides the tree to width 0 and restores 260px in bo
   }
 }))
 
+test("WU-60d: dragging the tree's right edge resizes it within bounds, survives a view switch and the tree switch; double click resets", () => withWorldline(browser, f60(), async page => {
+  const tree = page.locator('nav[aria-label="事件目录"]')
+  const handle = page.getByRole("separator", { name: "调整事件目录宽度" })
+  const width = async () => Math.round((await tree.boundingBox())!.width)
+  const drag = async (dx: number) => {
+    const b = (await handle.boundingBox())!, x = b.x + b.width / 2, y = b.y + 200
+    await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx / 2, y); await page.mouse.move(x + dx, y); await page.mouse.up()
+  }
+  await tab(page, "事件表")
+  assert.equal(await width(), 260)
+  await drag(120)
+  await expect.poll(width).toBe(380)
+  await expect(handle).toHaveAttribute("aria-valuenow", "380")
+  await tab(page, "时间线")
+  await expect.poll(width).toBe(380)
+  await drag(-1000)
+  await expect.poll(width).toBe(160)
+  await drag(2000)
+  await expect.poll(width).toBe(640)
+  await page.keyboard.press("Escape")
+  await handle.focus()
+  await page.keyboard.press("ArrowLeft")
+  await expect.poll(width).toBe(624)
+  const sw = page.getByRole("button", { name: "显示或隐藏事件目录" })
+  await sw.click()
+  await expect.poll(async () => Math.round((await tree.boundingBox())?.width ?? 0)).toBe(0)
+  await expect(handle).toBeHidden()
+  await sw.click()
+  await expect.poll(width).toBe(624)
+  await handle.dblclick()
+  await expect.poll(width).toBe(260)
+  assert.equal(await page.evaluate(() => (window as any).posts.length), 0)
+}))
+
 test("WU-60c: the tree is role=tree; parents carry aria-expanded; ↑↓ move, ←→ fold, Enter locates", () => withWorldline(browser, f60(), async page => {
   await tab(page, "事件表")
   const tree = page.getByRole("tree", { name: "事件目录" })

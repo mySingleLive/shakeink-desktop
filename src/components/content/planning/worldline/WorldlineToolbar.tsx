@@ -18,6 +18,9 @@ export function WorldlineToolbar(p: {
   onToggleAll(): void;
   zoomLabel: React.ReactNode;
   onZoom(dir: -1 | 1 | 0): void;
+  /** docs/586 §4: event-table zoom bounds (the timeline zoom has none). */
+  canZoomIn?: boolean;
+  canZoomOut?: boolean;
   query: string;
   /** The hits belong to the current box text (577 §12: they follow 120ms after typing stops). */
   applied: boolean;
@@ -57,10 +60,10 @@ export function WorldlineToolbar(p: {
           {p.allExpanded ? <ChevronsDownUp aria-hidden /> : <ChevronsUpDown aria-hidden />}
           <span className={s.lbl}>{p.allExpanded ? "全部收起" : "全部展开"}</span>
         </button>
-        <div className={s.zoom} title={p.view === "timeline" ? "缩放时间轴间距（也可滚轮）" : "缩放时间轴间距（也可 Ctrl + 滚轮）"}>
-          <button type="button" aria-label="缩小" onClick={() => p.onZoom(-1)}><Minus aria-hidden /></button>
+        <div className={s.zoom} title={p.view === "timeline" ? "缩放时间轴间距（也可滚轮）" : "缩放时间轴（也可 Ctrl + 滚轮）"}>
+          <button type="button" aria-label="缩小" disabled={p.view === "table" && p.canZoomOut === false} onClick={() => p.onZoom(-1)}><Minus aria-hidden /></button>
           <span className={s.value} data-zoom-value="">{p.zoomLabel}</span>
-          <button type="button" aria-label="放大" onClick={() => p.onZoom(1)}><Plus aria-hidden /></button>
+          <button type="button" aria-label="放大" disabled={p.view === "table" && p.canZoomIn === false} onClick={() => p.onZoom(1)}><Plus aria-hidden /></button>
           <span className={`${s.div} ${s.hideNarrow1}`} aria-hidden />
           <button type="button" className={`${s.reset} ${s.hideNarrow1}`} onClick={() => p.onZoom(0)}>复位</button>
         </div>
