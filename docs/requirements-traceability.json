@@ -5280,6 +5280,56 @@
       "一次渲染前多次 Ctrl + 滚轮越过边界可能留下滚动锚点（改前已存在，未处理）",
       "窄栏 5 位以上年份的月档文字约超出 4px"
     ]
+  },
+  {
+    "id": "WL-587",
+    "requirement": "导入作品的世界线需补齐事件层次（有关联的事件归到同一父事件下）、事件类型与重要度（用户 2026-11-18，以《诡秘之主》第 1 卷、只选世界线验证）",
+    "source": [
+      "docs/587-worldline-import-hierarchy-plan.md",
+      "docs/587-worldline-import-hierarchy-plan-review.md",
+      "docs/587-worldline-import-hierarchy-code-review.md"
+    ],
+    "implementation": [
+      "desktop/core/novel-import-wizard-grouping.ts",
+      "desktop/main/novel-import.ts",
+      "desktop/service/novel-import-ai.ts",
+      "desktop/core/novel-import-ai-payload.ts",
+      "desktop/service/novel-import-publish.ts",
+      "desktop/core/novel-import-semantics.ts",
+      "desktop/core/novel-import-wizard-state.ts",
+      "desktop/core/novel-import-wizard-checks.ts",
+      "desktop/core/novel-import-wizard-timeline.ts",
+      "desktop/core/novel-import-runtime-proof.ts"
+    ],
+    "testIds": [
+      "587-WG-01..WG-26",
+      "tests/unit/novel-import-worldline-grouping.test.ts",
+      "587-WG-11/WG-12/WG-14",
+      "tests/unit/novel-import-worldline-timeline.test.ts",
+      "587-WG-13/WG-16/WG-30..WG-38",
+      "tests/unit/novel-import-lines-performance.test.ts",
+      "587-WG-20",
+      "tests/integration/novel-import-wizard-publish.test.ts",
+      "587-WG-R1..WG-R4（真实目标）"
+    ],
+    "verificationKind": "IMPORT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-partially-met",
+    "evidence": [
+      "tests/unit/novel-import-worldline-grouping.test.ts 17/17 通过（含 fixed/gregorian 各 5000 组固定种子模糊测试，发布数据均通过 validatePlanning）",
+      "全量 npm test 5027 项、44 项失败，均为改前 HEAD 4d61712 基线失败；LP-30 为负载下的计时用例，14 路并行时 HEAD 与改后均 12/14 失败",
+      "prompt golden --check 通过：只新增 legacy-scene:analyze/grouping/worldline/// 一个键，其余 25 组逐字节不变",
+      "npm run typecheck 与 npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/import-runs/evidence/wg-r1（隔离根、构建版应用、第 1 卷、只选世界线，第一次运行）：保存 1061 个事件，61 个父事件，690 个事件（65%）有父事件，组大小 2–62（中位 9）；类型非“其他” 69%；重要度 1/2/3 为 394/483/184；归组 2 段并行 180 s，无丢弃；第 17 步 13 min（wu91-r2 为 12 min 23 s）",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/587/shots：时间线与事件表显示父事件框与子事件；事件编辑器类型下拉为“揭示”、重要程度“重要”",
+      "20 个组抽查（只看父名与成员名）未见明显错归"
+    ],
+    "verificationLimits": [
+      "“其他”仍占 31%，未达 <20% 目标；未按配额调提示词",
+      "最大两组 62 与 35 个成员，可能合并了多件事",
+      "window 祖先下跨度超过一天的 exact 家族可能差 1 ulp 无法发布（HEAD 同样不能发布，只在第 21 步手工改为 window 时出现）",
+      "worldGrouped.parents 与 precisions 上限 5000，全书导入未验证",
+      "已导入的作品不会自动更新，需重新导入"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

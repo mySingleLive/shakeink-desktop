@@ -37,6 +37,8 @@ export interface ImportWizardState {
  /** docs/570: written when step 17 has placed every inferred event on the one worldline. */
  /** docs/570 4R: chapters without an event were asked once more in this step 17. */
  worldGapsAsked?:true
+ /** docs/587: written when step 17 has grouped and graded the placed events; `parents` are the made parent ids. */
+ worldGrouped?:{groups:number;parents:string[];graded:number;dropped:number}
  worldTimeline?:WorldTimelineState
  lineRepairs?:Partial<Record<'worldline'|'narrative'|'outline',{droppedEvidence:number;droppedLinks:number;droppedEntries?:number;droppedGrades?:number}>>
  touchStash?:{foreshadowKey:string;title:string;content:string;order?:number;touch:{kind:'PLANT'|'MENTION'|'PAYOFF';chapterIndex:number;summary:string;quote:string;eventId?:string;narrativeId?:string}}[]
@@ -81,6 +83,7 @@ export const importWizardStateSchema=z.object({
  verify:z.object({failedPackets:z.array(z.object({unitIds:z.array(text(200)).min(1).max(5000),error:text(400),attempts:index.max(1_000_000)}).strict()).max(5000),repairs:z.array(z.object({conflictId:text(200),attempts:index.max(1_000_000)}).strict()).max(WIZARD_LIMITS.records),fixed:z.array(z.object({label:text(400),field:text(200)}).strict()).max(WIZARD_LIMITS.records),droppedConflicts:index.max(1_000_000),outlineAttempts:index.max(1_000_000),repairable:z.boolean().optional()}).strict().optional(),
  returnStep:z.enum(WIZARD_STEPS).optional(),returnState:stepState.optional(),returnPhase:z.enum(['paused','select','running','conflicts']).optional(),
  worldGapsAsked:z.literal(true).optional(),
+ worldGrouped:z.object({groups:index.max(1_000_000),parents:z.array(text(200).min(1)).max(5000),graded:index.max(1_000_000),dropped:index.max(1_000_000)}).strict().optional(),
  // docs/579 #5: a docs/570 gregorian timeline is upgraded on read (see upgradeLegacyWorldTimeline).
  worldTimeline:z.preprocess(upgradeLegacyWorldTimeline,z.union([z.object({version:z.literal(1),calendar:z.literal('fixed'),epoch:text(40).min(1),events:z.number().int().nonnegative().max(1_000_000)}).strict(),z.object({version:z.literal(1),calendar:z.literal('gregorian'),epoch:text(40).min(1),events:z.number().int().nonnegative().max(1_000_000),eras:z.array(z.object({name:text(40),start:z.number().finite()}).strict()).min(1).max(20).refine(l=>l.every((e,i)=>i===0||e.start>l[i-1].start),'纪元起点必须严格递增'),precisions:z.record(text(200).min(1),z.enum(['day','month','year','era'])).refine(r=>Object.keys(r).length<=5000,'精度记录过多')}).strict()]).optional()),
  lineRepairs:z.object({worldline:lineRepair.optional(),narrative:lineRepair.optional(),outline:lineRepair.extend({droppedEntries:z.number().int().nonnegative().max(1_000_000).optional()}).strict().optional()}).strict().optional(),

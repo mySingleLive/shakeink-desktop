@@ -1,5 +1,6 @@
 import {assertImportChapterVersion,importVolumeGroups} from '../core/novel-import-chapters'
 import {worldlineGradeFromFacts} from '../core/novel-import-worldline-facts'
+import {worldlineFamilyRanges} from '../core/novel-import-wizard-grouping'
 import {verifiedImportStructureVolumeCuts} from '../core/novel-import-structure'
 import {WORLD_TIMELINE_LINE_ID} from '../core/novel-import-wizard-timeline'
 import {sourceTextSummary} from '../core/novel-import-pdf-source-text'
@@ -154,8 +155,10 @@ export async function publishNovelImport(works:Workspaces,input:ImportPublishInp
    // docs/570 §3: the wizard's one worldline carries its calendar; its events are written in time order with day precision on a gregorian calendar.
    const timeline=s.wizardVersion===1?s.wizard?.worldTimeline:undefined,mainLine='import-world-'+WORLD_TIMELINE_LINE_ID
    const worldEventsInOrder=timeline?byKind('worldline').map((a,k)=>({a,k})).sort((x,y)=>{const t=(a:ImportArtifact)=>a.facts.timeKind==='exact'&&a.facts.lineId===WORLD_TIMELINE_LINE_ID?Number(a.facts.timeValue):Number.POSITIVE_INFINITY;return t(x.a)-t(y.a)||x.k-y.k}).map(({a})=>a):byKind('worldline')
+   // docs/587 §6: an exact event with exact or window children covers them all (bottom-up, nextUp-corrected).
+   const families=worldlineFamilyRanges(byKind('worldline').filter(a=>a.facts.timeKind==='exact'||a.facts.timeKind==='window').map(a=>({id:a.id,parentId:a.facts.parentId,timeKind:a.facts.timeKind,timeValue:Number(a.facts.timeValue),...(a.facts.timeKind==='window'?{timeEnd:Number(a.facts.timeEnd)}:{})})))
    for(const a of worldEventsInOrder){
-    const f=a.facts,event=eventMap.get(a.id)!,known=f.timeKind==='exact'||f.timeKind==='window'
+    const f=a.facts,event=eventMap.get(a.id)!,known=f.timeKind==='exact'||f.timeKind==='window',family=families.get(a.id)
     if(a.origin==='inferred'&&(!f.lineId||!f.lineName||!['unknown','exact','window'].includes(f.timeKind)))throw Error('推断世界线缺少结构事实')
     // docs/572: a gregorian timeline carries the novel's eras and a precision per event (day when absent).
     const onMain=!!timeline&&event.line===mainLine,era=onMain&&timeline!.calendar==='gregorian'?timeline!:undefined,precision=era?(era.precisions[a.id]??'day'):'hour' as const
@@ -166,7 +169,7 @@ export async function publishNovelImport(works:Workspaces,input:ImportPublishInp
     }
     const people=list(f.people).map(name=>{const id=typeof name==='string'?characterReference(name):undefined;if(!id)throw Error('世界线角色引用无效');return id})
     const parent=f.parentId?eventMap.get(f.parentId):undefined;if(f.parentId&&!parent)throw Error('世界线父事件引用无效')
-    for(const [part,text] of chunks(nativeText(a),100000).entries()){const fact=text;data.events.push(eventSchema.parse({id:part?event.id+'-part-'+part:event.id,line:event.line,parent:part?event.id:parent?.id,title:continuation(a.name,part),fact,people,...worldlineGradeFromFacts(f),time:{kind:!part&&known?f.timeKind:'unknown',value:!part&&known?Number(f.timeValue):0,end:!part&&f.timeKind==='window'?Number(f.timeEnd):null,precision,label:f.time??''}}))}
+    for(const [part,text] of chunks(nativeText(a),100000).entries()){const fact=text;data.events.push(eventSchema.parse({id:part?event.id+'-part-'+part:event.id,line:event.line,parent:part?event.id:parent?.id,title:continuation(a.name,part),fact,people,...worldlineGradeFromFacts(f),...(!part&&family?{duration:family.duration}:{}),time:{kind:!part&&known?f.timeKind:'unknown',value:!part&&known?(family?family.value:Number(f.timeValue)):0,end:!part&&f.timeKind==='window'?Number(f.timeEnd):null,precision,label:f.time??''}}))}
    }
    const actualChapters=data.chapters
    for(const [i,a] of byKind('narrative').entries()){

@@ -167,9 +167,13 @@ export function outlineTargets(r:Pick<ImportAiRequest,'instruction'>):number[]|u
 }
 /** docs/570: the catalogue JSON that a timeline request carries after its fixed prefix. */
 export function timelineCatalog(r:ImportAiRequest):{id:string;chapterIndex:number;time?:string}[]{const text=r.instruction??'';return (JSON.parse(text.slice(text.indexOf('['))) as [string,number,string,string,string,string][]).map(([id,chapterIndex,,,time])=>({id,chapterIndex,...(time?{time}:{})}))}
+/** docs/587: the rows a grouping request carries after its fixed prefix. */
+export function groupingCatalog(r:ImportAiRequest):[string,string,string,string,string,number][]{const text=r.instruction??'';return JSON.parse(text.slice(text.indexOf('[')))}
 export function linesAi(base:Ai):Ai{return async r=>{
  // docs/570: the step-17 timeline request keeps reading order and gives no dates.
  if(r.phase==='analyze'&&r.intent==='timeline')return {timeline:timelineCatalog(r).map((e,order)=>({id:e.id,order}))}
+ // docs/587: the grouping request makes no group and echoes each event's effective grade, so later payloads keep their bytes.
+ if(r.phase==='analyze'&&r.intent==='grouping')return {groups:[],grades:groupingCatalog(r).map(([key,,,,category,importance])=>[key,category,importance] as [string,string,number])}
  if(r.phase==='analyze'&&!r.intent&&r.kind==='worldline'){const u=r.units[0];return {artifacts:[{id:'ev-'+u.id.replace(/[^0-9a-z]/giu,''),kind:'worldline',name:'事件'+u.start,text:'发生了一件事。',facts:{lineId:'main',lineName:'主线',timeKind:'unknown',people:'[]',reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(0,8)}],sourceUnitIds:[u.id],origin:'inferred'}]}}
  if(r.phase==='analyze'&&!r.intent&&r.kind==='narrative'){const u=r.units[0],event=r.entities?.find(e=>e.kind==='worldline'),chapter=r.chapters!.findIndex(c=>u.start>=c.start&&u.start<c.end);if(!event)return {notFound:true};return {artifacts:[{id:'nar-'+u.id.replace(/[^0-9a-z]/giu,''),kind:'narrative',name:'讲述'+u.start,text:'讲述。',facts:{chapterIndex:String(chapter),order:'0',refs:JSON.stringify([{eventId:event.id,reliability:'客观事实'}]),reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(0,8)}],sourceUnitIds:[u.id],origin:'inferred'}]}}
  if(r.phase==='analyze'&&!r.intent&&r.kind==='outline'){

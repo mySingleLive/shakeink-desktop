@@ -32,8 +32,8 @@ export function worldTimelineCatalog(artifacts:ImportArtifact[],units:ImportUnit
   id:a.id,name:a.name,text:clip(a.text),chapterIndex:chapterOf(at),...(a.facts.time?.trim()?{time:a.facts.time}:{}),...(a.facts.attribution?.trim()?{attribution:a.facts.attribution}:{})}))
 }
 /** Reading-order slices whose JSON fits `budget` characters (at least one entry each). */
-export function worldTimelineSegments(catalog:WorldTimelineEntry[],budget:number,size1:(entry:WorldTimelineEntry)=>number=e=>JSON.stringify(e).length):WorldTimelineEntry[][]{
- const out:WorldTimelineEntry[][]=[];let current:WorldTimelineEntry[]=[],size=2
+export function worldTimelineSegments<T=WorldTimelineEntry>(catalog:T[],budget:number,size1:(entry:T)=>number=e=>JSON.stringify(e).length):T[][]{
+ const out:T[][]=[];let current:T[]=[],size=2
  for(const entry of catalog){const n=size1(entry)+1;if(current.length&&size+n>budget){out.push(current);current=[];size=2}current.push(entry);size+=n}
  if(current.length)out.push(current)
  return out

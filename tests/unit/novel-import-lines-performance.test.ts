@@ -464,3 +464,80 @@ test('WT-39: a chapter left without an event is asked once more on its own befor
   assert.ok(f.requests.indexOf(reasks[0])<f.requests.findIndex(isTimeline),'the order is decided after the re-ask')
  }finally{await f.dispose()}
 })
+
+/* docs/587 WG-30..WG-38: step 17 groups and grades the placed events after the timeline. Synthetic text only. */
+const isGrouping=(r:ImportAiRequest)=>r.phase==='analyze'&&r.intent==='grouping'
+/** Groups the first two catalogue rows and grades the first as 冲突/3. */
+function groupingAi(inner:Ai):Ai{return async r=>{if(!isGrouping(r))return inner(r);const rows=JSON.parse(r.instruction!.slice(r.instruction!.indexOf('['))) as [string][];return {groups:rows.length>1?[{name:'合成父事件',summary:'合成经过。',category:'冲突',importance:2,members:[rows[0][0],rows[1][0]]}]:[],grades:rows.map(([key],k)=>[key,k?'其他':'冲突',k?1:3] as [string,string,number])}}}
+test('WG-30/WG-38: step 17 sends grouping after the timeline; the parent and grades are written once',async()=>{
+ const f=await linesFixture(base=>groupingAi(linesAi(base)))
+ try{
+  await toLines(f);const v=await toStep(f,'narrative').catch(async()=>f.settle());assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)
+  const g=f.requests.filter(isGrouping),t=f.requests.filter(isTimeline);assert.equal(g.length,1);assert.ok(f.requests.indexOf(g[0])>f.requests.indexOf(t.at(-1)!),'after the timeline')
+  assert.deepEqual(g[0].units,[]);assert.deepEqual(g[0].artifacts,[]);assert.equal(g[0].executionLane,undefined)
+  const j=await f.journal(),state=j.wizard!.worldGrouped!;assert.equal(state.parents.length,1);assert.equal(state.groups,1)
+  const parent=j.artifacts.find(a=>a.id===state.parents[0])!;assert.equal(parent.name,'合成父事件');assert.equal(j.artifacts.filter(a=>a.facts.parentId===parent.id).length,2)
+  assert.equal(j.wizard!.worldTimeline!.events,j.artifacts.filter(a=>a.kind==='worldline').length-1,'the timeline counts only the placed events')
+  assert.ok(j.artifacts.some(a=>a.kind==='worldline'&&a.facts.category==='冲突'&&a.facts.importance==='3'))
+  // A later step does not ask again.
+  assert.equal(f.requests.filter(isGrouping).length,1)
+ }finally{await f.dispose()}
+})
+test('WG-31/WG-32: grouping failing twice fails step 17 with the timeline kept; a retry sends only grouping',async()=>{
+ let broken=true
+ const f=await linesFixture(base=>{const inner=groupingAi(linesAi(base));return async r=>{if(isGrouping(r)&&broken)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+ try{
+  await toLines(f);let v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(f.requests.filter(isGrouping).length,2)
+  let j=await f.journal();assert.ok(j.wizard!.worldTimeline,'the timeline stays');assert.equal(j.wizard!.worldGrouped,undefined);assert.ok(!j.artifacts.some(a=>a.facts.parentId))
+  const batches=worldBatches(f),timelines=f.requests.filter(isTimeline).length;broken=false;await f.act('wizard-redetect');v=await toStep(f,'narrative').catch(async()=>f.settle())
+  assert.equal(worldBatches(f),batches);assert.equal(f.requests.filter(isTimeline).length,timelines,'no timeline again');assert.equal(f.requests.filter(isGrouping).length,3)
+  j=await f.journal();assert.equal(j.wizard!.worldGrouped!.parents.length,1);assert.equal(v.wizard!.stepState.worldline,'done')
+ }finally{await f.dispose()}
+})
+test('WG-37: pausing during grouping writes nothing; resuming sends only grouping',async()=>{
+ let hold:(()=>void)|undefined,held=false
+ const f=await linesFixture(base=>{const inner=groupingAi(linesAi(base));return async r=>{if(isGrouping(r)&&!held){held=true;await new Promise<void>(resolve=>{hold=resolve})}return inner(r)}})
+ f.options.cancelAi=async()=>{hold?.()}
+ try{
+  await toLines(f);await until(()=>!!hold);const timelines=f.requests.filter(isTimeline).length
+  await f.act('pause');await f.settle();let j=await f.journal();assert.equal(j.wizard!.worldGrouped,undefined);assert.ok(!j.artifacts.some(a=>a.facts.parentId))
+  await f.act('resume',{consent:true});const v=await toStep(f,'narrative').catch(async()=>f.settle())
+  assert.equal(f.requests.filter(isTimeline).length,timelines);assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)
+  j=await f.journal();assert.equal(j.wizard!.worldGrouped!.parents.length,1)
+ }finally{hold?.();await f.dispose()}
+})
+test('WG-34: retrying the character list clears grouping; step 17 groups again with the same parent id',async()=>{
+ const f=await linesFixture(base=>groupingAi(linesAi(base)))
+ try{
+  await toLines(f);await toStep(f,'verify').catch(async()=>f.settle());let j=await f.journal();const first=j.wizard!.worldGrouped!.parents[0]
+  await f.act('wizard-retry-kind',{kind:'character'});j=await f.journal();assert.equal(j.wizard!.worldGrouped,undefined)
+  await toStep(f,'verify').catch(async()=>f.settle());j=await f.journal();assert.equal(j.wizard!.worldGrouped!.parents[0],first)
+ }finally{await f.dispose()}
+})
+test('WG-35: step-21 review packets leave out made parents',async()=>{
+ const f=await linesFixture(base=>groupingAi(linesAi(base)))
+ try{
+  await toLines(f);await toStep(f,'verify').catch(async()=>f.settle());const j=await f.journal(),parent=j.wizard!.worldGrouped!.parents[0]
+  const reviews=f.requests.filter(r=>r.phase==='review');assert.ok(reviews.length);assert.ok(reviews.every(r=>!r.artifacts.some(a=>a.id===parent)))
+ }finally{await f.dispose()}
+})
+test('WG-13: the controller refuses artifacts or notFound in a grouping reply',async()=>{
+ for(const bad of [{groups:[],grades:[],artifacts:[{id:'x'}]},{notFound:true}]){
+  const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>isGrouping(r)?bad as never:inner(r)})
+  try{await toLines(f);const v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(f.requests.filter(isGrouping).length,2)}finally{await f.dispose()}
+ }
+})
+test('WT-35b/587: every cleanup site that drops the timeline also drops the grouping marker',async()=>{
+ const {readFile}=await import('node:fs/promises'),source=await readFile('desktop/main/novel-import.ts','utf8')
+ const sites=source.split('\n').filter(l=>/delete (w|this\.wizard\(s\))\.worldTimeline/u.test(l)&&/delete (w|this\.wizard\(s\))\.lineRepairs/u.test(l))
+ assert.equal(sites.length,3);assert.ok(sites.every(l=>/delete (w|this\.wizard\(s\))\.worldGrouped/u.test(l)))
+})
+test('WG-16/S5: a grouping reply with drops leaves a step-21 notice; no candidates sends no request',async()=>{
+ const f=await linesFixture(base=>{const inner=groupingAi(linesAi(base));return async r=>{if(!isGrouping(r))return inner(r);const x=await inner(r) as {groups:unknown[];grades:[string,string,number][]};return {...x,grades:[...x.grades,['e999','冲突',1]]} as ImportAiResult}})
+ try{
+  await toLines(f);await toStep(f,'narrative').catch(async()=>f.settle());const j=await f.journal()
+  assert.ok(j.wizard!.worldGrouped!.dropped>=1);assert.ok(j.wizard!.dropped.some(d=>d.kind==='lines'&&d.label==='世界线归组'&&/丢弃/u.test(d.reason)))
+ }finally{await f.dispose()}
+ const g=await linesFixture(base=>{const inner=linesAi(base);return async r=>r.phase==='analyze'&&!r.intent&&r.kind==='worldline'?{notFound:true}:inner(r)})
+ try{await toLines(g);await toStep(g,'narrative').catch(async()=>g.settle());assert.equal(g.requests.filter(isGrouping).length,0)}finally{await g.dispose()}
+})

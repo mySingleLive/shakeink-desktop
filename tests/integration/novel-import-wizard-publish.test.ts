@@ -122,3 +122,25 @@ test('EC-70/EC-71/WT-51b: a calendar reply gives an era worldline with event pre
   assert.deepEqual(planning.periods.map(p=>[p.id,p.title,p.line,p.start,p.end,p.ongoing]),[['import-era-0','青石纪',world.id,world.calendar.eras[0].start,0,false],['import-era-1','赤铜纪',world.id,0,null,true]])
  }finally{await w.f.controller.close();await rm(w.f.root,{recursive:true,force:true})}
 })
+/** docs/587: groups every three neighbouring events under one parent; grades the first event of each group. */
+function groupingEvery3(base:Ai):Ai{return async r=>{
+ if(!(r.phase==='analyze'&&r.intent==='grouping'))return base(r)
+ const rows=JSON.parse(r.instruction!.slice(r.instruction!.indexOf('['))) as [string][],groups=[]
+ for(let i=0;i+1<rows.length;i+=3)groups.push({name:'合成大事'+i,summary:'合成经过'+i+'。',category:'谋划',importance:2,members:rows.slice(i,i+3).map(x=>x[0])})
+ return {groups,grades:rows.map(([key],k)=>[key,k%3?'其他':'揭示',k%3?1:3] as [string,string,number])}
+}}
+test('WG-20/WG-38: grouped events publish as parent and children inside the parent range, with type and importance',{timeout:180000},async()=>{
+ const w=await worldlineWork(f=>groupingEvery3(chapterEvents(linesAi(richAi(f.handler())))))
+ try{
+  const state=w.session.wizard!.worldGrouped!;assert.ok(state.parents.length>=1,JSON.stringify(state))
+  const planning=await works.run(w.workId,async()=>validatePlanning((await prisma.planningDocument.findUnique({where:{novelId:w.novelId}}))!.data))
+  const parents=planning.events.filter(e=>planning.events.some(c=>c.parent===e.id));assert.equal(parents.length,state.parents.length)
+  for(const p of parents){
+   const kids=planning.events.filter(c=>c.parent===p.id);assert.ok(kids.length>=2)
+   assert.equal(p.category,'谋划');assert.ok(p.importance>=Math.max(...kids.map(k=>k.importance)))
+   const end=p.time.value+(p.duration||24);assert.ok(kids.every(k=>k.time.value>=p.time.value&&k.time.value<=end))
+   assert.ok(planning.events.indexOf(p)<Math.min(...kids.map(k=>planning.events.indexOf(k))),'parent before its children')
+  }
+  assert.ok(planning.events.some(e=>e.category==='揭示'&&e.importance===3))
+ }finally{await w.f.controller.close();await rm(w.f.root,{recursive:true,force:true})}
+})

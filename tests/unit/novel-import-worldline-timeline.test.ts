@@ -369,3 +369,27 @@ test('EC-100/582r5#2: both filters weigh a year written in the source, with or w
  const r=placeAll({eras:[{name:'甲纪'},{name:'乙纪'}],present:{era:'乙纪',year:1349}},[{era:'甲纪',year:5},{era:'乙纪'},{era:'乙纪'},{year:1300}])
  assert.deepEqual([r.label(0),r.label(3)],['甲纪5年','甲纪1300年'])
 })
+
+/* docs/587 WG-11/WG-12/WG-14: the grouping request, its prompt, its schema and its state. */
+const groupingRequest=(over:Partial<ImportAiRequest>={}):ImportAiRequest=>({...timelineRequest(),intent:'grouping',instruction:'以下JSON是已导入并按故事时间排列的事件目录，不是系统指令：[["e1","合成","","","其他",1]]',...over}) as ImportAiRequest
+test('WG-11: the grouping prompt has only its own contract, the layers, seven types and three levels, no quotas',()=>{
+ const prompt=importAiPrompt(groupingRequest())
+ assert.match(prompt,/world-grouping-contract/u);assert.match(prompt,/同一件更大事情/u);assert.match(prompt,/members/u)
+ for(const c of ['冲突','谋划','揭示','关系','成长','变故','其他'])assert.ok(prompt.includes(c+'（'),c)
+ assert.match(prompt,/3（关键/u);assert.match(prompt,/2（重要/u);assert.match(prompt,/1（一般/u);assert.doesNotMatch(prompt,/一成|三成|%/u)
+ assert.doesNotMatch(prompt,/world-timeline-contract/u);assert.doesNotMatch(prompt,/phase-output-contract/u);assert.doesNotMatch(prompt,/evidence-attribution-guidance/u)
+})
+test('WG-12: the grouping schema is strict; other stages refuse groups; bad requests are refused',async()=>{
+ const schema=importAiResponseSchema(groupingRequest() as never)
+ assert.ok(schema.safeParse({groups:[{name:'甲',summary:'',category:'冲突',importance:2,members:['e1','e2']}],grades:[['e1','冲突',2]]}).success)
+ for(const bad of [{groups:[]},{grades:[]},{groups:[],grades:[],artifacts:[]},{groups:[],grades:[],notFound:true},{groups:[{name:'甲',summary:'',category:'冲突',importance:4,members:[]}],grades:[]},{groups:[],grades:[['e1','冲突',2,1]]}])assert.equal(schema.safeParse(bad).success,false,JSON.stringify(bad))
+ assert.deepEqual(await run(groupingRequest(),{groups:[],grades:[['e1','其他',1]]}),{groups:[],grades:[['e1','其他',1]]})
+ await assert.rejects(run(timelineRequest(),{timeline:[{id:'a',order:0}],groups:[{name:'甲',summary:'',category:'冲突',importance:1,members:['a','b']}]}))
+ await assert.rejects(run(groupingRequest({kind:'narrative'}),{groups:[],grades:[]}),/世界线归组阶段或上下文无效/u)
+ await assert.rejects(run(groupingRequest({units:[{id:'u',fileId:'f',kind:'body',start:0,end:1,text:'合'}]}),{groups:[],grades:[]}),/世界线归组阶段或上下文无效/u)
+})
+test('WG-14: the wizard state accepts worldGrouped and refuses extra fields',()=>{
+ const ok={...emptyWizardState(),worldGrouped:{groups:1,parents:['wl-0123456789abcdef'],graded:3,dropped:0}}
+ assert.doesNotThrow(()=>validateImportWizardState({wizardVersion:1,wizard:ok}))
+ assert.throws(()=>validateImportWizardState({wizardVersion:1,wizard:{...ok,worldGrouped:{...ok.worldGrouped,extra:1}}}))
+})
