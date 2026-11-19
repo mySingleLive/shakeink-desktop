@@ -68,7 +68,7 @@ import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
 import { EventTreeNav, TreeResizer } from "./worldline/EventTree";
 import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
 import wl from "./worldline/worldline.module.css";
-import { adapterFor, descendants, dimmedBy, eventTree, matchEvent, searchTerms as toSearchTerms, railLevel, shiftSelection, tableZoomBounds, type RailLevel } from "@/lib/planning/worldline-layout";
+import { adapterFor, descendants, eventTree, filterEvents, matchEvent, searchTerms as toSearchTerms, railLevel, shiftSelection, tableZoomBounds, type RailLevel } from "@/lib/planning/worldline-layout";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS, type MaterialRef } from "@/lib/material-reference";
 import { useDesktopStore } from "@/stores/desktop";
 
@@ -174,6 +174,8 @@ function PlanningWorkspace({
     [pinnedCard, setPinnedCard] = useState<string | null>(null),
     [foldedEvents, setFoldedEvents] = useState<ReadonlySet<string>>(new Set()),
     [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<PlanningEvent["category"]>>(new Set()),
+    // docs/591: importance levels switched off in the legend (interface state, never written to the work).
+    [hiddenImportance, setHiddenImportance] = useState<ReadonlySet<number>>(new Set()),
     [searchQuery, setSearchQuery] = useState(""),
     // docs/577 §12: hits follow the box 120ms after typing stops; clearing is immediate.
     [searchApplied, setSearchApplied] = useState(""),
@@ -264,27 +266,39 @@ function PlanningWorkspace({
   // docs/580 §5, §7: worldline redesign derived values (one tree for both views).
   const worldAllEvents = useMemo(() => (mode === "world" ? worldEvents(data, worldId) : []), [mode, data, worldId]),
     wTree = useMemo(() => eventTree(worldAllEvents, data), [worldAllEvents, data]),
+    // docs/591: the tree the views draw. Hidden types and importance levels (with their whole groups) are left out, so
+    // the table, the timeline and the event tree lay out only what is shown. Times still resolve against all of `data`.
+    wViewEvents = useMemo(() => filterEvents(worldAllEvents, { hiddenTypes, hiddenImportance }), [worldAllEvents, hiddenTypes, hiddenImportance]),
+    wViewTree = useMemo(() => (wViewEvents === worldAllEvents ? wTree : eventTree(wViewEvents, data)), [wViewEvents, worldAllEvents, wTree, data]),
+    wFiltered = wViewEvents !== worldAllEvents,
+    wShownIds = useMemo(() => new Set(wViewEvents.map((e) => e.id)), [wViewEvents]),
     // docs/584 R2: ids no longer in this world (deleted, other world) drop out of the selection.
     selection = useMemo<ReadonlySet<string>>(() => {
       const kept = [...selectionRaw].filter((id) => wTree.byId.has(id));
       return kept.length === selectionRaw.size ? selectionRaw : new Set(kept);
     }, [selectionRaw, wTree]),
+    // docs/591 review P0-1: actions on the selection (delete, quote, group drag, count) use only the shown events; the
+    // hidden ones stay selected and come back with the filter.
+    shownSelection = useMemo<ReadonlySet<string>>(() => {
+      if (!wFiltered) return selection;
+      const kept = [...selection].filter((id) => wShownIds.has(id));
+      return kept.length === selection.size ? selection : new Set(kept);
+    }, [selection, wFiltered, wShownIds]),
     wAdapter = useMemo(() => adapterFor(data, worldId, timeBase || null), [data, worldId, timeBase]),
-    wZoom = useMemo(() => tableZoomBounds(wTree, wAdapter), [wTree, wAdapter]),
+    wZoom = useMemo(() => tableZoomBounds(wViewTree, wAdapter), [wViewTree, wAdapter]),
     wTerms = useMemo(() => toSearchTerms(searchApplied), [searchApplied]),
     wCharacters = query.data?.characters ?? EMPTY_CHARACTERS,
     wNames = useMemo(() => new Map(wCharacters.map((c) => [c.id, c.name])), [wCharacters]),
     wHits = useMemo(() => {
       if (!wTerms.length) return [] as string[];
       const ctx = { adapter: wAdapter, names: wNames, data };
-      return [...wTree.byId.values(), ...wTree.pending].filter((n) => matchEvent(n.event, wTerms, ctx)).sort((x, y) => (x.start ?? Infinity) - (y.start ?? Infinity)).map((n) => n.id);
-    }, [wTerms, wTree, wNames, wAdapter, data]),
+      // docs/591: only shown events are hits, so the search never jumps to a hidden card.
+      return [...wViewTree.byId.values(), ...wViewTree.pending].filter((n) => matchEvent(n.event, wTerms, ctx)).sort((x, y) => (x.start ?? Infinity) - (y.start ?? Infinity)).map((n) => n.id);
+    }, [wTerms, wViewTree, wNames, wAdapter, data]),
     wHitSet = useMemo(() => new Set(wHits), [wHits]),
-    wDimmed = useCallback((id: string) => {
-      const e = wTree.byId.get(id)?.event ?? wTree.pending.find((p) => p.id === id)?.event;
-      // A search miss is the complement of the hit set, so the match runs once per query, not once per card.
-      return !!e && (dimmedBy(e, { hidden: hiddenTypes, terms: [], ctx: { adapter: wAdapter, names: wNames } }) || (wTerms.length > 0 && !wHitSet.has(id)));
-    }, [wTree, hiddenTypes, wTerms, wHitSet, wAdapter, wNames]),
+    // A search miss is the complement of the hit set, so the match runs once per query, not once per card. Legend
+    // filters remove events from wViewTree instead of fading them (docs/591).
+    wDimmed = useCallback((id: string) => wTerms.length > 0 && !wHitSet.has(id), [wTerms, wHitSet]),
     wFrozen = useMemo(() => new Set(activeWorld?.fork?.events.map((e) => e.id) ?? []), [activeWorld]),
     wCardContext = useMemo<WorldlineCardContextValue>(() => ({
       data, adapter: wAdapter, readonly, hasDraft: !!eventDraft, characters: wCharacters, searchTerms: wTerms, frozen: wFrozen,
@@ -2035,7 +2049,7 @@ function PlanningWorkspace({
                 setMessage("时间窗口结束不能早于开始。");
                 return;
               }
-              if (await put("events", d)) setEventDraft(null);
+              if (await put("events", d)) { setEventDraft(null); revealEvent(d); }
             }}
           >
             保存事件
@@ -2305,7 +2319,7 @@ function PlanningWorkspace({
     },
     clearSelection() { setSelection(new Set()); setEventSelection(null); },
     deleteSelection() {
-      const ids = [...selection];
+      const ids = [...shownSelection];
       if (!ids.length || readonly || eventDraft) return;
       // Frozen history belongs to the fork source and cannot be deleted here (same rule as the single 删除).
       if (ids.some((x) => wFrozen.has(x))) { setMessage("所选事件中有冻结前史，不能删除"); return; }
@@ -2317,7 +2331,7 @@ function PlanningWorkspace({
       const e = findWorldEvent(id);
       if (!e) return;
       if (action === "quoteSelection") {
-        const chosen = [...selection].map((x) => wTree.byId.get(x)).filter((n): n is NonNullable<typeof n> => !!n)
+        const chosen = [...shownSelection].map((x) => wTree.byId.get(x)).filter((n): n is NonNullable<typeof n> => !!n)
           .sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity));
         quotePlanning(chosen.map((n) => [n.event.title, `${worldId}/${n.id}`] as const), "世界事件");
         return;
@@ -2325,21 +2339,22 @@ function PlanningWorkspace({
       if (action === "deleteSelection") { actions.current.deleteSelection(); return; }
       if (action === "quote") quotePlanning(e.title, `${worldId}/${e.id}`, "世界事件");
       else if (action === "detail") setDialog({ kind: "event-detail", id: e.id });
-      else if (action === "edit") setEventDraft(structuredClone(e));
+      else if (action === "edit") { revealEvent(e); setEventDraft(structuredClone(e)); }
       else if (action === "copy") void put("events", { ...e, id: uid(), title: `${e.title} · 副本` });
       else if (action === "delete") setDialog({ kind: "delete-event", id: e.id });
       else if (action === "fork") setDialog({ kind: "fork", id: e.id });
       else if (action === "newChild")
         setEventDraft(eventSchema.parse({ id: uid(), line: worldId, parent: e.id, title: "未命名事件", time: { anchor: e.id, kind: "unknown" } }));
       else if (action === "locateChildren") {
-        const first = wTree.byId.get(e.id)?.children[0];
+        // docs/591 code review 2: the first shown child (a hidden child would clear the filter).
+        const first = wViewTree.byId.get(e.id)?.children[0];
         setFoldedEvents((v) => { const n = new Set(v); n.delete(e.id); return n; });
         if (first) locateWorldEvent(first.id);
       }
     },
     drag(ev, id) {
       // docs/584 A3: a title drag on a card of a ≥ 2 selection moves the whole selection.
-      if (selection.size >= 2 && selection.has(id)) startTimeDrag(ev, "events", id, "move", [...selection]);
+      if (shownSelection.size >= 2 && shownSelection.has(id)) startTimeDrag(ev, "events", id, "move", [...shownSelection]);
       else startTimeDrag(ev, "events", id, "move");
     },
     refs(e) { return eventReferences(e); },
@@ -2355,6 +2370,7 @@ function PlanningWorkspace({
     setTimeout(() => el.removeAttribute("data-flash"), 1200);
   }
   function locateWorldEvent(id: string) {
+    revealEvent(wTree.byId.get(id)?.event ?? wTree.pending.find((p) => p.id === id)?.event);
     setEventSelection(id);
     if (narrowPanel.current) setTreeOn(false);
     setFoldedEvents((v) => {
@@ -2384,6 +2400,22 @@ function PlanningWorkspace({
       flashCard(sc, id);
     }));
   }
+  // docs/591 review P0-2: the hit list changes with the filter, so the position starts again at the first hit.
+  useEffect(() => { setHitIndex(0); }, [hiddenTypes, hiddenImportance]);
+  // docs/591 review P0-3/P1-4: an event that is edited, saved, created or located while its type or importance is
+  // hidden would vanish; the filter is cleared and the user is told, so it stays on screen.
+  const showAllTypes = () => { setHiddenTypes(new Set()); setHiddenImportance(new Set()); };
+  /** True when `e` (as it is now, or as it will be saved) is left out by the legend filter, its group included. */
+  const filteredOut = (e: PlanningEvent) => wFiltered && filterEvents([...worldAllEvents.filter((x) => x.id !== e.id), e], { hiddenTypes, hiddenImportance }).every((x) => x.id !== e.id);
+  const revealEvent = (e: PlanningEvent | undefined) => {
+    if (!e || !filteredOut(e)) return;
+    // docs/591 code review 4: only the types and levels of the event and its ancestors are shown again.
+    const chain: PlanningEvent[] = [], seen = new Set<string>();
+    for (let x: PlanningEvent | undefined = e; x && !seen.has(x.id); x = x.parent ? worldAllEvents.find((y) => y.id === x!.parent) : undefined) { seen.add(x.id); chain.push(x); }
+    setHiddenTypes((v) => { const n = new Set(v); for (const x of chain) n.delete(x.category); return n; });
+    setHiddenImportance((v) => { const n = new Set(v); for (const x of chain) n.delete(x.importance); return n; });
+    setMessage("已显示该事件所属的类型和重要度");
+  };
   useEffect(() => {
     const id = pendingLocate.current;
     if (!id || !wTree.byId.has(id)) return;
@@ -2396,7 +2428,8 @@ function PlanningWorkspace({
     const labelTime = worldTimeLabel;
     const fork = activeWorld?.fork;
     const forkChanged = forkChangedCount(data, worldId);
-    const events = worldEvents(data, worldId).filter(
+    // docs/591 review P1-5: pending, continuing, 复位/全貌 and change lanes count only the shown events.
+    const events = wViewEvents.filter(
         (e) => e.parent === eventParent,
       ),
       placed = events.filter((e) => resolveTime(data, e).start !== null),
@@ -2518,7 +2551,7 @@ function PlanningWorkspace({
                 }
                 const p = allPeriods.find((x) => x.id === e.target.value);
                 if (!p) return;
-                const inside = worldAllEvents.filter((x) => { const t = wTree.byId.get(x.id)?.start; return t != null && t >= p.start && (p.end === null || t <= p.end) }).sort((x, y) => (wTree.byId.get(x.id)!.start! - wTree.byId.get(y.id)!.start!));
+                const inside = wViewEvents.filter((x) => { const t = wTree.byId.get(x.id)?.start; return t != null && t >= p.start && (p.end === null || t <= p.end) }).sort((x, y) => (wTree.byId.get(x.id)!.start! - wTree.byId.get(y.id)!.start!));
                 if (table && inside[0]) locateWorldEvent(inside[0].id);
                 else setWindowRange({ start: p.start - 2, span: Math.max(24, ((p.end ?? p.start + 24) - p.start) * 1.2), y: 0 });
                 setMessage(`已定位到时期「${p.title}」· ${inside.length} 件事件`);
@@ -2529,7 +2562,7 @@ function PlanningWorkspace({
               {allPeriods.map((p) => {
                 // docs/577 §9 / 581 WU-40c: swatch, range and event count; periods inside another one are indented.
                 const nested = allPeriods.some((o) => o.id !== p.id && o.start <= p.start && (o.end === null || (p.end !== null && p.end <= o.end)) && !(o.start === p.start && o.end === p.end));
-                const count = worldAllEvents.filter((x) => { const s = wTree.byId.get(x.id)?.start; return s != null && s >= p.start && (p.end === null || s <= p.end) }).length;
+                const count = wViewEvents.filter((x) => { const s = wTree.byId.get(x.id)?.start; return s != null && s >= p.start && (p.end === null || s <= p.end) }).length;
                 const color = `var(--chart-${([...p.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 5) + 1})`;
                 return (
                   <option key={p.id} value={p.id} style={{ color }}>
@@ -2552,7 +2585,7 @@ function PlanningWorkspace({
           query={searchQuery}
           applied={searchApplied === searchQuery}
           onQuery={(q) => { setSearchQuery(q); setHitIndex(0); }}
-          hitIndex={hitIndex}
+          hitIndex={wHits.length ? Math.min(hitIndex, wHits.length - 1) : 0}
           hitCount={wHits.length}
           onStep={(dir) => {
             if (!wHits.length) return;
@@ -2605,9 +2638,13 @@ function PlanningWorkspace({
             hidden={hiddenTypes}
             onToggle={(c) => setHiddenTypes((v) => { const n = new Set(v); if (n.has(c)) n.delete(c); else n.add(c); return n; })}
             onSolo={(c) => setHiddenTypes(new Set(EVENT_CATEGORIES.filter((x) => x !== c)))}
+            hiddenImportance={hiddenImportance}
+            onToggleImportance={(i) => setHiddenImportance((v) => { const n = new Set(v); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
             range={<ViewportRange store={viewport.current} label={labelTime} />}
             total={worldAllEvents.length}
-            selected={table ? 0 : selection.size}
+            selected={table ? 0 : shownSelection.size}
+            shown={wFiltered ? wViewEvents.length : undefined}
+            onShowAll={showAllTypes}
           />
         )}
         {fork && (
@@ -2711,13 +2748,13 @@ function PlanningWorkspace({
               </section>
             )}
             {eventDraft &&
-              !worldEvents(data, worldId).some((e) => e.id === eventDraft.id) &&
+              (!worldEvents(data, worldId).some((e) => e.id === eventDraft.id) || (wFiltered && !wShownIds.has(eventDraft.id))) &&
               renderEventEditor()}
             {table ? (
               <>
                   <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420, ...(treeWidth === null ? {} : { "--tree-w": `${treeWidth}px` }) } as React.CSSProperties}>
                     <EventTreeNav
-                      tree={wTree}
+                      tree={wViewTree}
                       folded={foldedEvents}
                       selected={eventSelection}
                       current={currentRow}
@@ -2728,7 +2765,8 @@ function PlanningWorkspace({
                     />
                     <TreeResizer width={treeWidth} onChange={setTreeWidth} />
                     <EventTable
-                      tree={wTree}
+                      tree={wViewTree}
+                      emptyText={wFiltered && !wViewEvents.length ? "筛选后没有事件" : undefined}
                       expanded={openCards}
                       folded={foldedEvents}
                       selected={eventSelection}
@@ -2753,7 +2791,7 @@ function PlanningWorkspace({
               <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420, ...(treeWidth === null ? {} : { "--tree-w": `${treeWidth}px` }) } as React.CSSProperties}>
                 <TimelineTreeNav
                   viewport={viewport.current}
-                  tree={wTree}
+                  tree={wViewTree}
                   folded={foldedEvents}
                   selected={eventSelection}
                   current={currentRow}
@@ -2763,7 +2801,8 @@ function PlanningWorkspace({
                 />
                 <TreeResizer width={treeWidth} onChange={setTreeWidth} />
                 <EventTimeline
-                  tree={wTree}
+                  tree={wViewTree}
+                  emptyText={wFiltered && !wViewTree.roots.length ? "筛选后没有已定位事件" : undefined}
                   viewport={viewport.current}
                   expanded={openCards}
                   folded={foldedEvents}
@@ -2824,7 +2863,7 @@ function PlanningWorkspace({
                     })),
                   }))}
                   onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
-                  selection={selection}
+                  selection={shownSelection}
                   onBoxSelect={(ids, additive) => actions.current.boxSelect(ids, additive)}
                   onClearSelection={() => actions.current.clearSelection()}
                   onDeleteSelection={() => actions.current.deleteSelection()}

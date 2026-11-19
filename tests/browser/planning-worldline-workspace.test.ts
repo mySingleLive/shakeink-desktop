@@ -41,6 +41,7 @@ test("WU-09e: interface state never writes to the work", () => withWorldline(bro
   for (let i = 0; i < 6; i++) await page.getByRole("button", { name: "放大" }).click()
   await search(page).fill("码头")
   await page.locator('[data-legend-type="冲突"]').click()
+  await page.locator('[data-legend-importance="2"]').click()
   await page.waitForTimeout(300)
   assert.equal(await page.evaluate(() => (window as any).posts.length), 0)
   assert.equal(await page.evaluate(() => (window as any).planningState().version), 1)
@@ -61,12 +62,12 @@ test("WU-32: a double click edits in place; the card stays expanded after save a
   await expect(c).toHaveAttribute("aria-expanded", "true")
 }))
 
-test("WU-34b: a hidden type and a search miss are both dimmed", () => withWorldline(browser, f60(), async page => {
+test("WU-34b: a hidden type is not drawn (docs/591); a search miss is dimmed", () => withWorldline(browser, f60(), async page => {
   await tab(page, "事件表")
   await page.locator('[data-legend-type="冲突"]').click()
   await search(page).fill("星图")
   const op = (t: string) => tableCard(page, t).evaluate(e => Number(getComputedStyle(e).opacity))
-  await expect.poll(() => op("巡夜队封锁北区码头")).toBeLessThanOrEqual(0.35)
+  await expect(tableCard(page, "巡夜队封锁北区码头")).toHaveCount(0)
   await expect.poll(() => op("钟楼守夜人在雾夜失踪")).toBeLessThanOrEqual(0.35)
   await expect.poll(() => op("学徒在旧书中发现星图")).toBeGreaterThan(0.9)
 }))
@@ -403,4 +404,70 @@ test("WU-79: a child outside its parent's range shows the range error; the windo
   const r = (await mm.boundingBox())!
   await page.mouse.click(r.x + 4, r.y + r.height / 2)
   await expect(page.locator("[data-range]")).toContainText(/前|-/)
+}))
+
+/* docs/591 review: actions and counts follow what the legend leaves shown. */
+const timelineCard = (page: Page, title: string) => page.locator(`[data-timeline-plane] [data-event-card][aria-label="${title}"]`)
+test("LF-B5: hidden events stay selected but are left out of the count and of selection actions", () => withWorldline(browser, f60(), async page => {
+  await expect(timelineCard(page, "学徒在旧书中发现星图")).toHaveCount(1)
+  await timelineCard(page, "学徒在旧书中发现星图").locator("h3").click()
+  await timelineCard(page, "巡夜队封锁北区码头").locator("h3").click({ modifiers: ["Meta"] })
+  await expect(page.locator("[data-selection-count]")).toHaveText("已选 2 个事件")
+  await page.locator('[data-legend-type="冲突"]').click()
+  // One selected event is shown, so no multi-selection count.
+  await expect(page.locator("[data-selection-count]")).toHaveCount(0)
+  await page.locator('[data-legend-type="冲突"]').click()
+  await expect(page.locator("[data-selection-count]")).toHaveText("已选 2 个事件")
+  // Delete acts only on the shown ones: with 冲突 hidden the key opens the single-event dialog for the visible card.
+  await page.locator('[data-legend-type="冲突"]').click()
+  // The key works while the timeline has focus (the legend click moved it away).
+  await page.getByRole("region", { name: "世界时间线" }).or(page.locator('[aria-label="世界时间线"]')).first().focus()
+  await page.keyboard.press("Backspace")
+  const dialog = page.getByRole("dialog", { name: "删除事件" })
+  // The single-event dialog, not the batch one for both selected events.
+  await expect(dialog).toContainText("删除该事件")
+  await page.keyboard.press("Escape")
+}, { controller: true }))
+test("LF-B6: the filter count shows shown / total with a 显示全部 button; the search position restarts on a filter change", () => withWorldline(browser, f60(), async page => {
+  await tab(page, "事件表")
+  await expect(page.locator("[data-filter-count]")).toHaveCount(0)
+  await search(page).fill("码头")
+  await expect(page.getByText(/^1 \/ \d+$/)).toBeVisible()
+  await search(page).press("Enter");await search(page).press("Enter")
+  await expect(page.getByText(/^3 \/ \d+$/)).toBeVisible()
+  await page.locator('[data-legend-type="谋划"]').click()
+  await expect(page.locator("[data-filter-count]")).toContainText(/^显示 \d+ \/ 共 \d+ 件事件/)
+  await expect(page.getByText(/^1 \/ \d+$/)).toBeVisible()
+  await page.locator("[data-show-all]").click()
+  await expect(page.locator("[data-filter-count]")).toHaveCount(0)
+  await expect(page.locator('[data-legend-importance="1"]')).toHaveAttribute("aria-pressed", "true")
+}))
+test("LF-B7: editing a hidden event or saving one into a hidden type shows all types again, so it never vanishes", () => withWorldline(browser, f60(), async page => {
+  await tab(page, "事件表")
+  await page.locator('[data-legend-type="其他"]').click()
+  await page.getByRole("button", { name: "＋ 事件" }).click()
+  await page.getByRole("button", { name: "保存事件", exact: true }).click()
+  await expect.poll(() => page.evaluate(() => (window as any).posts.length)).toBe(1)
+  await expect(page.locator('[data-legend-type="其他"]')).toHaveAttribute("aria-pressed", "true")
+  await expect(tableCard(page, "未命名事件")).toHaveCount(1)
+  await expect(page.getByText("已显示该事件所属的类型和重要度")).toBeVisible()
+}))
+test("LF-B7b: revealing an event shows only its own type and level again; other hidden filters stay", () => withWorldline(browser, f60(), async page => {
+  await tab(page, "事件表")
+  const c = tableCard(page, "学徒在旧书中发现星图")
+  await c.locator("[data-card-title]").click()
+  await page.locator('[data-legend-type="冲突"]').click()
+  // Editing is opened from the detail-less path: hide 揭示 while the card is open, then edit it from the editor fallback.
+  await c.locator("h3").dblclick()
+  await expect(page.getByRole("button", { name: "保存事件", exact: true })).toBeVisible()
+  await page.locator('[data-legend-type="揭示"]').click()
+  await expect(page.getByRole("button", { name: "保存事件", exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "保存事件", exact: true }).click()
+  await expect(page.locator('[data-legend-type="揭示"]')).toHaveAttribute("aria-pressed", "true")
+  await expect(page.locator('[data-legend-type="冲突"]')).toHaveAttribute("aria-pressed", "false")
+}))
+test("LF-B8: when the filter leaves nothing placed the timeline says so", () => withWorldline(browser, f60(), async page => {
+  for (const i of ["1", "2", "3"]) await page.locator(`[data-legend-importance="${i}"]`).click()
+  await expect(page.getByText("筛选后没有已定位事件")).toBeVisible()
+  await expect(page.locator("[data-filter-count]")).toContainText("显示 0 / 共")
 }))

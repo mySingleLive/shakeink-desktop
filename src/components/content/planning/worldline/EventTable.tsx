@@ -36,6 +36,7 @@ export function EventTable({
   onZoom,
   onScrollTop,
   scrollerRef,
+  emptyText,
 }: {
   tree: EventTree;
   expanded: ReadonlySet<string>;
@@ -59,6 +60,8 @@ export function EventTable({
   onZoom(stepLog: number, anchor: { id: string; offset: number } | null): void;
   onScrollTop(firstVisibleId: string | null): void;
   scrollerRef: React.RefObject<HTMLDivElement | null>;
+  /** docs/591: shown over the table when the legend filter leaves no event. */
+  emptyText?: string;
 }) {
   const ctx = useContext(WorldlineCardContext)!;
   const [heights, setHeights] = useState<Record<string, number>>({});
@@ -283,6 +286,7 @@ export function EventTable({
       <div aria-hidden style={{ height: TABLE_TOP }} />
       {/* Bottom room of at least 2/3 of the viewport, so locate can bring the last card to the upper third (WU-62). */}
       <div data-event-table="" {...(virtual ? { "data-virtual": "" } : {})} style={{ position: "relative", height: `calc(${layout.height}px + max(80px, 67%))` }}>
+        {emptyText && <p data-filter-empty="" className={s.emptyNote}>{emptyText}</p>}
         <div
           className={s.rail}
           style={{ height: layout.height }}

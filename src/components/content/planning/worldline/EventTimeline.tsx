@@ -90,6 +90,7 @@ export function EventTimeline({
   hitId,
   dimmed,
   pinned,
+  emptyText,
   periods,
   lanes = EMPTY_LANES,
   timeDrag,
@@ -110,6 +111,8 @@ export function EventTimeline({
   hitId: string | null;
   dimmed: (id: string) => boolean;
   pinned: string | null;
+  /** docs/591: the note shown when the (filtered) tree has no placed event. */
+  emptyText?: string;
   periods: readonly TimelinePeriod[];
   /** Character-change lanes under the families (显示角色变化); each item is drawn at its time. */
   lanes?: readonly TimelineLaneGroup[];
@@ -618,7 +621,7 @@ export function EventTimeline({
           ))}
         </div>
         {rect && <div data-select-rect="" className={s.selectRect} style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
-        {!tree.roots.length && <p className={s.emptyNote}>当前世界线还没有已定位事件。添加事件，或为待定位事件设置时间。</p>}
+        {!tree.roots.length && <p className={s.emptyNote}>{emptyText ?? "当前世界线还没有已定位事件。添加事件，或为待定位事件设置时间。"}</p>}
         {emptyView && (
           <div data-empty-view="" className={s.emptyView}>
             视图内没有事件

@@ -1642,12 +1642,38 @@ export function matchEvent(e: PlanningEvent, terms: readonly string[], ctx: Matc
   return terms.every((t) => hay.includes(t.toLowerCase()));
 }
 export interface DimFilter {
-  /** Categories hidden in the legend. */
-  hidden: ReadonlySet<EventCategory>;
   terms: readonly string[];
   ctx: MatchContext;
 }
-/** Hidden by the legend, or missed by a non-empty search: either one fades the event (M7). */
+/** Missed by a non-empty search fades the event (M7). Legend filters remove events instead (docs/591). */
 export function dimmedBy(e: PlanningEvent, filter: DimFilter): boolean {
-  return filter.hidden.has(e.category) || (filter.terms.length > 0 && !matchEvent(e, filter.terms, filter.ctx));
+  return filter.terms.length > 0 && !matchEvent(e, filter.terms, filter.ctx);
+}
+/** docs/591: types and importance levels switched off in the legend. */
+export interface EventFilter {
+  hiddenTypes: ReadonlySet<EventCategory>;
+  hiddenImportance: ReadonlySet<number>;
+}
+/** docs/591: drops events of a hidden type or importance, with all their descendants (a hidden parent hides its whole
+ * group). With nothing hidden the same array is returned. A parent chain that loops or leaves the list ends the walk. */
+export function filterEvents(events: readonly PlanningEvent[], filter: EventFilter): readonly PlanningEvent[] {
+  if (!filter.hiddenTypes.size && !filter.hiddenImportance.size) return events;
+  const byId = new Map(events.map((e) => [e.id, e]));
+  const off = (e: PlanningEvent) => filter.hiddenTypes.has(e.category) || filter.hiddenImportance.has(e.importance);
+  const hidden = new Map<string, boolean>();
+  const isHidden = (e: PlanningEvent): boolean => {
+    const known = hidden.get(e.id);
+    if (known !== undefined) return known;
+    const seen = new Set<string>();
+    let out = false;
+    for (let p: PlanningEvent | undefined = e; p && !seen.has(p.id); p = p.parent && p.parent !== p.id ? byId.get(p.parent) : undefined) {
+      seen.add(p.id);
+      const cached = hidden.get(p.id);
+      if (cached !== undefined) { out = cached; break; }
+      if (off(p)) { out = true; break; }
+    }
+    hidden.set(e.id, out);
+    return out;
+  };
+  return events.filter((e) => !isHidden(e));
 }

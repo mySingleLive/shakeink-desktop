@@ -527,17 +527,47 @@ test('WU-21: matchEvent needs every term somewhere in the title, fact, names, ty
  assert.equal(L.matchEvent(ev('a'),[],ctx),true,'no terms match everything')
 })
 
-test('WU-21b: dimmedBy fades events hidden by type or missed by the search (either one)',()=>{
+test('WU-21b: dimmedBy fades only events missed by the search (docs/591: hidden types are filtered out, not faded)',()=>{
  const d=plan([
   {id:'fight',at:0,title:'码头冲突',category:'冲突'},{id:'deal',at:24,title:'码头交易',category:'谋划'},
   {id:'walk',at:48,title:'街头散步',category:'其他'},{id:'fightFar',at:72,title:'山顶对决',category:'冲突'},
  ],FIXED24)
  const ctx:L.MatchContext={adapter:L.createCalendarAdapter(FIXED24),names:new Map()}
- const filter:L.DimFilter={hidden:new Set(['冲突']),terms:L.searchTerms('码头'),ctx}
+ const filter:L.DimFilter={terms:L.searchTerms('码头'),ctx}
  const dim=Object.fromEntries(d.events.map(e=>[e.id,L.dimmedBy(e,filter)]))
- assert.deepEqual(dim,{fight:true,deal:false,walk:true,fightFar:true})
- assert.equal(L.dimmedBy(d.events[0],{hidden:new Set(),terms:[],ctx}),false)
- assert.equal(L.dimmedBy(d.events[2],{hidden:new Set(['冲突']),terms:[],ctx}),false)
+ assert.deepEqual(dim,{fight:false,deal:false,walk:true,fightFar:true})
+ assert.equal(L.dimmedBy(d.events[0],{terms:[],ctx}),false)
+})
+
+/* docs/591 LF-01..LF-04: the legend filters events out of the views (type and importance). */
+test('LF-01: with nothing hidden filterEvents returns the same array',()=>{
+ const d=plan([{id:'a',at:0},{id:'b',at:24}],FIXED24)
+ assert.equal(L.filterEvents(d.events,{hiddenTypes:new Set(),hiddenImportance:new Set()}),d.events)
+})
+test('LF-02: hidden types and hidden importance both drop events, together or alone',()=>{
+ const d=plan([{id:'f1',at:0,category:'冲突',importance:1},{id:'f3',at:1,category:'冲突',importance:3},{id:'r1',at:2,category:'揭示',importance:1},{id:'r2',at:3,category:'揭示',importance:2}],FIXED24)
+ const ids=(t:string[],i:number[])=>L.filterEvents(d.events,{hiddenTypes:new Set(t) as Set<never>,hiddenImportance:new Set(i)}).map(e=>e.id)
+ assert.deepEqual(ids(['冲突'],[]),['r1','r2']);assert.deepEqual(ids([],[1]),['f3','r2']);assert.deepEqual(ids(['冲突'],[1]),['r2'])
+})
+test('LF-03: a hidden parent hides its whole group; a hidden child leaves the parent',()=>{
+ const d=plan([{id:'p',at:0,category:'冲突'},{id:'c',at:1,parent:'p',category:'揭示'},{id:'g',at:2,parent:'c',category:'揭示'},{id:'q',at:3,category:'揭示'},{id:'k',at:4,parent:'q',category:'冲突'}],FIXED24)
+ assert.deepEqual(L.filterEvents(d.events,{hiddenTypes:new Set(['冲突']),hiddenImportance:new Set()}).map(e=>e.id),['q'])
+})
+test('LF-04: a parent loop or a missing parent does not hang; such an event is judged on its own',()=>{
+ const d=plan([{id:'a',at:0,parent:'b',category:'揭示'},{id:'b',at:1,parent:'a',category:'揭示'},{id:'o',at:2,parent:'gone',category:'揭示'},{id:'x',at:3,parent:'a',category:'冲突'}],FIXED24)
+ assert.deepEqual(L.filterEvents(d.events,{hiddenTypes:new Set(['冲突']),hiddenImportance:new Set()}).map(e=>e.id),['a','b','o'])
+})
+
+test('LF-05: an event anchored to a hidden event keeps its start in the filtered tree',()=>{
+ const anchored={id:'B',line:'w',title:'B',fact:'',parent:null,category:'揭示',importance:1,people:[],ongoing:false,duration:0,time:{kind:'exact',value:10,end:null,precision:'hour',label:'',anchor:'A',boundary:'start'}}
+ const base=plan([{id:'A',at:100,category:'冲突'}],FIXED24),d=planningSchema.parse({...base,events:[...base.events,anchored]})
+ const shown=L.filterEvents(d.events,{hiddenTypes:new Set(['冲突']),hiddenImportance:new Set()})
+ assert.deepEqual(shown.map(e=>e.id),['B'])
+ assert.equal(L.eventTree(shown,d).byId.get('B')!.start,L.eventTree(d.events,d).byId.get('B')!.start)
+})
+test('LF-06: a hidden placed parent also hides its pending child',()=>{
+ const d=plan([{id:'p',at:0,category:'冲突'},{id:'c',at:null,parent:'p',category:'揭示'}],FIXED24)
+ assert.deepEqual(L.filterEvents(d.events,{hiddenTypes:new Set(['冲突']),hiddenImportance:new Set()}).map(e=>e.id),[])
 })
 
 test('CATEGORY_VAR maps every category to its own --event-* variable',()=>{

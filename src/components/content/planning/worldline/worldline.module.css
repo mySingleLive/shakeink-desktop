@@ -69,12 +69,17 @@
 /* ---------- status line and legend ---------- */
 .status { display: flex; align-items: center; gap: 14px; margin: 0 0 8px; color: var(--muted-foreground); font-size: 12px; flex-wrap: wrap; }
 .legend { margin-left: auto; display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.types { display: contents; }
 .legend button { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 11px; color: var(--muted-foreground); border: 1px solid transparent; }
 .legend button i { width: 7px; height: 7px; border-radius: 50%; background: var(--ec); }
 .legend button[aria-pressed="false"] { opacity: 0.45; text-decoration: line-through; }
 .legend button[aria-pressed="false"] i { background: transparent; outline: 1px solid var(--ec); }
-.sizes { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--border); }
+.sizes { display: inline-flex; align-items: center; gap: 2px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--border); }
+.sizes > span { margin-right: 4px; }
 .sizes i { display: inline-block; border-radius: 50%; background: var(--muted-foreground); }
+/* docs/591: an importance switched off looks like a type switched off. */
+.legend .sizes button i { background: var(--muted-foreground); }
+.legend .sizes button[aria-pressed="false"] i { background: transparent; outline: 1px solid var(--muted-foreground); }
 
 /* ---------- tree ---------- */
 .tree { overflow: auto; padding: 0 10px 40px 0; border-right: 1px solid var(--border); }
@@ -341,3 +346,5 @@
   .sep { display: none; }
   .minimap { left: 12px; right: 12px; }
 }
+/* docs/591: the 显示全部 button next to the filter count. */
+.showAll { height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--input); color: var(--foreground); font-size: 12px; }

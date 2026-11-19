@@ -106,12 +106,20 @@ export function WorldlineToolbar(p: {
   );
 }
 
-/** docs/577 §8–§9: type legend with counts (click hides, double-click solos) and the importance size key. */
-export function WorldlineLegend({ counts, hidden, onToggle, onSolo, range, total, selected = 0 }: {
+/** docs/591: the importance key, as [level, label, dot size in px]. */
+const IMPORTANCE_KEY = [[1, "一般", 6], [2, "重要", 9], [3, "关键", 13]] as const;
+/** docs/577 §8–§9, docs/591: type legend with counts (click hides, double-click solos) and the importance key (click
+ * hides). Hidden types and levels are left out of the views, not faded. */
+export function WorldlineLegend({ counts, hidden, onToggle, onSolo, hiddenImportance = new Set(), onToggleImportance, shown, onShowAll, range, total, selected = 0 }: {
   counts: Record<EventCategory, number>;
   hidden: ReadonlySet<EventCategory>;
   onToggle(c: EventCategory): void;
   onSolo(c: EventCategory): void;
+  hiddenImportance?: ReadonlySet<number>;
+  onToggleImportance?(importance: number): void;
+  /** docs/591: events left after the filter (undefined when nothing is hidden). */
+  shown?: number;
+  onShowAll?(): void;
   range: React.ReactNode;
   total: number;
   /** docs/584: the timeline multi-selection size (shown from 2). */
@@ -121,9 +129,14 @@ export function WorldlineLegend({ counts, hidden, onToggle, onSolo, range, total
   return (
     <div className={s.status}>
       <span data-range="">{range}</span>
-      <span>{total} 件事件</span>
+      {/* docs/591 code review 7: the live region is always mounted, and the button sits outside it. */}
+      <span data-filter-count={shown === undefined ? undefined : ""} aria-live="polite">
+        {shown === undefined ? `${total} 件事件` : `显示 ${shown} / 共 ${total} 件事件`}
+      </span>
+      {shown !== undefined && onShowAll && <button type="button" data-show-all="" className={s.showAll} onClick={onShowAll}>显示全部</button>}
       {selected >= 2 && <span data-selection-count="">已选 {selected} 个事件</span>}
-      <span className={s.legend} aria-label="类型图例（点击隐藏或显示，双击只看这一类）">
+      <span className={s.legend}>
+        <span role="group" aria-label="类型筛选（点击隐藏或显示，双击只看这一类）" className={s.types}>
         <span>类型</span>
         {EVENT_CATEGORIES.map((c) => (
           <button
@@ -138,8 +151,15 @@ export function WorldlineLegend({ counts, hidden, onToggle, onSolo, range, total
             {c} {counts[c]}
           </button>
         ))}
-        <span className={s.sizes} title="圆点大小表示重要程度">
-          重要度 <i style={{ width: 6, height: 6 }} />一般 <i style={{ width: 9, height: 9 }} />重要 <i style={{ width: 13, height: 13 }} />关键
+        </span>
+        <span className={s.sizes} title="圆点大小表示重要程度；点击隐藏或显示" role="group" aria-label="重要度筛选（点击隐藏或显示）">
+          <span>重要度</span>
+          {IMPORTANCE_KEY.map(([level, label, size]) => (
+            <button key={level} data-legend-importance={level} aria-pressed={!hiddenImportance.has(level)} onClick={() => onToggleImportance?.(level)}>
+              <i style={{ width: size, height: size }} />
+              {label}
+            </button>
+          ))}
         </span>
       </span>
     </div>
