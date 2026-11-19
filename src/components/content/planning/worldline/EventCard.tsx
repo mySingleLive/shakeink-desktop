@@ -169,9 +169,10 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             data-fold=""
             className={`${s.fold} ${p.folded ? s.foldClosed : ""}`}
             aria-label={`${p.folded ? "展开" : "折叠"}${e.title}的子事件`}
+            aria-expanded={!p.folded}
             onClick={() => p.onFold!(e.id)}
           >
-            ▾
+            <ChevronDown size={14} strokeWidth={2.25} aria-hidden />
           </button>
         )}
         <span className={`${s.dot} ${s[`i${e.importance}`]} ${e.time.kind === "window" ? s.dotWindow : ""}`} aria-hidden />
