@@ -228,6 +228,23 @@ const WORLD_FACT_HINT='世界设定content须为JSON字符串且结构严格：F
 /** A skipped settings task stops sending its own queued batches; this ends that task only, never the step. */
 class SettingsTaskSkipped extends Error{constructor(){super('该项已跳过')}}
 const sleepMs=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms))
+/** docs/590: parts of a line step, in run order. A failure keys on its part; batch failures key on the sent batch's units. */
+const LINE_STAGES=['copy','lines','gaps','timeline','grouping','step'] as const
+export type LineStage=typeof LINE_STAGES[number]
+/** Waits before the 1st..5th automatic retry of one place, in units of one second. */
+export const LINE_STEP_RETRY_DELAYS=[0,1,2,4,8] as const
+/** SHAKEINK_LINE_RETRY_UNIT_MS is a test hook only (read with SHAKEINK_TEST_ROOT or under node:test), at least 1 ms. */
+const lineRetryUnitMs=()=>process.env.SHAKEINK_TEST_ROOT||process.env.NODE_TEST_CONTEXT?Math.max(1,Number(process.env.SHAKEINK_LINE_RETRY_UNIT_MS)||1000):1000
+/** Failures a retry cannot change, or that need the author (stop, authorization, sources, storage, budget, local state). */
+const LINE_STEP_FATAL=/^(?:请重新允许|模型配置或授权已变化|来源|保存|导入操作已|导入任务正在停止|本地服务|运行时调用证据容量已满|当前导入已结束|导入数据根已关闭|单个导入任务及完整元数据超过模型预算|语义检查点|推断设定累计超过本地容量限制|导入草稿|导入请求超过模型预算|导入固定提示超过模型预算|当前模型上下文预算不足)/u
+/** docs/590 §3: clears the places that have passed (covered units, earlier parts), adds 1 to each failed place and
+ * returns the highest count, i.e. which automatic retry comes next (above 5: give up). */
+export function countLineFailure(tries:Map<string,number>,stage:LineStage,failedUnits:ReadonlySet<string>,covered:ReadonlySet<string>){
+ for(const key of [...tries.keys()]){const unit=key.startsWith('unit:')?key.slice(5):undefined;if(unit!==undefined?covered.has(unit):LINE_STAGES.indexOf(key as LineStage)<LINE_STAGES.indexOf(stage))tries.delete(key)}
+ const keys=stage==='lines'&&failedUnits.size?[...failedUnits].map(id=>'unit:'+id):[stage]
+ let attempt=0;for(const key of keys){const next=(tries.get(key)??0)+1;tries.set(key,next);attempt=Math.max(attempt,next)}
+ return attempt
+}
 /** Yielded by a sliced planner when its slice budget is spent; carries no request. */
 const PLAN_PAUSE=Symbol('plan-pause')
 /** A planning slice ends once this much synchronous time has passed (docs/565 3R-2). */
@@ -323,6 +340,10 @@ const classificationSourceHash=(s:ImportSession)=>importHash({scope:importScopeH
 const classificationResultHash=(s:ImportSession)=>importHash({kinds:s.units.map(({id,kind})=>({id,kind})),coverage:s.coverage.classify??[]})
 const sameTarget=(a:ImportSession['target'],b:ImportSession['target'])=>!!a&&!!b&&a.path===b.path&&a.device===b.device&&a.inode===b.inode
 class ImportRuntimePersistenceError extends Error {constructor(){super('导入运行时证据无法保存，请核对保存目录后重试')}}
+/** Node system errors (errno code such as ENOSPC/EIO) are storage failures, not model failures. */
+const lineStepRetryable=(error:unknown)=>error instanceof Error&&!(typeof (error as {errno?:unknown}).errno==='number'||typeof (error as {syscall?:unknown}).syscall==='string')&&!reviewGlobalFailure(error)&&!(error instanceof PdfFileChanged)&&!(error instanceof CandidateCommittedBlocked)&&!(error instanceof ImportRuntimePersistenceError)&&!LINE_STEP_FATAL.test(error.message)
+/** Test access only (docs/590). */
+export const lineStepRetryableForTest=(error:unknown)=>lineStepRetryable(error)
 const candidateBlockedMessage='导入检查点已保存为暂停状态，请重新打开核对目录并重新授权后继续'
 class CandidateCommittedBlocked extends Error {constructor(){super(candidateBlockedMessage)}}
 class PdfFileChanged extends Error {constructor(readonly sessionId:string,readonly fileId:string){super('来源PDF已发生变化，请重新选择')}}
@@ -1174,33 +1195,52 @@ export class NovelImportController {
   const merged=mergeImportArtifacts(s.artifacts,sources,1,[],this.sceneRegistry(s));importNativeMappings(merged.artifacts)
   await this.checkpoint(s,epoch,()=>{s.artifacts=merged.artifacts;this.addConflicts(s,merged.conflicts);for(const c of merged.conflicts)if(!this.wizard(s).deferredConflicts.includes(c.id))this.wizard(s).deferredConflicts.push(c.id)})
  }
- /** Worldline, narrative and detailed outlines over the materialized chapters. Progress counts chapters. */
+ /** Worldline, narrative and detailed outlines over the materialized chapters. Progress counts chapters.
+  * docs/590: steps 17/18 retry a failure on their own, up to five times per place (0/1/2/4/8 s apart), before the step
+  * fails and waits for the author. Every call starts the count at 1, so the author's retry gets five more. */
  private async runLine(s:ImportSession,epoch:number,kind:'worldline'|'narrative'|'outline'):Promise<boolean>{
-  const w=this.wizard(s)
-  try{
-   if(s.selected.includes(kind))await this.copySourceKind(s,epoch,kind)
-   if(this.wizardInfers(s,kind)){
-    const state=this.semanticCheckpoint(s),profile=this.executionBudget(s,'analyze'),units=workingImportUnits(s),covered=new Set(s.coverage[kind]??[]),pending=units.filter(u=>!covered.has(u.id))
-    // docs/531 3R-4: step 19 works on chapters still without a chapter outline, not on uncovered units.
-    await this.runLineParallel(s,epoch,kind,kind==='outline'?units:pending,profile,state.locks)
-    // docs/570 4R: a chapter that ends up with no event of its own (wl-fix4: chapters 209–212) is asked once more,
-    // on its own, before the order is decided. Done once per step: the marker is the timeline itself.
-    if(kind==='worldline'&&!w.worldTimeline&&!w.worldGapsAsked){const gaps=worldTimelineEmptyChapters(s.artifacts,units,s.chapters);if(gaps.length)await this.runLineParallel(s,epoch,kind,gaps,profile,state.locks);await this.checkpoint(s,epoch,()=>{w.worldGapsAsked=true})}
-    // docs/570 §2: once every batch is in, one book-wide request orders the events by story time. A resumed or
-    // retried step whose batches are complete sends only this request.
-    if(kind==='worldline'&&!w.worldTimeline)await this.runWorldTimeline(s,epoch,state.locks)
-    // docs/587: then one pass over the placed events groups related ones under a parent and grades every event.
-    if(kind==='worldline'&&w.worldTimeline&&!w.worldGrouped)await this.runWorldGrouping(s,epoch,state.locks)
+  const w=this.wizard(s),tries=new Map<string,number>()
+  for(;;){
+   const at:{stage:LineStage}={stage:'copy'},failedUnits=new Set<string>();let delay:number|undefined
+   try{await this.lineBody(s,epoch,kind,at,failedUnits);return true}
+   catch(error){
+    if(error instanceof DOMException&&error.name==='AbortError')throw error
+    if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error(error)
+    const attempt=kind!=='outline'&&at.stage!=='step'&&lineStepRetryable(error)?countLineFailure(tries,at.stage,failedUnits,new Set(s.coverage[kind]??[])):0
+    delay=attempt>=1&&attempt<=LINE_STEP_RETRY_DELAYS.length?LINE_STEP_RETRY_DELAYS[attempt-1]*lineRetryUnitMs():undefined
+    if(delay===undefined){await this.checkpoint(s,epoch,()=>{w.stepState[w.step]='failed';w.stepError=this.safeError(error);s.phase='select';s.resumePhase=undefined});return false}
+    if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error('line-step-retry '+JSON.stringify({kind,stage:at.stage,attempt,delayMs:delay,reason:settingsFailureClass(error)}))
    }
-   // docs/517 3R3-3: the step's shape repairs are listed once the step is adopted.
-   await this.checkpoint(s,epoch,()=>this.recordLinesRepairs(w,kind,w.lineRepairs?.[kind]))
-   await this.checkpoint(s,epoch,()=>{if(!s.artifacts.some(a=>a.kind===kind)&&!s.notFound.includes(kind))s.notFound.push(kind);this.advance(s)})
-   return true
-  }catch(error){
-   if(error instanceof DOMException&&error.name==='AbortError')throw error
-   if(process.env.SHAKEINK_IMPORT_DEBUG==='1')console.error(error)
-   await this.checkpoint(s,epoch,()=>{w.stepState[w.step]='failed';w.stepError=this.safeError(error);s.phase='select';s.resumePhase=undefined});return false
+   // The step stays running while it waits; a pause or cancel ends the wait within 50 ms. The final stage is never
+   // retried: its checkpoint may already have moved the wizard on in memory before the save failed (590 code review 1).
+   this.current(s,epoch);const end=Date.now()+delay;while(Date.now()<end){await sleepMs(Math.min(50,end-Date.now()));this.current(s,epoch)}
   }
+ }
+ /** One pass of a line step; `at.stage` names the part running when it throws (docs/590 §2). */
+ private async lineBody(s:ImportSession,epoch:number,kind:'worldline'|'narrative'|'outline',at:{stage:LineStage},failedUnits:Set<string>){
+  const w=this.wizard(s)
+  if(s.selected.includes(kind))await this.copySourceKind(s,epoch,kind)
+  if(this.wizardInfers(s,kind)){
+   at.stage='lines'
+   const state=this.semanticCheckpoint(s),profile=this.executionBudget(s,'analyze'),units=workingImportUnits(s),covered=new Set(s.coverage[kind]??[]),pending=units.filter(u=>!covered.has(u.id))
+   // docs/531 3R-4: step 19 works on chapters still without a chapter outline, not on uncovered units.
+   await this.runLineParallel(s,epoch,kind,kind==='outline'?units:pending,profile,state.locks,failedUnits)
+   // docs/570 4R: a chapter that ends up with no event of its own (wl-fix4: chapters 209–212) is asked once more,
+   // on its own, before the order is decided. Done once per step: the marker is the timeline itself.
+   at.stage='gaps'
+   if(kind==='worldline'&&!w.worldTimeline&&!w.worldGapsAsked){const gaps=worldTimelineEmptyChapters(s.artifacts,units,s.chapters);if(gaps.length)await this.runLineParallel(s,epoch,kind,gaps,profile,state.locks);await this.checkpoint(s,epoch,()=>{w.worldGapsAsked=true})}
+   // docs/570 §2: once every batch is in, one book-wide request orders the events by story time. A resumed or
+   // retried step whose batches are complete sends only this request.
+   at.stage='timeline'
+   if(kind==='worldline'&&!w.worldTimeline)await this.runWorldTimeline(s,epoch,state.locks)
+   // docs/587: then one pass over the placed events groups related ones under a parent and grades every event.
+   at.stage='grouping'
+   if(kind==='worldline'&&w.worldTimeline&&!w.worldGrouped)await this.runWorldGrouping(s,epoch,state.locks)
+  }
+  at.stage='step'
+  // docs/517 3R3-3: the step's shape repairs are listed once the step is adopted.
+  await this.checkpoint(s,epoch,()=>this.recordLinesRepairs(w,kind,w.lineRepairs?.[kind]))
+  await this.checkpoint(s,epoch,()=>{if(!s.artifacts.some(a=>a.kind===kind)&&!s.notFound.includes(kind))s.notFound.push(kind);this.advance(s)})
  }
  /** docs/570 §2: orders the inferred events by story time and places them on the one worldline. The catalogue is cut
   * into reading-order segments that fit the budget; each segment is one request, re-run once when it fails. */
@@ -1280,7 +1320,7 @@ export class NovelImportController {
   * parallel results never overwrite each other. A model-output failure is re-run once; a quote that still
   * cannot be located splits the batch in halves (run serially, as before). After the first lasting failure or a
   * stop no new batch is sent; every batch in flight settles before this returns or throws. */
- private async runLineParallel(s:ImportSession,epoch:number,kind:'worldline'|'narrative'|'outline',units:ImportUnit[],profile:ImportExecutionBudget,locks:ImportSemanticLock[]){
+ private async runLineParallel(s:ImportSession,epoch:number,kind:'worldline'|'narrative'|'outline',units:ImportUnit[],profile:ImportExecutionBudget,locks:ImportSemanticLock[],failedUnits?:Set<string>){
   const w=this.wizard(s),model=s.analysisGrant?.textModel,outline=kind==='outline'
   // docs/531 3R-8: an outline request sees no other outline and no event/narrative catalogue (its facts link characters, scenes and items only).
   const build=(batch:ImportUnit[])=>({phase:'analyze' as const,kind,units:batch,artifacts:this.contextArtifacts(s,batch,profile.characters).filter(a=>!outline||a.kind!=='outline'),workingRevision:s.workingRevision,executionLane:'wizard-lines-v1' as const})
@@ -1338,7 +1378,7 @@ export class NovelImportController {
   // At most two split levels per original batch (≤4 parts); a part that still fails is re-run once (3R3-1).
   /** docs/517 3R5: an original batch and the halves sent early for it form one group; exactly one path is adopted. */
   type Group={state:'open'|'original'|'halves';operations:Map<'original'|'half',Set<string>>;original?:Promise<void>}
-  type Job={units:ImportUnit[];targets?:number[];hint?:string;rerun?:boolean;depth?:number;group?:Group;role?:'original'|'half'}
+  type Job={units:ImportUnit[];targets?:number[];hint?:string;rerun?:boolean;depth?:number;group?:Group;role?:'original'|'half';sent?:boolean}
   // Succeeded batches as ms per character, so the trigger compares like with like (review-3 中D).
   // SHAKEINK_LINES_EARLY_MS is a test hook only (read with SHAKEINK_TEST_ROOT), clamped to ≥50 ms (521 低).
   const earlyMs=process.env.SHAKEINK_TEST_ROOT||process.env.NODE_TEST_CONTEXT?Math.max(50,Number(process.env.SHAKEINK_LINES_EARLY_MS)||30000):30000,succeeded:number[]=[]
@@ -1371,7 +1411,7 @@ export class NovelImportController {
     jobs.unshift(...halves.map(plan=>({...plan,depth:1,group,role:'half' as const})));wake()};timer=setTimeout(check,Math.max(50,earlyMs/4))}
    let currentId:string|undefined,settleOriginal:()=>void=()=>{}
    const originalSettled=new Promise<void>(resolve=>{settleOriginal=resolve})
-   const own=(id:string)=>{currentId=id;track(id)}
+   const own=(id:string)=>{currentId=id;job.sent=true;track(id)}
    try{const {request,result}=await call(job,job.hint,own);clearTimeout(timer);if(await commit(request,result,adoptFor(job),job.targets)){succeeded.push((Date.now()-began)/Math.max(1,chars));timing(true)}return}catch(error){clearTimeout(timer);failed=error;timing(false)}finally{settleOriginal()}
    // A path whose group was adopted elsewhere ends quietly: cancelled or not, its work is no longer needed (3R5-3).
    if(job.group&&(job.role==='original'?job.group.state!=='open':job.group.state==='original'))return
@@ -1397,7 +1437,7 @@ export class NovelImportController {
   // Workers wait while other batches are in flight, since a failed batch may still add halves to the queue.
   let active=0,waiting:(()=>void)[]=[]
   const wake=()=>{for(const resume of waiting.splice(0))resume()}
-  const worker=async()=>{for(;;){if(halt)return;const job=jobs.shift();if(!job){if(!active)return;await new Promise<void>(resume=>waiting.push(resume));continue}active++;try{await runJob(job)}catch(error){halt??={error}}finally{active--;wake()}}}
+  const worker=async()=>{for(;;){if(halt)return;const job=jobs.shift();if(!job){if(!active)return;await new Promise<void>(resume=>waiting.push(resume));continue}active++;try{await runJob(job)}catch(error){halt??={error};if(job.sent)for(const u of job.units)failedUnits?.add(u.id)}finally{active--;wake()}}}
   // Batches already in flight finish and commit; a pause cancels them through stopAction.
   await Promise.allSettled(Array.from({length:Math.min(WIZARD_LINE_CONCURRENCY,jobs.length)},worker))
   if(halt)throw halt.error

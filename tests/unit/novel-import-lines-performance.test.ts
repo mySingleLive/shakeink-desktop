@@ -3,13 +3,15 @@ import {test} from 'node:test'
 import {importGenerationModel,runImportGenerationLane,runImportAi,normalizeLinesReply} from '../../desktop/service/novel-import-ai'
 import {importAiPrompt} from '../../desktop/core/novel-import-ai-payload'
 import {mergeImportArtifacts,importHash} from '../../desktop/core/novel-import'
-import {wizardLinePlan,wizardLineIds} from '../../desktop/main/novel-import'
+import {wizardLinePlan,wizardLineIds,countLineFailure,lineStepRetryableForTest,LINE_STEP_RETRY_DELAYS} from '../../desktop/main/novel-import'
 import type {ImportAiRequest,ImportAiResult,ImportArtifact,ImportSession,ImportUnit} from '../../desktop/shared/novel-import'
 import type {ResolvedModel} from '../../src/lib/ai/provider'
 import {acquireLongTask,longTaskQueue} from '../../src/lib/long-task'
 import {fixture,source,rosterAi,model,sleep,linesAi,worldsAi,toStep,type Ai} from '../helpers/novel-import-wizard-fixture'
 
 /* docs/518. Synthetic text and names only. */
+// docs/590: automatic step retries wait 0/1/2/4/8 units; one unit is 1 ms here.
+process.env.SHAKEINK_LINE_RETRY_UNIT_MS='1'
 const CHAPTERS=64
 function body(){let t='';for(let i=0;i<CHAPTERS;i++)t+=`第${i+1}章 篇${i}\n\n沈砚在合成渡口${i}旁停步。${'风声。'.repeat(500)}\n\n`;return t}
 const lineRequest=(kind:'worldline'|'narrative'|'outline',over:Partial<ImportAiRequest>={}):ImportAiRequest=>({semanticVersion:1,phase:'analyze',kind,units:[],artifacts:[],executionLane:'wizard-lines-v1',operationId:'op',models:{text:model},workingRevision:0,selectedTargets:[kind],chapters:[],entities:[],...over}) as ImportAiRequest
@@ -254,7 +256,8 @@ test('LP-08b: a single-unit batch failing twice fails the step; a batch failing 
  try{
   await toLines(f);const v=await f.settle()
   assert.equal(v.wizard!.stepState.worldline,'failed');assert.match(v.wizard!.stepError??'',/结构不完整/u)
-  const requests=[...seen.values()].reduce((a,b)=>a+b,0);assert.ok(requests<=11,'at most 1+2+4+4 requests for one batch: '+requests)
+  // docs/590: the step itself is tried 1+5 times, each with at most 1+2+4+4 requests for the batch.
+  const requests=[...seen.values()].reduce((a,b)=>a+b,0);assert.ok(requests<=6*11,'at most 6×(1+2+4+4) requests for one batch: '+requests)
  }finally{await f.dispose()}
 })
 test('LP-09: a batch whose quotes still cannot be located is split in halves',async()=>{
@@ -269,7 +272,7 @@ test('LP-09: a batch whose quotes still cannot be located is split in halves',as
 })
 test('LP-10: a lasting failure stops new batches, keeps the committed ones and a retry sends only the rest',async()=>{
  let bad:string|undefined,healed=false
- const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'){bad??=r.units[0].id;if(!healed&&r.units[0].id===bad)throw Error('模型接口请求失败（HTTP 500）')}return inner(r)}})
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'){bad??=r.units[0].id;if(!healed&&r.units.some(u=>u.id===bad))throw Error('模型接口请求失败（HTTP 500）')}return inner(r)}})
  try{
   await toLines(f);const v=await f.settle()
   assert.equal(v.wizard!.step,'worldline');assert.equal(v.wizard!.stepState.worldline,'failed');assert.match(v.wizard!.stepError??'',/HTTP 500/u)
@@ -281,11 +284,12 @@ test('LP-10: a lasting failure stops new batches, keeps the committed ones and a
 test('LP-15b: a batch whose merge fails leaves no partial artifacts or coverage; the others are kept',async()=>{
  let bad:string|undefined
  // A parent that exists nowhere passes the per-artifact checks but fails importNativeMappings inside the checkpoint.
- const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'){const out=await inner(r);if(bad===undefined||r.units[0].id===bad){bad=r.units[0].id;const a=out.artifacts![0];return {artifacts:[{...a,facts:{...a.facts,parentId:'wl-missing'}}]}}return out}return inner(r)}})
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'){const out=await inner(r);if(bad===undefined||r.units.some(u=>u.id===bad)){bad??=r.units[0].id;const a=out.artifacts![0];return {artifacts:[{...a,facts:{...a.facts,parentId:'wl-missing'}}]}}return out}return inner(r)}})
  try{
-  await toLines(f);const v=await f.settle(),j=await f.journal(),covered=new Set(j.coverage.worldline??[]),batch=f.requests.find(r=>isLine(r)&&r.units[0].id===bad)!
+  await toLines(f);const v=await f.settle(),j=await f.journal(),covered=new Set(j.coverage.worldline??[]),batch=f.requests.find(r=>isLine(r)&&r.units.some(u=>u.id===bad))!
   assert.equal(v.wizard!.stepState.worldline,'failed',v.wizard!.stepError)
-  assert.ok(batch.units.every(u=>!covered.has(u.id)),'the failed batch is not covered');assert.ok(covered.size>0,'other batches stay covered')
+  // docs/590: later tries split the batch, so its other halves may be covered; the failing unit never is.
+  assert.ok(batch,'the bad batch was sent');assert.ok(!covered.has(bad!),'the failing unit is not covered');assert.ok(covered.size>0,'other batches stay covered')
   const names=j.artifacts.filter(a=>a.kind==='worldline').map(a=>a.name);assert.equal(names.length,new Set(names).size,'no half-merged duplicate')
  }finally{await f.dispose()}
 })
@@ -332,18 +336,22 @@ test('LP-28: when the slow batch returns first its halves are discarded; nothing
   assert.equal(inSlow.length,1,'exactly the original result covers the slow batch region');assert.equal(names.length,new Set(names).size)
  }finally{delete process.env.SHAKEINK_LINES_EARLY_MS;await x.f.dispose()}
 })
-test('LP-08c: the step-wide budget caps extra requests across batches; once spent the next failure fails the step',async()=>{
+test('LP-08c: the step-wide budget caps extra requests across batches; once spent the step retries itself (docs/590)',async()=>{
  // Every multi-unit batch fails once; its halves succeed. Halves cost 2 each, so the budget (= planned batches)
- // runs out after about half of the batches; the next failure then fails the step.
- const failedOnce=new Set<string>();let planned=0
- const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'&&r.units.length>2&&!failedOnce.has(r.units.map(u=>u.id).join(','))){failedOnce.add(r.units.map(u=>u.id).join(','));planned++;throw Error('模型返回结构不完整（artifacts）')}return inner(r)}})
+ // runs out after about half of the batches and the first try fails; the automatic retry then sends the rest.
+ const failedOnce=new Set<string>();let planned=0,firstTry:number|undefined,firstPlanned=0
+ // Each unit fails once, the first time it is in a multi-unit batch (docs/590), so later tries do not fail again.
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'&&r.units.length>2&&r.units.some(u=>!failedOnce.has(u.id))){for(const u of r.units)failedOnce.add(u.id);planned++;throw Error('模型返回结构不完整（artifacts）')}return inner(r)}})
+ const log=console.error,debug=process.env.SHAKEINK_IMPORT_DEBUG;process.env.SHAKEINK_IMPORT_DEBUG='1'
+ console.error=(...a:unknown[])=>{if(typeof a[0]==='string'&&a[0].startsWith('line-step-retry ')&&firstTry===undefined){firstTry=f.requests.filter(r=>isLine(r)&&r.kind==='worldline').length;firstPlanned=planned}}
  try{
-  await toLines(f);const v=await f.settle(),sent=f.requests.filter(r=>isLine(r)&&r.kind==='worldline').length
+  await toLines(f);const v=await toStep(f,'narrative').catch(async()=>f.settle())
   assert.ok(planned>2,'several original batches failed: '+planned)
-  assert.equal(v.wizard!.stepState.worldline,'failed','the budget runs out before every batch is split')
-  assert.match(v.wizard!.stepError??'',/结构不完整/u);assert.doesNotMatch(v.wizard!.stepError??'',/风声|渡口/u,'no source text in the error')
-  assert.ok(sent-planned<=planned+1,'extra requests ≤ planned batches (+1 for the last split): '+JSON.stringify({sent,planned}))
- }finally{await f.dispose()}
+  assert.ok(firstTry!==undefined,'the budget runs out before every batch is split, so the first try fails')
+  assert.ok(firstTry!-firstPlanned<=firstPlanned+1,'extra requests of the first try ≤ planned batches (+1 for the last split): '+JSON.stringify({firstTry,firstPlanned}))
+  assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError);assert.equal(v.wizard!.stepError,undefined)
+  const j=await f.journal();assert.deepEqual([...j.coverage.worldline].sort(),j.workingUnits!.map(u=>u.id).sort(),'the retry covers every unit')
+ }finally{console.error=log;if(debug===undefined)delete process.env.SHAKEINK_IMPORT_DEBUG;else process.env.SHAKEINK_IMPORT_DEBUG=debug;await f.dispose()}
 })
 test('LP-15c: going back to an earlier list clears the line repair counts with the line coverage',async()=>{
  const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{const out=await inner(r);if(isLine(r)&&r.kind==='worldline'&&out.artifacts?.length)return {...out,linesRepairs:{droppedEvidence:1,droppedLinks:0}};return out}})
@@ -406,9 +414,9 @@ test('WT-32: a timeline failing twice fails step 17; a retry sends only the time
  const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&broken)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
  try{
   await toLines(f);let v=await f.settle();assert.equal(v.wizard!.step,'worldline');assert.equal(v.wizard!.stepState.worldline,'failed');assert.ok(v.wizard!.stepError)
-  let j=await f.journal();assert.equal(j.wizard!.worldTimeline,undefined);assert.equal(f.requests.filter(isTimeline).length,2)
+  let j=await f.journal();assert.equal(j.wizard!.worldTimeline,undefined);assert.equal(f.requests.filter(isTimeline).length,12,'1+5 step tries of 2 requests (docs/590)')
   const batches=worldBatches(f);broken=false;await f.act('wizard-redetect');v=await toStep(f,'narrative').catch(async()=>f.settle())
-  assert.equal(worldBatches(f),batches,'no event batch is sent again');assert.equal(f.requests.filter(isTimeline).length,3)
+  assert.equal(worldBatches(f),batches,'no event batch is sent again');assert.equal(f.requests.filter(isTimeline).length,13)
   j=await f.journal();assert.ok(j.wizard!.worldTimeline);assert.equal(v.wizard!.stepState.worldline,'done')
  }finally{await f.dispose()}
 })
@@ -487,10 +495,10 @@ test('WG-31/WG-32: grouping failing twice fails step 17 with the timeline kept; 
  let broken=true
  const f=await linesFixture(base=>{const inner=groupingAi(linesAi(base));return async r=>{if(isGrouping(r)&&broken)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
  try{
-  await toLines(f);let v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(f.requests.filter(isGrouping).length,2)
+  await toLines(f);let v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(f.requests.filter(isGrouping).length,12,'1+5 step tries of 2 requests (docs/590)')
   let j=await f.journal();assert.ok(j.wizard!.worldTimeline,'the timeline stays');assert.equal(j.wizard!.worldGrouped,undefined);assert.ok(!j.artifacts.some(a=>a.facts.parentId))
   const batches=worldBatches(f),timelines=f.requests.filter(isTimeline).length;broken=false;await f.act('wizard-redetect');v=await toStep(f,'narrative').catch(async()=>f.settle())
-  assert.equal(worldBatches(f),batches);assert.equal(f.requests.filter(isTimeline).length,timelines,'no timeline again');assert.equal(f.requests.filter(isGrouping).length,3)
+  assert.equal(worldBatches(f),batches);assert.equal(f.requests.filter(isTimeline).length,timelines,'no timeline again');assert.equal(f.requests.filter(isGrouping).length,13)
   j=await f.journal();assert.equal(j.wizard!.worldGrouped!.parents.length,1);assert.equal(v.wizard!.stepState.worldline,'done')
  }finally{await f.dispose()}
 })
@@ -524,7 +532,7 @@ test('WG-35: step-21 review packets leave out made parents',async()=>{
 test('WG-13: the controller refuses artifacts or notFound in a grouping reply',async()=>{
  for(const bad of [{groups:[],grades:[],artifacts:[{id:'x'}]},{notFound:true}]){
   const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>isGrouping(r)?bad as never:inner(r)})
-  try{await toLines(f);const v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(f.requests.filter(isGrouping).length,2)}finally{await f.dispose()}
+  try{await toLines(f);const v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(f.requests.filter(isGrouping).length,12)}finally{await f.dispose()}
  }
 })
 test('WT-35b/587: every cleanup site that drops the timeline also drops the grouping marker',async()=>{
@@ -540,4 +548,160 @@ test('WG-16/S5: a grouping reply with drops leaves a step-21 notice; no candidat
  }finally{await f.dispose()}
  const g=await linesFixture(base=>{const inner=linesAi(base);return async r=>r.phase==='analyze'&&!r.intent&&r.kind==='worldline'?{notFound:true}:inner(r)})
  try{await toLines(g);await toStep(g,'narrative').catch(async()=>g.settle());assert.equal(g.requests.filter(isGrouping).length,0)}finally{await g.dispose()}
+})
+
+/* docs/590 AR-01..AR-15: steps 17/18 retry a failure on their own, five times per place, 0/1/2/4/8 units apart. */
+const timelines=(f:Awaited<ReturnType<typeof fixture>>)=>f.requests.filter(isTimeline).length
+/** Line requests (worldline or narrative) whose units include `id`. */
+const batchesWith=(f:Awaited<ReturnType<typeof fixture>>,kind:'worldline'|'narrative',id:string)=>f.requests.filter(r=>isLine(r)&&r.kind===kind&&r.units.some(u=>u.id===id)).length
+/** Collects `line-step-retry` debug lines while `run` runs. */
+async function retryLines<T>(run:()=>Promise<T>){const lines:Record<string,unknown>[]=[],log=console.error,debug=process.env.SHAKEINK_IMPORT_DEBUG;process.env.SHAKEINK_IMPORT_DEBUG='1'
+ console.error=(...a:unknown[])=>{if(typeof a[0]==='string'&&a[0].startsWith('line-step-retry '))lines.push(JSON.parse(a[0].slice(16)))}
+ try{return {value:await run(),lines}}finally{console.error=log;if(debug===undefined)delete process.env.SHAKEINK_IMPORT_DEBUG;else process.env.SHAKEINK_IMPORT_DEBUG=debug}}
+test('AR-00: the waits and the place counter',()=>{
+ assert.deepEqual([...LINE_STEP_RETRY_DELAYS],[0,1,2,4,8])
+ const tries=new Map<string,number>(),none=new Set<string>()
+ for(let n=1;n<=6;n++)assert.equal(countLineFailure(tries,'timeline',none,none),n)
+ // A later place clears the earlier ones; a failed batch counts its own units only.
+ assert.equal(countLineFailure(tries,'grouping',none,none),1);assert.equal(tries.has('timeline'),false)
+ const t2=new Map<string,number>();assert.equal(countLineFailure(t2,'lines',new Set(['a','b']),none),1);assert.equal(countLineFailure(t2,'lines',new Set(['b','c']),none),2);assert.equal(t2.get('unit:c'),1,'c starts at 1')
+ assert.equal(countLineFailure(t2,'lines',new Set(['c']),new Set(['a','b'])),2);assert.equal(t2.has('unit:b'),false,'covered units are cleared')
+ assert.equal(countLineFailure(t2,'lines',none,none),1,'a failure before any request keys on the part')
+ for(const m of ['所选模型的密钥不可用，请在设置中重新配置','模型配置或授权已变化，请重新允许','请重新允许发送本次导入范围','单个导入任务及完整元数据超过模型预算，请核对设定后重试','来源已变化，请重新识别卷章','导入数据根已关闭或变化','导入草稿目录身份变化','导入请求超过模型预算，请继续分批','导入固定提示超过模型预算预留'])assert.equal(lineStepRetryableForTest(Error(m)),false,m)
+ assert.equal(lineStepRetryableForTest(Object.assign(Error('ENOSPC: no space left on device, write'),{errno:-28,code:'ENOSPC',syscall:'write'})),false,'a file-system error')
+ for(const m of ['模型接口请求失败（HTTP 500）','模型返回结构不完整（artifacts）','模型证据无法定位（no-match）','模型结构化输出请求失败，请核对模型服务后重试'])assert.equal(lineStepRetryableForTest(Error(m)),true,m)
+ assert.equal(lineStepRetryableForTest(new DOMException('导入操作已暂停','AbortError')),false)
+})
+test('AR-01: a timeline failing three tries passes on the fourth; the event batches are not sent again',async()=>{
+ let fail=6
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&fail-->0)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+ try{
+  await toLines(f);const batches0=await (async()=>{await until(()=>timelines(f)>0,20000);return worldBatches(f)})()
+  const v=await toStep(f,'narrative').catch(async()=>f.settle());assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)
+  assert.equal(timelines(f),7);assert.equal(worldBatches(f),batches0,'no event batch is sent again')
+ }finally{await f.dispose()}
+})
+test('AR-02: a timeline failing every time fails after 1+5 tries; the author retry gets 1+5 more',async()=>{
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r))throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+ try{
+  await toLines(f);let v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.match(v.wizard!.stepError??'',/HTTP 500/u);assert.equal(timelines(f),12)
+  await f.act('wizard-redetect');v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(timelines(f),24)
+ }finally{await f.dispose()}
+})
+test('AR-03: the waits between tries are 0, 1, 2, 4 and 8 units',async()=>{
+ const at:number[]=[]
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)){at.push(Date.now());throw Error('模型接口请求失败（HTTP 500）')}return inner(r)}})
+ process.env.SHAKEINK_LINE_RETRY_UNIT_MS='100'
+ try{
+  await toLines(f);await f.settle();assert.equal(at.length,12)
+  // Requests 2k and 2k+1 belong to try k+1; the gap is from the end of try k to the start of try k+1.
+  const gaps=[1,2,3,4,5].map(k=>at[2*k]-at[2*k-1]);for(const [i,ms] of [0,100,200,400,800].entries())assert.ok(gaps[i]>=ms-5,'gap '+(i+1)+': '+JSON.stringify(gaps))
+  assert.ok(gaps[0]<100,'the first retry does not wait: '+gaps[0])
+ }finally{process.env.SHAKEINK_LINE_RETRY_UNIT_MS='1';await f.dispose()}
+})
+test('AR-04: a passed place resets the count; the next place starts again at 1',async()=>{
+ let bad:string|undefined,badTries=0,fail=10
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{
+  if(isLine(r)&&r.kind==='worldline'){bad??=r.units[0].id;if(r.units.some(u=>u.id===bad)&&badTries++<3)throw Error('模型接口请求失败（HTTP 500）')}
+  if(isTimeline(r)&&fail-->0)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+ try{
+  await toLines(f);const v=await toStep(f,'narrative').catch(async()=>f.settle());assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)
+  assert.equal(timelines(f),11,'the timeline passes on its sixth try');assert.ok(batchesWith(f,'worldline',bad!)>=4)
+ }finally{await f.dispose()}
+})
+test('AR-05: a different batch failing on each try is counted per place and the step passes',async()=>{
+ // Narrative batches: in each try one new batch fails (none of its units failed before), while unsent batches remain.
+ // Each place fails once, so every retry is its first (attempt 1); a step-wide counter would reach 2 on the second.
+ const failed=new Set<string>(),seen:Record<string,unknown>[]=[];let failures=0
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='narrative'&&failures<8&&failures===seen.length&&r.units.every(u=>!failed.has(u.id))){for(const u of r.units)failed.add(u.id);failures++;throw Error('模型接口请求失败（HTTP 500）')}return inner(r)}})
+ const log=console.error,debug=process.env.SHAKEINK_IMPORT_DEBUG;process.env.SHAKEINK_IMPORT_DEBUG='1'
+ console.error=(...a:unknown[])=>{if(typeof a[0]==='string'&&a[0].startsWith('line-step-retry ')){const l=JSON.parse(a[0].slice(16));if(l.kind==='narrative')seen.push(l)}}
+ try{
+  await toLines(f);const v=await toStep(f,'outline').catch(async()=>f.settle())
+  assert.notEqual(v.wizard!.stepState.narrative,'failed',v.wizard!.stepError);assert.ok(failures>=2,'failures on more than one try: '+failures)
+  assert.equal(seen.length,failures,'one retry per failed place');assert.ok(seen.every(l=>l.attempt===1),'every place on its first retry: '+JSON.stringify(seen.map(l=>l.attempt)))
+ }finally{console.error=log;if(debug===undefined)delete process.env.SHAKEINK_IMPORT_DEBUG;else process.env.SHAKEINK_IMPORT_DEBUG=debug;await f.dispose()}
+})
+test('AR-06: two batches failing in the same try both pass on the fifth retry; failing a sixth time fails the step',async()=>{
+ for(const limit of [5,6]){
+  const ids:string[]=[],count=new Map<string,number>()
+  const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'){if(ids.length<2&&!ids.includes(r.units[0].id))ids.push(r.units[0].id);const id=ids.find(id=>r.units.some(u=>u.id===id));if(id){const n=(count.get(id)??0)+1;count.set(id,n);if(n<=limit)throw Error('模型接口请求失败（HTTP 500）')}}return inner(r)}})
+  try{
+   await toLines(f);const v=await toStep(f,'narrative').catch(async()=>f.settle())
+   assert.equal(v.wizard!.stepState.worldline,limit===5?'done':'failed',limit+' '+(v.wizard!.stepError??''))
+  }finally{await f.dispose()}
+ }
+})
+test('AR-07: a gap re-ask failing every time fails after 1+5 tries, not forever',async()=>{
+ // One event per chapter a batch starts, except the last chapter (as WT-39); the re-ask of the last chapter always fails.
+ const perChapter=(r:ImportAiRequest)=>{const last=r.chapters!.length-1
+  const starts=r.chapters!.map((c,i)=>({c,i})).filter(({c,i})=>i!==last&&r.units.some(u=>u.start<=c.start&&u.end>c.start))
+  return starts.length?{artifacts:starts.map(({c,i})=>{const u=r.units.find(u=>u.start<=c.start&&u.end>c.start)!,from=Math.max(0,c.start-u.start);return {id:'ev-'+i,kind:'worldline' as const,name:'第'+i+'章事件',text:'发生了一件事。',facts:{lineId:'main',lineName:'主世界线',timeKind:'unknown',people:'[]',reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(from,from+6)}],sourceUnitIds:[u.id],origin:'inferred' as const}})}:{notFound:true}}
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isLine(r)&&r.kind==='worldline'){const j=await f.journal();if((j.coverage.worldline??[]).length===j.workingUnits!.length)throw Error('模型接口请求失败（HTTP 500）');return perChapter(r)}return inner(r)}})
+ try{
+  const {value:v,lines}=await retryLines(async()=>{await toLines(f);return f.settle()})
+  assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal((await f.journal()).wizard!.worldGapsAsked,undefined)
+  assert.deepEqual(lines.map(l=>[l.stage,l.attempt]),[1,2,3,4,5].map(n=>['gaps',n]))
+ }finally{await f.dispose()}
+})
+test('AR-08/AR-12: step 18 counts from 1 after step 17 retried; a narrative batch failing every time fails after 1+5 tries and the author retry completes it',async()=>{
+ let fail=8,bad:string|undefined,healed=false
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&fail-->0)throw Error('模型接口请求失败（HTTP 500）')
+  if(isLine(r)&&r.kind==='narrative'){bad??=r.units[0].id;if(!healed&&r.units.some(u=>u.id===bad))throw Error('模型接口请求失败（HTTP 500）')}return inner(r)}})
+ try{
+  const {value:v,lines}=await retryLines(async()=>{await toLines(f);return toStep(f,'outline').catch(async()=>f.settle())})
+  assert.equal(v.wizard!.stepState.worldline,'done');assert.equal(v.wizard!.step,'narrative');assert.equal(v.wizard!.stepState.narrative,'failed')
+  assert.deepEqual(lines.filter(l=>l.kind==='narrative').map(l=>l.attempt),[1,2,3,4,5])
+  const j=await f.journal(),covered=new Set(j.coverage.narrative??[]),before=f.requests.length;healed=true;await f.act('wizard-redetect');const w=await toStep(f,'outline').catch(async()=>f.settle())
+  assert.notEqual(w.wizard!.stepState.narrative,'failed',w.wizard!.stepError);assert.ok(f.requests.slice(before).filter(r=>isLine(r)&&r.kind==='narrative').every(r=>r.units.every(u=>!covered.has(u.id))))
+ }finally{await f.dispose()}
+})
+test('AR-09/AR-10: pausing or cancelling during a wait ends it at once; resuming counts from 1',async()=>{
+ for(const stop of ['pause','cancel'] as const){
+  let broken=true
+  const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&broken)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+  process.env.SHAKEINK_LINE_RETRY_UNIT_MS='2000'
+  try{
+   await toLines(f);await until(()=>timelines(f)>=4,20000);const sent=f.requests.length,t0=Date.now()
+   await f.act(stop);await f.settle();assert.ok(Date.now()-t0<1000,stop+' took '+(Date.now()-t0));assert.equal(f.requests.length,sent,'no request during the wait')
+   if(stop==='pause'){const j=await f.journal();assert.notEqual(j.wizard!.stepState.worldline,'failed');process.env.SHAKEINK_LINE_RETRY_UNIT_MS='1';const before=timelines(f)
+    // Still failing after the resume: a fresh count gives 1+5 more tries (12 requests) before the step fails.
+    await f.act('resume',{consent:true});let v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(timelines(f)-before,12)
+    broken=false;await f.act('wizard-redetect');v=await toStep(f,'narrative').catch(async()=>f.settle());assert.equal(v.wizard!.stepState.worldline,'done',v.wizard!.stepError)}
+  }finally{process.env.SHAKEINK_LINE_RETRY_UNIT_MS='1';await f.dispose()}
+ }
+})
+test('AR-11: authorization failures are not retried',async()=>{
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r))throw Error('所选模型的密钥不可用，请在设置中重新配置');return inner(r)}})
+ try{await toLines(f);const v=await f.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.equal(timelines(f),2,'one try only')}finally{await f.dispose()}
+ // A model change during the step is refused before the next request and not retried.
+ const g=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)){g.setModels({text:{...model,authRevision:2},review:model});throw Error('模型接口请求失败（HTTP 500）')}return inner(r)}})
+ try{await toLines(g);const v=await g.settle();assert.equal(v.wizard!.stepState.worldline,'failed');assert.match(v.wizard!.stepError??'',/模型配置或授权已变化|重新允许/u);assert.equal(g.requests.filter(isTimeline).length,1)}finally{await g.dispose()}
+})
+test('AR-14: retries in progress are not shown; the author retry is refused while they run',async()=>{
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r))throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+ process.env.SHAKEINK_LINE_RETRY_UNIT_MS='200'
+ try{
+  await toLines(f);await until(()=>timelines(f)>=4,20000)
+  for(let i=0;i<5;i++){const v=await f.view();assert.equal(v.wizard!.stepState.worldline,'running');assert.equal(v.wizard!.stepError,undefined);await sleep(20)}
+  await assert.rejects(f.act('wizard-redetect'),/导入正在处理|当前步骤没有失败/u)
+ }finally{process.env.SHAKEINK_LINE_RETRY_UNIT_MS='1';await f.act('pause').catch(()=>undefined);await f.settle().catch(()=>undefined);await f.dispose()}
+})
+test('AR-15: the retry debug line has no source text',async()=>{
+ let fail=2
+ const f=await linesFixture(base=>{const inner=linesAi(base);return async r=>{if(isTimeline(r)&&fail-->0)throw Error('模型接口请求失败（HTTP 500）');return inner(r)}})
+ try{const {lines}=await retryLines(async()=>{await toLines(f);return toStep(f,'narrative').catch(async()=>f.settle())})
+  assert.deepEqual(lines,[{kind:'worldline',stage:'timeline',attempt:1,delayMs:0,reason:'模型接口请求失败'}]);assert.doesNotMatch(JSON.stringify(lines),/风声|渡口/u)}finally{await f.dispose()}
+})
+test('AR-16: a failed save at the end of step 17 is not retried, so step 18 is never skipped',async()=>{
+ const f=await linesFixture()
+ // Fails, once, the save that moves the wizard from step 17 to step 18 (the step's last checkpoint).
+ const c=f.controller as unknown as {save:(s?:ImportSession,...a:unknown[])=>Promise<void>},save=c.save.bind(c);let failed=false
+ c.save=async(s?:ImportSession,...a:unknown[])=>{const w=(s??(f.controller as unknown as {session?:ImportSession}).session)?.wizard
+  if(!failed&&w?.step==='narrative'&&w.stepState.worldline==='done'){failed=true;throw Object.assign(Error('EIO: i/o error, write'),{errno:-5,code:'EIO',syscall:'write'})}return save(s,...a)}
+ try{
+  await toLines(f);const v=await f.settle();assert.ok(failed,'the end-of-step save failed once')
+  assert.equal(f.requests.filter(r=>isLine(r)&&r.kind==='narrative').length,0,'step 18 sent nothing')
+  assert.notEqual(v.wizard!.stepState.narrative,'done','step 18 is not marked done without running')
+ }finally{c.save=save;await f.dispose()}
 })

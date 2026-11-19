@@ -5370,6 +5370,72 @@
       "滚动中顶到视口顶部的分组标题栏右端约 170px 会被切换按钮遮住，滚动可避开",
       "等距模式圆点端点改读卡片头，展开卡片时移动 ≤ 5px"
     ]
+  },
+  {
+    "id": "NI-590",
+    "requirement": "导入作品时，导入世界线与导入叙事线出错不再立即停下等待[重试]，而是自动重试：同一处最多 5 次，间隔 0/1/2/4/8 秒（用户 2026-11-19 选定第 5 次 8 秒）；该处通过后计数清零，下一处从第 1 次计；5 次仍失败则停下并显示[重试]，点[重试]后同样最多自动重试 5 次（用户 2026-11-19）",
+    "source": [
+      "docs/590-line-step-auto-retry-plan.md",
+      "docs/590-line-step-auto-retry-plan-review.md",
+      "docs/590-line-step-auto-retry-code-review.md"
+    ],
+    "implementation": [
+      "desktop/main/novel-import.ts"
+    ],
+    "testIds": [
+      "590-AR-00..AR-16（AR-09/AR-10、AR-08/AR-12 合并；AR-13 由既有 OP 用例覆盖）",
+      "LP-08b/LP-08c/LP-10/LP-15b/WT-32/WG-31/WG-32/WG-13（按新行为更新）",
+      "tests/unit/novel-import-lines-performance.test.ts"
+    ],
+    "verificationKind": "IMPORT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-not-run",
+    "evidence": [
+      "tests/unit/novel-import-lines-performance.test.ts 59/59 通过（连续两次）",
+      "全量 npm test 5071 项、44 项失败；失败文件逐个单独重跑，与改前干净 HEAD c0e98c9 worktree 相同或 HEAD 失败更多（novel-import-wizard-publish HEAD 5 项失败、改后 1 项卡在 detect-scene；root-startup 改后单独 8/8 通过），无本改动引入的失败",
+      "tsc --noEmit 通过"
+    ],
+    "verificationLimits": [
+      "真实目标未执行：步骤 17/18 的自然失败无法按需触发，正式代码不加故障注入；自动重试路径只有单元用例证据",
+      "多处轮流失败时总尝试次数上限为 5×出错位置数；每次尝试重算批内额外请求预算，最坏请求数约为原来的 6 倍",
+      "步骤收尾（记录修复项、进入下一步）的失败不自动重试，避免重跑时跳过下一步"
+    ]
+  },
+  {
+    "id": "WL-591",
+    "requirement": "世界线顶部图例：点击取消某个事件类型或重要度（一般/重要/关键）后，画布中不显示这一类事件并重新排版（原为置灰）；父事件被取消时整组不显示；左侧事件目录同步筛选（用户 2026-11-19）",
+    "source": [
+      "docs/591-worldline-legend-filter-plan.md",
+      "docs/591-worldline-legend-filter-plan-review.md",
+      "docs/591-worldline-legend-filter-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/components/content/planning/PlanningWorkspace.tsx",
+      "src/components/content/planning/worldline/WorldlineToolbar.tsx",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/EventTimeline.tsx",
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "591-LF-01..LF-06",
+      "tests/unit/worldline-layout.test.ts",
+      "591-LF-B1..LF-B4、LF-B9、WU-33/WU-34（改）",
+      "tests/browser/planning-worldline-table.test.ts",
+      "591-LF-B5..LF-B8、LF-B7b、WU-09e/WU-34b（改）",
+      "tests/browser/planning-worldline-workspace.test.ts",
+      "WU-21b（改）",
+      "591-LF-R1（真实目标 lf-r1）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "tests/browser/planning-worldline-*.test.ts 153/153 通过；tests/unit/worldline-layout.test.ts 69/69 通过；tsc 与 npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/591/lf-r1（隔离根、构建版应用、LOTM-587-wg-r1 1061 个事件、无模型调用）：取消“其他”显示 717/1061，事件表高度 51598→32640px，重排 84 ms；再取消“一般”561/1061、25135px、68 ms、无重要度 1 圆点；“显示全部”147 ms 恢复到初始高度；截图 0–4"
+    ],
+    "verificationLimits": [
+      "图例计数仍按全部事件计；状态栏显示“显示 X / 共 Y”",
+      "编辑、保存或定位到被筛掉的事件时，自动恢复该事件及祖先的类型与重要度并提示"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",
