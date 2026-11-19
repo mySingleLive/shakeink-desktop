@@ -1,11 +1,12 @@
 "use client";
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  CARD_HEAD,
+  alignedRailMarks,
   CATEGORY_VAR,
   railMarks,
   tableLayout,
   descendants,
+  type AlignedRailMarks,
   type EventTree,
   type RailLevel,
   type TableLayout,
@@ -28,6 +29,8 @@ export function EventTable({
   level,
   canZoomIn,
   canZoomOut,
+  railMode,
+  onRailMode,
   periods,
   onFold,
   onZoom,
@@ -47,6 +50,9 @@ export function EventTable({
   level: RailLevel | null;
   canZoomIn: boolean;
   canZoomOut: boolean;
+  /** docs/588 §2: aligned (dots on the card heads) or linear (docs/586, equal time per length). */
+  railMode: RailMode;
+  onRailMode(mode: RailMode): void;
   periods: readonly { id: string; start: number; end: number | null }[];
   onFold(id: string): void;
   /** docs/586 §1: a wheel step in log scale (± ln 1.15); the parent adds it and clamps. */
@@ -64,9 +70,12 @@ export function EventTable({
   const [panelWidth, setPanelWidth] = useState(0);
   // The rail narrows with the panel (worldline.module.css @container ≤ 640px); leads follow the same geometry.
   const narrow = panelWidth > 0 && panelWidth <= 640;
-  const marks = useMemo(
-    () => railMarks(layout, layout.segments, ctx.adapter, { selected, periods, level, compact: narrow }),
-    [layout, ctx.adapter, selected, periods, level, narrow],
+  const marks: AlignedRailMarks = useMemo(
+    () =>
+      railMode === "aligned"
+        ? alignedRailMarks(layout, ctx.adapter, { selected, periods, compact: narrow })
+        : { ...railMarks(layout, layout.segments, ctx.adapter, { selected, periods, level, compact: narrow }), backs: [] },
+    [railMode, layout, ctx.adapter, selected, periods, level, narrow],
   );
   // §5.1 [R3]: virtualize when the worldline has more than VIRTUAL_MIN events in total (pending included, folding
   // ignored), so folding never switches modes. The window is one screen above and below the viewport, in steps.
@@ -77,6 +86,12 @@ export function EventTable({
   const [hover, setHover] = useState<readonly string[]>([]);
   const hovered = (id: string) => hover.includes(id);
   const hoverOn = (ids: readonly string[]) => setHover((h) => (h.length === ids.length && h.every((x, i) => x === ids[i]) ? h : ids));
+  // docs/588 §4: a mode switch redraws the rail under a still pointer; drop the old hover in the same render.
+  const [hoverMode, setHoverMode] = useState(railMode);
+  if (hoverMode !== railMode) {
+    setHoverMode(railMode);
+    setHover([]);
+  }
   const live = useRef({ layout, virtual, marks, canZoomIn, canZoomOut });
   live.current = { layout, virtual, marks, canZoomIn, canZoomOut };
   const sync = useRef(() => {});
@@ -84,11 +99,12 @@ export function EventTable({
     const sc = scrollerRef.current;
     if (!sc) return;
     // WU-46: the last year badge scrolled past; empty near the top. Only a text change re-renders.
-    const top = sc.scrollTop;
+    const top = sc.scrollTop - TABLE_TOP;
     setSticky(top <= 20 ? "" : (live.current.marks.badges.filter((b) => b.kind === "year" && b.y < top).at(-1)?.text ?? ""));
     if (!live.current.virtual) return setWin((w) => (w[0] === -Infinity && w[1] === Infinity ? w : [-Infinity, Infinity]));
     const h = Math.max(200, sc.clientHeight), step = Math.max(100, h / 4);
-    const lo = Math.floor((sc.scrollTop - h) / step) * step, hi = Math.ceil((sc.scrollTop + 2 * h) / step) * step;
+    const y = sc.scrollTop - TABLE_TOP;
+    const lo = Math.floor((y - h) / step) * step, hi = Math.ceil((y + 2 * h) / step) * step;
     setWin((w) => (w[0] === lo && w[1] === hi ? w : [lo, hi]));
   };
   useLayoutEffect(() => {
@@ -124,7 +140,7 @@ export function EventTable({
       <div
         key={c.id}
         data-measure-id={isOpen ? c.id : undefined}
-        className={`${s.slot} ${isOpen ? s.slotOpen : ""}`}
+        className={`${s.slot} ${isOpen ? s.slotOpen : ""} ${c.groupHead ? s.slotHead : ""}`}
         style={{ top, marginLeft: left }}
       >
         <EventCard
@@ -141,6 +157,7 @@ export function EventTable({
           placed={c.start !== null}
           maxAvatars={4}
           variant="table"
+          groupHead={c.groupHead}
           onFold={onFold}
         />
       </div>
@@ -214,7 +231,7 @@ export function EventTable({
       // docs/586 §1: at a bound nothing changes, so no anchor is left behind for a later layout.
       if (e.deltaY > 0 ? !down : !up) return;
       const step = e.deltaY > 0 ? -Math.log(1.15) : Math.log(1.15);
-      const y = e.clientY - sc.getBoundingClientRect().top + sc.scrollTop;
+      const y = e.clientY - sc.getBoundingClientRect().top + sc.scrollTop - TABLE_TOP;
       const under = l.cards.find((c) => c.top + c.height > y) ?? null;
       zoomAnchor.current = under ? { id: under.id, until: performance.now() + 400 } : null;
       anchorNow(under?.id ?? null);
@@ -252,11 +269,35 @@ export function EventTable({
       }}
     >
       <div data-sticky-year="" className={s.stickyYear}>{sticky && <span>{sticky}</span>}</div>
+      <div className={s.railModeDock}>
+        <div role="group" aria-label="时间轴模式" data-rail-mode-toggle="" className={s.railMode} title="对齐：时间轴日期与卡片同一水平线；等距：相同长度代表相同时间">
+          <span>时间轴</span>
+          {(["aligned", "linear"] as const).map((m) => (
+            <button key={m} type="button" className={s.railModeBtn} aria-pressed={railMode === m} onClick={() => onRailMode(m)}>
+              {m === "aligned" ? "对齐" : "等距"}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* docs/588 §2: room above the first card so the toggle never covers it at the top. */}
+      <div aria-hidden style={{ height: TABLE_TOP }} />
       {/* Bottom room of at least 2/3 of the viewport, so locate can bring the last card to the upper third (WU-62). */}
       <div data-event-table="" {...(virtual ? { "data-virtual": "" } : {})} style={{ position: "relative", height: `calc(${layout.height}px + max(80px, 67%))` }}>
-        <div className={s.rail} style={{ height: layout.height }} aria-hidden={false}>
+        <div
+          className={s.rail}
+          style={{ height: layout.height }}
+          aria-hidden={false}
+          onPointerOver={(e) => {
+            const el = (e.target as Element).closest<HTMLElement>("[data-rail-label],[data-rail-dot]");
+            hoverOn(el?.dataset.ids ? el.dataset.ids.split(" ") : []);
+          }}
+          onPointerLeave={() => hoverOn([])}
+        >
           {marks.lines.map((l) => (
             <div key={`l${l.segment}`} className={s.railLine} style={{ top: l.top, height: l.height }} />
+          ))}
+          {marks.backs.map((b) => (
+            <div key={`bk${b.segment}-${b.top}`} data-rail-back="" className={s.railBack} style={{ top: b.top, height: b.height }} title="早于上一事件" />
           ))}
           {marks.periods.map((p, i) => (
             <div key={`p${p.id}${i}`} data-rail-period={p.id} className={s.railPeriod} style={{ top: p.y0, height: Math.max(2, p.y1 - p.y0) }} />
@@ -279,7 +320,7 @@ export function EventTable({
             {[...marks.points].map(([id, y]) => {
               const card = layout.byId.get(id), n = node(id);
               if (!card || !n || !rendered.has(id)) return null;
-              const x1 = leadX + card.left, yh = card.top + CARD_HEAD;
+              const x1 = leadX + card.left, yh = card.head;
               return (
                 <path
                   key={id}
@@ -299,15 +340,15 @@ export function EventTable({
               <b
                 key={d.ids.join(",")}
                 data-rail-dot=""
+                data-ids={d.ids.join(" ")}
+                {...(d.back ? { "data-rail-back-dot": "" } : {})}
                 data-event-id={d.lead}
                 data-importance={d.importance}
                 {...(d.cluster ? { "data-cluster": "" } : {})}
-                className={`${s.railDot} ${d.cluster ? s.cluster : s[`d${d.importance}`]} ${allDim ? s.dim : ""} ${hot(d.ids) ? s.hot : ""}`}
+                className={`${s.railDot} ${d.cluster ? s.cluster : s[`d${d.importance}`]} ${allDim ? s.dim : ""} ${hot(d.ids) ? s.hot : ""} ${d.back ? s.back : ""}`}
                 style={{ top: d.y, "--ec": `var(${CATEGORY_VAR[lead.event.category]})` } as React.CSSProperties}
                 aria-label={`${lead.event.title} ${ctx.adapter.label(d.t, 1, lead.event.time.precision)} ${["一般", "重要", "关键"][d.importance - 1]}`}
                 title={d.cluster ? d.ids.map((id) => node(id)?.event.title).join("\n") : undefined}
-                onPointerEnter={() => hoverOn(d.ids)}
-                onPointerLeave={() => hoverOn([])}
               >
                 {d.cluster ? d.count : null}
               </b>
@@ -319,15 +360,29 @@ export function EventTable({
             const lead = node(marks.dots[i]?.lead ?? l.ids[0]);
             return (
               <span
-                key={`lb${i}`}
+                key={`lb${l.ids.join(",")}`}
                 data-rail-label=""
+                data-ids={l.ids.join(" ")}
                 data-rail-level={l.level ?? ""}
                 data-label-for={l.ids.join(" ")}
-                className={`${s.railLabel} ${hot(l.ids) ? s.hot : ""}`}
+                className={`${s.railLabel} ${hot(l.ids) ? s.hot : ""} ${l.back ? s.back : ""}`}
+                title={l.back ? "早于上一事件" : undefined}
                 style={{ top: l.y, ...(lead ? { "--ec": `var(${CATEGORY_VAR[lead.event.category]})` } : {}) } as React.CSSProperties}
               >
                 {l.text}
               </span>
+            );
+          })}
+          {railMode === "aligned" && hover.map((id) => {
+            const card = layout.byId.get(id), n = node(id);
+            if (!card || !n || !rendered.has(id)) return null;
+            return (
+              <i
+                key={`gd${id}`}
+                data-rail-guide={id}
+                className={s.railGuide}
+                style={{ top: card.head, width: leadX + card.left, "--ec": `var(${CATEGORY_VAR[n.event.category]})` } as React.CSSProperties}
+              />
             );
           })}
         </div>
@@ -378,8 +433,12 @@ function renderLevel(
 }
 
 function firstVisible(layout: TableLayout, scrollTop: number) {
-  return layout.cards.find((c) => c.top + c.height > scrollTop + 8)?.id ?? null;
+  const y = scrollTop - TABLE_TOP;
+  return layout.cards.find((c) => c.top + c.height > y + 8)?.id ?? null;
 }
+/** docs/588 §2: the toggle's room above the table, in px (scrollTop = layout y + TABLE_TOP). */
+export const TABLE_TOP = 40;
+export type RailMode = "aligned" | "linear";
 function gapText(gap: number, adapter: { dayHours: number }) {
   const days = gap / adapter.dayHours;
   if (days >= 365) return `约 ${Math.round(days / 365.2425).toLocaleString()} 年`;

@@ -5330,6 +5330,46 @@
       "worldGrouped.parents 与 precisions 上限 5000，全书导入未验证",
       "已导入的作品不会自动更新，需重新导入"
     ]
+  },
+  {
+    "id": "WL-588",
+    "requirement": "世界线事件表视图支持两种时间轴模式：对齐（事件日期与卡片头部同一水平线）与等距（现有），右上角切换按钮随时切换，默认对齐；父事件卡片占满分组框宽度与顶部；悬停时间轴日期时标签、圆点、引线与卡片一起高亮（用户 2026-11-18，设计稿三轮修改后审核通过）；对齐模式默认显示每张卡片的日期，不去重隐藏，日期文字与事件目录相同（用户验收 2026-11-19）",
+    "source": [
+      "docs/588-worldline-table-rail-modes-research.md",
+      "design/worldline-rail-modes/index.html",
+      "docs/588-worldline-table-rail-modes-plan.md",
+      "docs/588-worldline-table-rail-modes-plan-review.md",
+      "docs/588-worldline-table-rail-modes-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/EventCard.tsx",
+      "src/components/content/planning/worldline/worldline.module.css",
+      "src/components/content/planning/PlanningWorkspace.tsx"
+    ],
+    "testIds": [
+      "588-RM-01..RM-08（含 RM-01b、RM-05b）",
+      "tests/unit/worldline-layout.test.ts",
+      "588-RM-B1..RM-B8（含 RM-B2b、RM-B4b）",
+      "tests/browser/planning-worldline-table-rail-modes.test.ts",
+      "WU-19j/RL-02/CW-11/RL-B1..B5/WU-45/WU-44/WU-44b（迁移）",
+      "588-RM-09 / RM-E1..E4（真实目标 rail-588）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "tests/unit/worldline-layout.test.ts 63/63 通过",
+      "世界线浏览器用例 143/143 通过（新文件 10/10；RM-B4、RM-B6、RM-B8 经变异检查：去掉对应实现时失败）",
+      "全量 npm test 5036 项、43 项失败，失败名单均在 docs/587 基线中，无新增",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/588/e2/result.json 与截图（构建版应用、隔离根、LOTM-587-wg-r1、无模型调用）：默认对齐 100%；五个滚动位置圆点与卡片头偏差 0px（调研前中位 173px）；切换等距再切回卡片位置不变，等距复位为年档；悬停标签卡片高亮并出现参考线；标题栏与框对齐、高 36；回退圆点 61 个，与纯函数 backs-588.json 一致；正常退出"
+    ],
+    "verificationLimits": [
+      "对齐模式时间轴不单调，回退以 ↺、空心圆点与虚线表示",
+      "对齐模式缩放只改卡片间距，不改标签精度",
+      "滚动中顶到视口顶部的分组标题栏右端约 170px 会被切换按钮遮住，滚动可避开",
+      "等距模式圆点端点改读卡片头，展开卡片时移动 ≤ 5px"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

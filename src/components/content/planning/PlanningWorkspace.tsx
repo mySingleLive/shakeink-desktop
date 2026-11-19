@@ -60,7 +60,7 @@ import s from "./planning.module.css";
 import { Button } from "@/components/ui/button";
 import { WorldlineHeader, type WorldlineSaveState } from "./worldline/WorldlineHeader";
 import { EventCard, EventEditorContext, WorldlineCardContext, type WorldlineCardContextValue } from "./worldline/EventCard";
-import { EventTable } from "./worldline/EventTable";
+import { EventTable, type RailMode } from "./worldline/EventTable";
 import { EventTimeline, TimelineTreeNav, ViewportRange, ViewportValue } from "./worldline/EventTimeline";
 import { createViewportStore, type ViewportStore } from "@/lib/planning/worldline-viewport";
 import { renderProbe } from "@/lib/planning/render-probe";
@@ -180,6 +180,8 @@ function PlanningWorkspace({
     [hitIndex, setHitIndex] = useState(0),
     // docs/586 §1: event-table zoom in log scale around the reset scale (0 = reset); never rounded.
     [tableZoom, setTableZoom] = useState(0),
+    // docs/588 §2: event-table rail mode; aligned by default, interface state only.
+    [tableRail, setTableRail] = useState<RailMode>("aligned"),
     [treeOn, setTreeOn] = useState(true),
     // Dragged event-directory width, shared by both views; null keeps the CSS default (260px, 200px when narrow).
     [treeWidth, setTreeWidth] = useState<number | null>(null),
@@ -301,7 +303,7 @@ function PlanningWorkspace({
     const clamp = (e: number) => Math.min(hi, Math.max(lo, Number.isFinite(e) ? e : 0));
     const e = clamp(tableZoom),
       k = fit * Math.exp(e);
-    return { clamp, k, level: railLevel(k, wAdapter), canIn: e < hi - 1e-9, canOut: e > lo + 1e-9 };
+    return { clamp, e, k, level: railLevel(k, wAdapter), canIn: e < hi - 1e-9, canOut: e > lo + 1e-9 };
   }, [wZoom, wAdapter, tableZoom]);
   // Card callbacks are stable (actions ref), so they read the latest selection here.
   selectionRef.current = selection;
@@ -2539,7 +2541,7 @@ function PlanningWorkspace({
           }
           allExpanded={worldAllEvents.length > 0 && worldAllEvents.every((e) => openCards.has(e.id))}
           onToggleAll={() => { takePendingCollapse(); setOpenCards((v) => (worldAllEvents.length > 0 && worldAllEvents.every((e) => v.has(e.id)) ? new Set() : new Set(worldAllEvents.map((e) => e.id)))); }}
-          zoomLabel={table ? (tableView.level ? RAIL_LEVEL_NAME[tableView.level] : "按事件") : <ViewportValue store={viewport.current} render={(w) => `${Math.round(w.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`} />}
+          zoomLabel={table ? (tableRail === "aligned" ? `${Math.round(Math.exp(tableView.e) * 100)}%` : tableView.level ? RAIL_LEVEL_NAME[tableView.level] : "按事件") : <ViewportValue store={viewport.current} render={(w) => `${Math.round(w.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`} />}
           canZoomIn={tableView.canIn}
           canZoomOut={tableView.canOut}
           onZoom={(dir) => {
@@ -2737,6 +2739,8 @@ function PlanningWorkspace({
                       level={tableView.level}
                       canZoomIn={tableView.canIn}
                       canZoomOut={tableView.canOut}
+                      railMode={tableRail}
+                      onRailMode={setTableRail}
                       periods={allPeriods.map((p) => ({ id: p.id, start: p.start ?? 0, end: p.end }))}
                       onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
                       onZoom={(step) => setTableZoom((e) => tableView.clamp(tableView.clamp(e) + step))}

@@ -93,7 +93,9 @@ test("CW-10: timeline collapsed cards follow their titles within [150, 340] / [1
 
 test("CW-11: table collapsed cards follow their titles within [220, 880]; expanding one leaves the others", () => withWorldline(browser, f60(), async page => {
   await tab(page, "事件表")
-  const widths = () => page.evaluate(() => Object.fromEntries([...document.querySelectorAll<HTMLElement>("[data-event-table] [data-event-card]")].map(c => [c.getAttribute("aria-label")!, Math.round(c.getBoundingClientRect().width)])))
+  // docs/588 §1: a parent card heads its group box at the box's full width; the title-width rule is for the others.
+  const widths = () => page.evaluate(() => Object.fromEntries([...document.querySelectorAll<HTMLElement>("[data-event-table] [data-event-card]")].filter(c => !c.closest("[data-event-group]") || c.parentElement!.parentElement!.querySelector(":scope > div > [data-event-card]") !== c).map(c => [c.getAttribute("aria-label")!, Math.round(c.getBoundingClientRect().width)])))
+  assert.ok(await page.locator("[data-event-group]").evaluateAll(gs => gs.every(g => Math.abs(g.querySelector(":scope > div > [data-event-card]")!.getBoundingClientRect().width - g.getBoundingClientRect().width) <= 1)))
   const w0 = await widths()
   const all = Object.values(w0)
   assert.ok(new Set(all).size > 3, `widths vary: ${all}`)

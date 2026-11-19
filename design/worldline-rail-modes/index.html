@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>docs/588 设计稿 · 事件表时间轴：对齐 / 等距</title>
+<style>
+:root{--bg:#141110;--panel:#1b1715;--card:#201b18;--card-2:#272120;--line:#3a302b;--line-soft:#2a231f;--text:#ede6e0;--muted:#a09389;--faint:#6f645c;--accent:#e07a5f;--accent-2:#f2b48f;--chart-2:#8fb3a0;
+ --c0:#e8735f;--c1:#d9ab5b;--c2:#67b6cc;--c3:#cf8bbd;--c4:#8cc48a;--c5:#a08cf0;--c6:#8d837c}
+[data-light]{--bg:#f6f2ee;--panel:#fffdfb;--card:#fff;--card-2:#faf6f3;--line:#e2d7ce;--line-soft:#eee6df;--text:#2a231f;--muted:#7a6c63;--faint:#a7998f;--accent:#b03524;--accent-2:#c2553b;--chart-2:#5f8f78;
+ --c0:#c94a36;--c1:#b5832a;--c2:#2f8aa3;--c3:#a55590;--c4:#4f9a4c;--c5:#6f5bd0;--c6:#8e8279}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.review{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-height:38px;padding:6px 18px;background:#000;color:#bbb;font-size:12px}
+.review b{color:#fff}.review button{padding:3px 10px;border:1px solid #444;border-radius:6px}
+.review button[aria-pressed=true]{background:#fff;color:#000}.review .note{margin-left:auto;color:#888}
+.panel{display:flex;flex-direction:column;height:calc(100% - 38px);padding:18px 24px 0}
+h1{margin:0 0 12px;font-size:22px;font-weight:600;letter-spacing:.04em}
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{height:28px;padding:0 12px;border-radius:7px;border:1px solid var(--line-soft);background:var(--card);color:var(--text)}
+.seg{display:inline-flex;align-items:center;gap:2px;height:28px;padding:3px;border-radius:9px;background:var(--panel);border:1px solid var(--line-soft)}
+.seg button{height:22px;padding:0 12px;border-radius:6px;color:var(--muted);font-size:12.8px}
+.seg button[aria-pressed=true]{background:var(--card-2);color:var(--text);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.seg .cap{padding:0 4px 0 8px;color:var(--faint);font-size:12px}
+.sep{width:1px;height:18px;background:var(--line-soft);margin:0 4px}
+.zoom{display:inline-flex;align-items:center;height:28px;padding:0 2px;border:1px solid var(--line-soft);border-radius:7px}
+.zoom button{width:24px;height:22px;border-radius:5px;color:var(--muted)}.zoom button:hover{background:var(--card-2);color:var(--text)}
+.zoom .val{min-width:54px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}
+.zoom .reset{width:auto;padding:0 7px;font-size:12px}
+.status{display:flex;gap:14px;margin:12px 0 8px;color:var(--faint);font-size:12px}
+.view{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.railMode{position:absolute;top:8px;right:24px;z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.28)}
+.scroller{position:relative;flex:1;min-height:0;overflow:auto;border-top:1px solid var(--line-soft)}
+.table{position:relative;margin-top:32px}
+.rail{position:absolute;left:0;top:0;width:210px;pointer-events:none}
+.rline{position:absolute;left:158px;width:2px;margin-left:-1px;background:linear-gradient(transparent,var(--line) 18px,var(--line) calc(100% - 18px),transparent)}
+.rback{position:absolute;left:158px;width:0;margin-left:-1px;border-left:2px dashed var(--faint);opacity:.8}
+.dot{position:absolute;left:158px;width:11px;height:11px;border-radius:50%;background:var(--ec);border:2px solid var(--bg);box-shadow:0 0 0 1.5px var(--ec);transform:translate(-50%,-50%);pointer-events:auto}
+.dot.back{background:var(--bg)}
+.dot.cluster{width:18px;height:18px;border:0;color:var(--bg);font-size:10px;font-weight:800;line-height:18px;text-align:center}
+.dot.hot{box-shadow:0 0 0 1.5px var(--ec),0 0 14px var(--ec)}
+.lab{position:absolute;right:66px;pointer-events:auto;cursor:default;transform:translateY(-50%);white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted);padding:1px 7px;border-radius:5px}
+.lab.back{color:var(--faint);font-style:italic}.lab.hot{color:#fff;background:var(--ec);font-style:normal}
+.dot.hot{transform:translate(-50%,-50%) scale(1.45)}
+.badge{position:absolute;left:158px;transform:translate(-50%,-50%);padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;color:var(--accent-2);background:var(--bg);border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line))}
+.tick{position:absolute;left:150px;width:8px;height:1px;background:var(--line)}
+.ticklab{position:absolute;right:66px;transform:translateY(-50%);font-size:10px;color:var(--faint)}
+.period{position:absolute;left:172px;width:3px;border-radius:2px;background:var(--chart-2);opacity:.75}
+.brk{position:absolute;left:0;width:210px;display:flex;align-items:center;justify-content:flex-end;padding-right:66px;font-size:11px;font-style:italic;color:var(--faint)}
+svg.leads{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.lead{fill:none;stroke:color-mix(in srgb,var(--ec) 35%,var(--line));stroke-width:1}.lead.child{stroke-dasharray:3 3}.lead.hot{stroke:var(--ec);stroke-width:1.6}
+.cards{position:relative;margin-left:210px}
+.group{position:absolute;left:12px;right:24px;max-width:880px;border:1px solid var(--line-soft);border-left:3px solid var(--ec);border-radius:10px;background:color-mix(in srgb,var(--ec) 4%,transparent)}
+.card{position:absolute;display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:8px;background:var(--card);border:1px solid var(--line-soft);border-left:3px solid var(--ec);white-space:nowrap;max-width:560px}
+.card i{width:7px;height:7px;border-radius:50%;background:var(--ec)}.card .n{color:var(--faint);font-size:11px}.card .m{color:var(--faint);margin-left:6px}
+.card.head{right:24px;max-width:880px;height:36px;border-radius:10px 10px 0 0;border-width:0 0 1px 3px;border-color:var(--line-soft) var(--line-soft) var(--line-soft) var(--ec);background:color-mix(in srgb,var(--ec) 12%,var(--card));font-weight:600}
+.card.hot{border-color:var(--ec);box-shadow:0 0 0 1px var(--ec),0 0 16px color-mix(in srgb,var(--ec) 40%,transparent);background:color-mix(in srgb,var(--ec) 14%,var(--card))}
+.edge{position:absolute;left:0;right:0;height:0;border-top:1px dashed color-mix(in srgb,var(--accent) 60%,transparent);pointer-events:none}
+</style>
+</head>
+<body>
+<div class="review">
+  <b>docs/588 设计稿</b>（审核用；示例事件为虚构，不进入产品）
+  <span>落点</span>
+  <button data-anchor="head" aria-pressed="true">卡片头部中线（推荐）</button>
+  <button data-anchor="top">卡片上边界</button>
+  <span>主题</span>
+  <button data-theme="dark" aria-pressed="true">暗</button><button data-theme="light">亮</button>
+  <span class="note">事件表右上角的「时间轴 对齐 / 等距」属于产品界面；本行是审核开关</span>
+</div>
+<div class="panel">
+  <h1>世界线</h1>
+  <div class="bar" role="toolbar" aria-label="世界线工具栏">
+    <button class="btn">主世界线 ▾</button>
+    <div class="seg" role="group" aria-label="视图"><button aria-pressed="false">时间线</button><button aria-pressed="true">事件表</button></div>
+    <span class="sep"></span>
+    <button class="btn">时期 ▾</button>
+    <div class="zoom" title="缩放时间轴（也可 Ctrl + 滚轮）">
+      <button id="zout" aria-label="缩小">−</button><span class="val" id="zval"></span><button id="zin" aria-label="放大">＋</button>
+      <button class="reset" id="zfit">复位</button>
+    </div>
+  </div>
+  <div class="status"><span>第五纪1340年 — 第五纪1342年</span><span id="count"></span><span id="hint"></span></div>
+  <div class="view">
+      <div class="seg railMode" role="group" aria-label="时间轴模式" title="对齐：时间轴日期与卡片同一水平线；等距：相同长度代表相同时间">
+      <span class="cap">时间轴</span>
+      <button data-mode="aligned" aria-pressed="true">对齐</button>
+      <button data-mode="linear" aria-pressed="false">等距</button>
+    </div>
+  <div class="scroller" id="sc"><div class="table" id="table"><div class="rail" id="rail"></div><div class="cards" id="cards"></div></div></div>
+  </div>
+</div>
+<script>
+// Fictional sample: time in hours; year 1340 maps to 2001 so Date handles months.
+const T = (y, m, d, h = 0) => (Date.UTC(y - 1340 + 2001, m - 1, d, h) - Date.UTC(2001, 0, 1)) / 36e5
+const ymd = t => { const x = new Date(Date.UTC(2001, 0, 1) + t * 36e5); return { y: x.getUTCFullYear() - 2001 + 1340, m: x.getUTCMonth() + 1, d: x.getUTCDate(), h: x.getUTCHours() } }
+const C = ["--c0", "--c1", "--c2", "--c3", "--c4", "--c5", "--c6"]
+// [id, parent, title, category index, time, precision]
+const RAW = [
+  ["a", null, "港口码头发生连环失踪案", 0, T(1340, 3, 2), "day"],
+  ["b", null, "侦探事务所接受委托", 2, T(1340, 3, 9), "day"],
+  ["c", null, "旧钟楼家族往事", 3, T(1340, 4, 1), "month"],
+  ["c1", "c", "祖父在钟楼下埋藏信件", 2, T(1338, 11, 1), "month"],
+  ["c2", "c", "父亲失踪前留下怀表", 5, T(1339, 8, 14), "day"],
+  ["c3", "c", "信件被翻出并送到事务所", 2, T(1340, 4, 3), "day"],
+  ["d", null, "夜巡队在码头设伏", 0, T(1340, 4, 5, 21), "hour"],
+  ["e", null, "伏击失败，线索中断", 5, T(1340, 4, 6, 2), "hour"],
+  ["f", null, "主角加入秘密聚会", 3, T(1340, 4, 12), "day"],
+  ["g", null, "聚会内部的分歧", 1, T(1340, 4, 20), "day"],
+  ["g1", "g", "两位长老争夺领导权", 1, T(1340, 4, 21), "day"],
+  ["g2", "g", "新成员被要求表态", 1, T(1340, 4, 22), "day"],
+  ["h", null, "第一次独立调查", 4, T(1340, 5, 3), "day"],
+  ["i", null, "城中出现第二具无名尸体", 0, T(1340, 5, 3, 18), "hour"],
+  ["j", null, "调查推进到旧城区", 2, T(1340, 6, 1), "month"],
+  ["k", null, "冬季暴雪封港", 5, T(1340, 12, 20), "day"],
+  ["l", null, "新年集市上的重逢", 3, T(1341, 1, 2), "day"],
+  ["m", null, "主角获得晋升", 4, T(1341, 1, 15), "day"],
+  // A later segment, after a long gap.
+  ["n", null, "远行抵达海岛", 4, T(1342, 9, 1), "day"],
+  ["o", null, "海岛居民的禁忌", 2, T(1342, 9, 4), "day"],
+  ["p", null, "风暴夜的追逐", 0, T(1342, 9, 4, 22), "hour"],
+]
+const PERIODS = [{ id: "p1", start: T(1340, 4, 1), end: T(1340, 5, 1) }]
+const ev = new Map(RAW.map(([id, parent, title, cat, t, precision]) => [id, { id, parent, title, cat, t, precision, children: [] }]))
+for (const e of ev.values()) if (e.parent) ev.get(e.parent).children.push(e)
+for (const e of ev.values()) e.children.sort((a, b) => a.t - b.t)
+const roots = [...ev.values()].filter(e => !e.parent).sort((a, b) => a.t - b.t)
+// Segments: split on gaps beyond 30 days and 20 × the median gap (docs/580 §4).
+const gaps = roots.slice(1).map((r, i) => r.t - roots[i].t).sort((a, b) => a - b)
+const limit = Math.max(720, gaps[Math.floor(gaps.length / 2)] * 20)
+const segs = []
+roots.forEach((r, i) => { if (!i || r.t - roots[i - 1].t > limit) segs.push([]); segs.at(-1).push(r) })
+const main = segs.reduce((a, b) => (b.length > a.length ? b : a))
+const FIT = ((main.length - 1) * 40) / (main.at(-1).t - main[0].t)
+
+const state = { mode: "aligned", e: 0, anchor: "head", hover: [] }
+const K_MIN = 18 / (8 * 8784), K_MAX = 60
+const kOf = () => FIT * Math.exp(state.e)
+const LEVELS = [["minute", 1, "时分"], ["half", 12, "上下午"], ["day", 24, "日"], ["month", 744, "月"]]
+const levelOf = k => (LEVELS.find(([, len]) => len * k >= 18) ?? ["year", 0, "年"])
+const two = n => String(n).padStart(2, "0")
+const recText = e => { const x = ymd(e.t); return e.precision === "month" ? `${x.y}年${x.m}月` : e.precision === "hour" ? `${x.m}月${x.d}日 ${two(x.h)}:00` : `${x.m}月${x.d}日` }
+const levelText = (e, lv) => { const x = ymd(e.t); return lv === "year" ? `${x.y}年` : lv === "month" ? `${x.y}年${x.m}月` : lv === "day" ? `${x.m}月${x.d}日` : lv === "half" ? `${x.m}月${x.d}日${x.h < 12 ? "上午" : "下午"}` : e.precision === "hour" ? `${x.m}月${x.d}日 ${two(x.h)}:00` : `约${x.m}月${x.d}日` }
+
+// Card layout: same for both modes (tableLayout, docs/586 §1).
+function layout(k) {
+  const cards = [], groups = [], breaks = []
+  let y = 0, first = true
+  const block = (n, depth, seg, atLeast = -Infinity) => {
+    if (!first) y += 6
+    first = false
+    if (atLeast > y) y = atLeast
+    const start = y
+    if (n.children.length) {
+      const g = { id: n.id, top: y, depth, ec: C[n.cat] }
+      groups.push(g)
+      cards.push({ e: n, top: y, depth, seg, head: true }); y += 36 + 4
+      for (const c of n.children) block(c, depth + 1, seg)
+      y += 10; g.bottom = y
+    } else { cards.push({ e: n, top: y, depth, seg }); y += 34 }
+    return start
+  }
+  segs.forEach((s, j) => {
+    if (j) { breaks.push({ top: y, gap: s[0].t - Math.max(...segs[j - 1].flatMap(r => [r.t, ...r.children.map(c => c.t)])) }); y += 46; first = true }
+    let prev = 0
+    s.forEach((r, i) => { prev = block(r, 0, j, i ? prev + Math.min(240, (r.t - s[i - 1].t) * k) : -Infinity) })
+  })
+  return { cards, groups, breaks, height: y }
+}
+const off = c => (state.anchor === "head" ? (c.head ? 18 : 17) : 0)
+const key = s => s.replace(/^(↺ )?约/, "").replace(/^↺ /, "")
+// Aligned mode (docs/588): each dot sits on its card; labels at record precision; a card earlier than any card above it
+// in the segment is a step back in time.
+function alignedMarks(L) {
+  const dots = [], labels = [], badges = [], backs = [], periods = []
+  L.cards.forEach(c => (c.y = c.top + off(c)))
+  for (let j = 0; j < segs.length; j++) {
+    const cs = L.cards.filter(c => c.seg === j)
+    let max = -Infinity, prevKey = "", year = null, run = null
+    cs.forEach((c, i) => {
+      const back = c.e.t < max
+      const x = ymd(c.e.t)
+      if (!back && year !== x.y) {
+        badges.push({ y: i ? (cs[i - 1].y + c.y) / 2 : c.y - 22, text: `第五纪${x.y}年` })
+        year = x.y; prevKey = `${x.y}年`
+      }
+      let text = recText(c.e)
+      if (back && x.y !== year && !text.includes("年")) text = `${x.y}年${text}`
+      if (back) text = `↺ ${text}`
+      const show = back || key(text) !== prevKey
+      if (show && !back) prevKey = key(text)
+      dots.push({ y: c.y, e: c.e, back })
+      labels.push({ y: c.y, e: c.e, text, show, back })
+      if (back) { if (!run) run = { from: cs[i - 1].y }; run.to = c.y } else if (run) { backs.push(run); run = null }
+      max = Math.max(max, c.e.t)
+    })
+    if (run) backs.push(run)
+    for (const p of PERIODS) {
+      let bar = null
+      for (const c of cs) {
+        const inside = c.e.t >= p.start && c.e.t < p.end
+        if (inside) { bar ??= { y0: c.y }; bar.y1 = c.y } else if (bar) { periods.push(bar); bar = null }
+      }
+      if (bar) periods.push(bar)
+    }
+  }
+  return { dots, labels, badges, backs, periods, ticks: [], lines: lines(L) }
+}
+function lines(L) {
+  return segs.map((s, j) => { const ys = L.cards.filter(c => c.seg === j).map(c => c.y); return { top: Math.min(...ys) - 22, height: Math.max(...ys) - Math.min(...ys) + 44 } })
+}
+// Linear mode (docs/586, unchanged): dots interpolated by time between each segment's earliest and latest card.
+function linearMarks(L, lv) {
+  const dots = [], labels = [], badges = [], ticks = [], periods = []
+  L.cards.forEach(c => (c.y = c.top + off(c)))
+  const segY = []
+  for (let j = 0; j < segs.length; j++) {
+    const cs = L.cards.filter(c => c.seg === j)
+    const lo = cs.reduce((a, b) => (b.e.t < a.e.t ? b : a)), hi = cs.reduce((a, b) => (b.e.t > a.e.t ? b : a))
+    const y0 = Math.min(lo.y, hi.y), y1 = Math.max(lo.y, hi.y), t0 = lo.e.t, t1 = hi.e.t
+    const Y = t => (t1 === t0 ? (y0 + y1) / 2 : y0 + ((t - t0) / (t1 - t0)) * (y1 - y0))
+    segY[j] = { Y, y0, y1 }
+    const a = ymd(t0), b = ymd(t1)
+    badges.push({ y: y0 - 22, text: `第五纪${a.y}年`, seg: j })
+    for (let y = a.y + 1; y <= b.y; y++) badges.push({ y: Y(T(y, 1, 1)), text: `第五纪${y}年`, seg: j })
+    for (let i = a.y * 12 + a.m; i <= b.y * 12 + b.m - 1; i++) {
+      const y = Math.floor(i / 12), m = (i % 12) + 1
+      if (m !== 1) ticks.push({ y: Y(T(y, m, 1)), label: `${m}月` })
+    }
+    for (const p of PERIODS) { const s = Math.max(p.start, t0), e = Math.min(p.end, t1); if (e > s) periods.push({ y0: Y(s), y1: Y(e) }) }
+    const raw = cs.map(c => ({ y: Y(c.e.t), e: c.e })).sort((p, q) => p.y - q.y)
+    let group = []
+    const flush = () => { if (group.length) dots.push({ y: group[0].y, e: group[0].e, ids: group.map(g => g.e), seg: j }); group = [] }
+    for (const d of raw) { if (group.length && d.y - group[0].y >= 4) flush(); group.push(d) }
+    flush()
+  }
+  let lastTick = -Infinity
+  ticks.forEach(t => { t.show = t.y - lastTick >= 44; if (t.show) lastTick = t.y })
+  for (let j = 0; j < segs.length; j++) {
+    const items = [...badges.filter(b => b.seg === j).map(b => ({ y: b.y, key: b.text.replace("第五纪", ""), badge: true })),
+      ...dots.filter(d => d.seg === j).map(d => ({ y: d.y, d, text: levelText(d.e, lv) }))].sort((p, q) => p.y - q.y || (q.badge ? 1 : 0) - (p.badge ? 1 : 0))
+    let prev = "", last = -Infinity
+    for (const it of items) {
+      if (it.badge) { prev = it.key; continue }
+      const k = key(it.text), show = k !== prev && it.y - last >= 18
+      if (show) (prev = k), (last = it.y)
+      labels.push({ y: it.d.y, e: it.d.e, ids: it.d.ids.map(e => e.id), text: it.text, show })
+    }
+  }
+  return { dots, labels, badges, ticks, periods, backs: [], segY, lines: segY.map(s => ({ top: s.y0 - 22, height: s.y1 - s.y0 + 44 })) }
+}
+const $ = id => document.getElementById(id)
+const gapText = h => { const d = h / 24; return d >= 365 ? `约 ${Math.round(d / 365.2425)} 年` : d >= 30 ? `约 ${Math.round(d / 30)} 个月` : `${Math.round(d)} 天` }
+function render() {
+  const sc = $("sc"), keep = firstVisible()
+  const k = Math.min(K_MAX, Math.max(K_MIN, kOf())), lv = levelOf(k)
+  const L = layout(k), M = state.mode === "aligned" ? alignedMarks(L) : linearMarks(L, lv[0])
+  const pos = new Map()
+  if (state.mode === "aligned") M.dots.forEach(d => pos.set(d.e.id, d.y))
+  else L.cards.forEach(c => pos.set(c.e.id, M.segY[c.seg].Y(c.e.t)))
+  const hot = id => state.hover.includes(id)
+  const h = []
+  for (const l of M.lines) h.push(`<div class="rline" style="top:${l.top}px;height:${l.height}px"></div>`)
+  for (const b of M.backs) h.push(`<div class="rback" style="top:${b.from}px;height:${b.to - b.from}px" title="早于上一事件"></div>`)
+  for (const p of M.periods) h.push(`<div class="period" style="top:${p.y0}px;height:${Math.max(2, p.y1 - p.y0)}px" title="时期：港口疑案"></div>`)
+  for (const t of M.ticks) h.push(`<i class="tick" style="top:${t.y}px"></i>${t.show ? `<span class="ticklab" style="top:${t.y}px">${t.label}</span>` : ""}`)
+  for (const b of M.badges) h.push(`<div class="badge" style="top:${b.y}px">${b.text}</div>`)
+  for (const b of L.breaks) h.push(`<div class="brk" style="top:${b.top}px;height:46px">相隔 ${gapText(b.gap)}</div>`)
+  const leads = L.cards.map(c => {
+    const y = pos.get(c.e.id), x1 = 222 + c.depth * 18, yh = c.top + (c.head ? 18 : 17)
+    return `<path class="lead ${c.e.parent ? "child" : ""} ${hot(c.e.id) ? "hot" : ""}" style="--ec:var(${C[c.e.cat]})" d="M165 ${y} C 190 ${y}, ${x1 - 30} ${yh}, ${x1} ${yh}"/>`
+  })
+  h.push(`<svg class="leads" width="240" height="${L.height}">${leads.join("")}</svg>`)
+  for (const d of M.dots) {
+    const n = d.ids?.length ?? 1, cl = n > 1
+    h.push(`<b class="dot ${cl ? "cluster" : ""} ${d.back ? "back" : ""} ${(d.ids ?? [d.e]).some(e => hot(e.id)) ? "hot" : ""}" data-ids="${(d.ids ?? [d.e]).map(e => e.id).join(" ")}" style="top:${d.y}px;--ec:var(${C[d.e.cat]})">${cl ? n : ""}</b>`)
+  }
+  for (const l of M.labels) { const ids = l.ids ?? [l.e.id]; if (l.show || ids.some(hot))
+    h.push(`<span class="lab ${l.back ? "back" : ""} ${ids.some(hot) ? "hot" : ""}" data-ids="${ids.join(" ")}" style="top:${l.y}px;--ec:var(${C[l.e.cat]})" ${l.back ? 'title="早于上一事件"' : ""}>${l.text}</span>`) }
+  $("rail").innerHTML = h.join("")
+  $("rail").style.height = `${L.height}px`
+  const g = L.groups.map(g => `<div class="group" style="top:${g.top}px;height:${g.bottom - g.top}px;margin-left:${g.depth * 18}px;--ec:var(${C[ev.get(g.id).cat]})"></div>`)
+  const cs = L.cards.map(c => `<div class="card ${c.head ? "head" : ""} ${hot(c.e.id) ? "hot" : ""}" data-id="${c.e.id}" style="top:${c.top}px;left:${12 + c.depth * 18}px;--ec:var(${C[c.e.cat]})"><i></i>${c.e.title}${c.e.children.length ? `<span class="n">· ${c.e.children.length}</span>` : ""}<span class="m">⋯</span></div>`)
+  const edges = state.mode === "aligned" ? L.cards.map(c => `<div class="edge" style="top:${c.top + off(c)}px;left:-210px;right:auto;width:${222 + c.depth * 18}px;opacity:${hot(c.e.id) ? 1 : 0}"></div>`) : []
+  $("cards").innerHTML = g.join("") + cs.join("") + edges.join("")
+  $("cards").style.height = `${L.height}px`
+  $("table").style.height = `${L.height + 200}px`
+  $("zval").textContent = state.mode === "aligned" ? `${Math.round(Math.exp(state.e) * 100)}%` : lv[2]
+  $("zin").disabled = kOf() >= K_MAX - 1e-9; $("zout").disabled = kOf() <= K_MIN + 1e-9
+  $("count").textContent = `${ev.size} 件事件`
+  $("hint").textContent = state.mode === "aligned" ? "对齐：每个日期与卡片在同一水平线；↺ 表示早于上一事件" : "等距：相同长度代表相同时间间隔"
+  document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === state.mode))
+  if (keep) { const c = L.cards.find(c => c.e.id === keep.id); if (c) sc.scrollTop = c.top - keep.offset }
+}
+function firstVisible() {
+  const sc = $("sc"), el = [...document.querySelectorAll("#cards .card")].find(e => e.offsetTop + 34 > sc.scrollTop + 8)
+  return el ? { id: el.dataset.id, offset: el.offsetTop - sc.scrollTop } : null
+}
+document.querySelectorAll("[data-mode]").forEach(b => (b.onclick = () => { state.mode = b.dataset.mode; render() }))
+document.querySelectorAll("[data-anchor]").forEach(b => (b.onclick = () => { state.anchor = b.dataset.anchor; document.querySelectorAll("[data-anchor]").forEach(x => x.setAttribute("aria-pressed", x === b)); render() }))
+document.querySelectorAll("[data-theme]").forEach(b => (b.onclick = () => { document.documentElement.toggleAttribute("data-light", b.dataset.theme === "light"); document.querySelectorAll("[data-theme]").forEach(x => x.setAttribute("aria-pressed", x === b)) }))
+const step = s => { const lo = Math.log(K_MIN / FIT), hi = Math.log(K_MAX / FIT); state.e = Math.min(hi, Math.max(lo, state.e + s)); render() }
+$("zin").onclick = () => step(Math.log(1.25)); $("zout").onclick = () => step(-Math.log(1.25)); $("zfit").onclick = () => { state.e = 0; render() }
+$("sc").addEventListener("wheel", e => { if (!e.ctrlKey) return; e.preventDefault(); step(e.deltaY > 0 ? -Math.log(1.15) : Math.log(1.15)) }, { passive: false })
+// Hovering a rail label, a dot or a card lights the label, the dot, the lead and the card(s) together.
+const hover = e => {
+  const el = e.target.closest("[data-ids],[data-id]")
+  const ids = el ? (el.dataset.ids ?? el.dataset.id).split(" ") : []
+  if (ids.join() !== state.hover.join()) { state.hover = ids; render() }
+}
+$("table").addEventListener("pointerover", hover); $("table").addEventListener("pointerleave", () => { state.hover = []; render() })
+render()
+</script>
+</body>
+</html>

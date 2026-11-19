@@ -26,7 +26,8 @@ function view(precision: "year" | "day", hour: number): WorldlineView {
     characters: [], materials: [], readonly: false, history: [], proposals: [],
   }
 }
-const table = async (page: Page) => { await page.getByRole("tab", { name: "事件表" }).click(); await page.locator("[data-event-table]").waitFor() }
+// docs/588: these cases assert the equidistant rail (docs/586), which is no longer the default.
+const table = async (page: Page) => { await page.getByRole("tab", { name: "事件表" }).click(); await page.locator("[data-event-table]").waitFor(); await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: "等距", exact: true }).click() }
 const level = (page: Page) => page.locator("[data-zoom-value]")
 const zoomIn = (page: Page) => page.getByRole("button", { name: "放大" })
 const zoomOut = (page: Page) => page.getByRole("button", { name: "缩小" })

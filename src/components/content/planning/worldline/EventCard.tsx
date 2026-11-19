@@ -118,6 +118,8 @@ export interface EventCardProps {
   /** Avatar limit: 4 in the table, 3 on the timeline (577 §12). */
   maxAvatars: number;
   variant: "table" | "timeline";
+  /** docs/588 §1: event table, the parent card heading its group box (full width, flush with the box top). */
+  groupHead?: boolean;
   /** docs/584: on the timeline, the number of selected events when this card is one of ≥ 2 (batch menu items). */
   selectionSize?: number;
   onFold?(id: string): void;
@@ -146,7 +148,7 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
       {...(p.hot ? { "data-hot": "" } : {})}
       aria-label={e.title}
       aria-expanded={p.expanded || p.editing}
-      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hot ? s.hot : ""} ${p.hit ? s.hit : ""}`}
+      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hot ? s.hot : ""} ${p.hit ? s.hit : ""} ${p.groupHead ? s.groupHead : ""}`}
       style={{ "--ec": `var(${CATEGORY_VAR[e.category]})` } as React.CSSProperties}
       onPointerDownCapture={(ev) => { press.current = { x: ev.clientX, y: ev.clientY }; }}
       onClick={(ev) => {

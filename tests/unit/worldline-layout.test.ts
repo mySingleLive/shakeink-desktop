@@ -158,16 +158,17 @@ test('WU-19c: tableLayout tops increase, unmeasured expanded cards use the estim
  assert.equal(z.byId.get('c')!.top-z.byId.get('b')!.top,40)
 })
 
-test('WU-19j: layout constants: card 34, gap 6, group padding 10, child indent 18, break 46',()=>{
+test('WU-19j: layout constants: card 34, gap 6, group padding 10, child indent 18, break 46; docs/588 group header 36 + 4',()=>{
  assert.deepEqual([L.CARD_HEIGHT,L.CARD_GAP,L.GROUP_PADDING,L.TABLE_INDENT,L.TREE_INDENT,L.BREAK_HEIGHT],[34,6,10,18,16,46])
  // Roots 3 days apart, then one 5000 days later: a single break before 'far'.
  const d=plan([{id:'p',at:0,dur:48},{id:'c1',at:6,parent:'p'},{id:'c2',at:12,parent:'p'},{id:'q',at:3*24},{id:'r',at:6*24},{id:'far',at:5000*24}],FIXED24)
  const lay=L.tableLayout(treeOf(d),{},0,L.createCalendarAdapter(FIXED24))
  const c=(id:string)=>lay.byId.get(id)!
- for(const id of ['p','c1','c2','q','r','far'])assert.equal(c(id).height,34)
+ for(const id of ['c1','c2','q','r','far'])assert.equal(c(id).height,34)
+ assert.equal(c('p').height,36)
  const g=lay.groups.find(x=>x.id==='p')!
- assert.equal(c('p').top-g.top,10)
- assert.equal(c('c1').top-(c('p').top+34),6);assert.equal(c('c2').top-(c('c1').top+34),6)
+ assert.equal(c('p').top-g.top,0)
+ assert.equal(c('c1').top-(c('p').top+36),4);assert.equal(c('c2').top-(c('c1').top+34),6)
  assert.equal(g.bottom-(c('c2').top+34),10)
  assert.equal(c('c1').left-c('p').left,18);assert.equal(c('c2').left,18);assert.equal(c('c1').depth,1)
  assert.equal(lay.breaks.length,1)
@@ -175,10 +176,10 @@ test('WU-19j: layout constants: card 34, gap 6, group padding 10, child indent 1
  assert.equal(c('q').top-g.bottom,6);assert.equal(c('r').top-(c('q').top+34),6)
  assert.equal(br.height,46);assert.equal(br.top,c('r').top+34);assert.equal(c('far').top,br.top+46)
  assert.equal(lay.height,c('far').top+34)
- // Folding drops the children from the layout, the group keeps its padding.
+ // Folding drops the children from the layout; the box is just the header (docs/588 §1).
  const folded=L.tableLayout(treeOf(d),{},0,L.createCalendarAdapter(FIXED24),{folded:new Set(['p'])})
  assert.equal(folded.byId.has('c1'),false)
- assert.equal(folded.groups[0].bottom-folded.byId.get('p')!.top,34+10)
+ assert.equal(folded.groups[0].bottom-folded.byId.get('p')!.top,36)
 })
 
 /** n roots one per `stepDays` days on FIXED24, plus extra events. */
@@ -753,11 +754,11 @@ test('RL-02: the stretch layout takes max(stacked, previous block + min(240, Δt
  assert.ok(Math.abs(fit-19*40/1344)<1e-12)
  const g=gaps(L.tableLayout(uneven,{},fit,a),ids)
  assert.ok(g.slice(0,18).every(x=>Math.abs(x-40)<1e-9));assert.equal(g[18],240)
- // A grouped root: p (0 h) with children at 6 h and 12 h is 134 px high; q at 72 h.
+  // A grouped root: p (0 h) with children at 6 h and 12 h is 124 px high (docs/588: 36 + 4 + 34 + 6 + 34 + 10); q at 72 h.
  const grouped=treeOf(plan([{id:'p',at:0,dur:24},{id:'c1',at:6,parent:'p'},{id:'c2',at:12,parent:'p'},{id:'q',at:72}],FIXED24))
  const qTop=(k:number)=>{const l=L.tableLayout(grouped,{},k,a);return l.byId.get('q')!.top-l.groups[0].top}
- assert.equal(L.tableLayout(grouped,{},0,a).groups[0].bottom-L.tableLayout(grouped,{},0,a).groups[0].top,134)
- assert.equal(qTop(1),140);assert.equal(qTop(3),216);assert.equal(qTop(4),240)
+ assert.equal(L.tableLayout(grouped,{},0,a).groups[0].bottom-L.tableLayout(grouped,{},0,a).groups[0].top,124)
+ assert.equal(qTop(1),130);assert.equal(qTop(3),216);assert.equal(qTop(4),240)
  // An expanded card measured at 120 px.
  const two=treeOf(plan([{id:'a',at:0},{id:'b',at:48}],FIXED24)),open={expanded:new Set(['a'])}
  assert.equal(L.tableLayout(two,{a:120},1,a,open).byId.get('b')!.top,126)
@@ -850,4 +851,132 @@ test('TT-01: directory time always shows month and day, 约 when finer than the 
  assert.equal(f.treeTime(3*30*24+4,'day',true),'4月1日')
  const un=L.createCalendarAdapter(FIXED24,{calendar:FIXED24,scale:1,zero:null})
  assert.equal(un.treeTime(100,'day',true),'未映射')
+})
+
+/* docs/588 RM-01 … RM-08: group header layout and the aligned rail. Expected values are worked out by hand in docs/588. */
+test('RM-01: the parent card is the group header: top of the box, 36 high, children 4px below, box bottom 10px',()=>{
+ assert.deepEqual([L.GROUP_HEAD_HEIGHT,L.GROUP_HEAD_GAP,L.GROUP_PADDING],[36,4,10])
+ const d=plan([{id:'p',at:0,dur:24},{id:'c1',at:6,parent:'p'},{id:'c2',at:12,parent:'p'},{id:'q',at:72}],FIXED24)
+ const a=L.createCalendarAdapter(FIXED24),lay=L.tableLayout(treeOf(d),{},0,a)
+ const c=(id:string)=>lay.byId.get(id)!,g=lay.groups[0]
+ assert.equal(c('p').top,g.top);assert.equal(c('p').height,36);assert.equal(c('p').head,c('p').top+18);assert.equal(c('p').groupHead,true)
+ assert.equal(c('c1').top-c('p').top,40);assert.equal(c('c1').head,c('c1').top+17);assert.equal(c('c1').groupHead,false)
+ assert.equal(c('c2').top-c('c1').top,40);assert.equal(g.bottom-c('c2').top,44);assert.equal(g.bottom-g.top,124)
+ assert.equal(c('q').top-g.bottom,6);assert.equal(c('q').head,c('q').top+17)
+ assert.deepEqual(lay.segments[0].heads.map(h=>h.y),['p','c1','c2','q'].map(id=>c(id).head))
+ const folded=L.tableLayout(treeOf(d),{},0,a,{folded:new Set(['p'])})
+ assert.equal(folded.groups[0].bottom-folded.byId.get('p')!.top,36)
+ const openP=L.tableLayout(treeOf(d),{p:120},0,a,{expanded:new Set(['p'])})
+ assert.equal(openP.byId.get('c1')!.top-openP.byId.get('p')!.top,124);assert.equal(openP.byId.get('p')!.head,openP.byId.get('p')!.top+21)
+ const openC=L.tableLayout(treeOf(d),{c1:90},0,a,{expanded:new Set(['c1'])})
+ assert.equal(openC.byId.get('c1')!.head,openC.byId.get('c1')!.top+22)
+})
+test('RM-01b: nested groups keep every adjacent card head at least 39px apart',()=>{
+ const d=plan([{id:'p',at:0,dur:24},{id:'c',at:1,dur:2,parent:'p'},{id:'g',at:2,parent:'c'},{id:'d',at:3,parent:'p'}],FIXED24)
+ const a=L.createCalendarAdapter(FIXED24),lay=L.tableLayout(treeOf(d),{},0,a)
+ const top=(id:string)=>lay.byId.get(id)!.top,head=(id:string)=>lay.byId.get(id)!.head
+ assert.deepEqual(['p','c','g','d'].map(top),[0,40,80,130])
+ assert.deepEqual(lay.groups.map(x=>[x.id,x.bottom]),[['p',174],['c',124]])
+ assert.deepEqual(['p','c','g','d'].map(head),[18,58,97,147])
+ const f=L.tableLayout(treeOf(d),{},0,a,{folded:new Set(['c'])})
+ assert.equal(f.groups.find(x=>x.id==='c')!.bottom,76);assert.equal(f.byId.get('d')!.top,82);assert.equal(f.byId.get('d')!.head-f.byId.get('c')!.head,41)
+})
+const aligned=(d:PlanningData,cal:Cal=ERA_CAL,opts:Partial<L.RailOptions>={},folded?:Set<string>)=>{
+ const a=L.createCalendarAdapter(cal),lay=L.tableLayout(treeOf(d),{},0,a,{folded})
+ return {a,lay,m:L.alignedRailMarks(lay,a,opts)}
+}
+const labelOf=(m:L.AlignedRailMarks,id:string)=>m.labels.find(l=>l.ids.includes(id))!
+test('RM-02: aligned dots sit on the card heads, one per placed card, no clusters, no ticks',()=>{
+ const same=[0,1,2,3,4].map(h=>({id:`s${h}`,at:31*24+h,precision:'day'}))
+ const {lay,m}=aligned(plan([...Array.from({length:10},(_,i)=>({id:`r${i}`,at:i*72,precision:'day'})),...same,{id:'u',at:null}],FIXED24),FIXED24)
+ const placed=lay.cards.filter(c=>c.start!==null)
+ assert.equal(m.dots.length,placed.length)
+ for(const c of placed){assert.equal(m.points.get(c.id),c.head);assert.ok(m.dots.some(d=>d.lead===c.id&&d.y===c.head&&!d.cluster&&d.count===1))}
+ assert.equal(m.points.has('u'),false);assert.deepEqual(m.ticks,[])
+ assert.ok(m.labels.every(l=>l.level===null))
+})
+test('RM-03: aligned labels read like the event directory (treeTime) and every card shows its date (docs/588 验收); compact keeps months apart',()=>{
+ const d=plan([
+  {id:'y',at:D5(1340,1,1),precision:'year'},{id:'d1',at:D5(1340,3,2),precision:'day'},{id:'d2',at:D5(1340,3,2)+5,precision:'day'},
+  {id:'h',at:D5(1340,4,5)+21,precision:'hour'},{id:'m',at:D5(1340,5,1),precision:'month'},{id:'w',at:D5(1340,6,1),precision:'day',kind:'window',end:D5(1340,6,9)},
+ ])
+ const {m}=aligned(d)
+ assert.equal(labelOf(m,'y').text,'约1月1日');assert.equal(labelOf(m,'y').visible,true)
+ assert.equal(labelOf(m,'d1').text,'3月2日');assert.equal(labelOf(m,'d1').visible,true)
+ assert.equal(labelOf(m,'d2').text,'3月2日');assert.equal(labelOf(m,'d2').visible,true)
+ assert.ok(m.labels.every(l=>l.visible))
+ assert.equal(labelOf(m,'h').text,'4月5日 21:00');assert.equal(labelOf(m,'m').text,'约5月1日');assert.equal(labelOf(m,'w').text,'6月1日')
+ // Same text as the directory for every card (the directory shows the year header, so yearShown).
+ const a=L.createCalendarAdapter(ERA_CAL),dd=treeOf(d)
+ for(const l of m.labels){const n=dd.byId.get(l.ids[0])!;assert.equal(l.text,a.treeTime(n.start!,n.event.time.precision??'hour',true),n.id)}
+ const era=aligned(plan([{id:'old',at:D4(80000,6,1),precision:'era'},{id:'o2',at:D4(80000,9,1),precision:'day'}]))
+ assert.equal(labelOf(era.m,'old').text,'第四纪')
+ assert.deepEqual(era.m.badges.filter(b=>b.kind==='year').map(b=>b.text),['第四纪80000年'])
+ const c=aligned(plan([{id:'a',at:D5(1340,3,5)+21,precision:'hour'},{id:'b',at:D5(1340,4,5)+21,precision:'hour'}]),ERA_CAL,{compact:true}).m
+ assert.deepEqual(c.labels.map(l=>[l.text,l.visible]),[['5日 21:00',true],['5日 21:00',true]])
+})
+test('RM-04: a card earlier than the segment so far is a step back: ↺, always shown, hollow, one dashed run, no badge',()=>{
+ const d=plan([
+  {id:'A',at:D5(1340,4,1),dur:300*24,precision:'day'},{id:'A1',at:D5(1340,12,20),parent:'A',precision:'day'},
+  {id:'B',at:D5(1340,6,1),dur:240*24,precision:'day'},{id:'B1',at:D5(1340,6,5),parent:'B',precision:'day'},{id:'B2',at:D5(1341,1,3),parent:'B',precision:'day'},
+ ])
+ const {lay,m}=aligned(d),head=(id:string)=>lay.byId.get(id)!.head
+ assert.deepEqual(lay.cards.map(c=>c.id),['A','A1','B','B1','B2'])
+ assert.deepEqual(['A','A1','B','B1','B2'].map(id=>labelOf(m,id).back),[false,false,true,true,false])
+ assert.equal(labelOf(m,'B').text,'↺ 6月1日');assert.equal(labelOf(m,'B1').text,'↺ 6月5日')
+ assert.ok(labelOf(m,'B').visible&&labelOf(m,'B1').visible)
+ assert.deepEqual(m.dots.filter(x=>x.back).map(x=>x.lead),['B','B1'])
+ assert.deepEqual(m.backs,[{segment:0,top:head('A1'),height:head('B1')-head('A1')}])
+ const years=m.badges.filter(b=>b.kind==='year')
+ assert.deepEqual(years.map(b=>b.text),['第五纪1340年','第五纪1341年'])
+ assert.equal(years[1].y,(head('B1')+head('B2'))/2)
+ assert.equal(labelOf(m,'B2').text,'1月3日')
+ // A step back into an earlier year carries its year (with the era).
+ const e=aligned(plan([{id:'P',at:D5(1339,8,1),dur:400*24,precision:'day'},{id:'P1',at:D5(1340,3,1),parent:'P',precision:'day'},{id:'Q',at:D5(1339,8,14),precision:'day'}])).m
+ assert.equal(labelOf(e,'Q').text,'↺ 1339年8月14日')
+ // A coarser record reads 约 before its year, as the directory.
+ const wq=aligned(plan([{id:'P',at:D5(1339,8,1),dur:400*24,precision:'day'},{id:'P1',at:D5(1340,3,1),parent:'P',precision:'day'},{id:'Q',at:D5(1339,8,14),precision:'month'}])).m
+ assert.equal(labelOf(wq,'Q').text,'↺ 约1339年8月14日')
+ // Narrow rail (code review M1): a label carrying its year keeps the month and stops there (82px rail).
+ const hq=plan([{id:'P',at:D5(1339,8,1),dur:400*24,precision:'day'},{id:'P1',at:D5(1340,3,1),parent:'P',precision:'day'},{id:'Q',at:D5(1339,8,14)+21,precision:'hour'}])
+ assert.equal(labelOf(aligned(hq,ERA_CAL,{compact:true}).m,'Q').text,'↺ 1339年8月')
+ assert.equal(labelOf(aligned(hq).m,'Q').text,'↺ 1339年8月14日 21:00')
+ // A year record stepping back into another year.
+ const yq=plan([{id:'P',at:D5(1339,1,1),dur:500*24,precision:'year'},{id:'P1',at:D5(1340,3,1),parent:'P',precision:'day'},{id:'Q',at:D5(1339,1,1),precision:'year'}])
+ assert.equal(labelOf(aligned(yq).m,'Q').text,'↺ 约1339年1月1日')
+})
+test('RM-05b: a segment of era-precision cards only has no year badge',()=>{
+ const {m}=aligned(plan([{id:'a',at:D4(80000,6,1),precision:'era'},{id:'b',at:D4(80000,6,1)+48,precision:'era'}]))
+ assert.deepEqual(m.badges,[]);assert.deepEqual(m.labels.map(l=>l.text),['第四纪','第四纪']);assert.deepEqual(m.labels.map(l=>l.visible),[true,true])
+})
+test('RM-05: year badges: the first above the segment, a change of year between the card and the one right above it',()=>{
+ const d=plan([{id:'a',at:D5(1340,12,20),precision:'day'},{id:'b',at:D5(1341,1,2),precision:'day'},{id:'c',at:D5(1341,3,1),precision:'year'}])
+ const {lay,m}=aligned(d),head=(id:string)=>lay.byId.get(id)!.head
+ const years=m.badges.filter(b=>b.kind==='year')
+ assert.deepEqual(years.map(b=>[b.text,b.y]),[['第五纪1340年',head('a')-22],['第五纪1341年',(head('a')+head('b'))/2]])
+ assert.equal(labelOf(m,'c').text,'约3月1日');assert.equal(labelOf(m,'c').visible,true)
+})
+test('RM-06: period bars join consecutive cards inside [start, end]; an outside card splits them',()=>{
+ const d=plan([0,1,2,3,4,5].map(i=>({id:`r${i}`,at:i*72,precision:'day'})),FIXED24)
+ const {lay,m}=aligned(d,FIXED24,{periods:[{id:'p',start:72,end:216},{id:'one',start:360,end:360}]}),head=(id:string)=>lay.byId.get(id)!.head
+ assert.deepEqual(m.periods.map(p=>[p.id,p.y0,p.y1]),[['p',head('r1'),head('r3')],['one',head('r5'),head('r5')]])
+ const split=aligned(plan([{id:'a',at:0},{id:'b',at:10,parent:'a'},{id:'x',at:5},{id:'c',at:20}],FIXED24),FIXED24,{periods:[{id:'p',start:0,end:30}]})
+ assert.equal(split.m.periods.length,1)
+ const gap=aligned(d,FIXED24,{periods:[{id:'p',start:72,end:144},{id:'p',start:288,end:null}]}).m
+ assert.deepEqual(gap.periods.map(p=>[p.y0,p.y1]),[[head('r1'),head('r2')],[head('r4'),head('r5')]])
+})
+test('RM-07: two segments: one rail line each over the head range, breaks unchanged',()=>{
+ const d=plan([{id:'a',at:0,precision:'day'},{id:'b',at:72,precision:'day'},{id:'far',at:5000*24,precision:'day'},{id:'far2',at:5003*24,precision:'day'}],FIXED24)
+ const {lay,m}=aligned(d,FIXED24),head=(id:string)=>lay.byId.get(id)!.head
+ assert.deepEqual(m.lines,[{segment:0,top:head('a')-22,height:head('b')-head('a')+44},{segment:1,top:head('far')-22,height:head('far2')-head('far')+44}])
+ assert.equal(lay.breaks.length,1)
+})
+test('RM-08: calendars without months use railLabel; without years no year badge',()=>{
+ const yc:Cal={kind:'years',epoch:'',hoursPerDay:24,daysPerMonth:30,monthsPerYear:12,eras:[]}
+ const ya=L.createCalendarAdapter(yc),yd=plan([{id:'a',at:1,precision:'year'},{id:'b',at:3,precision:'year'}],yc)
+ const ym=aligned(yd,yc).m
+ assert.equal(labelOf(ym,'a').text,ya.railLabel(1,'year'))
+ const noYear:Cal={...FIXED24,monthsPerYear:null}
+ const nm=aligned(plan([{id:'a',at:0,precision:'day'},{id:'b',at:800*24,precision:'day'}],noYear),noYear).m
+ assert.equal(nm.badges.filter(b=>b.kind==='year').length,0)
 })

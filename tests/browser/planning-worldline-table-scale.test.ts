@@ -48,8 +48,10 @@ const inUpperThird = (page: Page, id: string) => expect.poll(async () => {
   return y === null ? Infinity : Math.abs(y - h / 3)
 }).toBeLessThanOrEqual(4)
 
-test("WU-44: hovering a card thickens its lead to 1.6, enlarges its dot and shows its hidden time label", () => withWorldline(browser, f60(), async page => {
+// docs/588 验收: the aligned rail shows every date, so a hidden label exists only on the equidistant rail; aligned hover is WU-44b / RM-B4.
+for (const railMode of ["等距"] as const) test(`WU-44: hovering a card thickens its lead to 1.6, enlarges its dot and shows its hidden time label（docs/588: ${railMode}）`, () => withWorldline(browser, f60(), async page => {
   await table(page)
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: railMode, exact: true }).click()
   const id = await page.evaluate(() => {
     const labelled = new Set([...document.querySelectorAll<HTMLElement>("[data-rail-label]")].flatMap(l => l.dataset.labelFor!.split(" ")))
     // The last such dot: a recent day-precision event, whose label text is never empty.
@@ -78,6 +80,8 @@ test("WU-44: hovering a card thickens its lead to 1.6, enlarges its dot and show
 
 test("WU-45 / WU-47 (pointer anchor): Ctrl + wheel zooms in with the card under the pointer fixed; stops at the finest scale; 复位 returns the reset level", () => withWorldline(browser, f885(), async page => {
   await table(page)
+  // docs/588: the level names belong to the equidistant rail.
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: "等距", exact: true }).click()
   const zoomValue = page.locator("[data-zoom-value]")
   // docs/586: F885 resets at k ≈ 1.30 px/h, the 日 level.
   await expect(zoomValue).toHaveText("日")
@@ -321,8 +325,9 @@ test("E-WU82: the timeline renders only the vertical band near the scroll positi
   assert.ok(shared.every(k => p0[k][0] === p1[k][0] && p0[k][1] === p1[k][1]), "plane positions unchanged")
 }))
 
-test("WU-44b: hovering a rail dot highlights its time label, lead and card; leaving clears them", () => withWorldline(browser, f60(), async page => {
+for (const railMode of ["对齐", "等距"] as const) test(`WU-44b: hovering a rail dot highlights its time label, lead and card; leaving clears them（docs/588: ${railMode}）`, () => withWorldline(browser, f60(), async page => {
   await table(page)
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: railMode, exact: true }).click()
   const id = await page.evaluate(() => {
     const labelled = new Set([...document.querySelectorAll<HTMLElement>("[data-rail-label]")].flatMap(l => l.dataset.labelFor!.split(" ")))
     const dot = [...document.querySelectorAll<HTMLElement>("[data-rail-dot]:not([data-cluster])")].reverse().find(d => labelled.has(d.dataset.eventId!))

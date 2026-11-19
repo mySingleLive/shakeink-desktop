@@ -23,6 +23,9 @@ import {
 export const CARD_HEIGHT = 34;
 export const CARD_GAP = 6;
 export const GROUP_PADDING = 10;
+/** docs/588 §1: the parent card is the group header, flush with the box top and as wide as the box. */
+export const GROUP_HEAD_HEIGHT = 36;
+export const GROUP_HEAD_GAP = 4;
 export const TABLE_INDENT = 18;
 export const TREE_INDENT = 16;
 export const BREAK_HEIGHT = 46;
@@ -582,6 +585,10 @@ export interface TableCard {
   importance: number;
   precision: EraPrecision;
   kind: StampTime["kind"];
+  /** docs/588 §1: the parent card heading its group box. */
+  groupHead: boolean;
+  /** docs/588 §1: y of the card head's middle line (dot and lead end). */
+  head: number;
 }
 export interface TableGroup {
   id: string;
@@ -624,6 +631,11 @@ export interface TableOptions {
 }
 /** A card head (dot, lead end) sits in the middle of the collapsed card. */
 export const CARD_HEAD = CARD_HEIGHT / 2;
+/** docs/588 §1: head middle line below the card top: 1px border + half of the 32 / 42px head; a group header has no
+ * border and a 36 / 42px head. */
+export function cardHeadOffset(groupHead: boolean, expanded: boolean): number {
+  return groupHead ? (expanded ? 21 : GROUP_HEAD_HEIGHT / 2) : expanded ? 22 : CARD_HEAD;
+}
 const EST_META = 26,
   EST_LINE = 21,
   EST_CHARS_PER_LINE = 42,
@@ -694,8 +706,8 @@ export function tableLayout(
     breaks: TableBreak[] = [];
   let y = 0,
     first = true;
-  const cardHeight = (n: TreeNode) =>
-    expanded.has(n.id) ? (heights[n.id] ?? estimateCardHeight(n.event)) : CARD_HEIGHT;
+  const cardHeight = (n: TreeNode, head: boolean) =>
+    expanded.has(n.id) ? (heights[n.id] ?? estimateCardHeight(n.event) - (head ? 2 : 0)) : head ? GROUP_HEAD_HEIGHT : CARD_HEIGHT;
   const k = Number.isFinite(scale) && scale > 0 ? scale : 0;
   /** Returns the block start (card top, or group top for a parent). `atLeast` is the stretched start of a root. */
   const block = (n: TreeNode, depth: number, segment: number, atLeast = -Infinity): number => {
@@ -704,11 +716,12 @@ export function tableLayout(
     if (atLeast > y) y = atLeast;
     const start = y;
     const left = depth * TABLE_INDENT;
-    const push = () => {
+    const push = (head: boolean) => {
+      const open = expanded.has(n.id);
       const card: TableCard = {
         id: n.id,
         top: y,
-        height: cardHeight(n),
+        height: cardHeight(n, head),
         left,
         depth,
         start: n.start,
@@ -717,20 +730,25 @@ export function tableLayout(
         importance: n.event.importance,
         precision: n.event.time.precision,
         kind: n.event.time.kind,
+        groupHead: head,
+        head: y + cardHeadOffset(head, open),
       };
       cards.push(card);
       y += card.height;
     };
     if (!n.children.length) {
-      push();
+      push(false);
       return start;
     }
     const group: TableGroup = { id: n.id, top: y, bottom: 0, left, depth };
     groups.push(group);
-    y += GROUP_PADDING;
-    push();
-    if (!folded.has(n.id)) for (const c of n.children) block(c, depth + 1, segment);
-    y += GROUP_PADDING;
+    push(true);
+    if (!folded.has(n.id)) {
+      // The first child's block adds CARD_GAP itself, so the header is followed by GROUP_HEAD_GAP in total.
+      y += GROUP_HEAD_GAP - CARD_GAP;
+      for (const c of n.children) block(c, depth + 1, segment);
+      y += GROUP_PADDING;
+    }
     group.bottom = y;
     return start;
   };
@@ -758,7 +776,7 @@ export function tableLayout(
   const segments: TableSegment[] = segs.map((s) => {
     const heads = cards
       .filter((c) => c.segment === s.index && c.start !== null)
-      .map((c) => ({ id: c.id, t: c.start!, y: c.top + CARD_HEAD }));
+      .map((c) => ({ id: c.id, t: c.start!, y: c.head }));
     let lo = heads[0],
       hi = heads[0];
     for (const h of heads) {
@@ -785,6 +803,8 @@ export interface RailDot {
   lead: string;
   importance: number;
   segment: number;
+  /** docs/588 §3: aligned rail, earlier than a card above it in the segment. */
+  back?: boolean;
 }
 export interface RailLabel {
   y: number;
@@ -793,6 +813,7 @@ export interface RailLabel {
   visible: boolean;
   /** docs/586: the zoom level the text was written at; null on the precision-only path. */
   level: RailLevel | null;
+  back?: boolean;
 }
 export interface RailBadge {
   kind: "era" | "year";
@@ -989,6 +1010,103 @@ export function railMarks(
     labels.push({ y: d.y, ids: d.ids, text, visible, level: null });
   }
   return { points, dots, labels, badges, ticks, periods, lines };
+}
+
+// ---------- aligned rail (docs/588 §3) ----------
+/** A run of step-back cards on the aligned rail, from the card head above the run to its last head. */
+export interface RailBack {
+  segment: number;
+  top: number;
+  height: number;
+}
+export interface AlignedRailMarks extends RailMarks {
+  backs: RailBack[];
+}
+const STEP_BACK = "↺ ";
+/** docs/588 §3: every dot on its card head, labels at the record precision, a card earlier than the segment so far
+ * marked as a step back, year badges between a card and the one right above it. Cards are laid out as in the
+ * equidistant mode (tableLayout), so only the rail changes. */
+export function alignedRailMarks(
+  layout: TableLayout,
+  adapter: CalendarAdapter,
+  options: Partial<Omit<RailOptions, "level">> = {},
+): AlignedRailMarks {
+  const points = new Map<string, number>();
+  const dots: RailDot[] = [],
+    labels: RailLabel[] = [],
+    badges: RailBadge[] = [],
+    periods: RailPeriodBar[] = [],
+    lines: RailLine[] = [],
+    backs: RailBack[] = [];
+  /** docs/588 验收 2026-11-19: the same text as the event directory (treeTime): month and day, 约 when finer than the
+   * record, hh:mm for hour records; the year only when the rail's current year badge does not already show it. The
+   * narrow rail (82px) drops the month before a time, and a label carrying its year stops at the month. */
+  const text = (c: TableCard, yearShown: boolean, compact: boolean) => {
+    const full = adapter.treeTime(c.start!, c.precision, yearShown);
+    if (!compact) return full;
+    return yearShown ? full.replace(/^(约?)\d+月(\d+日 \d)/u, "$1$2") : full.replace(/^(约?\d+年\d+月)\d+日.*$/u, "$1");
+  };
+  for (const s of layout.segments) {
+    const cards = s.heads.map((h) => layout.byId.get(h.id)!);
+    if (!cards.length) continue;
+    const top = cards[0].head - SEGMENT_BADGE_OFFSET;
+    lines.push({ segment: s.index, top, height: cards[cards.length - 1].head - cards[0].head + 2 * SEGMENT_BADGE_OFFSET });
+    let max = -Infinity,
+      year: string | null = null,
+      run: RailBack | null = null;
+    let runMax = -Infinity;
+    const firstYear = adapter.hasYears
+      ? cards.find((c) => {
+          const back = c.start! < runMax;
+          runMax = Math.max(runMax, c.start!);
+          return !back && c.precision !== "era";
+        })
+      : undefined;
+    if (firstYear) {
+      year = adapter.yearText(firstYear.start!);
+      badges.push({ kind: "year", y: top, t: firstYear.start!, text: year, segment: s.index });
+    }
+    cards.forEach((c, i) => {
+      const t = c.start!,
+        back = t < max;
+      if (!back && adapter.hasYears && c.precision !== "era" && i > 0 && adapter.yearText(t) !== year) {
+        year = adapter.yearText(t);
+        badges.push({ kind: "year", y: (cards[i - 1].head + c.head) / 2, t, text: year, segment: s.index });
+      }
+      // A card outside the current badge's year (a step back) carries its year, as the directory does under another header.
+      const body = text(c, !adapter.hasYears || adapter.yearText(t) === year, !!options.compact);
+      // docs/588 验收: every card on the aligned rail shows its date (cards are ≥ 39px apart, so labels never collide).
+      const visible = !!body;
+      points.set(c.id, c.head);
+      dots.push({ y: c.head, t, ids: [c.id], count: 1, cluster: false, lead: c.id, importance: c.importance, segment: s.index, back });
+      labels.push({ y: c.head, ids: [c.id], text: body && back ? `${STEP_BACK}${body}` : body, visible, level: null, back });
+      if (back) {
+        run ??= { segment: s.index, top: cards[i - 1].head, height: 0 };
+        run.height = c.head - run.top;
+      } else if (run) {
+        backs.push(run);
+        run = null;
+      }
+      max = Math.max(max, t);
+    });
+    if (run) backs.push(run);
+    for (const p of options.periods ?? []) {
+      let bar: RailPeriodBar | null = null;
+      for (const c of cards) {
+        const inside = c.start! >= p.start && (p.end === null || c.start! <= p.end);
+        if (inside) {
+          bar ??= { id: p.id, y0: c.head, y1: c.head, segment: s.index };
+          bar.y1 = c.head;
+        } else if (bar) {
+          periods.push(bar);
+          bar = null;
+        }
+      }
+      if (bar) periods.push(bar);
+    }
+  }
+  badges.sort((a, b) => a.y - b.y);
+  return { points, dots, labels, badges, ticks: [], periods, lines, backs };
 }
 
 // ---------- timeline: families in world coordinates (§5.2 ①) ----------
