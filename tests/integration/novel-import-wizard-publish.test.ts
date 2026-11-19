@@ -9,7 +9,7 @@ import {prisma} from '../../src/lib/db'
 import {publishNovelImport,readNovelImportRecord} from '../../desktop/service/novel-import-publish'
 import {resolveReferenceAnchor} from '../../src/lib/foreshadow-reference'
 import {validatePlanning} from '../../src/lib/planning/domain'
-import {fixture,filesF,rosterAi,toTree,toStep,linesAi,timelineCatalog,touchesAi,entityResult,entityName,type Ai} from '../helpers/novel-import-wizard-fixture'
+import {fixture,filesF,bodyF,source,rosterAi,toTree,toStep,linesAi,timelineCatalog,touchesAi,entityResult,entityName,type Ai} from '../helpers/novel-import-wizard-fixture'
 import type {ImportPublishInput,ImportSession} from '../../desktop/shared/novel-import'
 
 /* Synthetic fixture only: drive the real controller to step 21, then publish into a disposable PGlite
@@ -76,8 +76,8 @@ function chapterEvents(base:Ai):Ai{return async r=>{
  return {artifacts:chapters.map(({c,i})=>{const u=r.units.find(u=>u.start<=c.start&&u.end>c.start)??r.units.find(u=>u.start<c.end&&u.end>c.start)!,from=Math.max(0,c.start-u.start);return {id:'ev-'+i,kind:'worldline' as const,name:'第'+i+'章事件',text:'发生了一件事。',facts:{lineId:'main',lineName:'主世界线',timeKind:'unknown',people:'[]',reliability:'客观事实'},evidence:[{unitId:u.id,quote:u.text.slice(from,from+6)}],sourceUnitIds:[u.id],origin:'inferred' as const}})}
 }}
 /** docs/571: only characters and the worldline, so the flow does not depend on scene, item or world steps. */
-async function worldlineWork(ai:(f:Awaited<ReturnType<typeof fixture>>)=>Ai){
- const f=await fixture(filesF(),rosterAi());f.setAi(ai(f))
+async function worldlineWork(ai:(f:Awaited<ReturnType<typeof fixture>>)=>Ai,files=filesF()){
+ const f=await fixture(files,rosterAi());f.setAi(ai(f))
  let captured:ImportPublishInput|undefined
  f.options.publish=async input=>{captured=structuredClone(input) as ImportPublishInput;return publishNovelImport(works,input)}
  await f.act('choose',{mode:'files'});await f.act('wizard-next');await f.act('set-title',{title:'合成世界线作品'});await f.act('choose-target');await f.act('wizard-next')
@@ -100,6 +100,22 @@ test('WT-30/WT-50/WT-51: step 17 places every event on the one worldline, publis
   assert.deepEqual(planning.worlds.map(x=>[x.id,x.name,x.calendar.kind]),[['import-world-import-main-worldline','主世界线','fixed']])
   const values=planning.events.map(e=>e.time.value);assert.ok(planning.events.every(e=>e.time.kind==='exact'&&e.time.precision==='hour'))
   assert.deepEqual(values,values.map((_,i)=>i*24),'saved in strictly increasing time, one day per rank')
+ }finally{await w.f.controller.close();await rm(w.f.root,{recursive:true,force:true})}
+})
+test('TA-10c/589-M7: the timeline request carries narration date clues (not dialogue) after the catalogue; every event is placed',{timeout:180000},async()=>{
+ // Synthetic body: one narration date and one date inside dialogue; the fixture's first "之夜。" is in chapter 0.
+ const files=filesF(),text=bodyF().replace('之夜。','之夜。六月底的渡口很热。“九月初再来”，他说。')
+ files[0]=source(text,'正文.txt','f-body',{encoding:'gb18030'})
+ const w=await worldlineWork(f=>chapterEvents(linesAi(richAi(f.handler()))),files)
+ try{
+  const timeline=w.f.requests.filter(r=>r.intent==='timeline');assert.equal(timeline.length,1)
+  const lines=timeline[0].instruction!.split('\n');assert.ok(lines.length>=2)
+  const clueLine=lines.find(l=>l.includes('日期线索'));assert.ok(clueLine,'date clue section')
+  const clues=JSON.parse(clueLine!.slice(clueLine!.indexOf('：')+1));assert.ok(clues.some((c:[number,string])=>c[0]===0&&c[1].includes('六月底')),JSON.stringify(clues))
+  assert.ok(!clueLine!.includes('九月初'),'dialogue dates are left out')
+  assert.ok(timelineCatalog(timeline[0]).length>1,'the catalogue still parses')
+  const events=w.session.artifacts.filter(a=>a.kind==='worldline'),values=events.map(a=>Number(a.facts.timeValue))
+  assert.ok(events.every(a=>a.facts.timeKind==='exact'));assert.ok(values.every((v,i)=>i===0||v>values[i-1]))
  }finally{await w.f.controller.close();await rm(w.f.root,{recursive:true,force:true})}
 })
 test('EC-70/EC-71/WT-51b: a calendar reply gives an era worldline with event precisions and era periods',{timeout:180000},async()=>{

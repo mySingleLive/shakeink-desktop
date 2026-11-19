@@ -166,7 +166,7 @@ export function outlineTargets(r:Pick<ImportAiRequest,'instruction'>):number[]|u
  return (JSON.parse(line.slice('本批目标章：'.length)) as {index:number}[]).map(t=>t.index)
 }
 /** docs/570: the catalogue JSON that a timeline request carries after its fixed prefix. */
-export function timelineCatalog(r:ImportAiRequest):{id:string;chapterIndex:number;time?:string}[]{const text=r.instruction??'';return (JSON.parse(text.slice(text.indexOf('['))) as [string,number,string,string,string,string][]).map(([id,chapterIndex,,,time])=>({id,chapterIndex,...(time?{time}:{})}))}
+export function timelineCatalog(r:ImportAiRequest):{id:string;chapterIndex:number;time?:string}[]{const text=(r.instruction??'').split('\n')[0];return (JSON.parse(text.slice(text.indexOf('['))) as [string,number,string,string,string,string][]).map(([id,chapterIndex,,,time])=>({id,chapterIndex,...(time?{time}:{})}))}
 /** docs/587: the rows a grouping request carries after its fixed prefix. */
 export function groupingCatalog(r:ImportAiRequest):[string,string,string,string,string,number][]{const text=r.instruction??'';return JSON.parse(text.slice(text.indexOf('[')))}
 export function linesAi(base:Ai):Ai{return async r=>{

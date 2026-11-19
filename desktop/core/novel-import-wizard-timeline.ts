@@ -10,7 +10,8 @@ export interface WorldTimelineEntry {id:string;name:string;text:string;chapterIn
 /** docs/572: a calendar position; every part optional. `ago` = years before the main story starts. */
 export interface WorldTimelineTime {era?:string;year?:number;month?:number;day?:number;ago?:number}
 export interface WorldTimelineReplyItem extends WorldTimelineTime {id:string;order:number;phase?:'前史'|'主线'}
-export interface WorldTimelineRanked extends WorldTimelineTime {id:string;rank:number;phase?:'前史'|'主线'}
+/** docs/589: `chapterIndex` is the catalogue's reading chapter (0-based), absent when the event could not be located. */
+export interface WorldTimelineRanked extends WorldTimelineTime {id:string;rank:number;phase?:'前史'|'主线';chapterIndex?:number}
 export type WorldTimelinePrecision='day'|'month'|'year'|'era'
 /** Gregorian placements count hours from year 1 of the present era; the epoch only names that origin. */
 export const ERA_EPOCH='0001-01-01T00:00:00Z'
@@ -116,6 +117,34 @@ export function worldTimelineCalendarClues(units:ImportUnit[],max=120):string[]{
  return out
 }
 
+/** docs/589 §4′: dates the narration states (not dialogue: text inside “”「」『』 is skipped, quotes reset per unit), as
+ * [0-based chapter, clip of at most 14 characters around] in reading order, de-duplicated, at most `max`. Months must
+ * be 1–12; "今天是" counts only before a year, month or weekday. Units outside every chapter give nothing. */
+export function worldTimelineDateClues(units:ImportUnit[],chapters:{start:number;end:number}[],max=80):[number,string][]{
+ const month='(?<![0-9零〇一二两三四五六七八九十])([0-9]{1,2}|十[一二]?|[一二三四五六七八九])月(?:初|中旬|上旬|下旬|底|末|([0-9]{1,2}|[一二三四五六七八九十]{1,3})[日号])'
+ // A year after 今天是 has 3–4 digits (今天是1349年…), never 百年难遇 / 十年来.
+ const today='今天是(?:(?:[0-9]{3,4}|[零〇一二三四五六七八九]{3,4})年|(?:[0-9]{1,2}|[一二三四五六七八九十]{1,3})月|周[一二三四五六日天]|星期[一二三四五六日天]|礼拜[一二三四五六日天])'
+ const pattern=new RegExp(`${month}|${today}`,'gu'),open=new Set(['“','「','『']),close=new Set(['”','」','』']),HIDE='\u0000',stop=/[。！？!?\n\u0000]/u
+ const out:[number,string][]=[],seen=new Set<string>()
+ for(const unit of [...units].sort((a,b)=>a.start-b.start)){
+  // Masking works on code points; the chapter lookup converts back to the source's UTF-16 offsets (code review M1).
+  const source=[...unit.text];let depth=0
+  const chars=source.map(c=>{if(open.has(c)){depth++;return HIDE}if(close.has(c)){depth=Math.max(0,depth-1);return HIDE}return depth?HIDE:c})
+  const masked=chars.join('')
+  for(const m of masked.matchAll(pattern)){
+   if(m[1]!==undefined){const v=cnNumber(m[1]);if(v===undefined||v<1||v>12)continue}
+   if(m[2]!==undefined){const d=cnNumber(m[2]);if(d===undefined||d<1||d>31)continue}
+   const at=[...masked.slice(0,m.index)].length,end=at+[...m[0]].length
+   const offset=unit.start+source.slice(0,at).join('').length
+   const chapter=chapters.findIndex(c=>offset>=c.start&&offset<c.end);if(chapter<0)continue
+   let a=at,b=end;while(a>0&&at-a<14&&!stop.test(chars[a-1]))a--;while(b<chars.length&&b-end<14&&!stop.test(chars[b]))b++
+   const clip=chars.slice(a,b).join('').replace(/\s+/gu,' ').trim(),key=chapter+'\u0000'+clip
+   if(seen.has(key))continue;if(out.length>=max)return out;seen.add(key);out.push([chapter,clip])
+  }
+ }
+ return out
+}
+
 export interface WorldTimelineCalendar {eras:{name:string;aliases?:string[];years?:number|null;startAgo?:number|null}[];present?:{era:string;year?:number|null}|null}
 /** docs/572 R12: segment calendars merged in first-seen order; disagreeing lengths are dropped; a cycle drops all. */
 export function mergeWorldTimelineCalendars(list:(WorldTimelineCalendar|null|undefined)[]):WorldTimelineCalendar|null{
@@ -167,8 +196,11 @@ const hasTime=(t:WorldTimelineTime)=>t.era!==undefined||t.year!==undefined||t.mo
 
 /** Validates a model reply against the catalogue: unknown ids and repeats are dropped, missing ids are put back
  * after their reading neighbour, ranks are renumbered 0..n-1, invalid time parts dropped. Throws when no id is usable. */
-export function orderWorldTimeline(catalog:WorldTimelineEntry[],reply:WorldTimelineReplyItem[]):WorldTimelineRanked[]{
+export function orderWorldTimeline(catalog:WorldTimelineEntry[],reply:WorldTimelineReplyItem[],chapterCount?:number):WorldTimelineRanked[]{
  const known=new Set(catalog.map(e=>e.id)),seen=new Set<string>()
+ // docs/589 §1″: each rank carries its reading chapter; an unlocatable one (index >= chapter count) carries none.
+ const chapterOf=new Map(catalog.flatMap(e=>Number.isSafeInteger(e.chapterIndex)&&e.chapterIndex>=0&&(chapterCount===undefined||e.chapterIndex<chapterCount)?[[e.id,e.chapterIndex] as const]:[]))
+ const withChapter=(r:WorldTimelineRanked)=>chapterOf.has(r.id)?{...r,chapterIndex:chapterOf.get(r.id)}:r
  const kept=reply.map((item,k)=>({item,k})).filter(({item})=>{if(!known.has(item.id)||seen.has(item.id)||!Number.isSafeInteger(item.order)||item.order<0)return false;seen.add(item.id);return true}).sort((a,b)=>Number(a.item.phase!=='前史')-Number(b.item.phase!=='前史')||a.item.order-b.item.order||a.k-b.k).map(({item})=>item)
  if(!kept.length)throw Error('模型未返回可用的世界线时间顺序')
  const timeOf=new Map(catalog.map(e=>[e.id,e.time]))
@@ -189,7 +221,7 @@ export function orderWorldTimeline(catalog:WorldTimelineEntry[],reply:WorldTimel
   let at=0;for(let j=i-1;j>=0;j--){const k=list.findIndex(x=>x.id===catalog[j].id);if(k>=0){at=k+1;break}}
   list.splice(at,0,{id:entry.id,rank:0,...strip(timeFor(entry.id))});seen.add(entry.id)
  }
- return list.map((x,rank)=>({...x,rank}))
+ return list.map((x,rank)=>withChapter({...x,rank}))
 }
 
 /** docs/572 (wl-era1): segments are ordered separately, so a later segment's backstory must not follow the first
@@ -243,15 +275,52 @@ function placeRanks(ranked:WorldTimelineRanked[],calendar:WorldTimelineCalendar|
  let carryEra:number|undefined,carryYear:number|undefined,lastMonth:number|undefined
  const firstDated=times.find(t=>t.year!==undefined)
  const eraOf=times.map(t=>t.era!==undefined?eraIndex(calendar!,t.era):-1)
+ // docs/589 §1″: with a known story year, a month-day takes a year written in its own chapter (backstory and the rest
+ // keep separate chapter states), else the story year: backstory never rolls it over, the main story rolls it over
+ // only from a late month (10–12) to an early one (1–3). Other books and other eras keep the R8 inheritance below.
+ // `main` records whether the writer may set the story year (code review M5): a main-story month only takes a chapter
+ // year from such a writer.
+ type ChapterYear={era:number;year:number;last?:number;main:boolean}
+ const chapterYears=[new Map<number,ChapterYear>(),new Map<number,ChapterYear>()]
+ let mainYear=presentYear,mainLast:number|undefined
+ // Code review M4: the R8 fallback takes the last year of the rank's own era, not a year carried from another era.
+ const eraYear=new Map<number,{year:number;last?:number}>()
+ const chapterKey=(t:WorldTimelineRanked)=>t.chapterIndex!==undefined&&Number.isSafeInteger(t.chapterIndex)&&t.chapterIndex>=0?t.chapterIndex:undefined
+ const setsMain=(t:WorldTimelineRanked,year:number)=>t.phase==='主线'||t.phase!=='前史'&&presentYear!==undefined&&year>=presentYear
+ const carry=(era:number,year:number,month?:number)=>{carryEra=era;carryYear=year;lastMonth=month;eraYear.set(era,{year,last:month})}
  for(const [i,t] of times.entries()){
+  // docs/589 §2′: a main-story event happens during the main story, never years before it starts.
+  if(t.phase==='主线')delete t.ago
   if(t.ago!==undefined&&presentYear===undefined)delete t.ago
-  if(t.year!==undefined){if(eraOf[i]<0)eraOf[i]=carryEra??(firstEra?eraIndex(calendar,firstEra):presentIndex);carryEra=eraOf[i];carryYear=t.year;lastMonth=t.month;continue}
+  const states=chapterYears[t.phase==='前史'?0:1],chapter=chapterKey(t)
+  if(t.year!==undefined){if(eraOf[i]<0)eraOf[i]=carryEra??(firstEra?eraIndex(calendar,firstEra):presentIndex);carry(eraOf[i],t.year,t.month)
+   if(presentYear!==undefined){const main=eraOf[i]===presentIndex&&setsMain(t,t.year);if(chapter!==undefined)states.set(chapter,{era:eraOf[i],year:t.year,last:t.month,main});if(main){mainYear=t.year;mainLast=t.month}}
+   continue}
+  // Code review M4: an era-less backstory month right after a year of an earlier era keeps the R8 inheritance.
+  if(t.month!==undefined&&presentYear!==undefined&&(eraOf[i]===presentIndex||eraOf[i]<0&&(t.phase==='主线'||carryEra===undefined||carryEra===presentIndex))){
+   const found=chapter!==undefined?states.get(chapter):undefined
+   const own=found&&(eraOf[i]<0||found.era===eraOf[i])&&(t.phase!=='主线'||found.main)?found:undefined
+   let era=presentIndex,year:number
+   if(own){
+    year=own.year;if(own.last!==undefined&&t.month+6<own.last)year++
+    era=own.era;own.year=year;own.last=t.month
+    if(t.phase!=='前史'&&era===presentIndex&&setsMain(t,year)){mainYear=year;mainLast=t.month;own.main=true}
+   }else if(t.phase==='前史')year=presentYear
+   else{
+    year=mainYear!;if(mainLast!==undefined&&mainLast>=10&&t.month<=3)year++
+    mainYear=year;mainLast=t.month;if(chapter!==undefined)states.set(chapter,{era,year,last:t.month,main:true})
+   }
+   t.year=year;eraOf[i]=era;carry(era,year,t.month)
+   if(t.day!==undefined&&!isCivilDate(year,t.month,t.day))delete t.day
+   continue
+  }
   if(t.month!==undefined){
    const era=eraOf[i]>=0?eraOf[i]:carryEra??(firstDated?eraOf[times.indexOf(firstDated)]>=0?eraOf[times.indexOf(firstDated)]:eraIndex(calendar,firstDated.era)>=0?eraIndex(calendar,firstDated.era):presentIndex:presentIndex)
-   let year=carryYear??firstDated?.year??presentYear
+   const same=carryEra===undefined||carryEra===era?(carryYear!==undefined?{year:carryYear,last:lastMonth}:undefined):eraYear.get(era)
+   let year=same?.year??firstDated?.year??presentYear
    if(year===undefined){delete t.month;delete t.day;continue}
-   if(carryYear!==undefined&&lastMonth!==undefined&&t.month+6<lastMonth)year++
-   t.year=year;eraOf[i]=era;carryEra=era;carryYear=year;lastMonth=t.month
+   if(same&&same.last!==undefined&&t.month+6<same.last)year++
+   t.year=year;eraOf[i]=era;carry(era,year,t.month)
    if(t.day!==undefined&&!isCivilDate(year,t.month,t.day))delete t.day
   }
  }
@@ -345,9 +414,56 @@ function placeRanks(ranked:WorldTimelineRanked[],calendar:WorldTimelineCalendar|
   if(!(lo<hi))continue
   point[i]=lo+(hi-lo)/(k+1);precision[i]='era';floor=point[i]!
  }
+ fillMainZone(times,point,precision,own,presentYear!==undefined?starts[presentIndex]+civilDays(presentYear,1,1)*DAY:undefined,k=>eraOf[k]===presentIndex)
  const placed=interpolate(point,precision,own)
  const eras:Era[]=calendar.eras.map((e,i)=>({name:e.name,start:starts[i]}))
  return {placed,eras,gregorian:true}
+}
+/** docs/589 §3″: undated runs of the main story (from the first 主线 rank on) are placed by chapter, one day per chapter
+ * change, instead of stepping a year or a month per rank from a far anchor. `floor` is 1 January of the story year.
+ * A: between two placed ranks of the main zone, left to interpolation. B: after a main-zone rank to the end, from it.
+ * C: after backstory (or nothing) to the end, from max(previous + 1 day, floor). D: before a placed rank with backstory
+ * (or nothing) before, backwards from that rank; when that lands before floor or the previous value it spreads evenly
+ * inside the free range, or stays to interpolation. Values never leave (previous, next), so placement stays increasing. */
+function fillMainZone(times:WorldTimelineRanked[],point:(number|undefined)[],precision:(WorldTimelinePrecision|undefined)[],own:boolean[],floor:number|undefined,presentEra:(k:number)=>boolean){
+ const n=times.length,firstMain=times.findIndex(t=>t.phase==='主线')
+ if(firstMain<0)return
+ // Code review M2: with a known story year, an era-only placement inside the main zone is only a guess at the era's
+ // middle (often decades before the story year); those ranks are placed by chapter like undated ones. Only the present
+ // era: an era-only rank of another era the model named keeps its era (code review round 2, R2-M1).
+ if(floor!==undefined)for(let k=firstMain;k<n;k++)if(point[k]!==undefined&&!own[k]&&times[k].phase!=='前史'&&presentEra(k)){point[k]=undefined;precision[k]=undefined}
+ const changes=(a:number,b:number)=>{const x=times[a].chapterIndex,y=times[b].chapterIndex;return x===undefined||y===undefined||x!==y?1:0}
+ // Code review M3: ranks of one chapter at the end of the list share their day: spread them inside it, after `start`
+ // (the anchor of that chapter, when it is one), instead of leaving the run to a year- or month-wide spread.
+ const spread=(from:number,to:number,start?:number)=>{
+  for(let a=from;a<=to;){let b=a;while(b+1<=to&&point[b+1]===point[a])b++
+   const base=point[a]!,lead=start!==undefined&&start===base?1:0,count=b-a+1+lead
+   for(let k=a;k<=b;k++)point[k]=base+DAY*(k-a+lead)/count
+   a=b+1}
+ }
+ for(let i=firstMain;i<n;){
+  if(point[i]!==undefined){i++;continue}
+  let j=i;while(j+1<n&&point[j+1]===undefined)j++
+  let p=-1;for(let k=i-1;k>=0;k--)if(point[k]!==undefined){p=k;break}
+  const lo=p>=0?point[p]!:-Infinity,hi=j+1<n?point[j+1]!:Infinity,mainBefore=p>=firstMain&&own[p]
+  if(mainBefore&&hi===Infinity){
+   let v=lo;for(let k=i;k<=j;k++){v+=changes(k-1,k)*DAY;point[k]=v;precision[k]=precision[p]}
+   spread(i,j,lo)
+  }else if(!mainBefore&&hi===Infinity){
+   let v=lo>-Infinity?Math.max(lo+DAY,floor??-Infinity):floor
+   if(v!==undefined){for(let k=i;k<=j;k++){if(k>i)v+=changes(k-1,k)*DAY;point[k]=v;precision[k]='year'}spread(i,j)}
+  }else if(!mainBefore){
+   const back:number[]=new Array(j-i+1);let c=changes(j,j+1);back[j-i]=c
+   for(let k=j-1;k>=i;k--){c+=changes(k,k+1);back[k-i]=c}
+   const values=back.map(c=>hi-Math.max(c,1)*DAY)
+   if(values[0]>lo&&(floor===undefined||values[0]>=floor))values.forEach((v,k)=>{point[i+k]=v;precision[i+k]=precision[j+1]})
+   else{
+    const a=floor!==undefined&&floor<hi?Math.max(floor,lo):lo>-Infinity?lo:undefined
+    if(a!==undefined){const m=j-i+1;for(let k=0;k<m;k++){point[i+k]=a+(hi-a)*(k+1)/(m+1);precision[i+k]=precision[j+1]}}
+   }
+  }
+  i=j+1
+ }
 }
 /** Ranks between placed ones are interpolated; before the first and after the last they step by the neighbour's
  * precision; equal runs are spread inside [v, min(next, v+step)). */
