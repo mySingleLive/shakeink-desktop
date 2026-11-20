@@ -1,7 +1,8 @@
 "use client";
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   CATEGORY_VAR,
+  cardScale,
   CLIP_END_LABEL,
   CLIP_START_LABEL,
   collapsedCardInput,
@@ -9,16 +10,23 @@ import {
   descendants,
   familyStampEnd,
   emptyTimeline,
+  medianRootGap,
   minimapModel,
+  pointWidth as pointBoxWidth,
   timelineStep,
+  zoomLevel,
+  zoomPlan,
   type EventTree,
   type LaneItem,
   type TimelineState,
   type TreeNode,
+  type ZoomLevel,
+  type ZoomPlan,
 } from "@/lib/planning/worldline-layout";
 import { layoutTimelineCards, timelineTicks } from "@/lib/planning/timeline";
-import type { ViewportStore } from "@/lib/planning/worldline-viewport";
+import type { ViewportStore, ZoomNoteStore } from "@/lib/planning/worldline-viewport";
 import { EventCard, WorldlineCardContext } from "./EventCard";
+import { EventPoint } from "./EventPoint";
 import { EventTreeNav } from "./EventTree";
 import s from "./worldline.module.css";
 import { renderProbe } from "@/lib/planning/render-probe";
@@ -63,15 +71,25 @@ export function ViewportRange({ store, label }: { store: ViewportStore; label(t:
   return <>{label(w.start)} — {label(w.start + w.span)}</>;
 }
 const PAD = 14;
+/** docs/592 §7.1: zoom levels on (the product default). Only the browser test fixture provides false, so the timeline
+ * cases written before docs/592 keep running at level 0; a case without a Provider checks the default stays on. */
+export const TimelineZoomLevelsContext = createContext(true);
+/** docs/592 §2.4: the panel's status-line note store (PlanningWorkspace provides one per panel). */
+export const TimelineZoomNoteContext = createContext<ZoomNoteStore | null>(null);
+/** docs/592 §2.6: a second press within this time of a press on a point is its double click. */
+const POINT_DOUBLE_MS = 400;
+const EMPTY_IDS: ReadonlySet<string> = new Set();
 
 /** The time ruler; a component of its own so the render-count case can see it re-render on every window change. */
-function Ruler({ ticks, toX, label }: { ticks: readonly number[]; toX(t: number): number; label(t: number): string }) {
+function Ruler({ ticks, toX, label, hot }: { ticks: readonly number[]; toX(t: number): number; label(t: number): string; hot?: { x: number; text: string; ec: string } | null }) {
   renderProbe("Ruler");
   return (
     <div className={s.ruler} data-ruler="">
       {ticks.map((t) => (
         <span key={t} style={{ left: toX(t) }}>{label(t)}</span>
       ))}
+      {/* docs/592 R6: the hovered event's time on the ruler. */}
+      {hot && <span data-ruler-hot="" className={s.rulerHot} style={{ left: hot.x, "--ec": hot.ec } as React.CSSProperties}>{hot.text}</span>}
     </div>
   );
 }
@@ -153,6 +171,32 @@ export function EventTimeline({
   // 581 WU-55: a time-drag preview moves the dragged event (and, for a move, its subtree) by a transform only; the
   // packing is not touched, so no other family moves while the pointer is down. The save repacks.
   const shown = tree;
+  // docs/592 §2: zoom levels from the crowding d (median root gap on screen). The previous level (hysteresis) and plan
+  // (set identity) are refs committed in a layout effect, so a render React throws away leaves no trace (review R10).
+  const zoomOn = useContext(TimelineZoomLevelsContext);
+  const noteStore = useContext(TimelineZoomNoteContext);
+  const gap = useMemo(() => medianRootGap(tree), [tree]);
+  const prevLevel = useRef<ZoomLevel>(0);
+  const prevPlan = useRef<ZoomPlan | undefined>(undefined);
+  const [unfoldedRaw, setUnfolded] = useState<ReadonlySet<string>>(EMPTY_IDS);
+  const [showAllRaw, setShowAll] = useState(false);
+  const d = gap === null || !(width > 0) ? Infinity : (gap * width) / view.span;
+  const level: ZoomLevel = zoomOn ? zoomLevel(d, prevLevel.current) : 0;
+  const unfolded = level >= 3 ? unfoldedRaw : EMPTY_IDS, showAll = level >= 2 && showAllRaw;
+  const keepCards = useMemo(() => new Set([...selection, ...(selected ? [selected] : []), ...(hitId ? [hitId] : []), ...open]), [selection, selected, hitId, open]);
+  const plan = zoomPlan(tree, level, cardScale(d, level), { cards: keepCards, unfolded, showAll, folded }, prevPlan.current);
+  const viewFolded = useMemo(() => {
+    if (!plan.autoFolded.size && !unfolded.size) return folded;
+    const n = new Set([...folded, ...plan.autoFolded]);
+    for (const id of unfolded) n.delete(id);
+    return n;
+  }, [folded, plan.autoFolded, unfolded]);
+  useLayoutEffect(() => {
+    prevLevel.current = level;
+    prevPlan.current = plan;
+    if (level < 3 && unfoldedRaw.size) setUnfolded(EMPTY_IDS);
+    if (level < 2 && showAllRaw) setShowAll(false);
+  });
   const moved = useMemo(() => {
     const n = preview && preview.delta ? tree.byId.get(preview.id) : undefined;
     if (!n) return null;
@@ -162,16 +206,23 @@ export function EventTimeline({
   }, [tree, preview]);
   // docs/583 R1: collapsed widths follow the rendered head (found people, descendants), so the character list is a
   // relayout input too: adding or deleting a character resizes cards and repacks.
-  const widthOf = useMemo(() => {
-    const cache = new Map<string, number>(), known = new Set(ctx.characters.map((c) => c.id));
-    return (n: TreeNode) => {
-      let w = cache.get(n.id);
-      if (w === undefined) cache.set(n.id, (w = collapsedCardWidth(collapsedCardInput(n, known, shown))));
-      return w;
+  const { widthOf, inputOf } = useMemo(() => {
+    const cache = new Map<string, number>(), inputs = new Map<string, ReturnType<typeof collapsedCardInput>>(), known = new Set(ctx.characters.map((c) => c.id));
+    const inputOf = (n: TreeNode) => {
+      let i = inputs.get(n.id);
+      if (!i) inputs.set(n.id, (i = collapsedCardInput(n, known, shown)));
+      return i;
+    };
+    return {
+      inputOf,
+      widthOf: (n: TreeNode) => {
+        let w = cache.get(n.id);
+        if (w === undefined) cache.set(n.id, (w = collapsedCardWidth(inputOf(n))));
+        return w;
+      },
     };
   }, [shown, ctx.characters]);
-  const inputs = [shown, open, folded, heights, widthOf] as const;
-  const relayout = !lastSizes.current || inputs.some((v, i) => v !== lastSizes.current![i]);
+
   const laneScale = width > 0 ? width / view.span : 0;
   const lanePack = useMemo(() => {
     let top = 0;
@@ -191,11 +242,6 @@ export function EventTimeline({
   }, [lanes, laneScale]);
   // timelineStep is pure; its state and the relayout inputs are committed in a layout effect, so a render React
   // throws away (StrictMode, an interrupted concurrent render) leaves no trace (review R10).
-  const step = timelineStep(state.current, { tree: shown, view, width, expanded: open, folded, heights, widthOf, pinned, relayout, lane: lanePack.items });
-  useLayoutEffect(() => {
-    state.current = step.state;
-    lastSizes.current = inputs;
-  });
   const scale = width > 0 ? width / view.span : 0;
   // Descendant counts and family ends once per tree, not per card per pan frame (review R9).
   const famInfo = useMemo(() => {
@@ -220,6 +266,31 @@ export function EventTimeline({
     }
     return m;
   }, [shown, axis, ctx.adapter]);
+  /** A point reads its card stamp's start (a family's "A → B" keeps A). */
+  const pointDate = (id: string) => (stamps.get(id) ?? "").split(" → ")[0];
+  const pointWidth = useMemo(() => (n: TreeNode) => pointBoxWidth(n.event.title, (stamps.get(n.id) ?? "").split(" → ")[0], n.children.length > 0), [stamps]);
+  const inputs = [shown, open, viewFolded, heights, widthOf, plan.points, plan.scale, pointWidth] as const;
+  const relayout = !lastSizes.current || inputs.some((v, i) => v !== lastSizes.current![i]);
+  const step = timelineStep(state.current, {
+    tree: shown, view, width, expanded: open, folded: viewFolded, heights, widthOf, inputOf, pinned, relayout, lane: lanePack.items,
+    scaleCard: plan.scale, points: plan.points, pointWidth,
+  });
+  useLayoutEffect(() => {
+    state.current = step.state;
+    lastSizes.current = inputs;
+  });
+  // docs/592 §2.4: the status-line note, written after commit; cleared when the timeline unmounts.
+  const toggleShowAll = useRef(() => {});
+  toggleShowAll.current = () => setShowAll((v) => !v);
+  useLayoutEffect(() => {
+    if (!noteStore) return;
+    noteStore.set(level >= 2 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, key: level >= 4, showAll } : null);
+  });
+  useEffect(() => {
+    if (!noteStore) return;
+    noteStore.actions = { toggleShowAll: () => toggleShowAll.current() };
+    return () => { noteStore.actions = null; noteStore.set(null); };
+  }, [noteStore]);
 
   // Measured heights of open cards feed the next layout. One observer for the component's life; the open set
   // decides what it watches (review R9: no per-render observer churn).
@@ -257,6 +328,27 @@ export function EventTimeline({
   // docs/584 R2: a pan (middle button, or Space + left) moves start and y through the store; a left drag on the canvas
   // draws a selection box kept here only (no PlanningWorkspace render per frame, IC-21b). Esc, blur and
   // pointercancel restore a pan's start and y and drop a box. Time drags are owned by the workspace.
+  // docs/592 R6: hovered card or point; local state, so only the timeline re-renders. Not updated during a drag.
+  const [hover, setHover] = useState<string | null>(null);
+  const hoverAt = (target: EventTarget | null) => {
+    if (drag.current?.active || box.current?.active || timeDrag.preview) return;
+    const id = (target as Element | null)?.closest?.<HTMLElement>("[data-event-card],[data-event-point]")?.dataset.eventId ?? null;
+    setHover((h) => (h === id ? h : id));
+  };
+  // docs/592 §2.3 (review round 2 #1): while auto-folding is on, a fold button only toggles the timeline's own exception
+  // set, so the event table and the tree keep their folding; below level 3 it folds as before.
+  // Stable identity (EventCard is memo; a new function per render re-renders every card on each zoom frame, and a
+  // re-rendered Markdown body resets its innerHTML, losing e.g. a scrolled table: CP-06).
+  const foldLive = useRef({ level, onFold });
+  foldLive.current = { level, onFold };
+  const foldClick = useRef((id: string) => {
+    if (foldLive.current.level < 3) return foldLive.current.onFold(id);
+    setUnfolded((u) => { const n = new Set(u); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }).current;
+  /** docs/592 §2.6: the last press on a point, for its double click when the second press lands off the new card. */
+  const lastPointPress = useRef<{ id: string; at: number; x: number; y: number } | null>(null);
+  /** The click after a point's second press is swallowed, so the new card's own double click does not edit twice. */
+  const swallowClick = useRef(false);
   const drag = useRef<{ x: number; y: number; start: number; top: number; active: boolean } | null>(null);
   const box = useRef<{ x: number; y: number; additive: boolean; active: boolean; onCard: boolean } | null>(null);
   const [rect, setRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -309,7 +401,7 @@ export function EventTimeline({
         const span = Math.min(1e12, Math.max(1, v.span * Math.pow(1.2, a.zoom)));
         const at = v.start + ratio * v.span;
         // Keep the card under the pointer at its screen y once the new scale is packed (layout effect below).
-        const card = document.elementFromPoint(a.x, a.y)?.closest<HTMLElement>("[data-timeline-plane] [data-event-card]");
+        const card = document.elementFromPoint(a.x, a.y)?.closest<HTMLElement>("[data-timeline-plane] [data-event-card], [data-timeline-plane] [data-event-point]");
         zoomAnchor.current = card ? { id: card.dataset.eventId!, y: card.getBoundingClientRect().top } : null;
         viewport.setWindow({ start: at - ratio * span + (a.pan / Math.max(1, w)) * span, span });
         // At the span bounds nothing changes and nothing re-renders; a stale anchor would later undo a scroll.
@@ -343,8 +435,10 @@ export function EventTimeline({
     const a = zoomAnchor.current, lane = laneRef.current;
     if (!a || !lane) return;
     zoomAnchor.current = null;
-    const card = plane.current?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(a.id)}"]`);
-    if (card) viewport.setWindow({ y: viewport.getSnapshot().y - (card.getBoundingClientRect().top - a.y) });
+    // docs/592: from the layout, not the DOM. A repack can move the anchor outside the rendered band (vband), and a
+    // card may have turned into a point (or back); the packed element still knows where it is.
+    const el = step.elements.find((e) => e.id === a.id && (e.kind === "card" || e.kind === "point"));
+    if (el) viewport.setWindow({ y: viewport.getSnapshot().y - (lane.getBoundingClientRect().top + el.top + view.y - a.y) });
   });
   const restorePan = (d: { start: number; top: number }) => {
     viewport.setWindow({ start: d.start, y: d.top });
@@ -406,7 +500,8 @@ export function EventTimeline({
   useLayoutEffect(() => {
     if (!step.state.packed || !(laneH > 0) || !(width > 0)) return;
     // Keep the request until cards are packed, so an empty first layout does not swallow it.
-    const cards = step.elements.filter((e) => e.kind === "card");
+    // docs/592 review round 1 #3: points are events too.
+    const cards = step.elements.filter((e) => e.kind === "card" || e.kind === "point");
     if (!cards.length || !viewport.takeCenterRequest()) return;
     // The fitted window already spans the stretch to show; centre the cards that fall inside it (the packed range is
     // up to seven windows wide), horizontally by their pixel box, vertically when they fit the lane.
@@ -424,11 +519,17 @@ export function EventTimeline({
   });
   // docs/584 R1: nothing packed falls inside the lane → offer 复位. Checked on the visible rows only.
   const emptyView = tree.roots.length > 0 && laneH > 0 && width > 0 && !step.elements.some((c) => {
-    if (c.kind !== "card") return false;
+    if (c.kind !== "card" && c.kind !== "point") return false;
     const x = c.left + step.translateX + PAD, y = c.top + view.y;
     return x + c.width > 0 && x < width + 2 * PAD && y + c.height > 0 && y < laneH;
   });
   const frameLeft = mini.toX(view.start), frameRight = mini.toX(view.start + view.span);
+  // Code review P2: no hover marks while a time drag is in progress (the card keeps no stale highlight).
+  const shownHover = timeDrag.preview ? null : hover;
+  const hotNode = shownHover ? shown.byId.get(shownHover) : undefined;
+  const hotMark = hotNode && hotNode.start !== null && !timeDrag.preview
+    ? { x: toX(hotNode.start), text: pointDate(hotNode.id), ec: `var(${CATEGORY_VAR[hotNode.event.category]})` }
+    : null;
 
   return (
     <div
@@ -488,7 +589,7 @@ export function EventTimeline({
       onPointerCancel={() => { if (drag.current?.active) restorePan(drag.current); drag.current = null; }}
       onAuxClickCapture={(e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); } }}
     >
-      <Ruler ticks={ticks} toX={toX} label={(t) => ctx.adapter.label(t, view.span)} />
+      <Ruler ticks={ticks} toX={toX} label={(t) => ctx.adapter.label(t, view.span)} hot={hotMark} />
       <div className={s.periodsRow}>
         {periods.map((p) => {
           const right = width + PAD, a = toX(p.start), b = p.end === null ? Infinity : toX(p.end);
@@ -530,7 +631,18 @@ export function EventTimeline({
           // docs/584 R2: a left press on the canvas or on a card outside its title / controls may become a box selection
           // (≥ 5px) or stays a click (cards select themselves; empty canvas clears). No preventDefault: focus moves here.
           if (e.button !== 0 || (e.target as Element).closest("button,summary,input,select,textarea,a,[data-minimap],[data-card-title],[data-card-menu]")) return;
-          box.current = { x: e.clientX, y: e.clientY, additive: e.metaKey || e.ctrlKey || e.shiftKey, active: false, onCard: !!(e.target as Element).closest("[data-event-card]") };
+          const additive = e.metaKey || e.ctrlKey || e.shiftKey, mods = { toggle: e.metaKey || e.ctrlKey, add: e.shiftKey };
+          // docs/592 §2.6 (review round 2 #3): a press on a point selects it; it turns into a card next frame. A second press
+          // within POINT_DOUBLE_MS near the first is that point's double click, wherever it lands (its new card, or the
+          // empty spot the card moved away from): the lane edits once and swallows the click, so the card does not too.
+          const pt = (e.target as Element).closest<HTMLElement>("[data-event-point]")?.dataset.eventId;
+          const last = lastPointPress.current, now = performance.now();
+          const repeat = !!last && now - last.at < POINT_DOUBLE_MS && Math.hypot(e.clientX - last.x, e.clientY - last.y) < PAN_THRESHOLD;
+          lastPointPress.current = null;
+          swallowClick.current = false;
+          if (repeat) { swallowClick.current = true; ctx.onSelect(last!.id, 2, mods); }
+          else if (pt) { lastPointPress.current = { id: pt, at: now, x: e.clientX, y: e.clientY }; ctx.onSelect(pt, 1, mods); }
+          box.current = { x: e.clientX, y: e.clientY, additive, active: false, onCard: !!pt || repeat || !!(e.target as Element).closest("[data-event-card]") };
           if (!typing(e.target)) host.current?.focus({ preventScroll: true });
           e.currentTarget.setPointerCapture(e.pointerId);
         }}
@@ -555,13 +667,16 @@ export function EventTimeline({
             const lr = e.currentTarget.getBoundingClientRect();
             const box = { x: Math.min(b.x, e.clientX) - lr.left, y: Math.min(b.y, e.clientY) - lr.top, w: Math.abs(e.clientX - b.x), h: Math.abs(e.clientY - b.y) };
             const tx = step.translateX + PAD;
-            const hit = step.elements.filter((c) => c.kind === "card" && c.left + tx < box.x + box.w && c.left + tx + c.width > box.x && c.top + view.y < box.y + box.h && c.top + c.height + view.y > box.y).map((c) => c.id);
+            const hit = step.elements.filter((c) => (c.kind === "card" || c.kind === "point") && c.left + tx < box.x + box.w && c.left + tx + c.width > box.x && c.top + view.y < box.y + box.h && c.top + c.height + view.y > box.y).map((c) => c.id);
             setRect(null);
             onBoxSelect([...new Set(hit)], b.additive);
           } else if (!b.onCard && !b.additive) onClearSelection();
           setRect(null);
         }}
         onPointerCancel={() => { box.current = null; setRect(null); timeDrag.cancel(); }}
+        onClickCapture={(e) => { if (swallowClick.current) { swallowClick.current = false; e.stopPropagation(); } }}
+        onPointerOver={(e) => hoverAt(e.target)}
+        onPointerLeave={() => setHover(null)}
       >
         <div ref={plane} data-timeline-plane="" className={s.plane} style={{ transform: `translate(${step.translateX + PAD}px, ${view.y}px)`, height: (step.state.packed?.bottom ?? 0) + 120 }}>
           {step.elements.map((el) => {
@@ -589,12 +704,16 @@ export function EventTimeline({
               return <i key={`t${el.id}`} className={s.track} style={{ ...ec, left: el.left, width: el.width, top: el.top }} />;
             if (el.kind === "bar")
               return <i key={`b${el.id}`} className={s.durBar} style={{ ...ec, left: el.left, width: el.width, top: el.top }} />;
+            if (el.kind === "point")
+              return (
+                <div key={`p${el.id}`} data-event={el.id} data-family={el.family} data-plane-left="" className={s.tcard} style={{ ...ec, left: el.left, top: el.top, width: el.width, height: el.height }}>
+                  <EventPoint event={n.event} date={pointDate(n.id)} kids={famInfo.get(n.id)?.count ?? 0} hot={shownHover === n.id} dimmed={dimmed(n.id)} selected={selection.has(n.id)} />
+                </div>
+              );
             const parent = n.children.length > 0;
-            return (
-              <div key={`c${el.id}`} data-event={el.id} data-family={el.family} data-plane-left="" className={`${s.tcard} ${parent ? s.header : ""}`} style={{ ...ec, left: el.left, top: el.top, width: el.width }}>
-                <span data-stamp="" {...(parent ? { "data-family-range": "" } : {})} className={s.stamp} title={stamps.get(n.id)}>{stamps.get(n.id)}</span>
-                {el.clippedStart && <span className={s.clipNote}>{CLIP_START_LABEL}</span>}
-                {el.clippedEnd && <span className={`${s.clipNote} ${s.clipEnd}`}>{CLIP_END_LABEL}</span>}
+            // docs/592 R2: the card zooms on an inner box; the outer box keeps the layout position (zoom scales left/top).
+            const z = el.zoom ?? 1;
+            const cardEl = (
                 <EventCard
                   event={n.event}
                   expanded={expanded.has(n.id)}
@@ -604,13 +723,26 @@ export function EventTimeline({
                   editing={editing === n.id}
                   childCount={n.children.length}
                   descendantCount={famInfo.get(n.id)?.count ?? 0}
-                  folded={folded.has(n.id)}
+                  folded={viewFolded.has(n.id)}
                   placed
                   maxAvatars={3}
                   variant="timeline"
                   selectionSize={selection.has(n.id) && selection.size >= 2 ? selection.size : undefined}
-                  onFold={onFold}
+                  titleLines={el.lines}
+                  stacked={el.stacked}
+                  hot={shownHover === n.id}
+                  onFold={foldClick}
                 />
+            );
+            return (
+              <div key={`c${el.id}`} data-event={el.id} data-family={el.family} data-plane-left="" {...(shownHover === n.id ? { "data-hot": "" } : {})} className={`${s.tcard} ${parent ? s.header : ""}`} style={{ ...ec, left: el.left, top: el.top, width: el.width }}>
+                {/* The stamp and clip notes stay unzoomed children of the positioned box (docs/585 selectors). */}
+                <span data-stamp="" {...(parent ? { "data-family-range": "" } : {})} className={s.stamp} title={stamps.get(n.id)}>{stamps.get(n.id)}</span>
+                {el.clippedStart && <span className={s.clipNote}>{CLIP_START_LABEL}</span>}
+                {el.clippedEnd && <span className={`${s.clipNote} ${s.clipEnd}`}>{CLIP_END_LABEL}</span>}
+                <div data-card-zoom={z} className={s.cardZoom} style={z === 1 ? undefined : { zoom: z, width: el.width / z }}>
+                  {cardEl}
+                </div>
               </div>
             );
           })}
@@ -620,6 +752,7 @@ export function EventTimeline({
             </div>
           ))}
         </div>
+        {hotMark && <i data-hover-guide="" className={s.hoverGuide} style={{ left: hotMark.x, "--ec": hotMark.ec } as React.CSSProperties} />}
         {rect && <div data-select-rect="" className={s.selectRect} style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
         {!tree.roots.length && <p className={s.emptyNote}>{emptyText ?? "当前世界线还没有已定位事件。添加事件，或为待定位事件设置时间。"}</p>}
         {emptyView && (
@@ -718,4 +851,18 @@ function yieldsTo(target: Element | null, lane: HTMLElement | null, dx: number, 
 function typing(target: EventTarget | null) {
   const el = target as HTMLElement | null;
   return !!el?.closest?.("input,textarea,select,button,summary,[contenteditable=''],[contenteditable='true'],[role=button],[role=textbox]");
+}
+
+/** docs/592 §2.4: the status-line note of the zoom levels: 「N 个一般（和重要）事件显示为时间点 · 显示为卡片」. It subscribes
+ * to the panel's note store, so a zoom step re-renders only this line. */
+export function ZoomNoteLine({ store }: { store: ZoomNoteStore }) {
+  const note = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  if (!note) return null;
+  const what = note.key ? "一般和重要事件" : "一般事件";
+  return (
+    <span data-zoom-note="" className={s.zoomNote}>
+      {note.showAll ? `${what}已显示为卡片` : `${note.count} 个${what}显示为时间点`}
+      <button type="button" data-zoom-note-toggle="" onClick={() => store.actions?.toggleShowAll()}>{note.showAll ? "改回时间点" : "显示为卡片"}</button>
+    </span>
+  );
 }

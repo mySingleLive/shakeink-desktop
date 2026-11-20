@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import type { Browser, Page } from "playwright-core"
 import { expect } from "@playwright/test"
-import { launch, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
+import { launch, revealTimelineCard, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
 import { f60 } from "../helpers/worldline-f60"
 import { f885 } from "../helpers/worldline-f885"
 
@@ -255,6 +255,8 @@ function withTable(): WorldlineView {
 test("CP-06: a wheel over a scrollable table inside an open card scrolls the table until its end; elsewhere it zooms", () => withWorldline(browser, withTable(), async page => {
   await openTimeline(page)
   const card = page.locator(`[data-timeline-plane] [data-event-card][aria-label="七王盟约签订"]`)
+  // docs/592 R1: two-line titles make the families taller; bring the card into the lane first.
+  await revealTimelineCard(page, card)
   await card.locator("[data-card-expand]").click()
   const table = card.locator("table")
   await table.waitFor()

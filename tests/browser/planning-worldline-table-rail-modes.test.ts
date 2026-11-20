@@ -190,7 +190,7 @@ test("RM-B4b: linear mode, hovering a cluster's label lights every card in it", 
   await expect(page.locator("[data-event-table] [data-event-card][data-hot]")).toHaveCount(3)
 }))
 
-test("RM-B5: the parent card heads its box: full width, flush top, 36px, children 4px below; folded box is the header; expanded header still full width", () => withWorldline(browser, f60(), async page => {
+test("RM-B5: the parent card heads its box: full width, flush top, 36px, children 4px below; folded it is a stacked card (docs/592 R5); expanded header still full width", () => withWorldline(browser, f60(), async page => {
   await table(page)
   const group = page.locator('[data-event-group][data-parent-title="港口商会签下秘密契约"]').first()
   const geo = () => group.evaluate(g => {
@@ -203,9 +203,15 @@ test("RM-B5: the parent card heads its box: full width, flush top, 36px, childre
   assert.ok(Math.abs(g.head.t - g.box.t) <= 1, JSON.stringify(g))
   assert.equal(Math.round(g.head.h), 36)
   assert.ok(g.child && Math.abs(g.child.t - g.head.b - 4) <= 1, JSON.stringify(g))
+  const parentCard = page.locator('[data-event-table] [data-event-card][aria-label="港口商会签下秘密契约"]')
   await group.locator("[data-fold]").first().click(); await settle(page)
-  assert.equal(Math.round((await geo()).box.h), 36)
-  await group.locator("[data-fold]").first().click(); await settle(page)
+  // docs/592 R5: folded, the parent is a stacked card (40 + 8 peek) as wide as the box was; there is no box.
+  await expect(page.locator('[data-event-group][data-parent-title="港口商会签下秘密契约"]')).toHaveCount(0)
+  await expect(parentCard).toHaveAttribute("data-stacked", "")
+  const wrap = parentCard.locator("xpath=..")
+  assert.equal(Math.round(await wrap.evaluate(e => e.getBoundingClientRect().height)), 48)
+  assert.ok(Math.abs(await wrap.evaluate(e => e.getBoundingClientRect().width) - g.box.r + g.box.l) <= 1)
+  await parentCard.locator("[data-fold]").click(); await settle(page)
   await group.locator("[data-event-card] [data-card-title]").first().click(); await settle(page)
   const open = await geo()
   assert.ok(Math.abs(open.head.l - open.box.l) <= 1 && Math.abs(open.head.r - open.box.r) <= 1, JSON.stringify(open))

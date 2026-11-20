@@ -4,7 +4,9 @@ import {
   alignedRailMarks,
   CATEGORY_VAR,
   railMarks,
+  tableCardInput,
   tableLayout,
+  tableWidths,
   descendants,
   type AlignedRailMarks,
   type EventTree,
@@ -66,13 +68,20 @@ export function EventTable({
   const ctx = useContext(WorldlineCardContext)!;
   const [heights, setHeights] = useState<Record<string, number>>({});
   const open = useMemo(() => new Set([...expanded, ...(editing ? [editing] : [])]), [expanded, editing]);
-  const layout: TableLayout = useMemo(
-    () => tableLayout(tree, heights, scale, ctx.adapter, { expanded: open, folded }),
-    [tree, heights, scale, ctx.adapter, open, folded],
-  );
   const [panelWidth, setPanelWidth] = useState(0);
   // The rail narrows with the panel (worldline.module.css @container ≤ 640px); leads follow the same geometry.
   const narrow = panelWidth > 0 && panelWidth <= 640;
+  // docs/592 §1.3: the card column's width decides each collapsed title's lines (tableWidths follows the CSS nesting).
+  const [cardsWidth, setCardsWidth] = useState(0);
+  const widths = useMemo(() => (cardsWidth > 0 ? tableWidths(cardsWidth, narrow) : undefined), [cardsWidth, narrow]);
+  const inputOf = useMemo(() => {
+    const known = new Set(ctx.characters.map((c) => c.id));
+    return (n: TreeNode) => tableCardInput(n, known, tree);
+  }, [ctx.characters, tree]);
+  const layout: TableLayout = useMemo(
+    () => tableLayout(tree, heights, scale, ctx.adapter, { expanded: open, folded, widths, inputOf }),
+    [tree, heights, scale, ctx.adapter, open, folded, widths, inputOf],
+  );
   const marks: AlignedRailMarks = useMemo(
     () =>
       railMode === "aligned"
@@ -143,7 +152,7 @@ export function EventTable({
       <div
         key={c.id}
         data-measure-id={isOpen ? c.id : undefined}
-        className={`${s.slot} ${isOpen ? s.slotOpen : ""} ${c.groupHead ? s.slotHead : ""}`}
+        className={`${s.slot} ${isOpen ? s.slotOpen : ""} ${c.groupHead ? s.slotHead : ""} ${c.stacked ? s.slotStack : ""}`}
         style={{ top, marginLeft: left }}
       >
         <EventCard
@@ -161,6 +170,8 @@ export function EventTable({
           maxAvatars={4}
           variant="table"
           groupHead={c.groupHead}
+          titleLines={c.lines}
+          stacked={c.stacked}
           onFold={onFold}
         />
       </div>
@@ -250,9 +261,12 @@ export function EventTable({
   useLayoutEffect(() => {
     const host = scrollerRef.current?.closest<HTMLElement>("[data-worldline-root]") ?? scrollerRef.current?.closest<HTMLElement>("[data-worldline-panel]");
     if (!host) return;
-    const ro = new ResizeObserver(() => setPanelWidth(host.clientWidth));
+    const cardsEl = cardsRef.current;
+    const ro = new ResizeObserver(() => { setPanelWidth(host.clientWidth); if (cardsEl) setCardsWidth(cardsEl.clientWidth); });
     ro.observe(host);
+    if (cardsEl) ro.observe(cardsEl);
     setPanelWidth(host.clientWidth);
+    if (cardsEl) setCardsWidth(cardsEl.clientWidth);
     return () => ro.disconnect();
   }, [scrollerRef]);
   const inWin = (y: number) => !virtual || (y >= lo && y <= hi);

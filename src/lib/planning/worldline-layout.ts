@@ -55,6 +55,23 @@ export const CHILD_ROW_GAP = 10;
 export const LANE_GAP = 40;
 /** §5.2: re-base the plane once the window start is this many px away from the base. */
 export const REBASE_PX = 1_000_000;
+/** docs/592 §0: collapsed title line, stacked parent card (+ its two peeking layers), time point. */
+export const TITLE_LINE = 18;
+export const STACK_HEAD_HEIGHT = 40;
+export const STACK_PEEK = 8;
+export const POINT_HEIGHT = 18;
+/** Time point title cap: 8.5 characters at 11px. */
+export const POINT_TITLE_MAX = 94;
+/** docs/592 §2.1: crowding d (px) thresholds of the five timeline zoom levels; the way back up needs ×1.15. */
+export const ZOOM_FULL = 160;
+export const ZOOM_POINTS = 40;
+export const ZOOM_FOLD = 10;
+export const ZOOM_KEY = 2.5;
+export const ZOOM_HYSTERESIS = 1.15;
+export const CARD_SCALE_MIN = 0.75;
+/** docs/592 §2.5: vertical gap between two time points, and between a point and a card (cards keep FAMILY_V_GAP). */
+export const POINT_GAP = 6;
+export const POINT_CARD_GAP = 16;
 export const MINIMAP_GAP = 14;
 export const CLIP_START_LABEL = "‹ 起点在视野外";
 export const CLIP_END_LABEL = "延续到视野外 ›";
@@ -589,6 +606,10 @@ export interface TableCard {
   groupHead: boolean;
   /** docs/588 §1: y of the card head's middle line (dot and lead end). */
   head: number;
+  /** docs/592 R5: a parent whose children are folded, drawn as a stacked card (no group box). */
+  stacked: boolean;
+  /** docs/592 R1: collapsed title lines decided by the layout (1 when expanded or without `widths`). */
+  lines: 1 | 2;
 }
 export interface TableGroup {
   id: string;
@@ -628,12 +649,38 @@ export interface TableLayout {
 export interface TableOptions {
   expanded?: ReadonlySet<string>;
   folded?: ReadonlySet<string>;
+  /** docs/592 §1.3: card column widths (tableWidths); without them every collapsed title is one line. */
+  widths?: TableWidths;
+  /** Collapsed head input per node (EventTable: collapsedCardInput with the table's avatar limit, no ⌄ button). */
+  inputOf?: (n: TreeNode) => CollapsedCardInput;
+}
+export interface TableWidths {
+  slot(depth: number): number;
+  group(depth: number): number;
+}
+/** docs/592 §1.3: event-table widths from the CSS nesting: .slot / .groupBox sit at left 12 and right 24 (10 in a
+ * narrow panel) inside .cards or their group box, plus marginLeft TABLE_INDENT one level down; .slot caps at 880,
+ * .groupBox at 940 (worldline.module.css .slot, .groupBox, @container ≤ 640px). */
+export function tableWidths(cardsWidth: number, narrow: boolean): TableWidths {
+  const inset = narrow ? 22 : 36;
+  const group = (d: number): number => Math.min(940, (d ? group(d - 1) - TABLE_INDENT : cardsWidth) - inset);
+  const slot = (d: number): number => Math.min(880, (d ? group(d - 1) - TABLE_INDENT : cardsWidth) - inset);
+  return { slot, group };
+}
+/** The collapsed table head: up to 4 avatars, no ⌄ expand button (EventCard variant "table"). */
+export function tableCardInput(n: TreeNode, characters: ReadonlySet<string>, tree: EventTree): CollapsedCardInput {
+  const found = n.event.people.filter((id) => characters.has(id)).length, avatars = Math.min(4, found);
+  const node = tree.byId.get(n.id) ?? n;
+  return { title: n.event.title, depth: n.depth, importance: n.event.importance, avatars, more: found - avatars, kids: node.children.length ? descendants(node).length : null, expandButton: false };
 }
 /** A card head (dot, lead end) sits in the middle of the collapsed card. */
 export const CARD_HEAD = CARD_HEIGHT / 2;
 /** docs/588 §1: head middle line below the card top: 1px border + half of the 32 / 42px head; a group header has no
  * border and a 36 / 42px head. */
-export function cardHeadOffset(groupHead: boolean, expanded: boolean): number {
+export function cardHeadOffset(groupHead: boolean, expanded: boolean, stacked = false): number {
+  // docs/592 R1: every head part sits on the first title line, so a 2-line card keeps these offsets; R5: a stacked
+  // card's first line is 1 + 10 + 9 = 20 down.
+  if (stacked && !expanded) return STACK_HEAD_HEIGHT / 2;
   return groupHead ? (expanded ? 21 : GROUP_HEAD_HEIGHT / 2) : expanded ? 22 : CARD_HEAD;
 }
 const EST_META = 26,
@@ -706,8 +753,17 @@ export function tableLayout(
     breaks: TableBreak[] = [];
   let y = 0,
     first = true;
-  const cardHeight = (n: TreeNode, head: boolean) =>
-    expanded.has(n.id) ? (heights[n.id] ?? estimateCardHeight(n.event) - (head ? 2 : 0)) : head ? GROUP_HEAD_HEIGHT : CARD_HEIGHT;
+  const widths = options.widths, inputOf = options.inputOf ?? ((n: TreeNode) => tableCardInput(n, EMPTY_SET, tree));
+  // docs/592 §1.3: plain cards are as wide as their head up to the slot; group headers and stacked cards fill the box.
+  const linesOf = (n: TreeNode, depth: number, kind: "card" | "stack" | "groupHead"): 1 | 2 => {
+    if (!widths) return 1;
+    const input = inputOf(n), full = kind !== "card";
+    const own = Math.ceil(collapsedHeadChrome(input, "table") + titleWidth(input.title) + TITLE_SLACK);
+    const w = full ? widths.group(depth) : Math.min(widths.slot(depth), Math.max(220, own));
+    // A group header has no border (worldline.module.css .groupHead): 2px more room than the chrome assumes.
+    // Capped only when the slot (or the box) holds it below its own width; a card at its own width is one line.
+    return collapsedTitleLines(input, kind === "groupHead" ? w + 2 : w, "table", full || own > w);
+  };
   const k = Number.isFinite(scale) && scale > 0 ? scale : 0;
   /** Returns the block start (card top, or group top for a parent). `atLeast` is the stretched start of a root. */
   const block = (n: TreeNode, depth: number, segment: number, atLeast = -Infinity): number => {
@@ -716,12 +772,14 @@ export function tableLayout(
     if (atLeast > y) y = atLeast;
     const start = y;
     const left = depth * TABLE_INDENT;
-    const push = (head: boolean) => {
+    const push = (head: boolean, stacked = false) => {
       const open = expanded.has(n.id);
+      const kind = head ? "groupHead" : stacked ? "stack" : "card";
+      const lines = open ? 1 : linesOf(n, depth, kind);
       const card: TableCard = {
         id: n.id,
         top: y,
-        height: cardHeight(n, head),
+        height: open ? (heights[n.id] ?? estimateCardHeight(n.event) - (head ? 2 : 0)) : collapsedCardHeight(lines, kind) + (stacked ? STACK_PEEK : 0),
         left,
         depth,
         start: n.start,
@@ -731,13 +789,20 @@ export function tableLayout(
         precision: n.event.time.precision,
         kind: n.event.time.kind,
         groupHead: head,
-        head: y + cardHeadOffset(head, open),
+        head: y + cardHeadOffset(head, open, stacked),
+        stacked: stacked && !open,
+        lines,
       };
       cards.push(card);
       y += card.height;
     };
     if (!n.children.length) {
       push(false);
+      return start;
+    }
+    // docs/592 R5: a folded parent is one stacked card (an expanded one keeps its header look), with no group box.
+    if (folded.has(n.id) && !expanded.has(n.id)) {
+      push(false, true);
       return start;
     }
     const group: TableGroup = { id: n.id, top: y, bottom: 0, left, depth };
@@ -1115,7 +1180,7 @@ export const FAMILY_CHILD_TOP = 22;
 export const FAMILY_ROW_GAP = 26;
 export const FAMILY_FRAME_BOTTOM = 14;
 export const FAMILY_PAD_LEFT = 6;
-export type PlaneKind = "card" | "frame" | "track" | "bar" | "lane";
+export type PlaneKind = "card" | "frame" | "track" | "bar" | "lane" | "point";
 /** One element of a family, in world px (x) and family-relative px (y). Never written to CSS as is. */
 export interface WorldPiece {
   id: string;
@@ -1126,6 +1191,12 @@ export interface WorldPiece {
   width: number;
   top: number;
   height: number;
+  /** docs/592 R1: collapsed title lines of a card piece. */
+  lines?: 1 | 2;
+  /** docs/592 R5: a folded parent drawn as a stacked card. */
+  stacked?: boolean;
+  /** docs/592 R2: CSS zoom of a card piece (1 for open / editing cards). */
+  zoom?: number;
 }
 export interface FamilyBox {
   id: string;
@@ -1135,6 +1206,8 @@ export interface FamilyBox {
   right: number;
   h: number;
   pieces: WorldPiece[];
+  /** docs/592 §2.5: a root drawn as a time point (packs with the 6 / 16px gaps). */
+  point?: boolean;
 }
 export interface FamilyOptions {
   scale: number;
@@ -1143,6 +1216,13 @@ export interface FamilyOptions {
   heights?: Readonly<Record<string, number | undefined>>;
   /** Collapsed card width (docs/583 R1); defaults to the title-only estimate. */
   widthOf?: (n: TreeNode) => number;
+  /** docs/592: collapsed head input (title line estimate); defaults to the title-only input. */
+  inputOf?: (n: TreeNode) => CollapsedCardInput;
+  /** docs/592 R2: collapsed card zoom (1 at full size). */
+  scaleCard?: number;
+  /** docs/592 R3 / R7: events drawn as time points, and their width. */
+  points?: ReadonlySet<string>;
+  pointWidth?: (n: TreeNode) => number;
 }
 /** What the collapsed card head renders (EventCard.tsx head; docs/583 R1). */
 export interface CollapsedCardInput {
@@ -1162,27 +1242,50 @@ export interface CollapsedCardInput {
  * .avatars padding (:76) and 16px timeline avatars overlapping 5px (:77, :82), .kids padding + border (:83), summary (:87). */
 const HEAD = { border: 2, padLeft: 14, padRight: 6, gap: 9, fold: 20, expand: 24, menu: 24, avatarsPad: 4, avatar: 16, overlap: 5, badgePad: 16, arrow: 11, space: 3.5, digit: 6.2 };
 const DOT = [6, 9, 12];
-const TITLE_SLACK = 2;
+/** docs/592 §8: the real font runs up to 2px wider than titleWidth (LOTM), so 4 rather than 2. */
+const TITLE_SLACK = 4;
 const WIDE = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6\u00b7\u2014\u2026\u201c\u201d\u3000-\u303f]|[\u{20000}-\u{3fffd}]/u;
 /** Title width at the card's 13px: full-width characters (CJK, full-width punctuation, ·) 13px, others 7.4px. */
-function titleWidth(title: string) {
+export function titleWidth(title: string) {
   let w = 0;
   for (const ch of title) w += WIDE.test(ch) ? 13 : 7.4;
   return w;
 }
-/** docs/583 R1: collapsed timeline card width from the rendered head, clamped to [150, cap]. Pure; no DOM. */
-export function collapsedCardWidth(c: CollapsedCardInput): number {
+/** docs/592 §1.1: head width without the title (border, padding, gaps and every other part, the title's own 9px gap
+ * included). Avatars are 18px in the table and 16px on the timeline (worldline.module.css .avatars i / .timeline). */
+export function collapsedHeadChrome(c: CollapsedCardInput, variant: "table" | "timeline" = "timeline"): number {
+  const avatar = variant === "table" ? 18 : HEAD.avatar;
   const parts: number[] = [];
   if (c.kids !== null) parts.push(HEAD.fold);
   parts.push(DOT[Math.min(3, Math.max(1, c.importance)) - 1]);
-  parts.push(titleWidth(c.title) + TITLE_SLACK);
-  if (c.avatars > 0) parts.push(HEAD.avatarsPad + HEAD.avatar + (c.avatars - 1 + (c.more > 0 ? 1 : 0)) * (HEAD.avatar - HEAD.overlap));
+  if (c.avatars > 0) parts.push(HEAD.avatarsPad + avatar + (c.avatars - 1 + (c.more > 0 ? 1 : 0)) * (avatar - HEAD.overlap));
   if (c.kids !== null) parts.push(HEAD.badgePad + HEAD.arrow + HEAD.space + String(c.kids).length * HEAD.digit);
   if (c.expandButton) parts.push(HEAD.expand);
   parts.push(HEAD.menu);
-  const w = HEAD.border + HEAD.padLeft + HEAD.padRight + parts.reduce((a, b) => a + b, 0) + HEAD.gap * (parts.length - 1);
+  return HEAD.border + HEAD.padLeft + HEAD.padRight + parts.reduce((a, b) => a + b, 0) + HEAD.gap * parts.length;
+}
+/** docs/583 R1: collapsed timeline card width from the rendered head, clamped to [150, cap]. Pure; no DOM. */
+export function collapsedCardWidth(c: CollapsedCardInput): number {
+  const w = collapsedHeadChrome(c, "timeline") + titleWidth(c.title) + TITLE_SLACK;
   const cap = c.depth ? CHILD_CARD_WIDTH : ROOT_CARD_WIDTH;
   return Math.min(cap, Math.max(COLLAPSED_MIN_WIDTH, Math.ceil(w)));
+}
+/** docs/592 §1.1: title lines of a collapsed card of a given width: 2 exactly when the head does not fit with the same
+ * 2px slack the width rule adds, so a card sized from its own title is always one line. The layout decides; CSS fixes
+ * the title height to it. */
+export function collapsedTitleLines(c: CollapsedCardInput, width: number, variant: "table" | "timeline" = "timeline", capped = false): 1 | 2 {
+  const need = collapsedHeadChrome(c, variant) + titleWidth(c.title) + TITLE_SLACK;
+  // A card sized from its own title (width = ceil(need)) is one line. One held at a width cap is laid out by the real
+  // font, which runs up to ~2px wider than the estimate (docs/592 §8, LOTM: 5 such cards); within CAP_SLACK of the
+  // cap it wraps instead of fading.
+  return need > width + 0.5 || (capped && need > width - CAP_SLACK) ? 2 : 1;
+}
+/** Within this of a width cap a card counts as held at it (the real font, docs/592 §8). */
+const CAP_SLACK = 4;
+/** docs/592 §1.1: card height by title lines: a plain card 34 / 52, a stacked parent 40 / 58 (its 8px peek is extra),
+ * an event-table group header 36 / 54. */
+export function collapsedCardHeight(lines: 1 | 2, kind: "card" | "stack" | "groupHead"): number {
+  return (kind === "stack" ? STACK_HEAD_HEIGHT : kind === "groupHead" ? GROUP_HEAD_HEIGHT : CARD_HEIGHT) + (lines - 1) * TITLE_LINE;
 }
 export const TIMELINE_MAX_AVATARS = 3;
 /** The collapsed head input with the counts EventCard renders: people found in `characters` (EventCard.tsx:127-128)
@@ -1194,8 +1297,14 @@ export function collapsedCardInput(n: TreeNode, characters: readonly { id: strin
   const node = tree.byId.get(n.id) ?? n;
   return { title: n.event.title, depth: n.depth, importance: n.event.importance, avatars, more: found - avatars, kids: node.children.length ? descendants(node).length : null, expandButton: true };
 }
-const fallbackWidth = (n: TreeNode) =>
-  collapsedCardWidth({ title: n.event.title, depth: n.depth, importance: n.event.importance, avatars: 0, more: 0, kids: n.children.length ? descendants(n).length : null, expandButton: true });
+const fallbackInput = (n: TreeNode): CollapsedCardInput =>
+  ({ title: n.event.title, depth: n.depth, importance: n.event.importance, avatars: 0, more: 0, kids: n.children.length ? descendants(n).length : null, expandButton: true });
+const fallbackWidth = (n: TreeNode) => collapsedCardWidth(fallbackInput(n));
+/** docs/592 §2.5: dot box 12 + gap 5 + date (pad 10 + text at 11px) + gap 5 + title (≤ 94) + ▸ N (gap 5 + 22). */
+export function pointWidth(title: string, date: string, kids: boolean): number {
+  return 12 + 5 + 10 + (titleWidth(date) * 11) / 13 + 5 + Math.min(POINT_TITLE_MAX, (titleWidth(title) * 11) / 13) + (kids ? 27 : 0);
+}
+const fallbackPointWidth = (n: TreeNode) => pointWidth(n.event.title, "", n.children.length > 0);
 
 /**
  * docs/584 A2/A3: one drag moves a multi-selection by Δ. An event whose time is anchored, directly or through a chain,
@@ -1226,23 +1335,39 @@ export function shiftSelection(data: PlanningData, ids: readonly string[], delta
   return { moved, follows };
 }
 
-/** One family per root: the root, its unfolded descendants, frames, tracks and bars, all in world px. */
+/** One family per root: the root, its unfolded descendants, frames, tracks and bars, all in world px. docs/592: collapsed
+ * cards scale by `scaleCard` with the family insets; open cards do not. A folded parent is a leaf (own width, stacked
+ * height, no track or frame). A point is 18px high, its 12px dot box centred on its time. */
 export function buildFamilies(roots: readonly TreeNode[], options: FamilyOptions): FamilyBox[] {
   const { scale } = options,
     expanded = options.expanded ?? EMPTY_SET,
     folded = options.folded ?? EMPTY_SET,
     heights = options.heights ?? {},
-    widthOf = options.widthOf ?? fallbackWidth;
-  const cardWidth = (n: TreeNode, open: boolean) => (open ? OPEN_CARD_WIDTH : widthOf(n));
+    widthOf = options.widthOf ?? fallbackWidth,
+    inputOf = options.inputOf ?? fallbackInput,
+    points = options.points ?? EMPTY_SET,
+    pointWidth = options.pointWidth ?? fallbackPointWidth,
+    c = options.scaleCard ?? 1;
+  const isPoint = (n: TreeNode) => points.has(n.id) && !expanded.has(n.id);
+  const visibleKids = (n: TreeNode) => (folded.has(n.id) ? [] : n.children.filter((k) => k.start !== null));
+  /** A parent drawn with its family: it has children and they are shown. */
+  const family = (n: TreeNode) => visibleKids(n).length > 0;
+  const stackedOf = (n: TreeNode) => n.children.length > 0 && !family(n) && !expanded.has(n.id);
+  const ownWidth = (n: TreeNode) => (isPoint(n) ? pointWidth(n) : expanded.has(n.id) ? OPEN_CARD_WIDTH : widthOf(n) * c);
   const wx = (t: number) => t * scale;
-  const h = (n: TreeNode) =>
-    expanded.has(n.id) ? (heights[n.id] ?? estimateCardHeight(n.event)) : CARD_HEIGHT;
-  const visibleKids = (n: TreeNode) => (folded.has(n.id) ? [] : n.children.filter((c) => c.start !== null));
   const extent = (n: TreeNode): number => {
-    const own = wx(n.start!) + cardWidth(n, expanded.has(n.id));
-    if (!n.children.length) return own;
-    const bar = Math.max(wx(n.start!) + PARENT_BAR_MIN_WIDTH, wx(familyEnd(n)), own);
-    return Math.max(bar, ...visibleKids(n).map((k) => extent(k) + CHILD_ROW_GAP));
+    const own = wx(n.start!) + ownWidth(n);
+    if (!family(n)) return own;
+    const bar = Math.max(wx(n.start!) + PARENT_BAR_MIN_WIDTH * c, wx(familyEnd(n)), own);
+    return Math.max(bar, ...visibleKids(n).map((k) => extent(k) + CHILD_ROW_GAP * c));
+  };
+  /** Collapsed height: lines from the unscaled width (zoom keeps the line breaks), times the zoom. */
+  const heightOf = (n: TreeNode, width: number) => {
+    if (expanded.has(n.id)) return { h: heights[n.id] ?? estimateCardHeight(n.event), lines: 1 as const };
+    const stacked = stackedOf(n), w = width / c, cap = n.depth ? CHILD_CARD_WIDTH : ROOT_CARD_WIDTH;
+    // A family header is as wide as its family (not a cap); a leaf at ROOT/CHILD_CARD_WIDTH is held at its cap.
+    const lines = collapsedTitleLines(inputOf(n), w, "timeline", !family(n) && w > cap - CAP_SLACK - 0.5);
+    return { h: (collapsedCardHeight(lines, stacked ? "stack" : "card") + (stacked ? STACK_PEEK : 0)) * c, lines };
   };
   return roots
     .filter((r) => r.start !== null)
@@ -1255,39 +1380,42 @@ export function buildFamilies(roots: readonly TreeNode[], options: FamilyOptions
         else if (end !== null && end > n.start!)
           pieces.push({ id: n.id, kind: "bar", depth: n.depth, wx: wx(n.start!), width: wx(end) - wx(n.start!), top, height: 4 });
       };
+      const zoom = (n: TreeNode) => (expanded.has(n.id) ? 1 : c);
       const layout = (n: TreeNode, top: number): number => {
-        const left = wx(n.start!),
-          height = h(n);
-        if (!n.children.length) {
-          pieces.push({ id: n.id, kind: "card", depth: n.depth, wx: left, width: cardWidth(n, expanded.has(n.id)), top, height });
-          bar(n, top + height);
-          return top + height;
+        const left = wx(n.start!);
+        if (isPoint(n)) {
+          pieces.push({ id: n.id, kind: "point", depth: n.depth, wx: left - 6, width: pointWidth(n), top, height: POINT_HEIGHT });
+          return top + POINT_HEIGHT;
         }
-        const width = extent(n) - left;
-        pieces.push({ id: n.id, kind: "card", depth: n.depth, wx: left, width, top, height });
+        if (!family(n)) {
+          const width = ownWidth(n), { h, lines } = heightOf(n, width);
+          pieces.push({ id: n.id, kind: "card", depth: n.depth, wx: left, width, top, height: h, lines, stacked: stackedOf(n), zoom: zoom(n) });
+          bar(n, top + h);
+          return top + h;
+        }
+        const width = extent(n) - left, { h: height, lines } = heightOf(n, width);
+        pieces.push({ id: n.id, kind: "card", depth: n.depth, wx: left, width, top, height, lines, zoom: zoom(n) });
         pieces.push({ id: n.id, kind: "track", depth: n.depth, wx: left, width: Math.max(0, wx(familyEnd(n)) - left), top: top + height - 3, height: 3 });
-        let bottom = top + height;
         const kids = visibleKids(n);
-        if (kids.length) {
-          const rows: { right: number; items: TreeNode[] }[] = [];
-          for (const k of kids) {
-            let r = rows.findIndex((row) => row.right + CHILD_ROW_GAP <= wx(k.start!));
-            if (r < 0) r = rows.push({ right: -Infinity, items: [] }) - 1;
-            rows[r].right = extent(k);
-            rows[r].items.push(k);
-          }
-          let y = bottom + FAMILY_CHILD_TOP;
-          for (const row of rows) y = Math.max(...row.items.map((k) => layout(k, y))) + FAMILY_ROW_GAP;
-          bottom = y - FAMILY_ROW_GAP + FAMILY_FRAME_BOTTOM;
-          pieces.push({ id: n.id, kind: "frame", depth: n.depth, wx: left, width, top, height: bottom - top });
+        const rows: { right: number; items: TreeNode[] }[] = [];
+        for (const k of kids) {
+          const at = wx(k.start!) - (isPoint(k) ? 6 : 0);
+          let r = rows.findIndex((row) => row.right + CHILD_ROW_GAP * c <= at);
+          if (r < 0) r = rows.push({ right: -Infinity, items: [] }) - 1;
+          rows[r].right = extent(k);
+          rows[r].items.push(k);
         }
+        let y = top + height + FAMILY_CHILD_TOP * c;
+        for (const row of rows) y = Math.max(...row.items.map((k) => layout(k, y))) + FAMILY_ROW_GAP * c;
+        const bottom = y - FAMILY_ROW_GAP * c + FAMILY_FRAME_BOTTOM * c;
+        pieces.push({ id: n.id, kind: "frame", depth: n.depth, wx: left, width, top, height: bottom - top });
         return bottom;
       };
       const bottom = layout(root, 0);
       const finite = pieces.filter((p) => Number.isFinite(p.width));
       const left = Math.min(...pieces.map((p) => p.wx)) - FAMILY_PAD_LEFT,
         right = Math.max(...finite.map((p) => p.wx + p.width)) + FAMILY_H_GAP;
-      return { id: root.id, start: root.start!, left, right, h: Math.max(bottom, ...pieces.map((p) => p.top + p.height)), pieces };
+      return { id: root.id, start: root.start!, left, right, h: Math.max(bottom, ...pieces.map((p) => p.top + p.height)), pieces, point: isPoint(root) };
     });
 }
 
@@ -1312,8 +1440,16 @@ export interface PackOptions {
   /** The family whose card was clicked; it keeps its y (§5.2). Any event id inside the family works. */
   pinned?: string | null;
 }
-const collides = (y: number, f: FamilyBox, o: PackedFamily) =>
-  y < o.y + o.box.h + FAMILY_V_GAP && y + f.h + FAMILY_V_GAP > o.y;
+/** docs/592 §2.5: two points stack 6px apart, a point and a card 16px, two cards FAMILY_V_GAP. */
+const gapOf = (a: FamilyBox, b: FamilyBox) => (a.point && b.point ? POINT_GAP : a.point || b.point ? POINT_CARD_GAP : FAMILY_V_GAP);
+const collides = (y: number, f: FamilyBox, o: PackedFamily) => {
+  const g = gapOf(f, o.box);
+  return y < o.y + o.box.h + g && y + f.h + g > o.y;
+};
+// docs/592 review round 1 #14: the one-pass settle stays exact with per-pair gaps only while a small-gap box plus its
+// gap is never taller than the smallest large-gap box plus its gap (else y can jump past a column it skipped).
+if (POINT_HEIGHT + POINT_CARD_GAP > CARD_HEIGHT * CARD_SCALE_MIN + FAMILY_V_GAP || POINT_HEIGHT + POINT_GAP > CARD_HEIGHT * CARD_SCALE_MIN + POINT_CARD_GAP)
+  throw new Error("worldline packing gaps break the one-pass settle");
 /** Lowest y ≥ from where the family fits beside the placed ones; candidates are `from` and bottoms of overlapping ones. */
 function settle(f: FamilyBox, placed: readonly PackedFamily[], from: number) {
   // Same result as trying `from` and every column bottom in ascending order, in one pass by column top: y moves down
@@ -1321,7 +1457,7 @@ function settle(f: FamilyBox, placed: readonly PackedFamily[], from: number) {
   // column, later columns start lower still, so y is final. O(c log c) instead of O(c²); every zoom step repacks.
   const cols = placed.filter((o) => o.box.left < f.right && o.box.right > f.left).sort((a, b) => a.y - b.y);
   let y = from;
-  for (const o of cols) if (collides(y, f, o)) y = o.y + o.box.h + FAMILY_V_GAP;
+  for (const o of cols) if (collides(y, f, o)) y = o.y + o.box.h + gapOf(f, o.box);
   return y;
 }
 /**
@@ -1395,6 +1531,10 @@ export interface PlaneElement {
   clippedEnd: boolean;
   startLabel: string | null;
   endLabel: string | null;
+  /** docs/592: card title lines, stacked parent, card zoom (from WorldPiece). */
+  lines?: 1 | 2;
+  stacked?: boolean;
+  zoom?: number;
 }
 export interface PlaneOptions {
   base: number;
@@ -1423,6 +1563,7 @@ export function placeOnPlane(layout: PackedLayout, options: PlaneOptions): Plane
     width: number,
     top: number,
     height: number,
+    extra?: Pick<WorldPiece, "lines" | "stacked" | "zoom">,
   ) => {
     const a = wx - base * scale,
       b = Number.isFinite(width) ? a + width : Infinity;
@@ -1444,12 +1585,13 @@ export function placeOnPlane(layout: PackedLayout, options: PlaneOptions): Plane
       clippedEnd,
       startLabel: clippedStart ? CLIP_START_LABEL : null,
       endLabel: clippedEnd ? CLIP_END_LABEL : null,
+      ...(extra && kind === "card" ? { lines: extra.lines, stacked: extra.stacked, zoom: extra.zoom } : {}),
     });
   };
   for (const p of layout.families.values()) {
     if (!p.built) continue;
     for (const piece of p.box.pieces)
-      clip(piece.id, p.box.id, piece.kind, piece.depth, piece.wx, piece.width, p.y + piece.top, piece.height);
+      clip(piece.id, p.box.id, piece.kind, piece.depth, piece.wx, piece.width, p.y + piece.top, piece.height, piece);
   }
   const laneTop = layout.bottom + LANE_GAP;
   for (const item of options.lane ?? [])
@@ -1475,6 +1617,11 @@ export interface TimelineInput {
   folded?: ReadonlySet<string>;
   heights?: Readonly<Record<string, number | undefined>>;
   widthOf?: (n: TreeNode) => number;
+  /** docs/592: see FamilyOptions. */
+  inputOf?: (n: TreeNode) => CollapsedCardInput;
+  scaleCard?: number;
+  points?: ReadonlySet<string>;
+  pointWidth?: (n: TreeNode) => number;
   /** Event whose family keeps its y after an expand/collapse. */
   pinned?: string | null;
   /** Card sizes changed (expand, collapse, measured height, fold): rebuild and repack incrementally. */
@@ -1542,7 +1689,7 @@ export function timelineStep(state: TimelineState, input: TimelineInput): Timeli
     const roots = tree.roots.filter(
       (r) => r.start !== null && familyEnd(r) >= build!.lo && r.start <= build!.hi,
     );
-    const families = buildFamilies(roots, { scale, expanded: input.expanded, folded: input.folded, heights: input.heights, widthOf: input.widthOf });
+    const families = buildFamilies(roots, { scale, expanded: input.expanded, folded: input.folded, heights: input.heights, widthOf: input.widthOf, inputOf: input.inputOf, scaleCard: input.scaleCard, points: input.points, pointWidth: input.pointWidth });
     packed = packFamilies(families, full ? null : packed, { scale, width, pinned: rootOf(tree, input.pinned) });
     packMode = packed.mode;
   }
@@ -1676,4 +1823,97 @@ export function filterEvents(events: readonly PlanningEvent[], filter: EventFilt
     return out;
   };
   return events.filter((e) => !isHidden(e));
+}
+
+// ---------- docs/592: timeline zoom levels, time points and auto-folding ----------
+/** Median gap between adjacent root starts (worldline units); null below 2 placed roots or when it is 0. */
+export function medianRootGap(tree: EventTree): number | null {
+  const s = tree.roots.map((r) => r.start).filter((t): t is number => t !== null).sort((a, b) => a - b);
+  if (s.length < 2) return null;
+  const g = s.slice(1).map((t, i) => t - s[i]).sort((a, b) => a - b);
+  const m = g[Math.floor((g.length - 1) / 2)];
+  return m > 0 ? m : null;
+}
+/** 0 原样 · 1 缩小卡片 · 2 一般 → 时间点 · 3 父事件自动折叠 · 4 只留关键卡片. */
+export type ZoomLevel = 0 | 1 | 2 | 3 | 4;
+const ZOOM_STEPS = [ZOOM_FULL, ZOOM_POINTS, ZOOM_FOLD, ZOOM_KEY] as const;
+/** docs/592 §2.1: d = gap × width / span. Zooming out enters a level at once; zooming in leaves it only once d passes
+ * its threshold × 1.15 (the 160 step has no visible change and gets the same rule). */
+export function zoomLevel(d: number, prev: ZoomLevel): ZoomLevel {
+  const at = (k: number) => ZOOM_STEPS.filter((t) => d < t * k).length as ZoomLevel;
+  const down = at(1);
+  return down >= prev ? down : (Math.max(down, Math.min(prev, at(ZOOM_HYSTERESIS))) as ZoomLevel);
+}
+/** docs/592 §2.1: collapsed card zoom: 1 at level 0 or d ≥ 160, 0.75 at d ≤ 40, ln in between, in 0.05 steps. */
+export function cardScale(d: number, level: ZoomLevel): number {
+  if (level === 0 || d >= ZOOM_FULL) return 1;
+  if (d <= ZOOM_POINTS) return CARD_SCALE_MIN;
+  const f = CARD_SCALE_MIN + ((1 - CARD_SCALE_MIN) * Math.log(d / ZOOM_POINTS)) / Math.log(ZOOM_FULL / ZOOM_POINTS);
+  return Math.round(f * 20 + 1e-9) / 20;
+}
+export interface ZoomPlan {
+  level: ZoomLevel;
+  scale: number;
+  /** Events drawn as time points (never inside a folded family). */
+  points: ReadonlySet<string>;
+  /** Parents folded by the zoom (minus the user's unfolded ones and ancestors of kept events). */
+  autoFolded: ReadonlySet<string>;
+}
+export interface ZoomKeep {
+  /** Always cards: selected, the current search hit, the edited and the expanded events. */
+  cards: ReadonlySet<string>;
+  /** Parents the user folded (foldedEvents): their descendants are not drawn, so they are never points. */
+  folded?: ReadonlySet<string>;
+  /** Parents the user unfolded while auto-folding is on. */
+  unfolded: ReadonlySet<string>;
+  /** 显示为卡片: no points at levels 2–4. */
+  showAll: boolean;
+}
+const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) => a.size === b.size && [...a].every((x) => b.has(x));
+/** docs/592 §2.2: what each event is at a zoom level. A card stays a card at importance ≥ the level's bar (重要 at levels
+ * 2–3, 关键 at 4), when a descendant does, when it is kept or an ancestor of a kept event. Sets equal to `prev`'s are
+ * returned as `prev`'s objects, so an unchanged plan does not repack. */
+export function zoomPlan(tree: EventTree, level: ZoomLevel, scale: number, keep: ZoomKeep, prev?: ZoomPlan): ZoomPlan {
+  const bar = keep.showAll || level < 2 ? 0 : level >= 4 ? 3 : 2;
+  // `kept` holds the kept events; `opened` only their strict ancestors (code review P1-2): a kept parent itself still
+  // folds, so selecting a stacked card does not open its family and its fold button keeps working.
+  const kept = new Set<string>(), opened = new Set<string>();
+  for (const id of keep.cards) {
+    const n0 = tree.byId.get(id);
+    if (!n0) continue;
+    kept.add(id);
+    for (let n = n0.parent ? tree.byId.get(n0.parent) : undefined; n; n = n.parent ? tree.byId.get(n.parent) : undefined) {
+      if (opened.has(n.id)) break;
+      opened.add(n.id);
+    }
+  }
+  const userFolded = keep.folded ?? EMPTY_SET;
+  const card = new Map<string, boolean>();
+  const isCard = (n: TreeNode): boolean => {
+    let v = card.get(n.id);
+    if (v === undefined) {
+      v = n.event.importance >= bar || kept.has(n.id) || opened.has(n.id);
+      for (const k of n.children) if (isCard(k)) v = true;
+      card.set(n.id, v);
+    }
+    return v;
+  };
+  const autoFolded = new Set<string>(), points = new Set<string>();
+  // Only what the canvas draws (code review P1-1): a point's descendants are hidden with it (buildFamilies stops at a
+  // point), and so are the children of a folded parent, the user's or the zoom's.
+  const walk = (n: TreeNode) => {
+    if (bar && !isCard(n)) { points.add(n.id); return; }
+    if (!n.children.length) return;
+    if (keep.unfolded.has(n.id)) { for (const k of n.children) walk(k); return; }
+    if (level >= 3 && !opened.has(n.id)) { autoFolded.add(n.id); return; }
+    if (userFolded.has(n.id)) return;
+    for (const k of n.children) walk(k);
+  };
+  for (const r of tree.roots) walk(r);
+  return {
+    level,
+    scale,
+    points: prev && sameSet(prev.points, points) ? prev.points : points,
+    autoFolded: prev && sameSet(prev.autoFolded, autoFolded) ? prev.autoFolded : autoFolded,
+  };
 }

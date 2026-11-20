@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>docs/592 设计稿 · 两行标题 / 时间线缩放分级 / 层叠父事件</title>
+<style>
+/* Theme values copied from src/app/globals.css (.ink 玄墨 / .paper 宣纸). */
+.ink{--background:#0d0b0a;--foreground:#ece7e1;--card:#141110;--popover:#171312;--primary:#e07a5f;--muted:#181413;--muted-foreground:#9a918a;--border:rgba(255,248,240,.09);--input:rgba(255,248,240,.13);--shadow-2:0 8px 24px -8px rgba(0,0,0,.6);
+ --event-conflict:#e8735f;--event-scheme:#d9ab5b;--event-reveal:#67b6cc;--event-relation:#cf8bbd;--event-growth:#8cc48a;--event-change:#a08cf0;--event-other:#8d837c}
+.paper{--background:#f4edda;--foreground:#2b251b;--card:#faf5e8;--popover:#fcf8ee;--primary:#b03524;--muted:#eae1c8;--muted-foreground:#7d7157;--border:#d8cba6;--input:#cfc29b;--shadow-2:0 8px 24px -8px rgba(96,74,38,.14);
+ --event-conflict:#bf4633;--event-scheme:#8f6721;--event-reveal:#29788e;--event-relation:#a2538d;--event-growth:#3f7b3d;--event-change:#6f5bd0;--event-other:#776d66}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--background);color:var(--foreground);font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+.review{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-height:40px;padding:6px 18px;background:#000;color:#bbb;font-size:12px}
+.review b{color:#fff}.review button{padding:3px 10px;border:1px solid #444;border-radius:6px}
+.review button[aria-pressed=true]{background:#fff;color:#000}.review .note{margin-left:auto;color:#888}
+.panel{display:flex;flex-direction:column;height:calc(100% - 40px);padding:14px 24px 0}
+h1{margin:0 0 8px;font-size:20px;font-weight:600;letter-spacing:.04em}
+.status{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:26px;margin:0 0 8px;color:var(--muted-foreground);font-size:12px}
+.status .lv{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--muted)}
+.status .lv span{padding:1px 8px;border-radius:6px}.status .lv span.on{background:var(--background);color:var(--foreground);box-shadow:0 0 0 1px var(--input)}
+.status .zh{display:inline-flex;align-items:center;gap:6px;padding:1px 4px 1px 9px;border-radius:11px;border:1px dashed var(--input)}
+.status .zh button{height:20px;padding:0 8px;border-radius:10px;border:1px solid var(--input);color:var(--foreground)}
+.hint{color:var(--muted-foreground);font-size:12px;margin-left:auto}
+
+/* ---------- card (worldline.module.css, changed parts marked NEW) ---------- */
+.card{--ec:var(--event-other);position:relative;border-radius:9px;border:1px solid var(--border);
+ background:linear-gradient(90deg,color-mix(in srgb,var(--ec) 13%,var(--card)),var(--card) 46%);transition:border-color .15s}
+.card::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--ec)}
+.card:hover{border-color:color-mix(in srgb,var(--ec) 40%,var(--border))}
+.card.sel{border-color:color-mix(in srgb,var(--ec) 70%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--ec) 14%,transparent)}
+/* NEW R1: the head grows with a 2-line title; every other head item stays on the first line (18px line box). */
+.head{display:flex;align-items:flex-start;gap:9px;padding:7px 6px 7px 14px;cursor:pointer;min-width:0}
+.head>.ln{flex:none;display:flex;align-items:center;height:18px}
+.dot{flex:none;border-radius:50%;background:var(--ec)}
+.dot.i1{width:6px;height:6px}.dot.i2{width:9px;height:9px}.dot.i3{width:12px;height:12px;box-shadow:0 0 0 3px color-mix(in srgb,var(--ec) 22%,transparent)}
+.title{flex:1;min-width:0;margin:0;font:inherit;line-height:18px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;word-break:break-all}
+.kids{padding:0 7px;border-radius:8px;border:1px solid var(--border);color:var(--muted-foreground);font-size:11px;line-height:16px}
+.fold,.btn24{display:grid;place-items:center;border-radius:50%;color:var(--muted-foreground)}
+.fold{width:20px;height:20px;margin-left:-6px;background:color-mix(in srgb,var(--ec) 12%,transparent);color:color-mix(in srgb,var(--ec) 75%,var(--foreground))}
+.fold svg{transition:transform .15s}.fold.closed svg{transform:rotate(-90deg)}
+.btn24{width:24px;height:24px;border-radius:6px;margin:-3px 0}
+.avatars{display:inline-flex;padding-left:4px}.avatars i{display:grid;place-items:center;width:16px;height:16px;margin-left:-5px;border-radius:50%;font-style:normal;font-size:9px;font-weight:600;color:var(--background);background:color-mix(in srgb,var(--ec) 70%,var(--foreground));border:1.5px solid var(--card)}
+.avatars i:first-child{margin-left:0}
+/* OLD (现在) for the comparison strip: one line, last 36px fade. */
+.old .head{align-items:center;height:32px;padding-top:0;padding-bottom:0}.old .title{display:block;white-space:nowrap;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}
+/* NEW R5: a parent whose children are folded. 40px head, 12px corners on all four sides, the type tint one step
+ * deeper and a type-coloured hairline. Two cards peek out below; they are the wrapper's ::before / ::after
+ * (isolation: isolate on the wrapper paints them under the opaque card), so the card keeps its own ::before bar. */
+.card.stack{border-radius:12px;border-color:color-mix(in srgb,var(--ec) 38%,var(--border));
+ background:linear-gradient(90deg,color-mix(in srgb,var(--ec) 22%,var(--card)),color-mix(in srgb,var(--ec) 7%,var(--card)));
+ box-shadow:0 1px 0 color-mix(in srgb,var(--ec) 10%,transparent)}
+.card.stack .head{padding-top:10px;padding-bottom:10px}
+.card.stack .title{font-weight:600}
+.card.stack::before{top:9px;bottom:9px}
+.stackWrap{position:relative;isolation:isolate}
+/* Each layer is a copy of the card shifted down 4px and narrowed 8px per side, so exactly 4px of it shows below the
+ * layer above; both stay inside the wrapper's 8px bottom padding (the room the layout reserves). The lower layer is
+ * painted behind the upper one (z-index −2 < −1), so their edges never cross. Opaque fills: no line shows through. */
+.stackWrap::before,.stackWrap::after{content:"";position:absolute;pointer-events:none;border:1px solid color-mix(in srgb,var(--ec) 26%,var(--border))}
+.stackWrap::before{z-index:-1;left:8px;right:8px;top:4px;bottom:4px;border-radius:11px;background:color-mix(in srgb,var(--ec) 13%,var(--card))}
+.stackWrap::after{z-index:-2;left:16px;right:16px;top:8px;bottom:0;border-radius:10px;background:color-mix(in srgb,var(--ec) 7%,var(--card));border-color:color-mix(in srgb,var(--ec) 16%,var(--border))}
+
+/* ---------- views ---------- */
+.view{position:relative;flex:1;min-height:0;border-top:1px solid var(--border)}
+.view[hidden]{display:none}
+/* timeline */
+.ruler{position:relative;height:26px;border-bottom:1px solid var(--border)}
+.ruler span{position:absolute;top:6px;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted-foreground)}
+.lane{position:absolute;left:0;right:0;top:26px;bottom:0;overflow:hidden;cursor:default}
+.plane{position:absolute;left:0;top:0}
+.fam{position:absolute;border-radius:12px;border:1px solid color-mix(in srgb,var(--ec) 22%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 7%,transparent),transparent 85%);pointer-events:none}
+.track{position:absolute;height:3px;border-radius:2px;background:color-mix(in srgb,var(--ec) 45%,transparent);pointer-events:none}
+.tcard{position:absolute}
+.tcard .card{width:100%}
+.tcard.parent:not(.stackWrap) .card{background:linear-gradient(90deg,color-mix(in srgb,var(--ec) 20%,var(--card)),color-mix(in srgb,var(--ec) 6%,var(--card)))}
+.stamp{position:absolute;left:4px;bottom:100%;max-width:calc(100% - 4px);overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;white-space:nowrap;font-size:10px;font-variant-numeric:tabular-nums;color:var(--muted-foreground)}
+.stamp::before{content:"";display:inline-block;width:5px;height:5px;margin-right:5px;vertical-align:1px;border-radius:50%;background:var(--ec)}
+/* NEW (审核第 2 轮) hover: the card's date reads like a hot rail label (white on the type colour, docs/588). */
+.stamp{padding:0 6px 0 2px;border-radius:5px;transition:color .15s,background .15s}
+.tcard.hot .stamp{color:#fff;background:var(--ec)}
+.tcard.hot .stamp::before{background:#fff}
+.tcard.hot .card{border-color:color-mix(in srgb,var(--ec) 70%,var(--border));box-shadow:0 0 0 2px color-mix(in srgb,var(--ec) 22%,transparent)}
+/* the same time on the ruler: a pill and a hairline down the lane */
+.ruler .rulerHot{position:absolute;top:3px;z-index:2;transform:translateX(-50%);padding:1px 8px;border-radius:9px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff;background:var(--ec);pointer-events:none}
+.laneGuide{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed color-mix(in srgb,var(--ec) 60%,transparent);pointer-events:none;z-index:1}
+/* NEW (审核第 2 轮) a low-importance event zoomed out: a point. Dot + date + short title on one line, no card, no
+ * border. The dot sits on the event time (its centre at the x where the card's left edge would be). */
+.tpoint{position:absolute;display:flex;align-items:center;gap:5px;height:18px;margin-left:-6px;white-space:nowrap;font-size:11px;line-height:18px;color:var(--muted-foreground);cursor:pointer}
+/* 审核第 3 轮: the dot is the card's importance dot (.dot.i1/.i2/.i3: 6 / 9 / 12px, 关键 with its ring), centred in a
+ * 12px box so every point's date starts at the same x; all text is muted grey; the title fades out over its last
+ * 28px instead of an ellipsis (only when it overflows, like the card title's data-fade). */
+.tpoint>.pdot{flex:none;display:grid;place-items:center;width:12px;height:12px}
+.tpoint>time{flex:none;padding:0 5px;border-radius:5px;font-variant-numeric:tabular-nums;color:var(--muted-foreground);transition:color .15s,background .15s}
+.tpoint>span{max-width:8.5em;overflow:hidden;white-space:nowrap;color:var(--muted-foreground)}
+.tpoint>span[data-fade]{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.tpoint>b{font-weight:400;font-size:10px;color:var(--muted-foreground);opacity:.8}
+.tpoint .dot{opacity:.85}
+.tpoint.hot .dot{opacity:1;box-shadow:0 0 0 3px color-mix(in srgb,var(--ec) 30%,transparent),0 0 8px var(--ec)}
+.tpoint.hot>time{color:#fff;background:var(--ec)}
+.tpoint.hot>span{color:var(--foreground)}
+.zoomNote{position:absolute;right:16px;bottom:12px;padding:6px 10px;border-radius:9px;border:1px solid var(--border);background:var(--popover);box-shadow:var(--shadow-2);font-size:12px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+/* table */
+.scroller{position:absolute;inset:0;overflow:auto}
+.rail{position:absolute;left:0;top:0;width:210px;pointer-events:none}
+.railLine{position:absolute;left:158px;width:2px;margin-left:-1px;background:var(--input)}
+.railDot{position:absolute;left:158px;width:11px;height:11px;border-radius:50%;background:var(--ec);border:2px solid var(--background);box-shadow:0 0 0 1.5px var(--ec);transform:translate(-50%,-50%)}
+.railLabel{position:absolute;right:66px;transform:translateY(-50%);white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted-foreground)}
+.lead{fill:none;stroke:color-mix(in srgb,var(--ec) 35%,var(--border));stroke-width:1}
+.cards{position:relative;margin-left:210px}
+.slot{position:absolute;left:12px;right:24px;max-width:880px}
+.slot>.card{width:fit-content;min-width:220px;max-width:100%}
+.slot.head0>.card{width:100%}
+.groupBox{position:absolute;left:12px;right:24px;max-width:940px;border-radius:12px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ec) 22%,var(--border)),inset 3px 0 0 var(--ec);background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 7%,transparent),transparent 80%)}
+.groupBox>.slot.head0{left:0;right:0;max-width:none}
+.groupBox>.slot.head0>.card{border:0;border-radius:12px 12px 0 0;box-shadow:inset 3px 0 0 var(--ec),inset 0 -1px 0 var(--border);background:color-mix(in srgb,var(--ec) 12%,var(--card))}
+.groupBox>.slot.head0>.card::before{display:none}
+.groupBox>.slot.head0>.card .title{font-weight:600}
+/* comparison */
+.cmp{position:absolute;inset:0;overflow:auto;padding:18px 0 40px}
+.cmp h2{margin:18px 0 10px;font-size:13px;font-weight:600;color:var(--muted-foreground)}
+.cmp h2:first-child{margin-top:0}
+.row{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.cell{width:340px}.cell>small{display:block;margin-bottom:6px;color:var(--muted-foreground);font-size:11px}
+.scaleRow{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.spec{margin-top:6px;color:var(--muted-foreground);font-size:11px;font-variant-numeric:tabular-nums}
+.narrow .cards .slot{max-width:300px}
+</style>
+</head>
+<body class="ink">
+<div class="review">
+  <b>docs/592 设计稿</b>
+  <span>视图</span>
+  <button data-view="cmp" aria-pressed="true">卡片对比</button>
+  <button data-view="tl" aria-pressed="false">时间线（滚轮缩放）</button>
+  <button data-view="tb" aria-pressed="false">事件表</button>
+  <span>｜主题</span>
+  <button data-theme="ink" aria-pressed="true">玄墨</button>
+  <button data-theme="paper" aria-pressed="false">宣纸</button>
+  <span>｜卡片最小系数</span>
+  <button data-min="0.6" aria-pressed="false">0.6</button>
+  <button data-min="0.75" aria-pressed="true">0.75</button>
+  <button data-min="0.85" aria-pressed="false">0.85</button>
+  <span class="note">示例数据为设计稿虚构，仅用于审核，不进入产品</span>
+</div>
+<div class="panel">
+  <h1>世界线</h1>
+  <div class="status" id="status"></div>
+  <section class="view" id="v-cmp"><div class="cmp" id="cmp"></div></section>
+  <section class="view" id="v-tl" hidden>
+    <div class="ruler" id="ruler"></div>
+    <div class="lane" id="lane"><div class="plane" id="plane"></div></div>
+    <div class="zoomNote" id="zoomNote"></div>
+  </section>
+  <section class="view" id="v-tb" hidden><div class="scroller" id="scroller"></div></section>
+</div>
+<script>
+// ---------- sample data (fictional, design only) ----------
+const CATS = ["conflict","scheme","reveal","relation","growth","change","other"];
+const WORDS = ["边城守军夜袭敌营","旧友在码头重逢","密信被截获","学徒第一次登台","雨夜里的交易","商会改选会长","古籍残页现世","两家联姻谈判破裂","灯塔熄灭三日","北境寒潮南下","议会通过新税法","少年离家远行","钟楼下的约定","商队在山口失踪","祭典上的意外","老师留下的遗书","港口大火烧了一夜","第一次正面交锋","真相在审判庭揭开","失散的兄妹相认"];
+const SUFFIX = ["","","","，众人各怀心思","并引出更早的旧案","，局势就此改变","之后再无音讯"];
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const YEAR = 8766;
+const events = [];
+let t = 0;
+for (let f = 0; f < 70; f++) {
+  t += (rnd() < 0.55 ? 0.2 : rnd() < 0.7 ? 1 : 3 + rnd() * 6) * YEAR;
+  const id = "e" + events.length, kids = rnd() < 0.22 ? 2 + Math.floor(rnd() * 5) : 0;
+  const imp = rnd() < 0.37 ? 1 : rnd() < 0.72 ? 2 : 3;
+  events.push({ id, parent: null, start: t, importance: imp, cat: CATS[Math.floor(rnd() * 7)], title: WORDS[Math.floor(rnd() * WORDS.length)] + SUFFIX[Math.floor(rnd() * SUFFIX.length)], people: Math.floor(rnd() * 4) });
+  for (let k = 0; k < kids; k++)
+    events.push({ id: "e" + events.length, parent: id, start: t + (k + rnd()) * 0.08 * YEAR, importance: rnd() < 0.45 ? 1 : rnd() < 0.8 ? 2 : 3, cat: events.find((e) => e.id === id).cat, title: WORDS[Math.floor(rnd() * WORDS.length)] + SUFFIX[Math.floor(rnd() * SUFFIX.length)], people: Math.floor(rnd() * 3) });
+}
+const byId = new Map(events.map((e) => [e.id, e]));
+const childrenOf = (id) => events.filter((e) => e.parent === id);
+const roots = events.filter((e) => !e.parent);
+const gaps = roots.slice(1).map((r, i) => r.start - roots[i].start).sort((a, b) => a - b);
+const MEDIAN_GAP = gaps[Math.floor((gaps.length - 1) / 2)];
+// ---------- card ----------
+const WIDE = /[⺀-꓏＀-｠　-〿·—…“”]/u;
+const titleW = (s) => [...s].reduce((w, ch) => w + (WIDE.test(ch) ? 13 : 7.4), 0);
+const DOT = [6, 9, 12];
+/** Head chrome width (border, padding, gaps, controls) — mirrors collapsedCardWidth in worldline-layout.ts. */
+function chrome(e, timeline) {
+  const kids = childrenOf(e.id).length;
+  const parts = [DOT[e.importance - 1]];
+  if (kids) parts.unshift(20);
+  const av = Math.min(timeline ? 3 : 4, e.people);
+  if (av) parts.push(4 + 16 + (av - 1) * 11);
+  if (kids) parts.push(16 + 11 + 3.5 + String(kids).length * 6.2);
+  if (timeline) parts.push(24);
+  parts.push(24);
+  return 2 + 14 + 6 + parts.reduce((a, b) => a + b, 0) + 9 * parts.length; // the title is one more part (9px gap each)
+}
+/** R1: width first grows to the cap, then the title wraps; at most 2 lines. */
+function sizeOf(e, cap, timeline, min = 150) {
+  // 6px slack: under CSS zoom the head lays out in fractional px, and an exact fit would wrap the last character.
+  const ch = chrome(e, timeline), tw = titleW(e.title) + 6;
+  const w = Math.min(cap, Math.max(min, Math.ceil(ch + tw)));
+  const lines = tw > w - ch + 0.5 ? 2 : 1;
+  return { w, lines };
+}
+const STACK_EXTRA = 8;
+const cardH = (lines, stack) => (stack ? 40 : 34) + (lines - 1) * 18;
+const ICON_DOWN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25"><path d="m6 9 6 6 6-6"/></svg>';
+const ICON_EXP = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>';
+const ICON_MORE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
+function cardHTML(e, o = {}) {
+  const kids = childrenOf(e.id), desc = kids.length;
+  const av = Math.min(o.timeline ? 3 : 4, e.people);
+  const ec = `--ec:var(--event-${e.cat})`;
+  const fold = desc ? `<span class="ln"><button class="fold ${o.folded ? "closed" : ""}" data-fold="${e.id}" title="${o.folded ? "展开" : "折叠"}子事件">${ICON_DOWN}</button></span>` : "";
+  const avatars = av ? `<span class="ln"><span class="avatars">${Array.from({ length: av }, (_, i) => `<i>${"甲乙丙丁"[i]}</i>`).join("")}</span></span>` : "";
+  const badge = desc ? `<span class="ln"><span class="kids" title="${desc} 个子事件">▸ ${desc}</span></span>` : "";
+  const exp = o.timeline ? `<span class="ln"><span class="btn24">${ICON_EXP}</span></span>` : "";
+  const html = `<article class="card ${o.stack ? "stack" : ""} ${o.old ? "old" : ""} ${o.sel ? "sel" : ""}" style="${ec}${o.width ? `;width:${o.width}px` : ""}">
+    <div class="head">${fold}<span class="ln"><span class="dot i${e.importance}"></span></span><h3 class="title" title="${e.title}">${e.title}</h3>${avatars}${badge}${exp}<span class="ln"><span class="btn24">${ICON_MORE}</span></span></div></article>`;
+  return o.stack ? `<div class="stackWrap" style="${ec};padding-bottom:${STACK_EXTRA}px">${html}</div>` : html;
+}
+
+// ---------- shared UI state ----------
+let theme = "ink", view = "cmp", minScale = 0.75;
+const tableFolded = new Set(roots.filter((r) => childrenOf(r.id).length).slice(0, 3).map((r) => r.id));
+for (const b of document.querySelectorAll("[data-theme]")) b.onclick = () => { theme = b.dataset.theme; document.body.className = theme; press("[data-theme]", b); };
+for (const b of document.querySelectorAll("[data-view]")) b.onclick = () => { view = b.dataset.view; press("[data-view]", b); show(); };
+for (const b of document.querySelectorAll("[data-min]")) b.onclick = () => { minScale = +b.dataset.min; press("[data-min]", b); renderAll(); };
+function press(sel, on) { for (const b of document.querySelectorAll(sel)) b.setAttribute("aria-pressed", b === on); }
+function show() { for (const v of ["cmp", "tl", "tb"]) document.getElementById("v-" + v).hidden = v !== view; renderAll(); }
+// ---------- 卡片对比 ----------
+function renderCmp() {
+  const long = events.find((e) => !e.parent && titleW(e.title) > 230 && !childrenOf(e.id).length) ?? events[0];
+  const longer = { ...long, title: long.title + "，城中流言四起", people: 3 };
+  const short = events.find((e) => !childrenOf(e.id).length && titleW(e.title) < 120);
+  const parent = roots.find((r) => childrenOf(r.id).length >= 3);
+  const one = sizeOf(longer, 340, true);
+  const scales = [1, 0.92, minScale];
+  document.getElementById("cmp").innerHTML = `
+    <h2>R1 · 收起卡片标题最多两行（时间线收起卡，宽度先加到上限 340px，放不下再换行）</h2>
+    <div class="row">
+      <div class="cell"><small>现在：一行，末尾渐隐</small>${cardHTML(longer, { timeline: true, old: true, width: one.w })}<div class="spec">高 34px</div></div>
+      <div class="cell"><small>修改后：两行，超出两行末尾省略号</small>${cardHTML(longer, { timeline: true, width: one.w })}<div class="spec">高 52px；圆点、头像、按钮对齐第一行</div></div>
+      <div class="cell"><small>短标题不受影响</small>${cardHTML(short, { timeline: true, width: sizeOf(short, 340, true).w })}<div class="spec">高 34px</div></div>
+    </div>
+    <h2>R1 · 事件表窄面板（槽宽 300px，对话栏旁常见）</h2>
+    <div class="row">
+      <div class="cell" style="width:300px"><small>现在</small>${cardHTML(longer, { old: true, width: 300 })}</div>
+      <div class="cell" style="width:300px"><small>修改后</small>${cardHTML(longer, { width: 300 })}</div>
+    </div>
+    <h2>R5 · 子事件已折叠的父事件：层叠卡（事件表与时间线相同）</h2>
+    <div class="row">
+      <div class="cell" style="width:420px"><small>现在（事件表：只剩分组框的标题栏）</small>
+        <div style="position:relative;height:36px"><div class="groupBox" style="left:0;right:0;height:36px;--ec:var(--event-${parent.cat})"><div class="slot head0" style="top:0">${cardHTML(parent, { folded: true })}</div></div></div></div>
+      <div class="cell" style="width:420px"><small>修改后</small>${cardHTML(parent, { folded: true, stack: true })}<div class="spec">卡片 40px + 层叠 8px；四角 12px；下面露出两层</div></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div class="cell"><small>时间线现在（家族头卡，子事件折叠后）</small><div class="tcard parent" style="position:relative;--ec:var(--event-${parent.cat})">${cardHTML(parent, { folded: true, timeline: true, old: true })}</div></div>
+      <div class="cell"><small>时间线修改后</small>${cardHTML(parent, { folded: true, timeline: true, stack: true })}</div>
+      <div class="cell"><small>修改后 · 两行标题</small>${cardHTML({ ...parent, title: parent.title + "，牵连出港口的旧账与三家商会的恩怨" }, { folded: true, timeline: true, stack: true })}<div class="spec">卡片 58px + 层叠 8px</div></div>
+    </div>
+    <h2>R2 · 时间线缩小后卡片随之变小（系数 1 → ${minScale}，审核栏可换最小系数）</h2>
+    <div class="scaleRow">${scales.map((c) => `<div><div style="zoom:${c};width:${one.w}px">${cardHTML(longer, { timeline: true, width: one.w })}</div><div style="zoom:${c};width:${one.w}px;margin-top:22px">${cardHTML(parent, { folded: true, timeline: true, stack: true })}</div><div class="spec">系数 ${c}：标题 ${(13 * c).toFixed(1)}px，单行卡高 ${Math.round(34 * c)}px</div></div>`).join("")}</div>`;
+}
+// ---------- 时间线：滚轮缩放 + 分级 ----------
+// 审核第 3 轮: a fifth level KEY_AT; at the far zoom-out only 关键 events stay cards.
+const PAD = 14, HIDE_AT = 40, FOLD_AT = 10, KEY_AT = 2.5, FULL_AT = 160, HYST = 1.15;
+const tl = { start: roots[0].start - 0.3 * YEAR, span: 3 * YEAR, level: 0, showAll: false, unfolded: new Set(), sel: null };
+const laneEl = document.getElementById("lane");
+/** d: the median root gap on screen, in px. */
+const density = (w) => (MEDIAN_GAP * w) / tl.span;
+/** Level 0 原样 / 1 缩小卡片 / 2 + 隐藏一般 / 3 + 折叠父事件, with a 15% hysteresis on the way back up. */
+function levelFor(d, prev) {
+  const down = d < KEY_AT ? 4 : d < FOLD_AT ? 3 : d < HIDE_AT ? 2 : d < FULL_AT ? 1 : 0;
+  if (down >= prev) return down;
+  const up = d < KEY_AT * HYST ? 4 : d < FOLD_AT * HYST ? 3 : d < HIDE_AT * HYST ? 2 : d < FULL_AT ? 1 : 0;
+  return Math.max(down, Math.min(prev, up));
+}
+const cardScale = (d) => d >= FULL_AT ? 1 : d <= HIDE_AT ? minScale : Math.round((minScale + (1 - minScale) * Math.log(d / HIDE_AT) / Math.log(FULL_AT / HIDE_AT)) * 20) / 20;
+/** A card stays a card at importance ≥ min, or when a descendant does (its family needs the parent card). */
+const keepAt = (min) => { const k = (e) => e.importance >= min || childrenOf(e.id).some(k); return k; };
+function renderTimeline() {
+  const W = laneEl.clientWidth - 2 * PAD;
+  if (W <= 0) return;
+  const d = density(W), prevLevel = tl.level;
+  tl.level = levelFor(d, tl.level);
+  if (tl.level < 3) tl.unfolded.clear();
+  if (tl.level < 2) tl.showAll = false;
+  const c = tl.level === 0 ? 1 : cardScale(d);
+  const hiding = tl.level >= 2 && !tl.showAll;
+  // 审核第 2 轮: a low-importance event is not removed, it shrinks to a point (dot + date + short title).
+  const keep = keepAt(tl.level >= 4 ? 3 : 2);
+  const asPoint = (e) => hiding && !keep(e) && e.id !== tl.sel;
+  const visible = () => true;
+  const hidden = events.filter(asPoint).length;
+  const scale = W / tl.span, x = (t) => PAD + (t - tl.start) * scale;
+  const lo = tl.start - tl.span, hi = tl.start + 2 * tl.span;
+  // Families, packed first-fit in screen px (the real layout packs in world px: buildFamilies / packFamilies).
+  const placed = [], parts = [];
+  // Gap between two boxes: 30px (FAMILY_V_GAP) unless both are points, which stack 6px apart like list rows; a
+  // point above a card keeps 16px so the card's date stamp has room.
+  const gapOf = (a, b) => (a && b ? 6 : a || b ? 16 : 30);
+  const settle = (left, right, h, pt = false) => {
+    let top = 28;
+    for (const o of placed.filter((o) => o.left < right && o.right > left).sort((a, b) => a.top - b.top)) {
+      const g = gapOf(pt, o.pt);
+      if (top < o.top + o.h + g && top + h + g > o.top) top = o.top + o.h + g;
+    }
+    placed.push({ left, right, top, h, pt });
+    return top;
+  };
+  for (const r of roots.filter((r) => r.start > lo && r.start < hi)) {
+    if (asPoint(r)) {
+      // A point is packed like a tiny family (18px high, its own width), so it never overlaps a card.
+      const pw = pointWidth(r), top = settle(x(r.start) - 6, x(r.start) + pw + 14, POINT_H, true);
+      parts.push(point(r, x(r.start), top));
+      continue;
+    }
+    const kids = childrenOf(r.id).filter(visible);
+    const folded = kids.length && tl.level >= 3 && !tl.unfolded.has(r.id);
+    const rs = sizeOf(r, 340, true), rh = cardH(rs.lines, folded || 0) * c + (folded ? STACK_EXTRA * c : 0);
+    let w = rs.w * c, h = rh;
+    const rows = [];
+    if (kids.length && !folded) {
+      const rowsRight = [];
+      for (const k of kids) {
+        const pt = asPoint(k), ks = sizeOf(k, 300, true), kx = x(k.start) - x(r.start), kw = pt ? pointWidth(k) : ks.w * c, kh = pt ? POINT_H : cardH(ks.lines) * c;
+        let ri = rowsRight.findIndex((rr) => rr + 10 <= kx);
+        if (ri < 0) ri = rowsRight.push(-1e9) - 1;
+        rowsRight[ri] = kx + kw;
+        (rows[ri] ??= []).push({ k, kx, kw, kh, pt });
+      }
+      w = Math.max(w, 260 * c, ...rowsRight);
+      let y = rh + 22 * c;
+      for (const row of rows) { const rhh = Math.max(...row.map((i) => i.kh)); row.forEach((i) => (i.ky = y)); y += rhh + 26 * c; }
+      h = y - 26 * c + 14 * c;
+    }
+    const top = settle(x(r.start) - 6, x(r.start) + w + 14, h);
+    const ec = `--ec:var(--event-${r.cat})`;
+    if (rows.length) parts.push(`<div class="fam" style="${ec};left:${x(r.start)}px;top:${top}px;width:${w}px;height:${h}px"></div>`);
+    parts.push(card(r, x(r.start), top, rows.length || folded ? w : rs.w * c, c, folded ? "stack" : kids.length ? "parent" : "", rs.w));
+    if (kids.length && !folded) parts.push(`<i class="track" style="${ec};left:${x(r.start)}px;top:${top + rh - 3}px;width:${Math.max(0, x(Math.max(...kids.map((k) => k.start))) - x(r.start))}px"></i>`);
+    for (const row of rows) for (const i of row) parts.push(i.pt ? point(i.k, x(r.start) + i.kx, top + i.ky) : card(i.k, x(r.start) + i.kx, top + i.ky, i.kw, c, "", sizeOf(i.k, 300, true).w));
+  }
+  document.getElementById("plane").innerHTML = parts.join("") + `<i class="laneGuide" id="laneGuide" hidden></i>`;
+  tl.x = x;
+  applyHover();
+  // ruler: whole years
+  const stepY = [1, 2, 5, 10, 20, 50, 100, 200, 500].find((n) => (n * YEAR * scale) >= 110) ?? 1000;
+  const ticks = [];
+  for (let y = Math.ceil(tl.start / YEAR / stepY) * stepY; y * YEAR <= tl.start + tl.span; y += stepY) ticks.push(`<span style="left:${x(y * YEAR)}px">第 ${y} 年</span>`);
+  document.getElementById("ruler").innerHTML = ticks.join("") + `<span class="rulerHot" id="rulerHot" hidden></span>`;
+  const names = ["原样", "缩小卡片", "一般 → 时间点", "折叠父事件", "只留关键卡片"];
+  document.getElementById("status").innerHTML = `<span>${events.length} 件事件</span><span>视窗 ${(tl.span / YEAR).toFixed(1)} 年</span>
+    <span class="lv">${names.map((n, i) => `<span class="${i <= tl.level ? "on" : ""}">${n}</span>`).join("")}</span>
+    ${tl.level >= 2 ? (tl.showAll ? `<span class="zh">一般事件已显示为卡片 <button id="hideAgain">改回时间点</button></span>` : `<span class="zh">${hidden} 个${tl.level >= 4 ? "一般和重要" : "一般"}事件显示为时间点 <button id="showAll">显示为卡片</button></span>`) : ""}
+    <span class="hint">滚轮缩放 · Shift + 滚轮平移 · 悬停卡片或时间点高亮日期 · 点时间点选中</span>`;
+  document.getElementById("showAll")?.addEventListener("click", () => { tl.showAll = true; renderTimeline(); });
+  document.getElementById("hideAgain")?.addEventListener("click", () => { tl.showAll = false; renderTimeline(); });
+  document.getElementById("zoomNote").textContent = `卡片系数 ${c.toFixed(2)} · 拥挤度 d = ${d.toFixed(1)}px（一般→点 < ${HIDE_AT}，折叠 < ${FOLD_AT}，只留关键 < ${KEY_AT}）`;
+}
+// ---------- 时间点（审核第 2 轮） ----------
+const POINT_H = 18, POINT_TITLE = 8.5 * 11;
+const dateText = (e) => `第 ${(e.start / YEAR).toFixed(1)} 年`;
+const pointWidth = (e) => 12 + 5 + 10 + titleW(dateText(e)) * 11 / 13 + 5 + Math.min(POINT_TITLE, titleW(e.title) * 11 / 13) + (childrenOf(e.id).length ? 5 + 22 : 0);
+function point(e, left, top) {
+  const n = childrenOf(e.id).length, fade = titleW(e.title) * 11 / 13 > POINT_TITLE + 0.5;
+  return `<div class="tpoint" data-id="${e.id}" data-t="${e.start}" style="--ec:var(--event-${e.cat});left:${left}px;top:${top}px" title="${e.title}"><span class="pdot"><span class="dot i${e.importance}"></span></span><time>${dateText(e)}</time><span ${fade ? "data-fade" : ""}>${e.title}</span>${n ? `<b>▸ ${n}</b>` : ""}</div>`;
+}
+// ---------- 悬停：卡片 / 时间点 + 它的日期 + 标尺上的同一时间 ----------
+let hoverId = null;
+function applyHover() {
+  for (const el of document.querySelectorAll("#plane .hot")) el.classList.remove("hot");
+  const pill = document.getElementById("rulerHot"), guide = document.getElementById("laneGuide");
+  const el = hoverId && document.querySelector(`#plane [data-id="${hoverId}"]`);
+  if (!el || !pill) { if (pill) pill.hidden = true; if (guide) guide.hidden = true; return; }
+  el.classList.add("hot");
+  const e = byId.get(hoverId), xx = tl.x(e.start), ec = `var(--event-${e.cat})`;
+  pill.hidden = false; pill.textContent = dateText(e); pill.style.left = xx + "px"; pill.style.setProperty("--ec", ec);
+  guide.hidden = false; guide.style.left = xx + "px"; guide.style.height = document.getElementById("plane").scrollHeight + "px"; guide.style.setProperty("--ec", ec);
+}
+laneEl.addEventListener("pointerover", (ev) => {
+  const id = ev.target.closest?.("[data-id]")?.dataset.id ?? null;
+  if (id !== hoverId) { hoverId = id; applyHover(); }
+});
+laneEl.addEventListener("pointerleave", () => { hoverId = null; applyHover(); });
+function card(e, left, top, w, c, kind, natural) {
+  const ec = `--ec:var(--event-${e.cat})`;
+  const stamp = `<span class="stamp" style="zoom:${1 / c}">第 ${(e.start / YEAR).toFixed(1)} 年</span>`;
+  const inner = cardHTML(e, { timeline: true, stack: kind === "stack", folded: kind === "stack", sel: tl.sel === e.id, width: kind ? undefined : natural });
+  // CSS zoom also scales left/top, so the position sits on an unzoomed wrapper and only the card content zooms.
+  return `<div class="tcard ${kind === "parent" ? "parent" : ""}" data-id="${e.id}" style="${ec};left:${left}px;top:${top}px;width:${w}px"><div style="zoom:${c};width:${w / c}px;position:relative">${stamp}${inner}</div></div>`;
+}
+laneEl.addEventListener("wheel", (ev) => {
+  ev.preventDefault();
+  const W = laneEl.clientWidth - 2 * PAD, r = laneEl.getBoundingClientRect();
+  if (ev.shiftKey || Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) { tl.start += ((ev.deltaX || ev.deltaY) / W) * tl.span; return renderTimeline(); }
+  const ratio = Math.min(1, Math.max(0, (ev.clientX - r.left - PAD) / W)), at = tl.start + ratio * tl.span;
+  tl.span = Math.min(400 * YEAR, Math.max(0.3 * YEAR, tl.span * Math.pow(1.2, Math.abs(ev.deltaY) >= 50 ? Math.sign(ev.deltaY) : ev.deltaY / 100)));
+  tl.start = at - ratio * tl.span;
+  renderTimeline();
+}, { passive: false });
+laneEl.addEventListener("click", (ev) => {
+  const f = ev.target.closest("[data-fold]");
+  if (f) { const id = f.dataset.fold; if (tl.level >= 3) { tl.unfolded.has(id) ? tl.unfolded.delete(id) : tl.unfolded.add(id); } renderTimeline(); return; }
+  const c = ev.target.closest("[data-id]");
+  tl.sel = c ? c.dataset.id : null;
+  renderTimeline();
+});
+// ---------- 事件表（对齐模式：圆点在卡片头第一行中线） ----------
+let narrow = false;
+function renderTable() {
+  const sc = document.getElementById("scroller");
+  const slotW = narrow ? 300 : Math.min(880, sc.clientWidth - 210 - 36);
+  let y = 0;
+  const rail = [], cards = [], leads = [];
+  const dotAt = (e, top) => {
+    const head = top + (childrenOf(e.id).length && tableFolded.has(e.id) ? 20 : childrenOf(e.id).length ? 18 : 17);
+    rail.push(`<b class="railDot" style="top:${head}px;--ec:var(--event-${e.cat})"></b><span class="railLabel" style="top:${head}px">第 ${(e.start / YEAR).toFixed(1)} 年</span>`);
+    leads.push(`<path class="lead" style="--ec:var(--event-${e.cat})" d="M165 ${head} L222 ${head}"/>`);
+  };
+  // Card heights come from a measuring pass (the product estimates them in tableLayout and corrects with ResizeObserver).
+  const probe = document.createElement("div");
+  probe.style.cssText = `position:absolute;visibility:hidden;left:0;top:0;width:${slotW}px`;
+  document.body.append(probe);
+  const measure = (html, w) => { probe.style.width = w + "px"; probe.innerHTML = `<div style="width:fit-content;min-width:220px;max-width:100%">${html}</div>`; return Math.round(probe.firstChild.getBoundingClientRect().height); };
+  for (const r of roots.slice(0, 40)) {
+    const kids = childrenOf(r.id);
+    if (!kids.length) {
+      const html = cardHTML(r);
+      dotAt(r, y);
+      cards.push(`<div class="slot" style="top:${y}px">${html}</div>`);
+      y += measure(html, slotW) + 6;
+      continue;
+    }
+    if (tableFolded.has(r.id)) {
+      const html = cardHTML(r, { folded: true, stack: true });
+      dotAt(r, y);
+      cards.push(`<div class="slot" style="top:${y}px;max-width:${narrow ? 324 : 940}px;right:24px">${html}</div>`);
+      probe.style.width = (narrow ? 324 : Math.min(940, slotW + 60)) + "px"; probe.innerHTML = html;
+      y += Math.round(probe.firstChild.getBoundingClientRect().height) + 6;
+      continue;
+    }
+    const top = y, headHtml = cardHTML(r, { folded: false });
+    probe.style.width = (narrow ? 324 : Math.min(940, slotW + 60)) + "px"; probe.innerHTML = headHtml;
+    const headH = Math.max(36, Math.round(probe.firstChild.getBoundingClientRect().height));
+    dotAt(r, y);
+    let inner = `<div class="slot head0" style="top:0">${headHtml}</div>`, iy = headH + 4;
+    for (const k of kids) {
+      const html = cardHTML(k);
+      dotAt(k, top + iy);
+      inner += `<div class="slot" style="top:${iy}px;margin-left:18px;right:24px">${html}</div>`;
+      iy += measure(html, slotW - 18) + 6;
+    }
+    iy += 4;
+    cards.push(`<div class="groupBox" style="top:${top}px;height:${iy}px;max-width:${narrow ? 324 : 940}px;--ec:var(--event-${r.cat})">${inner}</div>`);
+    y = top + iy + 6;
+  }
+  probe.remove();
+  sc.innerHTML = `<div style="position:relative;height:${y + 120}px;margin-top:16px" class="${narrow ? "narrow" : ""}">
+    <div class="rail" style="height:${y}px"><div class="railLine" style="top:0;height:${y}px"></div>${rail.join("")}
+      <svg style="position:absolute;left:0;top:0;overflow:visible" width="240" height="${y}">${leads.join("")}</svg></div>
+    <div class="cards" style="height:${y}px">${cards.join("")}</div></div>`;
+  document.getElementById("status").innerHTML = `<span>${events.length} 件事件</span><span>时间轴 对齐</span>
+    <span class="zh">槽宽 <button id="narrowBtn">${narrow ? "窄面板 300px" : "宽面板"}</button></span>
+    <span class="hint">点父卡左侧圆钮折叠 / 展开子事件；折叠后显示层叠卡</span>`;
+  document.getElementById("narrowBtn").onclick = () => { narrow = !narrow; renderTable(); };
+}
+document.getElementById("scroller").addEventListener("click", (ev) => {
+  const f = ev.target.closest("[data-fold]");
+  if (!f) return;
+  const id = f.dataset.fold;
+  tableFolded.has(id) ? tableFolded.delete(id) : tableFolded.add(id);
+  renderTable();
+});
+
+function renderAll() {
+  if (view === "cmp") {
+    renderCmp();
+    document.getElementById("status").innerHTML = `<span>上：现在 / 修改后对比</span><span class="hint">切到“时间线”用滚轮缩放查看 R2–R4；切到“事件表”查看 R1 / R5</span>`;
+  } else if (view === "tl") renderTimeline();
+  else renderTable();
+}
+addEventListener("resize", renderAll);
+renderAll();
+</script>
+</body>
+</html>

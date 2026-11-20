@@ -25,6 +25,7 @@ import React,{Profiler} from 'react';
 import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {WorldlinePanel} from './src/components/content/planning/PlanningWorkspace';
+import {TimelineZoomLevelsContext} from './src/components/content/planning/worldline/EventTimeline';
 import {applyPlanningOperations,planningSchema} from './src/lib/planning/domain';
 import {useChatStore} from './src/stores/chat';
 import {useTabsStore,buildTabId} from './src/stores/tabs';
@@ -56,7 +57,9 @@ globalThis.mountWorldline=(view,mount={})=>{
  globalThis.planningState=()=>state;
  const client=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity},mutations:{retry:false}}});
  const root=createRoot(document.getElementById('app'));
- const panel=(key)=><div key={key} data-fixture-panel={key} style={{height:mount.panels>1?'50vh':'100vh',overflow:'auto'}}><WorldlinePanel novelId='${NOVEL}' refId={mount.refId}/></div>;
+ // docs/592 §7.1: zoom levels are off unless a case asks for them ('default' mounts without a Provider).
+ const zoomed=(el)=>mount.zoomLevels==='default'?el:<TimelineZoomLevelsContext.Provider value={mount.zoomLevels===true}>{el}</TimelineZoomLevelsContext.Provider>;
+ const panel=(key)=><div key={key} data-fixture-panel={key} style={{height:mount.panels>1?'50vh':'100vh',overflow:'auto'}}>{zoomed(<WorldlinePanel novelId='${NOVEL}' refId={mount.refId}/>)}</div>;
  flushSync(()=>root.render(<QueryClientProvider client={client}>{mount.controller?<DesktopCommandController/>:null}<Profiler id="workspace" onRender={onRender}>{Array.from({length:mount.panels??1},(_,i)=>panel('p'+i))}</Profiler></QueryClientProvider>));
  globalThis.requestWorldFocus=(target)=>useTabsStore.getState().requestPanelFocus(buildTabId('worldline','${NOVEL}'),target);
  globalThis.disposeWorldline=()=>{flushSync(()=>root.unmount());client.clear()};
@@ -87,7 +90,7 @@ export function launch() {
 export interface WorldlineView { version: number; data: unknown; characters: { id: string; name: string; avatarUrl: string | null }[]; materials: unknown[]; readonly: boolean; history: unknown[]; proposals: unknown[] }
 
 /** Opens a page, mounts the panel with `view`, runs `body`, and fails on any page error. */
-export async function withWorldline(browser: Browser, view: WorldlineView, body: (page: Page) => Promise<void>, options: { profiling?: boolean; theme?: "ink" | "paper"; width?: number; refId?: string; panels?: number; controller?: boolean; reducedMotion?: boolean } = {}) {
+export async function withWorldline(browser: Browser, view: WorldlineView, body: (page: Page) => Promise<void>, options: { profiling?: boolean; theme?: "ink" | "paper"; width?: number; refId?: string; panels?: number; controller?: boolean; reducedMotion?: boolean; zoomLevels?: boolean | "default" } = {}) {
   const page = await browser.newPage({ viewport: { width: options.width ?? 1440, height: 1000 }, deviceScaleFactor: 1 })
   const errors: string[] = []
   page.setDefaultTimeout(5000)
@@ -102,12 +105,29 @@ export async function withWorldline(browser: Browser, view: WorldlineView, body:
     await page.addStyleTag({ content: `${await stylesheet}\n${compiled.css}` })
     await page.addScriptTag({ content: compiled.js })
     if (options.reducedMotion) await page.emulateMedia({ reducedMotion: "reduce" })
-    await page.evaluate(([v, m]) => (window as any).mountWorldline(v, m), [view, { refId: options.refId, panels: options.panels, controller: options.controller }] as const)
+    await page.evaluate(([v, m]) => (window as any).mountWorldline(v, m), [view, { refId: options.refId, panels: options.panels, controller: options.controller, zoomLevels: options.zoomLevels ?? false }] as const)
     await page.getByRole("heading", { name: "世界线", exact: true }).first().waitFor()
     await body(page)
     if (errors.length) throw Error("page errors: " + errors.join(" | "))
   } finally {
     await page.evaluate(() => (window as any).disposeWorldline?.()).catch(() => {})
     await page.close()
+  }
+}
+
+/** docs/592: R1's two-line titles make families taller, so a card a case expects in view at first open may sit under
+ * the lane's bottom edge. Moves the canvas with the arrow keys (80px per press, as a user would, no selection or
+ * locate) until the card is inside the lane. The timeline must be open. */
+export async function revealTimelineCard(page: Page, card: import("playwright-core").Locator) {
+  const lane = page.locator("[data-timeline-lane]")
+  // A card outside the rendered band or the built range is not in the DOM: fail here, not in a later click timeout.
+  await card.first().waitFor({ state: "attached", timeout: 3000 })
+  for (let i = 0; i < 60; i++) {
+    const [c, l] = await Promise.all([card.boundingBox(), lane.boundingBox()])
+    if (!c || !l) return
+    if (c.y >= l.y + 8 && c.y + c.height <= l.y + l.height - 60) return
+    await page.locator("[data-timeline]").focus()
+    await page.keyboard.press(c.y + c.height > l.y + l.height - 60 ? "ArrowDown" : "ArrowUp")
+    await page.waitForTimeout(16)
   }
 }

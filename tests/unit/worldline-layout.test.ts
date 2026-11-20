@@ -176,10 +176,10 @@ test('WU-19j: layout constants: card 34, gap 6, group padding 10, child indent 1
  assert.equal(c('q').top-g.bottom,6);assert.equal(c('r').top-(c('q').top+34),6)
  assert.equal(br.height,46);assert.equal(br.top,c('r').top+34);assert.equal(c('far').top,br.top+46)
  assert.equal(lay.height,c('far').top+34)
- // Folding drops the children from the layout; the box is just the header (docs/588 §1).
+ // Folding drops the children from the layout; docs/592 R5: the parent is a stacked card (40 + 8 peek), no group box.
  const folded=L.tableLayout(treeOf(d),{},0,L.createCalendarAdapter(FIXED24),{folded:new Set(['p'])})
  assert.equal(folded.byId.has('c1'),false)
- assert.equal(folded.groups[0].bottom-folded.byId.get('p')!.top,36)
+ assert.equal(folded.groups.length,0);assert.equal(folded.byId.get('p')!.height,48);assert.equal(folded.byId.get('p')!.stacked,true)
 })
 
 /** n roots one per `stepDays` days on FIXED24, plus extra events. */
@@ -895,7 +895,8 @@ test('RM-01: the parent card is the group header: top of the box, 36 high, child
  assert.equal(c('q').top-g.bottom,6);assert.equal(c('q').head,c('q').top+17)
  assert.deepEqual(lay.segments[0].heads.map(h=>h.y),['p','c1','c2','q'].map(id=>c(id).head))
  const folded=L.tableLayout(treeOf(d),{},0,a,{folded:new Set(['p'])})
- assert.equal(folded.groups[0].bottom-folded.byId.get('p')!.top,36)
+ // docs/592 R5: a folded parent is a stacked card, not a header box; its head is 20px down.
+ assert.equal(folded.groups.length,0);assert.equal(folded.byId.get('p')!.height,48);assert.equal(folded.byId.get('p')!.head,folded.byId.get('p')!.top+20)
  const openP=L.tableLayout(treeOf(d),{p:120},0,a,{expanded:new Set(['p'])})
  assert.equal(openP.byId.get('c1')!.top-openP.byId.get('p')!.top,124);assert.equal(openP.byId.get('p')!.head,openP.byId.get('p')!.top+21)
  const openC=L.tableLayout(treeOf(d),{c1:90},0,a,{expanded:new Set(['c1'])})
@@ -909,7 +910,9 @@ test('RM-01b: nested groups keep every adjacent card head at least 39px apart',(
  assert.deepEqual(lay.groups.map(x=>[x.id,x.bottom]),[['p',174],['c',124]])
  assert.deepEqual(['p','c','g','d'].map(head),[18,58,97,147])
  const f=L.tableLayout(treeOf(d),{},0,a,{folded:new Set(['c'])})
- assert.equal(f.groups.find(x=>x.id==='c')!.bottom,76);assert.equal(f.byId.get('d')!.top,82);assert.equal(f.byId.get('d')!.head-f.byId.get('c')!.head,41)
+ // docs/592 R5: folded 'c' is a stacked card at 40 (48 with its peek); 'd' follows after the 6px gap.
+ assert.equal(f.groups.some(x=>x.id==='c'),false);assert.equal(f.byId.get('c')!.stacked,true);assert.equal(f.byId.get('c')!.height,48)
+ assert.equal(f.byId.get('d')!.top,40+48+6);assert.equal(f.byId.get('d')!.head-f.byId.get('c')!.head,48+6+17-20)
 })
 const aligned=(d:PlanningData,cal:Cal=ERA_CAL,opts:Partial<L.RailOptions>={},folded?:Set<string>)=>{
  const a=L.createCalendarAdapter(cal),lay=L.tableLayout(treeOf(d),{},0,a,{folded})
@@ -1009,4 +1012,175 @@ test('RM-08: calendars without months use railLabel; without years no year badge
  const noYear:Cal={...FIXED24,monthsPerYear:null}
  const nm=aligned(plan([{id:'a',at:0,precision:'day'},{id:'b',at:800*24,precision:'day'}],noYear),noYear).m
  assert.equal(nm.badges.filter(b=>b.kind==='year').length,0)
+})
+
+/* docs/592 ZP-01 … ZP-16: two-line titles, zoom levels, time points, stacked parents. Expected values follow the plan
+ * (docs/592-worldline-card-zoom-stack-plan.md §0–§3), worked out by hand, not read from the implementation. */
+const ci=(c:Partial<L.CollapsedCardInput>&{title:string}):L.CollapsedCardInput=>({depth:0,importance:1,avatars:0,more:0,kids:null,expandButton:true,...c})
+test('ZP-01: collapsedTitleLines is 1 while the title fits the room, 2 beyond; table chrome differs by avatars, ⌄ and its gap',()=>{
+ const tl=ci({title:'短标题'}),w=L.collapsedCardWidth(tl)
+ assert.equal(L.collapsedTitleLines(tl,w,'timeline'),1)
+ // docs/592 §8: 4px title slack (the real font runs up to 2px wider than the estimate).
+ const room=340-L.collapsedHeadChrome(ci({title:''}),'timeline')-4
+ const fits=ci({title:'国'.repeat(Math.floor(room/13))}),over=ci({title:'国'.repeat(Math.floor(room/13)+1)})
+ assert.equal(L.collapsedTitleLines(fits,340,'timeline'),1)
+ assert.equal(L.collapsedTitleLines(over,340,'timeline'),2)
+ assert.equal(L.collapsedTitleLines(ci({title:'国'.repeat(30)}),340,'timeline'),2)
+ // Table: 18px avatars (16 on the timeline) and no ⌄ expand button (24 + one 9px gap).
+ const t2=ci({title:'x',avatars:2,expandButton:false}),l2=ci({title:'x',avatars:2})
+ assert.equal(L.collapsedHeadChrome(l2,'timeline')-L.collapsedHeadChrome(t2,'table'),24+9-2*2)
+})
+test('ZP-01b: a card held at its cap wraps when it fits by less than 4px; a card sized from its own title is one line',()=>{
+ const c=ci({title:'国'.repeat(10)}),need=L.collapsedHeadChrome(c,'timeline')+L.titleWidth(c.title)+4
+ // Not capped: fits at its own width, wraps below it.
+ assert.equal(L.collapsedTitleLines(c,Math.ceil(need),'timeline'),1)
+ assert.equal(L.collapsedTitleLines(c,need-1,'timeline'),2)
+ // Capped at need + 3 (fits by 3px < 4): wraps; capped at need + 5: one line.
+ assert.equal(L.collapsedTitleLines(c,need+3,'timeline',true),2)
+ assert.equal(L.collapsedTitleLines(c,need+5,'timeline',true),1)
+})
+test('ZP-02: collapsedCardHeight: 34/52 card, 40/58 stack, 36/54 group header',()=>{
+ assert.deepEqual([L.collapsedCardHeight(1,'card'),L.collapsedCardHeight(2,'card'),L.collapsedCardHeight(1,'stack'),L.collapsedCardHeight(2,'stack'),L.collapsedCardHeight(1,'groupHead'),L.collapsedCardHeight(2,'groupHead')],[34,52,40,58,36,54])
+ assert.deepEqual([L.TITLE_LINE,L.STACK_HEAD_HEIGHT,L.STACK_PEEK,L.POINT_HEIGHT],[18,40,8,18])
+})
+test('ZP-03: tableLayout without widths: every collapsed card 34, headers 36, heads at +17 / +18',()=>{
+ const d=plan([{id:'p',at:0,title:'国'.repeat(40)},{id:'c',at:6,parent:'p',title:'国'.repeat(40)},{id:'q',at:72,title:'国'.repeat(40)}],FIXED24)
+ const lay=L.tableLayout(treeOf(d),{},0,L.createCalendarAdapter(FIXED24))
+ assert.deepEqual(['p','c','q'].map(id=>lay.byId.get(id)!.height),[36,34,34])
+ assert.deepEqual(['p','c','q'].map(id=>lay.byId.get(id)!.head-lay.byId.get(id)!.top),[18,17,17])
+})
+test('ZP-04: tableWidths follows the CSS nesting (wide inset 36, narrow 22, plus the 18px indent per level)',()=>{
+ const n=L.tableWidths(350,true)
+ assert.deepEqual([n.slot(0),n.group(0),n.slot(1),n.group(1)],[328,328,288,288])
+ const w=L.tableWidths(1200,false)
+ assert.deepEqual([w.slot(0),w.group(0),w.slot(1),w.group(1)],[880,940,880,886])
+})
+test('ZP-05: with widths, a 2-line card is 52 and pushes the next 18 down; folded parent 48 stacked at +20; 2-line header 54',()=>{
+ const long='国'.repeat(26),short='短'
+ const d=plan([{id:'a',at:0,title:long},{id:'b',at:24,title:short},{id:'p',at:48,title:long},{id:'c',at:50,parent:'p',title:short},{id:'f',at:96,title:short},{id:'k',at:97,parent:'f',title:short}],FIXED24)
+ const a=L.createCalendarAdapter(FIXED24),widths=L.tableWidths(350,true)
+ const lay=L.tableLayout(treeOf(d),{},0,a,{widths,folded:new Set(['f'])})
+ const c=(id:string)=>lay.byId.get(id)!
+ assert.equal(c('a').height,52);assert.equal(c('b').top,52+6);assert.equal(c('b').height,34)
+ assert.equal(c('p').height,54);assert.equal(c('p').head,c('p').top+18);assert.equal(c('c').top,c('p').top+54+4)
+ assert.equal(c('f').stacked,true);assert.equal(c('f').height,48);assert.equal(c('f').head,c('f').top+20);assert.equal(lay.groups.some(g=>g.id==='f'),false)
+ assert.equal(c('a').lines,2);assert.equal(c('b').lines,1)
+})
+test('ZP-06: zoomLevel thresholds 160 / 40 / 10 / 2.5 with a 15% way back',()=>{
+ assert.deepEqual([200,100,30,5,1].map(d=>L.zoomLevel(d,0)),[0,1,2,3,4])
+ assert.equal(L.zoomLevel(11,3),3);assert.equal(L.zoomLevel(11.6,3),2)
+ assert.equal(L.zoomLevel(45,2),2);assert.equal(L.zoomLevel(46.1,2),1)
+ assert.equal(L.zoomLevel(2.8,4),4);assert.equal(L.zoomLevel(2.9,4),3)
+ assert.equal(L.zoomLevel(Infinity,4),0)
+ assert.equal(L.medianRootGap(treeOf(plan([{id:'a',at:0}],FIXED24))),null)
+ // Gaps 10, 30, 60 between roots (the child is not a root): median 30; an even count takes the lower middle (docs/592 research).
+ assert.equal(L.medianRootGap(treeOf(plan([{id:'a',at:0},{id:'b',at:10},{id:'c',at:40},{id:'d',at:100},{id:'x',at:41,parent:'a'}],FIXED24))),30)
+ assert.equal(L.medianRootGap(treeOf(plan([{id:'a',at:0},{id:'b',at:10},{id:'c',at:40}],FIXED24))),10)
+})
+test('ZP-07: cardScale: 1 at ≥ 160 and at level 0; 0.75 at ≤ 40; ln between, in 0.05 steps',()=>{
+ const near=(a:number,b:number)=>assert.ok(Math.abs(a-b)<1e-9,`${a} ≠ ${b}`)
+ near(L.cardScale(160,1),1);near(L.cardScale(40,2),0.75);near(L.cardScale(100,1),0.9);near(L.cardScale(120,1),0.95);near(L.cardScale(60,1),0.8)
+ near(L.cardScale(1000,0),1);near(L.cardScale(20,0),1)
+ for(const d of [41,55,70,90,130,159])assert.ok(Math.abs(L.cardScale(d,1)*20-Math.round(L.cardScale(d,1)*20))<1e-9,`${d}`)
+})
+test('ZP-08: buildFamilies(scaleCard 0.75) shrinks collapsed cards and family insets; open cards and family gaps stay',()=>{
+ const d=plan([{id:'p',at:0,title:'父事件'},{id:'c',at:2,parent:'p',title:'子事件'},{id:'solo',at:500,title:'独立事件'}],FIXED24)
+ const tree=treeOf(d),scale=1,widthOf=(n:L.TreeNode)=>L.collapsedCardWidth(L.collapsedCardInput(n,[],tree))
+ const piece=(f:L.FamilyBox[],id:string,kind='card')=>f.flatMap(x=>x.pieces).find(p=>p.kind===kind&&p.id===id)!
+ const one=L.buildFamilies(tree.roots,{scale,widthOf}),q=L.buildFamilies(tree.roots,{scale,widthOf,scaleCard:0.75})
+ assert.ok(Math.abs(piece(q,'solo').width-piece(one,'solo').width*0.75)<=1)
+ assert.ok(Math.abs(piece(q,'solo').height-34*0.75)<=1)
+ assert.ok(Math.abs(piece(q,'c').top-(piece(one,'c').top*0.75))<=1,'child row offset scales')
+ const open=L.buildFamilies(tree.roots,{scale,widthOf,scaleCard:0.75,expanded:new Set(['solo']),heights:{solo:200}})
+ assert.equal(piece(open,'solo').width,420);assert.equal(piece(open,'solo').height,200)
+})
+const zTree=()=>treeOf(plan([
+ {id:'n',at:0,importance:1},{id:'m',at:10,importance:2},{id:'k',at:20,importance:3},
+ {id:'p',at:30,importance:1},{id:'p1',at:31,parent:'p',importance:2},{id:'p2',at:32,parent:'p',importance:1},
+ {id:'q',at:40,importance:1},{id:'q1',at:41,parent:'q',importance:1},
+ {id:'r',at:50,importance:2},{id:'r1',at:51,parent:'r',importance:3},
+],FIXED24))
+const noKeep={cards:new Set<string>(),unfolded:new Set<string>(),showAll:false}
+test('ZP-09: level 2: 一般 → points; a 一般 parent with a 重要 child stays a card; kept events and their ancestors are cards; only drawn events count',()=>{
+ const t=zTree(),z=L.zoomPlan(t,2,0.75,noKeep)
+ // q is a point, so its child q1 is not drawn and not counted (code review P1-1).
+ assert.deepEqual([...z.points].sort(),['n','p2','q'])
+ const kept=L.zoomPlan(t,2,0.75,{...noKeep,cards:new Set(['q1'])})
+ assert.deepEqual([...kept.points].sort(),['n','p2'])
+ assert.equal(z.autoFolded.size,0)
+ // A family the user folded draws no children, so none of them is a point.
+ assert.deepEqual([...L.zoomPlan(t,2,0.75,{...noKeep,folded:new Set(['p'])}).points].sort(),['n','q'])
+})
+test('ZP-10: level 4: 重要 too → points; only 关键, ancestors of 关键 and kept events are cards',()=>{
+ const t=zTree(),z=L.zoomPlan(t,4,0.75,{...noKeep,unfolded:new Set(['p','q','r'])})
+ // p (一般, its child only 重要) is a point and hides p1 / p2; r stays a card for its 关键 child r1.
+ assert.deepEqual([...z.points].sort(),['m','n','p','q'])
+})
+test('ZP-11: level 3 folds every card parent except unfolded ones and strict ancestors of kept events; folded descendants are not points',()=>{
+ const t=zTree(),z=L.zoomPlan(t,3,0.75,noKeep)
+ // q is a point (no card to stack), so only the card parents p and r fold.
+ assert.deepEqual([...z.autoFolded].sort(),['p','r'])
+ assert.deepEqual([...z.points].sort(),['n','q'])
+ const u=L.zoomPlan(t,3,0.75,{...noKeep,unfolded:new Set(['q']),cards:new Set(['p2'])})
+ assert.deepEqual([...u.autoFolded].sort(),['r'])
+ assert.deepEqual([...u.points].sort(),['n','q'])
+ // Code review P1-2: a selected parent is not its own ancestor, so it still folds.
+ assert.deepEqual([...L.zoomPlan(t,3,0.75,{...noKeep,cards:new Set(['p'])}).autoFolded].sort(),['p','r'])
+})
+test('ZP-12: showAll empties the points at levels 2–4; below level 2 points, autoFolded, unfolded and showAll are moot',()=>{
+ const t=zTree()
+ for(const lv of [2,3,4] as const){const z=L.zoomPlan(t,lv,0.75,{...noKeep,showAll:true});assert.equal(z.points.size,0);assert.equal(z.autoFolded.size,lv>=3?3:0)}
+ const low=L.zoomPlan(t,1,0.9,{cards:new Set(),unfolded:new Set(['p']),showAll:true})
+ assert.equal(low.points.size,0);assert.equal(low.autoFolded.size,0)
+})
+test('ZP-13: an unchanged plan keeps the previous set objects',()=>{
+ const t=zTree(),a=L.zoomPlan(t,3,0.75,noKeep),b=L.zoomPlan(t,3,0.75,{cards:new Set(),unfolded:new Set(),showAll:false},a)
+ assert.equal(b.points,a.points);assert.equal(b.autoFolded,a.autoFolded)
+ const c=L.zoomPlan(t,2,0.75,noKeep,a)
+ assert.notEqual(c.points,a.points)
+})
+test('ZP-14: buildFamilies(points): a root point is its own family, 18 high, centred on its time; child points share rows without overlap',()=>{
+ const d=plan([{id:'a',at:100,title:'一个时间点'},{id:'p',at:0,title:'父'},{id:'c1',at:1,parent:'p'},{id:'c2',at:1.5,parent:'p'},{id:'c3',at:2,parent:'p'}],FIXED24)
+ const tree=treeOf(d),scale=10,pointWidth=()=>120
+ const fams=L.buildFamilies(tree.roots,{scale,points:new Set(['a','c1','c2']),pointWidth})
+ const fa=fams.find(f=>f.id==='a')!
+ assert.equal(fa.point,true);assert.equal(fa.pieces.length,1)
+ assert.deepEqual([fa.pieces[0].kind,fa.pieces[0].wx,fa.pieces[0].height,fa.pieces[0].width],['point',100*scale-6,18,120])
+ const kids=fams.find(f=>f.id==='p')!.pieces.filter(p=>p.id.startsWith('c'))
+ assert.deepEqual(kids.map(k=>k.kind),['point','point','card'])
+ for(const x of kids)for(const y of kids)if(x!==y&&x.top===y.top)assert.ok(x.wx+x.width<=y.wx||y.wx+y.width<=x.wx,`${x.id}/${y.id} overlap`)
+})
+test('ZP-15: a folded parent is laid out as a leaf: own width, stacked height, no track; a duration bar stays',()=>{
+ const d=plan([{id:'p',at:0,dur:600,title:'父事件'},{id:'c',at:500,parent:'p'}],FIXED24)
+ const tree=treeOf(d),widthOf=(n:L.TreeNode)=>L.collapsedCardWidth(L.collapsedCardInput(n,[],tree))
+ const f=L.buildFamilies(tree.roots,{scale:1,widthOf,folded:new Set(['p']),scaleCard:0.75})[0]
+ const card=f.pieces.find(x=>x.kind==='card')!
+ assert.ok(Math.abs(card.width-widthOf(tree.byId.get('p')!)*0.75)<=1,`${card.width}`)
+ assert.ok(Math.abs(card.height-48*0.75)<=1,`${card.height}`)
+ assert.equal(f.pieces.some(x=>x.kind==='track'),false);assert.equal(f.pieces.some(x=>x.kind==='frame'),false)
+ assert.equal(f.pieces.some(x=>x.kind==='bar'),true)
+})
+test('ZP-16: packFamilies with 6 / 16 / 30 gaps: no overlap and the lowest free slot, also for side-by-side point and card columns',()=>{
+ const gap=(a?:boolean,b?:boolean)=>a&&b?L.POINT_GAP:a||b?L.POINT_CARD_GAP:L.FAMILY_V_GAP
+ assert.ok(L.POINT_HEIGHT+L.POINT_CARD_GAP<=L.CARD_HEIGHT*L.CARD_SCALE_MIN+L.FAMILY_V_GAP)
+ assert.ok(L.POINT_HEIGHT+L.POINT_GAP<=L.CARD_HEIGHT*L.CARD_SCALE_MIN+L.POINT_CARD_GAP)
+ let seed=11;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647
+ const box=(i:number,point:boolean,left:number,w:number,h:number):L.FamilyBox=>({id:`f${i}`,start:left,left,right:left+w,h,point,pieces:[]})
+ const sets:L.FamilyBox[][]=[]
+ for(let k=0;k<20;k++)sets.push(Array.from({length:50},(_,i)=>{const p=rnd()<0.5;return box(i,p,Math.floor(rnd()*900),p?60+rnd()*80:150+rnd()*200,p?18:25.5+rnd()*35)}))
+ // Review round 1 #14: a point column and a card column side by side, close in y, both under a wide card.
+ sets.push([box(0,true,0,100,18),box(1,false,120,100,25.5),box(2,true,0,100,18),box(3,false,120,100,25.5),box(4,false,0,260,34)])
+ for(const fams of sets){
+  const packed=L.packFamilies(fams,null,{scale:1,width:1000})
+  const placed:{f:L.FamilyBox;y:number}[]=[]
+  for(const f of [...fams].sort((a,b)=>a.start-b.start||a.id.localeCompare(b.id))){
+   const y=packed.families.get(f.id)!.y
+   const cols=placed.filter(o=>o.f.left<f.right&&o.f.right>f.left)
+   const ok=(c:number)=>cols.every(o=>!(c<o.y+o.f.h+gap(f.point,o.f.point)&&c+f.h+gap(f.point,o.f.point)>o.y))
+   assert.ok(ok(y),`${f.id} overlaps`)
+   const cands=[L.PLANE_TOP,...cols.map(o=>o.y+o.f.h+gap(f.point,o.f.point))].filter(c=>c>=L.PLANE_TOP).sort((a,b)=>a-b)
+   assert.equal(y,cands.find(ok),`${f.id} lowest slot`)
+   placed.push({f,y})
+  }
+ }
 })

@@ -114,6 +114,12 @@
 .card:has(details[open]) { z-index: 9; }
 .head { display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 6px 0 14px; cursor: pointer; min-width: 0; }
 .open .head { height: 42px; }
+/* docs/592 R1: a collapsed head grows with its title (1 + 7 + 18 / 36 + 7 + 1 = 34 / 52); every other part sits in an
+ * 18px line box on the first title line, so the dot and lead offsets (cardHeadOffset) do not change. */
+.card:not(.open) > .head { align-items: flex-start; height: auto; padding-top: 7px; padding-bottom: 7px; }
+.ln { flex: none; display: flex; align-items: center; height: 18px; }
+.card:not(.open) > .head .ln > .fold, .card:not(.open) > .head .ln > .expand { margin-block: -3px; }
+.card:not(.open) > .head .ln > .menuHost > summary { margin-block: -3px; }
 .dot { flex: none; border-radius: 50%; background: var(--ec); }
 .dot.i1 { width: 6px; height: 6px; }
 .dot.i2 { width: 9px; height: 9px; }
@@ -121,6 +127,15 @@
 .dot.dotWindow { background: transparent; border: 1.5px solid var(--ec); }
 .title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; margin: 0; font: inherit; }
 .title[data-fade] { mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+/* docs/592 §1.1: the layout's line count fixes the title height; no -webkit-line-clamp (it draws an ellipsis). */
+.card:not(.open) .title { height: 18px; line-height: 18px; }
+.card:not(.open) .title[data-lines="2"] { height: 36px; white-space: normal; word-break: break-all; }
+/* A 2-line title still too long: the first line shows in full, the second fades over its last 36px. */
+.card:not(.open) .title[data-lines="2"][data-fade] {
+  mask-image: linear-gradient(#000 0 18px, transparent 18px), linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+  -webkit-mask-image: linear-gradient(#000 0 18px, transparent 18px), linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+  mask-composite: add; -webkit-mask-composite: source-over;
+}
 .open .title { white-space: normal; font-weight: 600; font-size: 14px; }
 .avatars { flex: none; display: inline-flex; align-items: center; padding-left: 4px; }
 .avatars i { display: grid; place-items: center; width: 18px; height: 18px; margin-left: -5px; overflow: hidden; border-radius: 50%; font-style: normal; font-size: 10px; font-weight: 600;
@@ -218,6 +233,8 @@
 .slot.slotHead > .card.groupHead.open { border-radius: 12px; }
 .groupHead .head { height: 36px; }
 .groupHead.open .head { height: 42px; }
+/* docs/592 §1.3: a group header is 0 + 9 + 18 / 36 + 9 = 36 / 54 (no border); its first line stays 18 down. */
+.card.groupHead:not(.open) > .head { padding-top: 9px; padding-bottom: 9px; }
 .groupHead .title { font-weight: 600; }
 .slot.slotHead > .card.groupHead.hot:not(.selected) { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, var(--border)), 0 0 0 2px color-mix(in srgb, var(--ec) 22%, transparent); }
 .slot.slotHead > .card.groupHead.selected { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, transparent), 0 0 0 3px color-mix(in srgb, var(--ec) 14%, transparent); }
@@ -275,7 +292,8 @@
 .tcard:has([aria-expanded="true"]) { z-index: 5; }
 .tcard:has(details[open]) { z-index: 9; }
 .tcard .card { width: 100%; }
-.header > .card { background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 20%, var(--card)), color-mix(in srgb, var(--ec) 6%, var(--card))); }
+/* docs/592: the card sits in a .cardZoom box (code review P1-4). */
+.header > .cardZoom > .card { background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 20%, var(--card)), color-mix(in srgb, var(--ec) 6%, var(--card))); }
 /* docs/585 §4: the stamp stays inside its card's width (ellipsis) and takes the pointer so the title shows the full
  * text; it sits outside the card, so a press on it follows the empty-canvas path (box select / pan). */
 .stamp { position: absolute; left: 4px; bottom: 100%; max-width: calc(100% - 4px); overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
@@ -348,3 +366,52 @@
 }
 /* docs/591: the 显示全部 button next to the filter count. */
 .showAll { height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--input); color: var(--foreground); font-size: 12px; }
+
+/* ---------- docs/592 R5: stacked parent (children folded) ---------- */
+/* Each layer is a copy of the card shifted down 4px and narrowed 8px per side, so exactly 4px of it shows below the
+ * layer above; both stay inside the 8px bottom padding the layout reserves (STACK_PEEK). The lower layer paints behind
+ * the upper one (z-index −2 < −1), so their edges never cross; opaque fills, so no line shows through. */
+.stackWrap { --ec: var(--event-other); position: relative; isolation: isolate; padding-bottom: 8px; }
+.stackWrap::before, .stackWrap::after { content: ""; position: absolute; pointer-events: none; border: 1px solid color-mix(in srgb, var(--ec) 26%, var(--border)); }
+.stackWrap::before { z-index: -1; left: 8px; right: 8px; top: 4px; bottom: 4px; border-radius: 11px; background: color-mix(in srgb, var(--ec) 13%, var(--card)); }
+.stackWrap::after { z-index: -2; left: 16px; right: 16px; top: 8px; bottom: 0; border-radius: 10px; background: color-mix(in srgb, var(--ec) 7%, var(--card)); border-color: color-mix(in srgb, var(--ec) 16%, var(--border)); }
+.card.stack { border-radius: 12px; border-color: color-mix(in srgb, var(--ec) 38%, var(--border));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 22%, var(--card)), color-mix(in srgb, var(--ec) 7%, var(--card))); }
+.card.stack::before { top: 9px; bottom: 9px; }
+/* 1 + 10 + 18 + 10 + 1 = 40: the first line's middle is 20 down (cardHeadOffset). */
+.card.stack:not(.open) > .head { padding-top: 10px; padding-bottom: 10px; }
+.card.stack .title { font-weight: 600; }
+.card.stack:hover { border-color: color-mix(in srgb, var(--ec) 55%, var(--border)); }
+/* Event table: a stacked card is as wide as the group box it replaces. */
+.slot.slotStack { max-width: 940px; }
+.slot.slotStack > .stackWrap > .card { width: 100%; }
+.tcard .stackWrap { width: 100%; }
+
+/* ---------- docs/592 timeline: zoom, time points, hover ---------- */
+/* The card's zoom sits on an inner box; the outer .tcard keeps the layout's left / top / width (zoom would scale them). */
+.cardZoom { position: relative; }
+/* R3 / R7 time point: importance dot in a 12px box centred on the time, muted date and title, the title fading out. */
+.tpoint { position: absolute; z-index: 2; display: flex; align-items: center; gap: 5px; height: 18px; white-space: nowrap; font-size: 11px; line-height: 18px;
+  color: var(--muted-foreground); cursor: pointer; transition: opacity 0.15s; }
+.tpoint .pdot { flex: none; display: grid; place-items: center; width: 12px; height: 12px; }
+.tpoint .dot { opacity: 0.85; }
+.tpoint > time { flex: none; padding: 0 5px; border-radius: 5px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); transition: color 0.15s, background 0.15s; }
+.tpoint > span[data-point-title] { max-width: 94px; overflow: hidden; color: var(--muted-foreground); }
+.tpoint > span[data-point-title][data-fade] { mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+.tpoint > b { font-weight: 400; font-size: 10px; color: var(--muted-foreground); opacity: 0.8; }
+.tpoint.dim { opacity: 0.3; }
+/* R6 hover: the date reads like a hot rail label (white on the type colour, docs/588). */
+.tpoint.hot .dot { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 30%, transparent), 0 0 8px var(--ec); }
+.tpoint.hot > time { color: #fff; background: var(--ec); }
+.tpoint.hot > span[data-point-title] { color: var(--foreground); }
+.stamp { border-radius: 5px; transition: color 0.15s, background 0.15s; }
+.tcard[data-hot] .stamp { color: #fff; background: var(--ec); padding: 0 6px 0 2px; }
+.tcard[data-hot] .stamp::before { background: #fff; }
+.ruler .rulerHot { position: absolute; top: 3px; z-index: 2; transform: translateX(-50%); padding: 1px 8px; border-radius: 9px; font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: #fff; background: var(--ec); pointer-events: none; }
+.ruler .rulerHot::after { display: none; }
+.hoverGuide { position: absolute; top: 0; bottom: 0; z-index: 1; width: 0; border-left: 1px dashed color-mix(in srgb, var(--ec) 60%, transparent); pointer-events: none; }
+/* Status-line note of the zoom levels (docs/592 §2.4, approved design .status .zh). */
+.zoomNote { display: inline-flex; align-items: center; gap: 6px; padding: 1px 4px 1px 9px; border-radius: 11px; border: 1px dashed var(--input); }
+.zoomNote button { height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--input); color: var(--foreground); font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .tpoint, .tpoint > time, .stamp { transition: none; } }

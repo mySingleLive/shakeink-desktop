@@ -40,3 +40,29 @@ export function createViewportStore(initial:{start:number;span:number;y?:number}
   takeCenterRequest(){const c=center;center=false;return c},
  }
 }
+
+/** docs/592 §2.4: the status-line note of the timeline zoom levels. One store per panel (like the viewport store):
+ * EventTimeline writes it in a layout effect and registers the button actions; the status line subscribes, so
+ * PlanningWorkspace never re-renders on a zoom step. Equal notes notify nobody. */
+export interface ZoomNote {readonly count:number;readonly key:boolean;readonly showAll:boolean}
+export interface ZoomNoteStore {
+ subscribe(listener:()=>void):()=>void
+ getSnapshot():ZoomNote|null
+ set(note:ZoomNote|null):void
+ /** The current timeline's 显示为卡片 / 改回时间点 handler; null when no timeline is mounted. */
+ actions:{toggleShowAll():void}|null
+}
+export function createZoomNoteStore():ZoomNoteStore{
+ let current:ZoomNote|null=null
+ const listeners=new Set<()=>void>()
+ return {
+  subscribe(listener){listeners.add(listener);return()=>{listeners.delete(listener)}},
+  getSnapshot:()=>current,
+  set(note){
+   if(note===current||(note&&current&&note.count===current.count&&note.key===current.key&&note.showAll===current.showAll))return
+   current=note?Object.freeze({...note}):null
+   for(const listener of [...listeners])listener()
+  },
+  actions:null,
+ }
+}

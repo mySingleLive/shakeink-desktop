@@ -109,11 +109,13 @@ test("LF-B4: the timeline view leaves out hidden types and importance levels", (
   await expect(page.locator('[data-worldline-panel] [data-event-card][aria-label="议员在宴会上遇刺未遂"]')).toHaveCount(0)
 }))
 
-test("WU-35: no ellipsis anywhere; overflowing titles fade with a mask", () => withWorldline(browser, f60(), async page => {
+test("WU-35: no ellipsis anywhere; docs/592 R1: titles too long for one line wrap to two, never line-clamped", () => withWorldline(browser, f60(), async page => {
   await table(page)
   assert.equal(await page.evaluate(() => [...document.querySelectorAll("[data-worldline-panel] *")].filter(e => getComputedStyle(e).textOverflow === "ellipsis").length), 0)
   await page.setViewportSize({ width: 900, height: 1000 })
-  await expect.poll(() => page.locator("[data-card-title][data-fade]").count()).toBeGreaterThan(0)
+  // F60's titles that faded at 900px before docs/592 all fit two lines, so they wrap instead of fading.
+  await expect.poll(() => page.locator('[data-event-table] [data-event-card][data-title-lines="2"]').count()).toBeGreaterThan(0)
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll("[data-card-title]")].filter(e => !["none", ""].includes(getComputedStyle(e).webkitLineClamp)).length), 0)
 }))
 
 test("WU-36: collapsed cards show at most 4 avatars then +N, with no extra height", () => withWorldline(browser, f60(), async page => {
@@ -130,7 +132,10 @@ test("WU-41/WU-42/WU-48: parents group their children; folding hides them and sh
   const group = page.locator('[data-event-group][data-parent-title="港口商会签下秘密契约"]')
   await expect(group.locator("[data-event-card]")).toHaveCount(6)
   await group.locator("[data-fold]").first().click()
-  await expect(group.locator("[data-event-card]")).toHaveCount(1)
+  // docs/592 R5: folded, the parent is a stacked card and its group box (with the children) is gone.
+  await expect(group).toHaveCount(0)
+  await expect(page.locator('[data-event-table] [data-event-card][aria-label="港口商会签下秘密契约"]')).toHaveAttribute("data-stacked", "")
+  await expect(page.locator('[data-event-table] [data-event-card][aria-label^="港口商会签下秘密契约·"]')).toHaveCount(0)
   await expect(page.locator('[role="treeitem"][aria-label^="港口商会签下秘密契约"]')).toHaveAttribute("aria-expanded", "false")
 }))
 

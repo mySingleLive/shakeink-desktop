@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import type { Browser, Page } from "playwright-core"
 import { expect } from "@playwright/test"
-import { launch, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
+import { launch, revealTimelineCard, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
 import { f60 } from "../helpers/worldline-f60"
 
 /* docs/581 §3.5–§3.8: card widths, time drags, periods, deep links, panels, motion and contrast, forks, time bases and
@@ -31,6 +31,8 @@ test("WU-36b: card widths in the table and on the timeline", () => withWorldline
   // docs/583: an open card collapses after the double-click interval.
   await expect(tableCard(page, "学徒在旧书中发现星图")).toHaveAttribute("aria-expanded", "false")
   await tab(page, "时间线")
+  // docs/592 R1: two-line titles make the families taller; bring the card into the lane first.
+  await revealTimelineCard(page, tlCard(page, "学徒在旧书中发现星图"))
   // docs/583 R1: collapsed widths follow the title within [150, 340] (root) / [150, 300] (child).
   const root = await w(tlCard(page, "学徒在旧书中发现星图")), child = await w(tlCard(page, "港口商会签下秘密契约·先遣人员抵达现场"))
   assert.ok(root >= 150 && root <= 340, `root ${root}`)

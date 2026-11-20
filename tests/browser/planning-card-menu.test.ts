@@ -55,6 +55,7 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {WorldlinePanel,NarrativePanel} from './src/components/content/planning/PlanningWorkspace';
+import {TimelineZoomLevelsContext} from './src/components/content/planning/worldline/EventTimeline';
 import {useChatStore} from './src/stores/chat';
 globalThis.mountPlanning=(mode,fixture)=>{
  window.desktop={};
@@ -66,7 +67,7 @@ globalThis.mountPlanning=(mode,fixture)=>{
  };
  const client=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity},mutations:{retry:false}}});
  const root=createRoot(document.getElementById('app'));
- flushSync(()=>root.render(<QueryClientProvider client={client}>{mode==='world'?<WorldlinePanel novelId='${NOVEL}'/>:<NarrativePanel novelId='${NOVEL}'/>}</QueryClientProvider>));
+ flushSync(()=>root.render(<QueryClientProvider client={client}><TimelineZoomLevelsContext.Provider value={false}>{mode==='world'?<WorldlinePanel novelId='${NOVEL}'/>:<NarrativePanel novelId='${NOVEL}'/>}</TimelineZoomLevelsContext.Provider></QueryClientProvider>));
  globalThis.disposePlanning=()=>{flushSync(()=>root.unmount());client.clear()};
  globalThis.chatDraft=()=>useChatStore.getState().draft;
 };

@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import type { Browser, Page } from "playwright-core"
 import { expect } from "@playwright/test"
-import { launch, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
+import { launch, revealTimelineCard, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
 import { f60 } from "../helpers/worldline-f60"
 import { f885 } from "../helpers/worldline-f885"
 
@@ -92,6 +92,8 @@ test("IC-11: the middle button drags 3000px down and right without a bound; drag
 
 test("IC-11b: the editor is revealed by moving y; focusing its fields never scrolls the lane", () => withWorldline(browser, f60(), async page => {
   await openTimeline(page)
+  // docs/592 R1: two-line titles make the families taller; bring the card into the lane first.
+  await revealTimelineCard(page, card(page, "学徒在旧书中发现星图"))
   await card(page, "学徒在旧书中发现星图").locator("h3").dblclick()
   const save = page.getByRole("button", { name: "保存事件", exact: true })
   await expect(save).toBeVisible()
@@ -149,6 +151,8 @@ test("IC-13: Space + left drag pans; Space in the search box types; Space on a f
 
 test("IC-14: middle or Space + left on a card title or a period pans and never changes time", () => withWorldline(browser, f60(), async page => {
   await openTimeline(page)
+  // docs/592 R1: two-line titles make the families taller; bring the card into the lane first.
+  await revealTimelineCard(page, card(page, "学徒在旧书中发现星图"))
   const t = await center(page, "学徒在旧书中发现星图")
   let s = await viewStart(page)
   await middleDrag(page, t.x, t.y, -160, 0, 6)

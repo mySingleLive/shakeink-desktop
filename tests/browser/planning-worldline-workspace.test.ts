@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import type { Browser, Page } from "playwright-core"
 import { expect } from "@playwright/test"
-import { launch, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
+import { launch, revealTimelineCard, withWorldline, type WorldlineView } from "../helpers/worldline-browser-fixture"
 import { f60 } from "../helpers/worldline-f60"
 
 /* docs/581 §3 workspace, toolbar, tree, search, periods and view memory on the real WorldlinePanel. Fixture F60 and
@@ -91,7 +91,8 @@ for (const width of [1440, 1280, 1160, 1024, 900]) {
 test("WU-39c: pressing the title and moving 3px is a click (select); 10px is a time drag that keeps the expanded state", () => withWorldline(browser, f60(), async page => {
   await tab(page, "时间线")
   const c = tlCard(page, "学徒在旧书中发现星图")
-  await c.scrollIntoViewIfNeeded()
+  // docs/592 R1: two-line titles make the families taller; bring the card into the lane first.
+  await revealTimelineCard(page, c)
   const b = (await c.locator("h3").boundingBox())!
   await page.mouse.move(b.x + 20, b.y + b.height / 2); await page.mouse.down(); await page.mouse.move(b.x + 23, b.y + b.height / 2); await page.mouse.up()
   // docs/584: on the timeline a click selects; expanding is the head button.
@@ -410,6 +411,8 @@ test("WU-79: a child outside its parent's range shows the range error; the windo
 const timelineCard = (page: Page, title: string) => page.locator(`[data-timeline-plane] [data-event-card][aria-label="${title}"]`)
 test("LF-B5: hidden events stay selected but are left out of the count and of selection actions", () => withWorldline(browser, f60(), async page => {
   await expect(timelineCard(page, "学徒在旧书中发现星图")).toHaveCount(1)
+  // docs/592 R1: two-line titles make the families taller; bring the card into the lane first.
+  await revealTimelineCard(page, timelineCard(page, "学徒在旧书中发现星图"))
   await timelineCard(page, "学徒在旧书中发现星图").locator("h3").click()
   await timelineCard(page, "巡夜队封锁北区码头").locator("h3").click({ modifiers: ["Meta"] })
   await expect(page.locator("[data-selection-count]")).toHaveText("已选 2 个事件")

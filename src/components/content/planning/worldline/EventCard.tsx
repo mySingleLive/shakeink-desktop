@@ -83,14 +83,15 @@ export function useBodyMarks<T extends HTMLElement>(terms: readonly string[], de
   return ref;
 }
 
-/** Marks overflowing titles so CSS fades their last 36px (577 §11, WU-35). */
+/** Marks overflowing titles so CSS fades their last 36px (577 §11, WU-35); docs/592: a 2-line title that still overflows
+ * its fixed 36px fades the end of its second line. */
 export function useFade<T extends HTMLElement>(dep: unknown) {
   const ref = useRef<T>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const check = () => {
-      if (el.scrollWidth > el.clientWidth + 1) el.setAttribute("data-fade", "");
+      if (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) el.setAttribute("data-fade", "");
       else el.removeAttribute("data-fade");
     };
     // No synchronous check: reading scrollWidth in a layout effect forces a reflow per card (≈ 870 ms for the first
@@ -122,6 +123,10 @@ export interface EventCardProps {
   groupHead?: boolean;
   /** docs/584: on the timeline, the number of selected events when this card is one of ≥ 2 (batch menu items). */
   selectionSize?: number;
+  /** docs/592 R1: collapsed title lines decided by the layout (CSS fixes the title height to them). */
+  titleLines?: 1 | 2;
+  /** docs/592 R5: a parent whose children are folded: drawn as a stacked card. */
+  stacked?: boolean;
   onFold?(id: string): void;
 }
 
@@ -130,17 +135,21 @@ export interface EventCardProps {
 export const EventCard = memo(function EventCard(p: EventCardProps) {
   const ctx = useContext(WorldlineCardContext)!;
   const e = p.event;
-  const titleRef = useFade<HTMLHeadingElement>(`${e.title}/${p.expanded}`);
+  const lines = p.expanded || p.editing ? 1 : (p.titleLines ?? 1);
+  const stacked = !!p.stacked && !p.expanded && !p.editing;
+  const titleRef = useFade<HTMLHeadingElement>(`${e.title}/${p.expanded}/${lines}`);
   const press = useRef<{ x: number; y: number } | null>(null);
   const factRef = useBodyMarks<HTMLDivElement>(ctx.searchTerms, `${e.fact}/${p.expanded}/${p.editing}`);
   const frozen = ctx.frozen.has(e.id);
   const people = e.people.map((id) => ctx.characters.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c);
   const shown = people.slice(0, p.maxAvatars);
   const time = timeText(e, ctx);
-  return (
+  const card = (
     <article
       data-event-card=""
       data-event-id={e.id}
+      data-title-lines={lines}
+      {...(stacked ? { "data-stacked": "" } : {})}
       data-importance={e.importance}
       {...(p.placed ? { "data-placed": "" } : {})}
       {...(p.selected ? { "data-selected": "" } : {})}
@@ -148,7 +157,7 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
       {...(p.hot ? { "data-hot": "" } : {})}
       aria-label={e.title}
       aria-expanded={p.expanded || p.editing}
-      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hot ? s.hot : ""} ${p.hit ? s.hit : ""} ${p.groupHead ? s.groupHead : ""}`}
+      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hot ? s.hot : ""} ${p.hit ? s.hit : ""} ${p.groupHead ? s.groupHead : ""} ${stacked ? s.stack : ""}`}
       style={{ "--ec": `var(${CATEGORY_VAR[e.category]})` } as React.CSSProperties}
       onPointerDownCapture={(ev) => { press.current = { x: ev.clientX, y: ev.clientY }; }}
       onClick={(ev) => {
@@ -164,7 +173,7 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
     >
       <div className={s.head}>
         {p.childCount > 0 && p.onFold && (
-          <button
+          <span className={s.ln}><button
             type="button"
             data-fold=""
             className={`${s.fold} ${p.folded ? s.foldClosed : ""}`}
@@ -173,12 +182,13 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             onClick={() => p.onFold!(e.id)}
           >
             <ChevronDown size={14} strokeWidth={2.25} aria-hidden />
-          </button>
+          </button></span>
         )}
-        <span className={`${s.dot} ${s[`i${e.importance}`]} ${e.time.kind === "window" ? s.dotWindow : ""}`} aria-hidden />
+        <span className={s.ln}><span className={`${s.dot} ${s[`i${e.importance}`]} ${e.time.kind === "window" ? s.dotWindow : ""}`} aria-hidden /></span>
         <h3
           ref={titleRef}
           data-card-title=""
+          data-lines={lines}
           className={s.title}
           title={e.title}
           onPointerDown={(ev) => ev.button === 0 && !frozen && !ctx.readonly && ctx.onStartTimeDrag(ev, e.id)}
@@ -186,20 +196,20 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
           <Highlight text={e.title} terms={ctx.searchTerms} />
         </h3>
         {!p.expanded && !p.editing && shown.length > 0 && (
-          <span data-avatars="" className={s.avatars} title={people.map((c) => c.name).join("、")}>
+          <span className={s.ln}><span data-avatars="" className={s.avatars} title={people.map((c) => c.name).join("、")}>
             {shown.map((c) => (
               <i key={c.id}>{c.avatarUrl ? <img src={c.avatarUrl} alt="" /> : c.name.slice(0, 1)}</i>
             ))}
             {people.length > shown.length && <i className={s.more}>+{people.length - shown.length}</i>}
-          </span>
+          </span></span>
         )}
         {p.childCount > 0 && (
-          <span className={s.kids} title={`${p.descendantCount} 个子事件`}>
+          <span className={s.ln}><span className={s.kids} title={`${p.descendantCount} 个子事件`}>
             {p.expanded ? `${p.childCount} 个子事件` : `▸ ${p.descendantCount}`}
-          </span>
+          </span></span>
         )}
         {p.variant === "timeline" && (
-          <button
+          <span className={s.ln}><button
             type="button"
             data-card-expand=""
             className={s.expand}
@@ -208,9 +218,9 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             onClick={() => ctx.onExpand(e.id)}
           >
             <ChevronDown size={16} strokeWidth={2} aria-hidden className={p.expanded ? s.expandUp : undefined} />
-          </button>
+          </button></span>
         )}
-        <details data-card-menu="" className={s.menuHost} onClick={(ev) => {
+        <span className={s.ln}><details data-card-menu="" className={s.menuHost} onClick={(ev) => {
           if ((ev.target as Element).closest("button")) (ev.currentTarget as HTMLDetailsElement).open = false;
         }}>
           <summary aria-label={`${e.title}更多操作`}>
@@ -228,7 +238,7 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             {(p.selectionSize ?? 0) >= 2 && <button disabled={ctx.readonly || ctx.hasDraft || frozen} onClick={() => ctx.onMenu("deleteSelection", e.id)}>删除所选 {p.selectionSize} 个事件</button>}
             <button disabled={ctx.readonly} onClick={() => ctx.onMenu("fork", e.id)}>从此分叉</button>
           </div>
-        </details>
+        </details></span>
       </div>
       {p.editing ? (
         <EventEditorSlot />
@@ -266,6 +276,8 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
       )}
     </article>
   );
+  // docs/592 R5: two layers peek out below the stacked card (the wrapper's ::before / ::after, isolation keeps them under it).
+  return stacked ? <div data-stack-wrap="" className={s.stackWrap} style={{ "--ec": `var(${CATEGORY_VAR[e.category]})` } as React.CSSProperties}>{card}</div> : card;
 });
 
 /** Card time row, same text as the old card (WT-55, EC-73): the start cut to the event precision, the source time words,

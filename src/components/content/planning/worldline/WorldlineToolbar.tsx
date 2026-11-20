@@ -110,7 +110,7 @@ export function WorldlineToolbar(p: {
 const IMPORTANCE_KEY = [[1, "一般", 6], [2, "重要", 9], [3, "关键", 13]] as const;
 /** docs/577 §8–§9, docs/591: type legend with counts (click hides, double-click solos) and the importance key (click
  * hides). Hidden types and levels are left out of the views, not faded. */
-export function WorldlineLegend({ counts, hidden, onToggle, onSolo, hiddenImportance = new Set(), onToggleImportance, shown, onShowAll, range, total, selected = 0 }: {
+export function WorldlineLegend({ counts, hidden, onToggle, onSolo, hiddenImportance = new Set(), onToggleImportance, shown, onShowAll, range, total, selected = 0, zoomNote }: {
   counts: Record<EventCategory, number>;
   hidden: ReadonlySet<EventCategory>;
   onToggle(c: EventCategory): void;
@@ -124,6 +124,8 @@ export function WorldlineLegend({ counts, hidden, onToggle, onSolo, hiddenImport
   total: number;
   /** docs/584: the timeline multi-selection size (shown from 2). */
   selected?: number;
+  /** docs/592 §2.4: the timeline's zoom-level note (subscribes to its own store). */
+  zoomNote?: React.ReactNode;
 }) {
   renderProbe("WorldlineLegend");
   return (
@@ -134,6 +136,7 @@ export function WorldlineLegend({ counts, hidden, onToggle, onSolo, hiddenImport
         {shown === undefined ? `${total} 件事件` : `显示 ${shown} / 共 ${total} 件事件`}
       </span>
       {shown !== undefined && onShowAll && <button type="button" data-show-all="" className={s.showAll} onClick={onShowAll}>显示全部</button>}
+      {zoomNote}
       {selected >= 2 && <span data-selection-count="">已选 {selected} 个事件</span>}
       <span className={s.legend}>
         <span role="group" aria-label="类型筛选（点击隐藏或显示，双击只看这一类）" className={s.types}>

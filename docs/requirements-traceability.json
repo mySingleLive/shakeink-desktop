@@ -5436,6 +5436,46 @@
       "图例计数仍按全部事件计；状态栏显示“显示 X / 共 Y”",
       "编辑、保存或定位到被筛掉的事件时，自动恢复该事件及祖先的类型与重要度并提示"
     ]
+  },
+  {
+    "id": "WL-592",
+    "requirement": "世界线收起卡片标题最多两行；时间线滚轮缩小时卡片随之缩小（最小 0.75），一般事件改为时间点（重要度圆点 + 日期 + 渐隐短标题，灰色、无卡片），再缩小父事件自动折叠，缩到最小只留关键事件为卡片；事件表与时间线中子事件折叠的父事件画成四角圆角、下方两层的层叠卡；时间线悬停卡片或时间点时其日期与标尺同一时间高亮（用户 2026-11-20，设计稿审核三轮后批准）",
+    "source": [
+      "docs/592-worldline-card-zoom-stack-research.md",
+      "design/worldline-card-zoom/index.html",
+      "docs/592-worldline-card-zoom-stack-plan.md",
+      "docs/592-worldline-card-zoom-stack-plan-review.md",
+      "docs/592-worldline-card-zoom-stack-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/lib/planning/worldline-viewport.ts",
+      "src/components/content/planning/PlanningWorkspace.tsx",
+      "src/components/content/planning/worldline/EventTimeline.tsx",
+      "src/components/content/planning/worldline/EventCard.tsx",
+      "src/components/content/planning/worldline/EventPoint.tsx",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/WorldlineToolbar.tsx",
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "592-ZP-01..ZP-16、ZP-01b（tests/unit/worldline-layout.test.ts）",
+      "592-ZB-01..ZB-27、ZB-05b（tests/browser/planning-worldline-card-zoom.test.ts，夹具 zoomView / F60 / F885）",
+      "WU-35、WU-41/42/48、RM-B5、WU-19j/RM-01/RM-01b（改，需求导致）",
+      "592-E8（真实目标 e8 + fade-592）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "浏览器夹具（内存 API，非真实目标）：tests/browser/planning-*.test.ts 191 项，187 通过，4 项失败为改动前基线已有的 CM-02/03/06/10；tests/unit/worldline-layout.test.ts 86/86；npm test 5093 项中 44 项失败与 docs/587 记录的基线逐条相同；tsc 与 npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/592/e8（隔离根、构建版应用、LOTM-587-wg-r1 1061 个事件、无模型调用、只滚轮/悬停/读 DOM）：复位视窗约 1178 年为第 5 级，21 张卡片 + 74 个时间点 + 21 张层叠卡，状态行“313 个一般和重要事件显示为时间点”；逐级放大 46 步无“视图内没有事件”；第 3 级起状态行“164 个一般事件…”，第 2 级“384 个…”，d > 46 后无时间点；卡片系数 0.75→1；悬停 19 个目标帧间隔 p50 16.7 / p95 18.3 / 最大 18.7 ms，标尺胶囊与竖线出现；窄面板事件表 25 张两行卡，折叠后出现层叠卡；作品版本前后均为 1",
+      "fade-592.json：真实字体下一行估算被渐隐的卡片 0 张（另 19 张为构建范围边缘被裁短的卡片，与估算无关）"
+    ],
+    "verificationLimits": [
+      "现有时间线浏览器用例在测试夹具中关闭缩放分级运行（TimelineZoomLevelsContext=false，docs/592 §7.1），不覆盖分级打开时的行为；分级打开时由 ZB-* 与真实目标 e8 覆盖",
+      "父事件不能被拖到其子事件之外（规划数据校验，非本次范围）；ZB-12 的保存检查在叶子事件上进行",
+      "数值阈值（d = 160 / 40 / 10 / 2.5 px、最小系数 0.75）按设计稿批准值，未做用户可调设置"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

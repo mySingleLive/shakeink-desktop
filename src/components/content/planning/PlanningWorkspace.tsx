@@ -61,8 +61,8 @@ import { Button } from "@/components/ui/button";
 import { WorldlineHeader, type WorldlineSaveState } from "./worldline/WorldlineHeader";
 import { EventCard, EventEditorContext, WorldlineCardContext, type WorldlineCardContextValue } from "./worldline/EventCard";
 import { EventTable, type RailMode } from "./worldline/EventTable";
-import { EventTimeline, TimelineTreeNav, ViewportRange, ViewportValue } from "./worldline/EventTimeline";
-import { createViewportStore, type ViewportStore } from "@/lib/planning/worldline-viewport";
+import { EventTimeline, TimelineTreeNav, TimelineZoomNoteContext, ViewportRange, ViewportValue, ZoomNoteLine } from "./worldline/EventTimeline";
+import { createViewportStore, createZoomNoteStore, type ViewportStore, type ZoomNoteStore } from "@/lib/planning/worldline-viewport";
 import { renderProbe } from "@/lib/planning/render-probe";
 import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
 import { EventTreeNav, TreeResizer } from "./worldline/EventTree";
@@ -195,6 +195,9 @@ function PlanningWorkspace({
   renderProbe("PlanningWorkspace");
   const viewport = useRef<ViewportStore>(null!);
   viewport.current ??= createViewportStore({ start: 0, span: 240 });
+  // docs/592 §2.4: one zoom-note store per panel, like the viewport store.
+  const zoomNote = useRef<ZoomNoteStore>(null!);
+  zoomNote.current ??= createZoomNoteStore();
   type WindowValue = { start: number; span: number; y: number };
   // docs/584 R1: y (the plane's vertical offset) lives in the store with start and span.
   const setWindowRange = useCallback((next: WindowValue | ((v: WindowValue) => WindowValue)) => {
@@ -2513,7 +2516,7 @@ function PlanningWorkspace({
       }));
     };
     return (
-      <WorldlineCardContext.Provider value={wCardContext}>
+      <WorldlineCardContext.Provider value={wCardContext}><TimelineZoomNoteContext.Provider value={zoomNote.current}>
       <EventEditorContext.Provider value={renderEventEditor}>
       <div ref={worldPanel} data-worldline-root="" className={wl.root}>
         {/* docs/577 §1, §14: one-row toolbar; every action of the old three rows is in it or under 更多. */}
@@ -2645,6 +2648,7 @@ function PlanningWorkspace({
             selected={table ? 0 : shownSelection.size}
             shown={wFiltered ? wViewEvents.length : undefined}
             onShowAll={showAllTypes}
+            zoomNote={table ? undefined : <ZoomNoteLine store={zoomNote.current} />}
           />
         )}
         {fork && (
@@ -2937,7 +2941,7 @@ function PlanningWorkspace({
         )}
       </div>
       </EventEditorContext.Provider>
-      </WorldlineCardContext.Provider>
+      </TimelineZoomNoteContext.Provider></WorldlineCardContext.Provider>
     );
   }
   async function submitDialog(e: FormEvent<HTMLFormElement>) {
