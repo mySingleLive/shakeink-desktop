@@ -1296,3 +1296,49 @@ test('MM-03: no roots, one segment at one time, and 30 segments in 30px give fin
  // Every segment is at the equal-share minimum here (the all-fixed branch): widths are equal.
  const w0=m.segments[0].width;assert.ok(m.segments.every(g=>Math.abs(g.width-w0)<1e-9),'equal shares')
 })
+
+/* docs/597 AO-01 … AO-06: auto-open fit on the all-open trial layout. Scale 1 px/h, so hours are px. */
+const aoStep=(events:Ev[],open?:string[],view={start:0,span:2000})=>{
+ const tree=treeOf(plan(events,FIXED24))
+ const step=L.timelineStep(L.emptyTimeline(),{tree,view,width:2000,expanded:new Set(open??[...tree.byId.keys()])})
+ return {tree,step,view:{dx:step.translateX,dy:0,w:2000,h:1000}}
+}
+test('AO-01: leaves 444px apart fit at gap 24 when open (420 wide); 443px apart do not',()=>{
+ for(const [sp,fit] of [[444,true],[443,false]] as const){
+  const {tree,step,view}=aoStep([0,1,2].map(i=>({id:`a${i}`,at:100+i*sp})))
+  assert.equal(step.elements.filter(e=>e.kind==='card').every(e=>e.width===420),true)
+  assert.equal(L.autoOpenFits(step.elements,tree,view,L.AUTO_OPEN_GAP),fit,`spacing ${sp}`)
+ }
+})
+test('AO-02: a card crossing in x but below the view does not count',()=>{
+ const {tree,step}=aoStep([{id:'a',at:100},{id:'b',at:300}])
+ const b=step.elements.find(e=>e.id==='b'&&e.kind==='card')!,a=step.elements.find(e=>e.id==='a'&&e.kind==='card')!
+ assert.ok(b.top>a.top+a.height,'b is packed below a')
+ assert.equal(L.autoOpenFits(step.elements,tree,{dx:step.translateX,dy:0,w:2000,h:b.top-1},L.AUTO_OPEN_GAP),true)
+ assert.equal(L.autoOpenFits(step.elements,tree,{dx:step.translateX,dy:0,w:2000,h:1000},L.AUTO_OPEN_GAP),false)
+})
+test('AO-03: one card in view fits; none in view gives null',()=>{
+ const {tree,step,view}=aoStep([{id:'a',at:100}])
+ assert.equal(L.autoOpenFits(step.elements,tree,view,L.AUTO_OPEN_GAP),true)
+ assert.equal(L.autoOpenFits(step.elements,tree,{...view,dx:view.dx+5000},L.AUTO_OPEN_GAP),null)
+})
+test('AO-04: a parent is not compared with its children; two children 300px apart do not fit, 500px apart do',()=>{
+ for(const [sp,fit] of [[300,false],[500,true]] as const){
+  const {tree,step,view}=aoStep([{id:'p',at:100,dur:1200},{id:'k0',at:150,parent:'p'},{id:'k1',at:150+sp,parent:'p'}])
+  assert.equal(L.autoOpenFits(step.elements,tree,view,L.AUTO_OPEN_GAP),fit,`children ${sp} apart`)
+ }
+})
+test('AO-05: AUTO_OPEN_KEEP is the packer row gap: 440px apart fit and share a row, 439px do not',()=>{
+ assert.equal(L.AUTO_OPEN_KEEP,L.FAMILY_PAD_LEFT+L.FAMILY_H_GAP)
+ for(const [sp,fit] of [[440,true],[439,false]] as const){
+  const {tree,step,view}=aoStep([{id:'a',at:100},{id:'b',at:100+sp}])
+  assert.equal(L.autoOpenFits(step.elements,tree,view,L.AUTO_OPEN_KEEP),fit,`spacing ${sp}`)
+  const [ca,cb]=['a','b'].map(id=>step.elements.find(e=>e.id===id&&e.kind==='card')!)
+  assert.equal(ca.top===cb.top,fit,`same row at ${sp}`)
+ }
+})
+test('AO-06: frames, tracks and bars do not count; a long bar under a lone card still fits',()=>{
+ const {tree,step,view}=aoStep([{id:'a',at:100,dur:5000},{id:'b',at:2000}])
+ assert.ok(step.elements.some(e=>e.kind==='bar'))
+ assert.equal(L.autoOpenFits(step.elements,tree,{...view,w:1500},L.AUTO_OPEN_GAP),true)
+})

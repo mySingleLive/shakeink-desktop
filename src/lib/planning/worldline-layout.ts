@@ -1712,6 +1712,37 @@ export function timelineStep(state: TimelineState, input: TimelineInput): Timeli
   };
 }
 
+// ---------- docs/597: auto-open at level 0 ----------
+/** Least horizontal gap between open cards in view to start auto-opening. */
+export const AUTO_OPEN_GAP = 24;
+/** Gap that keeps auto-open on (hysteresis): the packer's same-row condition (family box 6 left + 14 right). */
+export const AUTO_OPEN_KEEP = FAMILY_PAD_LEFT + FAMILY_H_GAP;
+/** docs/597 §6.2: on the all-open trial layout, true when every two cards in view that are not ancestor and descendant
+ * are at least `gap` apart in x; null when no card is in view. `view` maps an element to lane px: x = left + dx,
+ * y = top + dy, inside [0, w] × [0, h]. */
+export function autoOpenFits(elements: readonly PlaneElement[], tree: EventTree, view: { dx: number; dy: number; w: number; h: number }, gap: number): boolean | null {
+  const v = elements.filter((e) => {
+    if (e.kind !== "card") return false;
+    const x = e.left + view.dx, y = e.top + view.dy;
+    return x < view.w && x + e.width > 0 && y < view.h && y + e.height > 0;
+  });
+  if (!v.length) return null;
+  const related = (a: string, b: string) => {
+    for (let n = tree.byId.get(a)?.parent; n; n = tree.byId.get(n)?.parent) if (n === b) return true;
+    for (let n = tree.byId.get(b)?.parent; n; n = tree.byId.get(n)?.parent) if (n === a) return true;
+    return false;
+  };
+  const s = [...v].sort((a, b) => a.left - b.left);
+  for (let i = 0; i < s.length; i++)
+    for (let j = i + 1; j < s.length; j++) {
+      const a = s[i], b = s[j];
+      // Sorted by left: once b clears a, every later card does too.
+      if (a.left + a.width + gap <= b.left) break;
+      if (!related(a.id, b.id)) return false;
+    }
+  return true;
+}
+
 // ---------- minimap (§5.3) ----------
 export interface MinimapSegment {
   index: number;

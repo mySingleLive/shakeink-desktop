@@ -5,6 +5,7 @@ import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { resolveTime, type PlanningData, type PlanningEvent } from "@/lib/planning/domain";
 import { CATEGORY_VAR, type CalendarAdapter } from "@/lib/planning/worldline-layout";
 import s from "./worldline.module.css";
+import { renderProbe } from "@/lib/planning/render-probe";
 
 export const IMPORTANCE_LABELS = ["一般", "重要", "关键"] as const;
 
@@ -133,6 +134,7 @@ export interface EventCardProps {
 /** One event card, collapsed (34px pill) or expanded (577 §2). The 「…」 menu keeps the `details[data-card-menu]`
  * structure so the existing CM tests and outside-click/Escape handling keep working (581 §7). */
 export const EventCard = memo(function EventCard(p: EventCardProps) {
+  renderProbe("EventCard");
   const ctx = useContext(WorldlineCardContext)!;
   const e = p.event;
   const lines = p.expanded || p.editing ? 1 : (p.titleLines ?? 1);

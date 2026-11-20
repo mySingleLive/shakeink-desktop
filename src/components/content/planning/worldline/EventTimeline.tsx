@@ -1,6 +1,9 @@
 "use client";
 import { createContext, useContext, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
+  AUTO_OPEN_GAP,
+  AUTO_OPEN_KEEP,
+  autoOpenFits,
   CATEGORY_VAR,
   cardScale,
   CLIP_END_LABEL,
@@ -159,6 +162,7 @@ export function EventTimeline({
   const view = useSyncExternalStore(viewport.subscribe, viewport.getSnapshot, viewport.getSnapshot);
   const host = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const [laneH, setLaneH] = useState(0);
   const [heights, setHeights] = useState<Record<string, number>>({});
   const state = useRef<TimelineState>(emptyTimeline());
   const lastSizes = useRef<readonly unknown[] | null>(null);
@@ -284,16 +288,63 @@ export function EventTimeline({
   /** A point reads its card stamp's start (a family's "A → B" keeps A). */
   const pointDate = (id: string) => (stamps.get(id) ?? "").split(" → ")[0];
   const pointWidth = useMemo(() => (n: TreeNode) => pointBoxWidth(n.event.title, (stamps.get(n.id) ?? "").split(" → ")[0], n.children.length > 0), [stamps]);
+  // docs/597 §6.4: a collapse on an auto-opened card pins it locally (until the workspace pins another card).
+  const [pinnedLocal, setPinnedLocal] = useState<{ id: string; base: string | null } | null>(null);
+  const pinnedNow = pinnedLocal && pinnedLocal.base === pinned ? pinnedLocal.id : pinned;
   const inputs = [shown, open, viewFolded, heights, widthOf, plan.points, plan.scale, pointWidth, plan.hidden] as const;
   const relayout = !lastSizes.current || inputs.some((v, i) => v !== lastSizes.current![i]);
-  const step = timelineStep(state.current, {
-    tree: shown, view, width, expanded: open, folded: viewFolded, heights, widthOf, inputOf, pinned, relayout, lane: lanePack.items,
+  const layoutInput = {
+    tree: shown, view, width, folded: viewFolded, heights, widthOf, inputOf, pinned: pinnedNow, lane: lanePack.items,
     scaleCard: plan.scale, points: plan.points, pointWidth, hidden: plan.hidden,
-  });
+  };
+  const closedStep = timelineStep(state.current, { ...layoutInput, expanded: open, relayout });
+  // docs/597 §6.1: at level 0 a second, all-open layout is packed beside the closed one; it is shown when every card in
+  // view keeps the gap there (checked on that layout itself, in this render: no effect loop, review P1-1). Level 0 has
+  // no points or hidden events, so "all cards" is every event, minus those the user closed while auto-open was on.
+  const [autoClosed, setAutoClosed] = useState<ReadonlySet<string>>(EMPTY_IDS);
+  const openAll = useMemo(() => {
+    if (!zoomOn || level !== 0) return null;
+    const n = new Set(shown.byId.keys());
+    for (const id of autoClosed) if (!open.has(id)) n.delete(id);
+    return n;
+  }, [zoomOn, level, shown, autoClosed, open]);
+  const openState = useRef<TimelineState>(emptyTimeline());
+  const openSizes = useRef<readonly unknown[] | null>(null);
+  const openInputs = [shown, openAll, viewFolded, heights, widthOf, plan.points, plan.scale, pointWidth, plan.hidden] as const;
+  const openRelayout = !openSizes.current || openInputs.some((v, i) => v !== openSizes.current![i]);
+  const openStep = openAll ? timelineStep(openState.current, { ...layoutInput, expanded: openAll, relayout: openRelayout }) : null;
+  const prevOn = useRef(false);
+  // A hidden tab (lane height 0) has no view either: like an empty stretch it keeps the state (code review P3).
+  const fits = !openStep ? false : laneH > 0
+    ? autoOpenFits(openStep.elements, shown, { dx: openStep.translateX + PAD, dy: view.y, w: width + 2 * PAD, h: laneH }, prevOn.current ? AUTO_OPEN_KEEP : AUTO_OPEN_GAP)
+    : null;
+  // review P1-2: no card in view (an empty stretch) keeps the previous state.
+  const on = !!openStep && (fits === null ? prevOn.current : fits);
+  const step = on ? openStep! : closedStep;
+  /** Auto-open switches on this render (read before the commit effect below updates prevOn). */
+  const flipped = on !== prevOn.current;
+  const shownOpen = on ? openAll! : open;
   useLayoutEffect(() => {
-    state.current = step.state;
+    state.current = closedStep.state;
     lastSizes.current = inputs;
+    openState.current = openStep ? openStep.state : emptyTimeline();
+    openSizes.current = openStep ? openInputs : null;
+    // A4: leaving auto-open forgets the cards the user closed in it.
+    if (prevOn.current && !on && autoClosed.size) setAutoClosed(EMPTY_IDS);
+    prevOn.current = on;
   });
+  // docs/597 §6.4 (review P2-3): the expand button of an auto-opened card toggles the timeline's own exception set. A
+  // stable override of the card context (EventCard is memo); the handler reads live values through a ref.
+  const autoLive = useRef({ on, expanded, pinned, ctx });
+  autoLive.current = { on, expanded, pinned, ctx };
+  const onAutoExpand = useRef((id: string) => {
+    const a = autoLive.current;
+    if (!a.on) return a.ctx.onExpand(id);
+    setAutoClosed((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    setPinnedLocal({ id, base: a.pinned });
+    if (a.expanded.has(id)) a.ctx.onExpand(id);
+  }).current;
+  const cardCtx = useMemo(() => ({ ...ctx, onExpand: onAutoExpand }), [ctx, onAutoExpand]);
   // docs/592 §2.4: the status-line note, written after commit; cleared when the timeline unmounts.
   const toggleShowAll = useRef(() => {});
   toggleShowAll.current = () => setShowAll((v) => (v ? 0 : pointClass));
@@ -333,13 +384,15 @@ export function EventTimeline({
     observer.current = ro;
     return () => { ro.disconnect(); cancelAnimationFrame(frame); observer.current = null; };
   }, []);
-  const openKey = step.elements.filter((e) => e.kind === "card" && open.has(e.id)).map((e) => e.id).join("\u0000");
+  const vbandKey = (() => { const h = Math.max(300, laneH), st = Math.max(150, h / 3); return `${Math.floor((-view.y - h) / st)}:${h}`; })();
+  const openKey = step.elements.filter((e) => e.kind === "card" && shownOpen.has(e.id)).map((e) => e.id).join("\u0000");
   useLayoutEffect(() => {
     const ro = observer.current, root = plane.current;
     if (!ro || !root) return;
     ro.disconnect();
     root.querySelectorAll<HTMLElement>("[data-event-card][aria-expanded='true']").forEach((el) => ro.observe(el));
-  }, [openKey]);
+    // docs/597 code review P2-2: open cards also enter the DOM when the rendered band moves (vband, declared below).
+  }, [openKey, vbandKey]);
 
   // docs/584 R2: a pan (middle button, or Space + left) moves start and y through the store; a left drag on the canvas
   // draws a selection box kept here only (no PlanningWorkspace render per frame, IC-21b). Esc, blur and
@@ -450,10 +503,21 @@ export function EventTimeline({
     el.addEventListener("wheel", wheel, { passive: false });
     return () => { el.removeEventListener("wheel", wheel); cancelAnimationFrame(frame); };
   }, [viewport, laneRef]);
+  // docs/597: when auto-open switches, the opened cards are measured a frame later and repack again; the anchor is kept
+  // for that repack (the next change of `heights`), so the card under the wheel stays put. Any new wheel replaces it.
+  const settleAnchor = useRef<{ id: string; y: number; heights: unknown } | null>(null);
+  useLayoutEffect(() => {
+    const s0 = settleAnchor.current, lane = laneRef.current;
+    if (!s0 || !lane || zoomAnchor.current || s0.heights === heights) return;
+    settleAnchor.current = null;
+    const el = step.elements.find((e) => e.id === s0.id && (e.kind === "card" || e.kind === "point"));
+    if (el) viewport.setWindow({ y: viewport.getSnapshot().y - (lane.getBoundingClientRect().top + el.top + view.y - s0.y) });
+  });
   useLayoutEffect(() => {
     const a = zoomAnchor.current, lane = laneRef.current;
     if (!a || !lane) return;
     zoomAnchor.current = null;
+    settleAnchor.current = flipped ? { id: a.id, y: a.y, heights } : null;
     // docs/592: from the layout, not the DOM. A repack can move the anchor outside the rendered band (vband), and a
     // card may have turned into a point (or back); the packed element still knows where it is.
     const drawn = (e: PlaneElement) => e.kind === "card" || e.kind === "point";
@@ -488,7 +552,6 @@ export function EventTimeline({
   const mini = useMemo(() => minimapModel(tree.roots, miniWidth, ctx.adapter), [tree, ctx.adapter, miniWidth]);
   // Vertical band of the plane worth rendering: one lane height above and below the visible rows, in steps.
   // docs/584: the visible plane rows are [−y, −y + lane height]; recomputed in steps from the store, never on scroll.
-  const [laneH, setLaneH] = useState(0);
   useLayoutEffect(() => {
     const lane = laneRef.current;
     if (!lane) return;
@@ -752,6 +815,7 @@ export function EventTimeline({
         onPointerOver={(e) => hoverAt(e.target)}
         onPointerLeave={() => setHover(null)}
       >
+        <WorldlineCardContext.Provider value={cardCtx}>
         <div ref={plane} data-timeline-plane="" className={s.plane} style={{ transform: `translate(${step.translateX + PAD}px, ${view.y}px)`, height: (step.state.packed?.bottom ?? 0) + 120 }}>
           {step.elements.map((el) => {
             // Real data (995 events, one family each) builds ~850 cards in the 7-window build range; rendering only the
@@ -790,7 +854,7 @@ export function EventTimeline({
             const cardEl = (
                 <EventCard
                   event={n.event}
-                  expanded={expanded.has(n.id)}
+                  expanded={on ? shownOpen.has(n.id) : expanded.has(n.id)}
                   selected={selected === n.id || selection.has(n.id)}
                   hit={hitId === n.id}
                   dimmed={dimmed(n.id)}
@@ -826,6 +890,7 @@ export function EventTimeline({
             </div>
           ))}
         </div>
+        </WorldlineCardContext.Provider>
         {hotMark && <i data-hover-guide="" className={s.hoverGuide} style={{ left: hotMark.x, "--ec": hotMark.ec } as React.CSSProperties} />}
         {rect && <div data-select-rect="" className={s.selectRect} style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }} />}
         {!tree.roots.length && <p className={s.emptyNote}>{emptyText ?? "当前世界线还没有已定位事件。添加事件，或为待定位事件设置时间。"}</p>}
