@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   CATEGORY_VAR,
   cardScale,
@@ -8,6 +8,7 @@ import {
   collapsedCardInput,
   collapsedCardWidth,
   descendants,
+  familyEnd,
   familyStampEnd,
   emptyTimeline,
   medianRootGap,
@@ -15,9 +16,11 @@ import {
   pointWidth as pointBoxWidth,
   timelineStep,
   zoomLevel,
+  zoomBars,
   zoomPlan,
   type EventTree,
   type LaneItem,
+  type PlaneElement,
   type TimelineState,
   type TreeNode,
   type ZoomLevel,
@@ -32,6 +35,9 @@ import s from "./worldline.module.css";
 import { renderProbe } from "@/lib/planning/render-probe";
 
 const MINIMAP_WIDTH = 420;
+/** docs/596: the minimap is 120px high: 8px top, a 90px drawing area for the content height, then the row of roots
+ * outside the build range (no height of their own) and 8px bottom (worldline.module.css). */
+const MINI_TOP = 8, MINI_MH = 90;
 const LANE_CARD_WIDTH = 230;
 const PAN_THRESHOLD = 5;
 const EMPTY_LANES: readonly TimelineLaneGroup[] = [];
@@ -179,12 +185,21 @@ export function EventTimeline({
   const prevLevel = useRef<ZoomLevel>(0);
   const prevPlan = useRef<ZoomPlan | undefined>(undefined);
   const [unfoldedRaw, setUnfolded] = useState<ReadonlySet<string>>(EMPTY_IDS);
-  const [showAllRaw, setShowAll] = useState(false);
+  // docs/593 §2: 显示为卡片 remembers the point class it was clicked for (1 一般 / 2 重要); a new class drops it.
+  const [showAllRaw, setShowAll] = useState<0 | 1 | 2>(0);
   const d = gap === null || !(width > 0) ? Infinity : (gap * width) / view.span;
   const level: ZoomLevel = zoomOn ? zoomLevel(d, prevLevel.current) : 0;
-  const unfolded = level >= 3 ? unfoldedRaw : EMPTY_IDS, showAll = level >= 2 && showAllRaw;
+  const maxImportance = useMemo(() => { let m = 0; for (const n of tree.byId.values()) if (n.start !== null && n.event.importance > m) m = n.event.importance; return m; }, [tree]);
+  const pointClass = zoomBars(level, maxImportance).pointClass;
+  const unfolded = level >= 3 ? unfoldedRaw : EMPTY_IDS, showAll = pointClass > 0 && showAllRaw === pointClass;
   const keepCards = useMemo(() => new Set([...selection, ...(selected ? [selected] : []), ...(hitId ? [hitId] : []), ...open]), [selection, selected, hitId, open]);
-  const plan = zoomPlan(tree, level, cardScale(d, level), { cards: keepCards, unfolded, showAll, folded }, prevPlan.current);
+  const scaleCard = cardScale(d, level);
+  // docs/593 review P2: computed only when an input changes (a pan frame keeps the same plan).
+  const plan = useMemo(
+    () => zoomPlan(tree, level, scaleCard, { cards: keepCards, unfolded, showAll, folded }, prevPlan.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- prevPlan is a ref (set identity only)
+    [tree, level, scaleCard, keepCards, unfolded, showAll, folded],
+  );
   const viewFolded = useMemo(() => {
     if (!plan.autoFolded.size && !unfolded.size) return folded;
     const n = new Set([...folded, ...plan.autoFolded]);
@@ -195,7 +210,7 @@ export function EventTimeline({
     prevLevel.current = level;
     prevPlan.current = plan;
     if (level < 3 && unfoldedRaw.size) setUnfolded(EMPTY_IDS);
-    if (level < 2 && showAllRaw) setShowAll(false);
+    if (showAllRaw && showAllRaw !== pointClass) setShowAll(0);
   });
   const moved = useMemo(() => {
     const n = preview && preview.delta ? tree.byId.get(preview.id) : undefined;
@@ -269,11 +284,11 @@ export function EventTimeline({
   /** A point reads its card stamp's start (a family's "A → B" keeps A). */
   const pointDate = (id: string) => (stamps.get(id) ?? "").split(" → ")[0];
   const pointWidth = useMemo(() => (n: TreeNode) => pointBoxWidth(n.event.title, (stamps.get(n.id) ?? "").split(" → ")[0], n.children.length > 0), [stamps]);
-  const inputs = [shown, open, viewFolded, heights, widthOf, plan.points, plan.scale, pointWidth] as const;
+  const inputs = [shown, open, viewFolded, heights, widthOf, plan.points, plan.scale, pointWidth, plan.hidden] as const;
   const relayout = !lastSizes.current || inputs.some((v, i) => v !== lastSizes.current![i]);
   const step = timelineStep(state.current, {
     tree: shown, view, width, expanded: open, folded: viewFolded, heights, widthOf, inputOf, pinned, relayout, lane: lanePack.items,
-    scaleCard: plan.scale, points: plan.points, pointWidth,
+    scaleCard: plan.scale, points: plan.points, pointWidth, hidden: plan.hidden,
   });
   useLayoutEffect(() => {
     state.current = step.state;
@@ -281,10 +296,11 @@ export function EventTimeline({
   });
   // docs/592 §2.4: the status-line note, written after commit; cleared when the timeline unmounts.
   const toggleShowAll = useRef(() => {});
-  toggleShowAll.current = () => setShowAll((v) => !v);
+  toggleShowAll.current = () => setShowAll((v) => (v ? 0 : pointClass));
   useLayoutEffect(() => {
     if (!noteStore) return;
-    noteStore.set(level >= 2 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, key: level >= 4, showAll } : null);
+    // docs/593 H4: hidden events have no note; levels without points (4, 6) clear it.
+    noteStore.set(pointClass > 0 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, important: pointClass === 2, showAll } : null);
   });
   useEffect(() => {
     if (!noteStore) return;
@@ -353,7 +369,9 @@ export function EventTimeline({
   const box = useRef<{ x: number; y: number; additive: boolean; active: boolean; onCard: boolean } | null>(null);
   const [rect, setRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const space = useRef(false);
-  const miniDrag = useRef<{ offset: number } | null>(null);
+  /** docs/596: a minimap press. `dx` keeps the pointer's offset in the frame; `px0 / py0 / y0` drive the relative
+   * vertical drag; `start0 / y0` are restored by Esc. */
+  const miniDrag = useRef<{ dx: number; px0: number; py0: number; start0: number; y0: number; h0: number; moved: boolean } | null>(null);
   const td = useRef(timeDrag);
   td.current = timeDrag;
   useEffect(() => {
@@ -362,6 +380,7 @@ export function EventTimeline({
       drag.current = null;
       box.current = null;
       setRect(null);
+      if (miniDrag.current?.moved) viewport.setWindow({ start: miniDrag.current.start0, y: miniDrag.current.y0 });
       miniDrag.current = null;
       space.current = false;
       host.current?.removeAttribute("data-space");
@@ -382,7 +401,7 @@ export function EventTimeline({
   // to stop the page scroll and the browser zoom (React's onWheel is passive).
   const live = useRef({ view, width });
   live.current = { view, width };
-  const zoomAnchor = useRef<{ id: string; y: number } | null>(null);
+  const zoomAnchor = useRef<{ id: string; y: number; px: number; py: number } | null>(null);
   useEffect(() => {
     const el = host.current;
     if (!el) return;
@@ -402,7 +421,7 @@ export function EventTimeline({
         const at = v.start + ratio * v.span;
         // Keep the card under the pointer at its screen y once the new scale is packed (layout effect below).
         const card = document.elementFromPoint(a.x, a.y)?.closest<HTMLElement>("[data-timeline-plane] [data-event-card], [data-timeline-plane] [data-event-point]");
-        zoomAnchor.current = card ? { id: card.dataset.eventId!, y: card.getBoundingClientRect().top } : null;
+        zoomAnchor.current = card ? { id: card.dataset.eventId!, y: card.getBoundingClientRect().top, px: a.x, py: a.y } : null;
         viewport.setWindow({ start: at - ratio * span + (a.pan / Math.max(1, w)) * span, span });
         // At the span bounds nothing changes and nothing re-renders; a stale anchor would later undo a scroll.
         if (viewport.getSnapshot() === v) zoomAnchor.current = null;
@@ -437,8 +456,21 @@ export function EventTimeline({
     zoomAnchor.current = null;
     // docs/592: from the layout, not the DOM. A repack can move the anchor outside the rendered band (vband), and a
     // card may have turned into a point (or back); the packed element still knows where it is.
-    const el = step.elements.find((e) => e.id === a.id && (e.kind === "card" || e.kind === "point"));
-    if (el) viewport.setWindow({ y: viewport.getSnapshot().y - (lane.getBoundingClientRect().top + el.top + view.y - a.y) });
+    const drawn = (e: PlaneElement) => e.kind === "card" || e.kind === "point";
+    const el = step.elements.find((e) => e.id === a.id && drawn(e));
+    const r = lane.getBoundingClientRect();
+    if (el) viewport.setWindow({ y: viewport.getSnapshot().y - (r.top + el.top + view.y - a.y) });
+    else {
+      // docs/593 review P1-4: the anchor was hidden by the new level. Follow the drawn event nearest the pointer in x
+      // (then y), its top 6px above the pointer, so the shrunken canvas does not leave the lane empty.
+      const tx = step.translateX + PAD + r.left, dx = (e: PlaneElement) => Math.max(0, e.left + tx - a.px, a.px - (e.left + e.width + tx));
+      let best: PlaneElement | null = null;
+      for (const e of step.elements) {
+        if (!drawn(e)) continue;
+        if (!best || dx(e) < dx(best) || (dx(e) === dx(best) && Math.abs(e.top + view.y + r.top - a.py) < Math.abs(best.top + view.y + r.top - a.py))) best = e;
+      }
+      if (best) viewport.setWindow({ y: viewport.getSnapshot().y - (r.top + best.top + view.y - (a.py - 6)) });
+    }
   });
   const restorePan = (d: { start: number; top: number }) => {
     viewport.setWindow({ start: d.start, y: d.top });
@@ -454,10 +486,6 @@ export function EventTimeline({
   // The minimap is 420px, or the panel width minus margins on a narrow panel (worldline.module.css).
   const miniWidth = width > 0 ? Math.min(MINIMAP_WIDTH, width + 2 * PAD - 24) : MINIMAP_WIDTH;
   const mini = useMemo(() => minimapModel(tree.roots, miniWidth, ctx.adapter), [tree, ctx.adapter, miniWidth]);
-  const moveMini = (px: number) => {
-    const left = Math.max(0, Math.min(miniWidth, px - (miniDrag.current?.offset ?? 0)));
-    viewport.setWindow({ start: mini.toT(left) });
-  };
   // Vertical band of the plane worth rendering: one lane height above and below the visible rows, in steps.
   // docs/584: the visible plane rows are [−y, −y + lane height]; recomputed in steps from the store, never on scroll.
   const [laneH, setLaneH] = useState(0);
@@ -472,6 +500,22 @@ export function EventTimeline({
     setLaneH(lane.clientHeight);
     return () => { lane.removeEventListener("scroll", zero); ro.disconnect(); };
   }, [laneRef]);
+  // docs/596: the minimap's vertical axis is the content height H (families, then the character-change rows), drawn
+  // over MINI_MH px from MINI_TOP; the frame is the lane's rows [−y, −y + laneH]. y stays unbounded (docs/584): the
+  // minimap only stops a move from carrying the frame past the content, and never pulls an outside y back in.
+  const lanesBottom = lanePack.items.length ? step.laneTop + Math.max(...lanePack.items.map((i) => i.top + i.height)) : 0;
+  const contentH = Math.max(laneH, Math.max(step.state.packed?.bottom ?? 0, lanesBottom) + 40);
+  const toMY = (y: number) => MINI_TOP + Math.min(1, Math.max(0, y / contentH)) * MINI_MH;
+  const limitY = (y: number, from: number) => Math.min(Math.max(from, 0), Math.max(Math.min(from, laneH - contentH), y));
+  const moveMini = (px: number, py: number) => {
+    const d = miniDrag.current;
+    if (!d) return;
+    d.moved = true;
+    const left = Math.max(0, Math.min(miniWidth, px - d.dx));
+    // The content height at the press (review P3-1): a repack mid-drag must not rescale the distance already dragged.
+    const y = limitY(d.y0 - ((py - d.py0) * d.h0) / MINI_MH, d.y0);
+    viewport.setWindow({ start: mini.toT(left), y });
+  };
   const vband = useMemo<[number, number]>(() => {
     const h = Math.max(300, laneH), step = Math.max(150, h / 3), top = -view.y;
     return [Math.floor((top - h) / step) * step, Math.ceil((top + 2 * h) / step) * step];
@@ -485,10 +529,13 @@ export function EventTimeline({
     // Fully visible when it fits; taller than the lane, its bottom (the save / cancel buttons) is kept in view.
     const reveal = () => {
       const l = lane.getBoundingClientRect(), r = el.getBoundingClientRect(), m = 12;
+      // docs/596 P2-1: an editor under the 120px minimap keeps its save / cancel buttons above it.
+      const mm = host.current?.querySelector("[data-minimap]")?.getBoundingClientRect();
+      const mb = mm && r.right > mm.left && r.left < mm.right ? Math.max(m, l.bottom - mm.top + 14) : m;
       let dy = 0;
-      if (r.height + 2 * m > l.height) dy = l.bottom - m - r.bottom;
+      if (r.height + m + mb > l.height) dy = l.bottom - mb - r.bottom;
       else if (r.top < l.top + m) dy = l.top + m - r.top;
-      else if (r.bottom > l.bottom - m) dy = l.bottom - m - r.bottom;
+      else if (r.bottom > l.bottom - mb) dy = l.bottom - mb - r.bottom;
       if (Math.abs(dy) > 0.5) viewport.setWindow({ y: viewport.getSnapshot().y + dy });
     };
     reveal();
@@ -524,6 +571,33 @@ export function EventTimeline({
     return x + c.width > 0 && x < width + 2 * PAD && y + c.height > 0 && y < laneH;
   });
   const frameLeft = mini.toX(view.start), frameRight = mini.toX(view.start + view.span);
+  // Clamped to the drawing area (review P3-3): a view above or below the content shows an 8px frame at that edge.
+  const frameH = Math.min(MINI_MH, Math.max(8, (laneH / contentH) * MINI_MH));
+  const frameTop = Math.min(MINI_TOP + MINI_MH - frameH, Math.max(MINI_TOP, MINI_TOP + (-view.y / contentH) * MINI_MH));
+  // docs/596 P3: the marks change with the layout, the minimap or a search, not on a pan frame. Every zoom step repacks
+  // (new family y and content height for every mark), so the marks read deferred copies: React redraws them at low
+  // priority after the step's frame, and a burst of wheel steps draws them once (CP-07 long tasks).
+  const packedFamilies = useDeferredValue(step.state.packed?.families), built = step.state.build;
+  const markH = useDeferredValue(contentH);
+  const miniMarks = useMemo(() => {
+    const out: React.ReactNode[] = [];
+    let hidden = 0;
+    const my = (y: number) => MINI_TOP + Math.min(1, Math.max(0, y / markH)) * MINI_MH;
+    for (const r of tree.roots) {
+      const f = packedFamilies?.get(r.id), x = mini.toX(r.start!);
+      const ec = `var(${CATEGORY_VAR[r.event.category]})`, op = dimmed(r.id) ? 0.2 : 1;
+      if (f?.built) {
+        out.push(<i key={r.id} data-mini-root={r.id} data-mini-row="packed" style={{ left: x, top: my(f.y), height: Math.max(2, (f.box.h / markH) * MINI_MH), "--ec": ec, opacity: op * (0.45 + r.event.importance * 0.18) } as React.CSSProperties} />);
+      } else {
+        // Outside the build range ("out") or hidden by the zoom level ("hidden"): no laid-out height, so the bottom row.
+        // Every root keeps a mark, as before docs/596 (the minimap shows the whole timeline, docs/595).
+        const away = !built || familyEnd(r) < built.lo || r.start! > built.hi;
+        if (!away) hidden++;
+        out.push(<i key={r.id} data-mini-root={r.id} data-mini-row={away ? "out" : "hidden"} style={{ left: x, top: MINI_TOP + MINI_MH + 4, height: 6, "--ec": ec, opacity: op } as React.CSSProperties} />);
+      }
+    }
+    return { nodes: out, hidden };
+  }, [tree, packedFamilies, built, mini, markH, dimmed]);
   // Code review P2: no hover marks while a time drag is in progress (the card keeps no stale highlight).
   const shownHover = timeDrag.preview ? null : hover;
   const hotNode = shownHover ? shown.byId.get(shownHover) : undefined;
@@ -766,25 +840,47 @@ export function EventTimeline({
         data-minimap=""
         role="slider"
         tabIndex={0}
-        aria-label="全局缩略：点击或拖动移动视窗，← → 平移"
+        aria-label="全局缩略：点击或拖动移动视窗，方向键平移"
+        data-content-height={contentH}
+        data-mini-hidden={miniMarks.hidden}
         aria-valuemin={mini.segments[0]?.t0 ?? 0}
         aria-valuemax={mini.segments.at(-1)?.t1 ?? 0}
         aria-valuenow={Math.round(view.start)}
-        aria-valuetext={ctx.adapter.label(view.start, view.span)}
+        aria-valuetext={laneH > 0 ? `${ctx.adapter.label(view.start, view.span)}，纵向 第 ${Math.min(Math.max(1, Math.floor(-view.y / laneH) + 1), Math.max(1, Math.ceil(contentH / laneH)))} / ${Math.max(1, Math.ceil(contentH / laneH))} 屏` : ctx.adapter.label(view.start, view.span)}
         className={s.minimap}
         style={width + 2 * PAD - 24 < MINIMAP_WIDTH ? undefined : { width: miniWidth }}
         onPointerDown={(e) => {
           e.stopPropagation();
-          const r = e.currentTarget.getBoundingClientRect(), px = e.clientX - r.left;
-          miniDrag.current = { offset: px >= frameLeft && px <= frameRight ? px - frameLeft : (frameRight - frameLeft) / 2 };
+          if (e.button !== 0) return;
+          const r = e.currentTarget.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+          const inside = px >= frameLeft && px <= Math.max(frameRight, frameLeft + 8) && py >= frameTop && py <= frameTop + frameH;
+          const d = { dx: px - frameLeft, px0: px, py0: py, start0: view.start, y0: view.y, h0: contentH, moved: false };
           e.currentTarget.setPointerCapture(e.pointerId);
-          moveMini(px);
+          miniDrag.current = d;
+          if (inside) return;
+          // docs/596 (and docs/595 review P2-2): a press outside the frame centres the window on the pressed time and,
+          // when the content is taller than the lane and the new window stays in the current build range (the layout the
+          // vertical axis describes, §3), on the pressed height; then the drag continues from there. A jump past the
+          // build range lays out afresh, so its y would point at rows of the old layout: y is kept.
+          const start = mini.toT(px) - view.span / 2;
+          const sameLayout = !!built && start >= built.lo && start + view.span <= built.hi;
+          const y = contentH > laneH && sameLayout ? limitY(-(((Math.min(Math.max(py, MINI_TOP), MINI_TOP + MINI_MH) - MINI_TOP) / MINI_MH) * contentH - laneH / 2), view.y) : view.y;
+          viewport.setWindow({ start, y });
+          d.moved = true;
+          // The frame now starts at toX(start); keep the pointer at that offset while dragging on.
+          d.dx = px - mini.toX(start);
+          d.y0 = y;
         }}
-        onPointerMove={(e) => { if (miniDrag.current) moveMini(e.clientX - e.currentTarget.getBoundingClientRect().left); }}
+        onPointerMove={(e) => { if (miniDrag.current) { const r = e.currentTarget.getBoundingClientRect(); moveMini(e.clientX - r.left, e.clientY - r.top); } }}
         onPointerUp={() => { miniDrag.current = null; }}
         onPointerCancel={() => { miniDrag.current = null; }}
         onLostPointerCapture={() => { miniDrag.current = null; }}
         onKeyDown={(e) => {
+          if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            e.preventDefault();
+            viewport.setWindow({ y: limitY(view.y + ((e.key === "ArrowDown" ? -1 : 1) * laneH) / 4, view.y) });
+            return;
+          }
           if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
           e.preventDefault();
           viewport.setWindow({ start: view.start + ((e.key === "ArrowRight" ? 1 : -1) * view.span) / 4 });
@@ -793,10 +889,9 @@ export function EventTimeline({
         {mini.segments.map((g) => (
           <u key={g.index} style={{ left: g.x0, width: g.width }} />
         ))}
-        {tree.roots.map((r) => (
-          <i key={r.id} style={{ left: mini.toX(r.start!), height: 10 + r.event.importance * 6, "--ec": `var(${CATEGORY_VAR[r.event.category]})`, opacity: dimmed(r.id) ? 0.2 : 1 } as React.CSSProperties} />
-        ))}
-        <b style={{ left: frameLeft, width: Math.max(8, frameRight - frameLeft) }} />
+        {lanesBottom > 0 && <s data-mini-lanes="" style={{ top: toMY(step.laneTop), height: Math.max(2, toMY(lanesBottom) - toMY(step.laneTop)) }} />}
+        {miniMarks.nodes}
+        <b style={{ left: frameLeft, width: Math.max(8, frameRight - frameLeft), top: frameTop, height: frameH }} />
       </div>
     </div>
   );
@@ -853,12 +948,12 @@ function typing(target: EventTarget | null) {
   return !!el?.closest?.("input,textarea,select,button,summary,[contenteditable=''],[contenteditable='true'],[role=button],[role=textbox]");
 }
 
-/** docs/592 §2.4: the status-line note of the zoom levels: 「N 个一般（和重要）事件显示为时间点 · 显示为卡片」. It subscribes
+/** docs/592 §2.4 / docs/593: the status-line note of the zoom levels: 「N 个一般（重要）事件显示为时间点 · 显示为卡片」. It subscribes
  * to the panel's note store, so a zoom step re-renders only this line. */
 export function ZoomNoteLine({ store }: { store: ZoomNoteStore }) {
   const note = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   if (!note) return null;
-  const what = note.key ? "一般和重要事件" : "一般事件";
+  const what = note.important ? "重要事件" : "一般事件";
   return (
     <span data-zoom-note="" className={s.zoomNote}>
       {note.showAll ? `${what}已显示为卡片` : `${note.count} 个${what}显示为时间点`}

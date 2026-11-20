@@ -116,7 +116,9 @@ test("WU-56/WU-56b: the minimap jumps to ancient events and back with cards in p
   const before = await snap(page)
   const mm = page.getByRole("slider", { name: /全局缩略/ })
   const r = (await mm.boundingBox())!
-  await page.mouse.click(r.x + 6, r.y + r.height / 2)
+  // docs/596: the minimap moves y as well; click at the height of the first ancient root's mark.
+  const my = await page.locator("[data-minimap] i[data-mini-root]").first().evaluate(e => parseFloat((e as HTMLElement).style.top) + 1)
+  await page.mouse.click(r.x + 6, r.y + my)
   await expect(page.locator("[data-range]")).toContainText(/前|旧纪|-/)
   const ancient = await snap(page)
   assert.ok(ancient.some(c => c.vis), "ancient cards visible")

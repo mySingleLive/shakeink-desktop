@@ -5476,6 +5476,90 @@
       "父事件不能被拖到其子事件之外（规划数据校验，非本次范围）；ZB-12 的保存检查在叶子事件上进行",
       "数值阈值（d = 160 / 40 / 10 / 2.5 px、最小系数 0.75）按设计稿批准值，未做用户可调设置"
     ]
+  },
+  {
+    "id": "WL-594",
+    "requirement": "世界线时间线：鼠标悬停在收起成时间点的事件上时显示完整标题，标题浮在其他事件卡片之上，位置不变（用户 2026-11-20）",
+    "source": [
+      "docs/594-worldline-point-hover-title-plan.md",
+      "docs/594-worldline-point-hover-title-plan-review.md",
+      "docs/594-worldline-point-hover-title-code-review.md"
+    ],
+    "implementation": [
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "594-ZB-34（r3 / r8）、ZB-35、ZB-36（tests/browser/planning-worldline-card-zoom.test.ts，夹具 zoomView，内存 API）",
+      "594-H1（真实目标 hover-594.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "浏览器夹具（内存 API，非真实目标）：去掉 docs/594 CSS 时 ZB-34/35/36 共 4 项全部失败，加上后全部通过；tests/browser/planning-*.test.ts 201 项，197 通过，4 项失败为 WL-592 记录的基线 CM-02/03/06/10；tsc 通过；npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/594/h1（隔离根、构建版应用、LOTM-587-wg-r1、无模型调用、只滚轮/悬停/读 DOM）：d ≈ 12.9（只有一般事件为时间点），4 个完整标题会压住卡片的长标题时间点：悬停后标题宽 94 → 168–281px、不再截断，圆点/日期/标题左边缘位移 0，外层 z-index 8，衬底为 --background；被压住的点悬停前命中卡片、悬停后命中时间点；移开后恢复渐隐；作品版本前后均为 1；截图 0–3-hover.png"
+    ],
+    "verificationLimits": [
+      "画布右边缘（.lane overflow: clip）仍会截断伸长的标题，靠原生 title 提示兜底",
+      "悬停时按在伸长的标题上选中该时间点，而不是下面的卡片（标题在最上层的结果）"
+    ]
+  },
+  {
+    "id": "WL-595",
+    "requirement": "世界线时间线右下角小地图大部分区域没有事件标记（缺陷，用户 2026-11-20）",
+    "source": [
+      "docs/595-worldline-minimap-segments-plan.md",
+      "docs/595-worldline-minimap-segments-plan-review.md",
+      "docs/595-worldline-minimap-segments-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts"
+    ],
+    "testIds": [
+      "595-MM-01..MM-03（tests/unit/worldline-layout.test.ts）",
+      "595-MM-B1（tests/browser/planning-worldline-minimap.test.ts，夹具 30 段，内存 API，1440 / 820px）",
+      "595-E1（真实目标 mini-595.mjs before / after）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified",
+    "evidence": [
+      "单元：MM-01..03 在 HEAD 的 minimapModel 下失败，修改后通过；tests/unit/worldline-layout.test.ts 94/94；tsc 通过；npm test 5102 项 45 项失败，全部在与世界线无关的文件（导入审计、打包、备份移除、关闭作品等），unit/integration 中只有 worldline-layout.test.ts 引用改动模块",
+      "浏览器夹具（非真实目标）：MM-B1 在 HEAD 的 minimapModel 下失败（标记画在别的段），修改后通过；planning-*.test.ts 203 项 198 通过，失败为基线 CM-02/03/06/10 与负载相关的 ZB-20（新旧代码各 6 次交替运行均为 3 过 3 败，p95 均约 33ms）",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/595/before 与 after（隔离根、构建版应用、LOTM-587-wg-r1 371 个根事件、30 段、只读 DOM 与点击小地图、无模型调用、作品版本不变）：修改前 262/371 个标记在自己的段框内、25/30 个段框有自己的标记、2px 槽位 30、段间距 406px；修改后 371/371、30/30、槽位 137、间距 84px、最窄段 4px；窄面板（265px）371/371、槽位 101"
+    ],
+    "verificationLimits": [
+      "点击窄段（多为 4px）时视窗常跳不到该段：框外点击用 left = px − 半框宽，属于原有交互；真实目标点击 3 个段中 1 个命中。由 WL-596（小地图上下左右移动）改为以点击处为视窗中心并补用例",
+      "视窗落在段内没有根事件开始的部分或段间空档时，视窗框夹在段边（最小 8px）"
+    ]
+  },
+  {
+    "id": "WL-596",
+    "requirement": "世界线时间线小地图允许上下左右移动视口，高度适当增加（用户 2026-11-20；选择“全时间轴 + 当前排版纵向”、高 120px）",
+    "source": [
+      "docs/596-worldline-minimap-2d-plan.md",
+      "docs/596-worldline-minimap-2d-plan-review.md",
+      "docs/596-worldline-minimap-2d-code-review.md"
+    ],
+    "implementation": [
+      "src/components/content/planning/worldline/EventTimeline.tsx",
+      "src/components/content/planning/worldline/worldline.module.css",
+      "tests/helpers/worldline-browser-fixture.ts"
+    ],
+    "testIds": [
+      "596-MM-B2..B9、MM-B4b、MM-B4c（tests/browser/planning-worldline-minimap.test.ts，夹具 F60 / withChanges / mm30，内存 API）",
+      "ZB-30、WU-66f、WU-56/56b（改，需求导致）",
+      "596-E1（真实目标 mini2d-596.mjs r1；mini-595.mjs after-596 回归）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "浏览器夹具（非真实目标）：新用例在改动前全部失败；MM-B9 关掉编辑器边距改动时失败；planning-*.test.ts 213 项，最后一轮 207 通过，失败为基线 CM-02/03/06/10 与负载相关的 WU-40b、ZB-20（单独运行各 3/3 通过）；CP-07 长任务由改动初版的 15–19 降到 1–5（与旧代码交替运行相同）；tsc、npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/596/r1（隔离根、构建版应用、LOTM-587-wg-r1、无模型调用、作品版本不变）：小地图高 120；复位视图内容高 3747、可见 993，拖动视窗框 (+60, +25) 时 y 变化 −1040.8（期望 −1040.8）；放大后三次点击：均改了时间，构建范围内的点击改了 y，远处点击 y 不变；截图 0-initial、1-after-clicks、2-minimap",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/595/after-596：371/371 个标记在自己段框内、30/30 段框有标记、窄面板 371/371（docs/595 结果保持）"
+    ],
+    "verificationLimits": [
+      "纵向只描述当前构建范围（视窗左 3 屏、右 4 屏）的排版；隐藏和范围外的根事件画在底行；跳到构建范围外的点击只改时间",
+      "macOS 应用菜单把 Escape 绑定为“停止生成”，真实应用中拖动时 Esc 到不了页面（现有行为，画布平移同样）；Esc 恢复只由浏览器夹具 MM-B7 验证"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

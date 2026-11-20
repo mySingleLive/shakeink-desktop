@@ -62,11 +62,14 @@ export const STACK_PEEK = 8;
 export const POINT_HEIGHT = 18;
 /** Time point title cap: 8.5 characters at 11px. */
 export const POINT_TITLE_MAX = 94;
-/** docs/592 §2.1: crowding d (px) thresholds of the five timeline zoom levels; the way back up needs ×1.15. */
+/** docs/592 §2.1 / docs/593 §1.1: crowding d (px) thresholds of the seven timeline zoom levels; the way back up needs
+ * ×1.15. */
 export const ZOOM_FULL = 160;
 export const ZOOM_POINTS = 40;
 export const ZOOM_FOLD = 10;
-export const ZOOM_KEY = 2.5;
+export const ZOOM_HIDE_NORMAL = 2.5;
+export const ZOOM_KEY_POINTS = 0.6;
+export const ZOOM_HIDE_KEY = 0.15;
 export const ZOOM_HYSTERESIS = 1.15;
 export const CARD_SCALE_MIN = 0.75;
 /** docs/592 §2.5: vertical gap between two time points, and between a point and a card (cards keep FAMILY_V_GAP). */
@@ -1223,6 +1226,8 @@ export interface FamilyOptions {
   /** docs/592 R3 / R7: events drawn as time points, and their width. */
   points?: ReadonlySet<string>;
   pointWidth?: (n: TreeNode) => number;
+  /** docs/593: events not drawn (with their descendants). */
+  hidden?: ReadonlySet<string>;
 }
 /** What the collapsed card head renders (EventCard.tsx head; docs/583 R1). */
 export interface CollapsedCardInput {
@@ -1347,9 +1352,10 @@ export function buildFamilies(roots: readonly TreeNode[], options: FamilyOptions
     inputOf = options.inputOf ?? fallbackInput,
     points = options.points ?? EMPTY_SET,
     pointWidth = options.pointWidth ?? fallbackPointWidth,
+    hidden = options.hidden ?? EMPTY_SET,
     c = options.scaleCard ?? 1;
   const isPoint = (n: TreeNode) => points.has(n.id) && !expanded.has(n.id);
-  const visibleKids = (n: TreeNode) => (folded.has(n.id) ? [] : n.children.filter((k) => k.start !== null));
+  const visibleKids = (n: TreeNode) => (folded.has(n.id) ? [] : n.children.filter((k) => k.start !== null && !hidden.has(k.id)));
   /** A parent drawn with its family: it has children and they are shown. */
   const family = (n: TreeNode) => visibleKids(n).length > 0;
   const stackedOf = (n: TreeNode) => n.children.length > 0 && !family(n) && !expanded.has(n.id);
@@ -1370,7 +1376,7 @@ export function buildFamilies(roots: readonly TreeNode[], options: FamilyOptions
     return { h: (collapsedCardHeight(lines, stacked ? "stack" : "card") + (stacked ? STACK_PEEK : 0)) * c, lines };
   };
   return roots
-    .filter((r) => r.start !== null)
+    .filter((r) => r.start !== null && !hidden.has(r.id))
     .map((root) => {
       const pieces: WorldPiece[] = [];
       const bar = (n: TreeNode, top: number) => {
@@ -1622,6 +1628,7 @@ export interface TimelineInput {
   scaleCard?: number;
   points?: ReadonlySet<string>;
   pointWidth?: (n: TreeNode) => number;
+  hidden?: ReadonlySet<string>;
   /** Event whose family keeps its y after an expand/collapse. */
   pinned?: string | null;
   /** Card sizes changed (expand, collapse, measured height, fold): rebuild and repack incrementally. */
@@ -1689,7 +1696,7 @@ export function timelineStep(state: TimelineState, input: TimelineInput): Timeli
     const roots = tree.roots.filter(
       (r) => r.start !== null && familyEnd(r) >= build!.lo && r.start <= build!.hi,
     );
-    const families = buildFamilies(roots, { scale, expanded: input.expanded, folded: input.folded, heights: input.heights, widthOf: input.widthOf, inputOf: input.inputOf, scaleCard: input.scaleCard, points: input.points, pointWidth: input.pointWidth });
+    const families = buildFamilies(roots, { scale, expanded: input.expanded, folded: input.folded, heights: input.heights, widthOf: input.widthOf, inputOf: input.inputOf, scaleCard: input.scaleCard, points: input.points, pointWidth: input.pointWidth, hidden: input.hidden });
     packed = packFamilies(families, full ? null : packed, { scale, width, pinned: rootOf(tree, input.pinned) });
     packMode = packed.mode;
   }
@@ -1722,29 +1729,53 @@ export interface MinimapModel {
   toT(x: number): number;
 }
 const MINIMAP_PAD = 0.04;
-/** Segments as on the rail; each one's width is (width − gaps) × its root count ÷ all roots. toX and toT invert each other. */
+/** Segments as on the rail. docs/595: the gaps take at most 20% of the width (14px when that fits); each segment gets
+ * a width proportional to its root count, raised to a minimum (4px, or an equal share when even that does not fit). A
+ * segment's time range covers only its roots' starts (a long family no longer stretches it into the next segment),
+ * padded and clipped at the midpoints to its neighbours, so ranges never overlap and every root draws in its own
+ * segment. toX and toT invert each other. */
 export function minimapModel(roots: readonly TreeNode[], width: number, adapter: CalendarAdapter): MinimapModel {
   const segs = railSegments(roots, adapter);
-  const total = segs.reduce((n, s) => n + s.roots.length, 0);
-  const usable = Math.max(0, width - MINIMAP_GAP * Math.max(0, segs.length - 1));
+  const n = segs.length;
+  const gap = n > 1 ? Math.min(MINIMAP_GAP, (0.2 * width) / (n - 1)) : 0;
+  const usable = Math.max(0, width - gap * Math.max(0, n - 1));
+  // Proportional widths, except that a segment below `min` is raised to it and the rest share what is left. Each
+  // round fixes at least one more segment, so this ends within n rounds; if every segment ends up fixed they share
+  // `usable` equally (no 0 / 0).
+  const min = n ? Math.min(4, usable / n) : 0;
+  const fixed = new Set<number>();
+  let widths = segs.map(() => 0);
+  for (let round = 0; round <= n; round++) {
+    const freeCount = segs.reduce((k, s, i) => (fixed.has(i) ? k : k + s.roots.length), 0);
+    const rest = usable - fixed.size * min;
+    widths = segs.map((s, i) => (fixed.has(i) ? min : freeCount > 0 ? (rest * s.roots.length) / freeCount : 0));
+    const low = segs.map((_, i) => i).filter((i) => !fixed.has(i) && widths[i] < min - 1e-9);
+    if (!low.length) break;
+    low.forEach((i) => fixed.add(i));
+    if (fixed.size === n) { widths = segs.map(() => usable / n); break; }
+  }
   let x = 0;
-  const segments: MinimapSegment[] = segs.map((s) => {
-    const t1 = Math.max(s.t1, ...s.roots.map((r) => familyEnd(r)));
-    const pad = Math.max(adapter.dayHours, (t1 - s.t0) * MINIMAP_PAD);
-    const w = total ? (usable * s.roots.length) / total : 0;
-    const seg = { index: s.index, t0: s.t0 - pad, t1: t1 + pad, count: s.roots.length, x0: x, width: w };
-    x += w + MINIMAP_GAP;
+  const segments: MinimapSegment[] = segs.map((s, i) => {
+    const a = s.t0, z = s.t1;
+    const pad = Math.max(adapter.dayHours, (z - a) * MINIMAP_PAD);
+    const prev = segs[i - 1], next = segs[i + 1];
+    const t0 = prev ? Math.max(a - pad, (prev.t1 + a) / 2) : a - pad;
+    const t1 = next ? Math.min(z + pad, (z + next.t0) / 2) : z + pad;
+    const w = widths[i];
+    const seg = { index: s.index, t0, t1, count: s.roots.length, x0: x, width: w };
+    x += w + gap;
     return seg;
   });
   const toX = (t: number) => {
     if (!segments.length) return 0;
-    const g = segments.find((g) => t <= g.t1) ?? segments[segments.length - 1];
-    const r = (t - g.t0) / (g.t1 - g.t0);
+    let g = segments[0];
+    for (const s of segments) if (s.t0 <= t) g = s; else break;
+    const r = g.t1 > g.t0 ? (t - g.t0) / (g.t1 - g.t0) : 0;
     return g.x0 + Math.min(1, Math.max(0, r)) * g.width;
   };
   const toT = (px: number) => {
     if (!segments.length) return 0;
-    const g = segments.find((g) => px <= g.x0 + g.width + MINIMAP_GAP / 2) ?? segments[segments.length - 1];
+    const g = segments.find((g) => px <= g.x0 + g.width + gap / 2) ?? segments[segments.length - 1];
     const r = g.width > 0 ? (px - g.x0) / g.width : 0;
     return g.t0 + Math.min(1, Math.max(0, r)) * (g.t1 - g.t0);
   };
@@ -1834,9 +1865,9 @@ export function medianRootGap(tree: EventTree): number | null {
   const m = g[Math.floor((g.length - 1) / 2)];
   return m > 0 ? m : null;
 }
-/** 0 原样 · 1 缩小卡片 · 2 一般 → 时间点 · 3 父事件自动折叠 · 4 只留关键卡片. */
-export type ZoomLevel = 0 | 1 | 2 | 3 | 4;
-const ZOOM_STEPS = [ZOOM_FULL, ZOOM_POINTS, ZOOM_FOLD, ZOOM_KEY] as const;
+/** 0 原样 · 1 缩小卡片 · 2 一般 → 时间点 · 3 父事件自动折叠 · 4 一般隐藏 · 5 重要 → 时间点 · 6 重要隐藏 (docs/593). */
+export type ZoomLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+const ZOOM_STEPS = [ZOOM_FULL, ZOOM_POINTS, ZOOM_FOLD, ZOOM_HIDE_NORMAL, ZOOM_KEY_POINTS, ZOOM_HIDE_KEY] as const;
 /** docs/592 §2.1: d = gap × width / span. Zooming out enters a level at once; zooming in leaves it only once d passes
  * its threshold × 1.15 (the 160 step has no visible change and gets the same rule). */
 export function zoomLevel(d: number, prev: ZoomLevel): ZoomLevel {
@@ -1851,9 +1882,18 @@ export function cardScale(d: number, level: ZoomLevel): number {
   const f = CARD_SCALE_MIN + ((1 - CARD_SCALE_MIN) * Math.log(d / ZOOM_POINTS)) / Math.log(ZOOM_FULL / ZOOM_POINTS);
   return Math.round(f * 20 + 1e-9) / 20;
 }
+/** docs/593 §1.2: below `hide` an event is not drawn, below `bar` it is a time point; `pointClass` names the points
+ * (1 一般 / 2 重要, 0 none). `hide` never passes the worldline's highest importance, so hiding never empties it. */
+export function zoomBars(level: ZoomLevel, maxImportance: number): { hide: number; bar: number; pointClass: 0 | 1 | 2 } {
+  const hide = Math.min(level >= 6 ? 3 : level >= 4 ? 2 : 0, maxImportance);
+  const bar = level >= 5 ? 3 : level >= 2 ? 2 : 0;
+  return { hide, bar, pointClass: bar > hide ? (Math.max(1, Math.min(bar - 1, maxImportance)) as 1 | 2) : 0 };
+}
 export interface ZoomPlan {
   level: ZoomLevel;
   scale: number;
+  /** docs/593: topmost events not drawn at all (their descendants go with them). */
+  hidden: ReadonlySet<string>;
   /** Events drawn as time points (never inside a folded family). */
   points: ReadonlySet<string>;
   /** Parents folded by the zoom (minus the user's unfolded ones and ancestors of kept events). */
@@ -1866,15 +1906,19 @@ export interface ZoomKeep {
   folded?: ReadonlySet<string>;
   /** Parents the user unfolded while auto-folding is on. */
   unfolded: ReadonlySet<string>;
-  /** 显示为卡片: no points at levels 2–4. */
+  /** 显示为卡片: no points at levels 2–6 (hidden events stay hidden). */
   showAll: boolean;
 }
 const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) => a.size === b.size && [...a].every((x) => b.has(x));
-/** docs/592 §2.2: what each event is at a zoom level. A card stays a card at importance ≥ the level's bar (重要 at levels
- * 2–3, 关键 at 4), when a descendant does, when it is kept or an ancestor of a kept event. Sets equal to `prev`'s are
- * returned as `prev`'s objects, so an unchanged plan does not repack. */
+/** docs/592 §2.2 / docs/593 §1.3: what each event is at a zoom level. It is drawn at importance ≥ the level's hide bar,
+ * and a card at importance ≥ its card bar (zoomBars), or when a descendant is, when it is kept or an ancestor of a kept
+ * event. The direct children of a parent the user unfolded ignore the hide bar and are cards (review P1-3). Sets equal to `prev`'s
+ * are returned as `prev`'s objects, so an unchanged plan does not repack. */
 export function zoomPlan(tree: EventTree, level: ZoomLevel, scale: number, keep: ZoomKeep, prev?: ZoomPlan): ZoomPlan {
-  const bar = keep.showAll || level < 2 ? 0 : level >= 4 ? 3 : 2;
+  let max = 0;
+  for (const n of tree.byId.values()) if (n.start !== null && n.event.importance > max) max = n.event.importance;
+  const bars = zoomBars(level, max), hide = bars.hide;
+  const bar = keep.showAll ? hide : bars.bar;
   // `kept` holds the kept events; `opened` only their strict ancestors (code review P1-2): a kept parent itself still
   // folds, so selecting a stacked card does not open its family and its fold button keeps working.
   const kept = new Set<string>(), opened = new Set<string>();
@@ -1898,13 +1942,27 @@ export function zoomPlan(tree: EventTree, level: ZoomLevel, scale: number, keep:
     }
     return v;
   };
-  const autoFolded = new Set<string>(), points = new Set<string>();
+  const shown = new Map<string, boolean>();
+  const isShown = (n: TreeNode): boolean => {
+    let v = shown.get(n.id);
+    if (v === undefined) {
+      v = n.event.importance >= hide || kept.has(n.id) || opened.has(n.id);
+      for (const k of n.children) if (isShown(k)) v = true;
+      shown.set(n.id, v);
+    }
+    return v;
+  };
+  const autoFolded = new Set<string>(), points = new Set<string>(), hidden = new Set<string>();
   // Only what the canvas draws (code review P1-1): a point's descendants are hidden with it (buildFamilies stops at a
-  // point), and so are the children of a folded parent, the user's or the zoom's.
-  const walk = (n: TreeNode) => {
-    if (bar && !isCard(n)) { points.add(n.id); return; }
+  // point), and so are the children of a folded parent, the user's or the zoom's, and of a hidden event.
+  const walk = (n: TreeNode, free = false) => {
+    // docs/593 code review P2: a child the user unfolded into view although its importance is hidden is a card (it has
+    // no point class, so the status note could not account for it as a point).
+    const forced = free && hide > 0 && !isShown(n);
+    if (hide && !free && !isShown(n)) { hidden.add(n.id); return; }
+    if (bar && !forced && !isCard(n)) { points.add(n.id); return; }
     if (!n.children.length) return;
-    if (keep.unfolded.has(n.id)) { for (const k of n.children) walk(k); return; }
+    if (keep.unfolded.has(n.id)) { for (const k of n.children) walk(k, true); return; }
     if (level >= 3 && !opened.has(n.id)) { autoFolded.add(n.id); return; }
     if (userFolded.has(n.id)) return;
     for (const k of n.children) walk(k);
@@ -1913,6 +1971,7 @@ export function zoomPlan(tree: EventTree, level: ZoomLevel, scale: number, keep:
   return {
     level,
     scale,
+    hidden: prev && sameSet(prev.hidden, hidden) ? prev.hidden : hidden,
     points: prev && sameSet(prev.points, points) ? prev.points : points,
     autoFolded: prev && sameSet(prev.autoFolded, autoFolded) ? prev.autoFolded : autoFolded,
   };

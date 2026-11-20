@@ -301,12 +301,14 @@
 .stamp::before { content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 5px; vertical-align: 1px; border-radius: 50%; background: var(--ec); }
 .clipNote { position: absolute; top: 100%; left: 4px; margin-top: 2px; font-size: 10px; color: var(--muted-foreground); white-space: nowrap; pointer-events: none; }
 .clipNote.clipEnd { left: auto; right: 4px; }
-.minimap { position: absolute; right: 18px; bottom: 14px; z-index: 12; height: 44px; border-radius: 10px; cursor: pointer; touch-action: none;
+.minimap { position: absolute; right: 18px; bottom: 14px; z-index: 12; height: 120px; border-radius: 10px; cursor: pointer; touch-action: none;
   border: 1px solid var(--border); background: color-mix(in srgb, var(--popover) 92%, transparent); box-shadow: var(--shadow-2); }
 .minimap:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.minimap u { position: absolute; top: 8px; bottom: 8px; border-radius: 4px; background: var(--muted); }
-.minimap i { position: absolute; bottom: 10px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ec); }
-.minimap b { position: absolute; top: 3px; bottom: 3px; border-radius: 7px; border: 1.5px solid var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.minimap u { position: absolute; top: 6px; bottom: 6px; border-radius: 4px; background: var(--muted); }
+/* docs/596: marks sit at their family's height (top / height inline); roots outside the build range in the bottom row. */
+.minimap i { position: absolute; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ec); pointer-events: none; }
+.minimap s { position: absolute; left: 4px; right: 4px; border-radius: 2px; background: color-mix(in srgb, var(--muted-foreground) 22%, transparent); pointer-events: none; }
+.minimap b { position: absolute; box-sizing: border-box; min-height: 8px; border-radius: 5px; pointer-events: none; border: 1.5px solid var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
 .laneItem { position: absolute; z-index: 2; }
 .laneHead { position: absolute; left: 0; z-index: 3; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-foreground); pointer-events: none; }
 .laneItem > button { width: 100%; min-height: 80px; }
@@ -404,6 +406,13 @@
 .tpoint.hot .dot { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 30%, transparent), 0 0 8px var(--ec); }
 .tpoint.hot > time { color: #fff; background: var(--ec); }
 .tpoint.hot > span[data-point-title] { color: var(--foreground); }
+/* docs/594: the hovered point shows its whole title on an opaque backing above the other cards. Only the title's right
+ * end grows (no padding), so the dot, the date and the title's left edge stay put. z 8 is inside the plane's stacking
+ * context (will-change): over cards (2) and opened cards (5), under an open card menu (9). */
+.tcard:has(> [data-event-point][data-hot]) { z-index: 8; }
+.tpoint.hot { background: var(--background); border-radius: 4px; box-shadow: 0 0 0 3px var(--background); }
+.tpoint.hot.dim { opacity: 1; }
+.tpoint.hot > span[data-point-title] { max-width: none; overflow: visible; mask-image: none; -webkit-mask-image: none; }
 .stamp { border-radius: 5px; transition: color 0.15s, background 0.15s; }
 .tcard[data-hot] .stamp { color: #fff; background: var(--ec); padding: 0 6px 0 2px; }
 .tcard[data-hot] .stamp::before { background: #fff; }

@@ -44,7 +44,7 @@ export function createViewportStore(initial:{start:number;span:number;y?:number}
 /** docs/592 §2.4: the status-line note of the timeline zoom levels. One store per panel (like the viewport store):
  * EventTimeline writes it in a layout effect and registers the button actions; the status line subscribes, so
  * PlanningWorkspace never re-renders on a zoom step. Equal notes notify nobody. */
-export interface ZoomNote {readonly count:number;readonly key:boolean;readonly showAll:boolean}
+export interface ZoomNote {readonly count:number;readonly important:boolean;readonly showAll:boolean}
 export interface ZoomNoteStore {
  subscribe(listener:()=>void):()=>void
  getSnapshot():ZoomNote|null
@@ -59,7 +59,7 @@ export function createZoomNoteStore():ZoomNoteStore{
   subscribe(listener){listeners.add(listener);return()=>{listeners.delete(listener)}},
   getSnapshot:()=>current,
   set(note){
-   if(note===current||(note&&current&&note.count===current.count&&note.key===current.key&&note.showAll===current.showAll))return
+   if(note===current||(note&&current&&note.count===current.count&&note.important===current.important&&note.showAll===current.showAll))return
    current=note?Object.freeze({...note}):null
    for(const listener of [...listeners])listener()
   },

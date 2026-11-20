@@ -123,11 +123,13 @@ export async function revealTimelineCard(page: Page, card: import("playwright-co
   // A card outside the rendered band or the built range is not in the DOM: fail here, not in a later click timeout.
   await card.first().waitFor({ state: "attached", timeout: 3000 })
   for (let i = 0; i < 60; i++) {
-    const [c, l] = await Promise.all([card.boundingBox(), lane.boundingBox()])
+    const [c, l, m] = await Promise.all([card.boundingBox(), lane.boundingBox(), page.locator("[data-minimap]").first().boundingBox().catch(() => null)])
     if (!c || !l) return
-    if (c.y >= l.y + 8 && c.y + c.height <= l.y + l.height - 60) return
+    // docs/596: the minimap is 120px high; a card that overlaps it in x must end above it to be clickable.
+    const bottom = m && c.x < m.x + m.width && c.x + c.width > m.x ? Math.min(l.y + l.height - 60, m.y - 8) : l.y + l.height - 60
+    if (c.y >= l.y + 8 && c.y + c.height <= bottom) return
     await page.locator("[data-timeline]").focus()
-    await page.keyboard.press(c.y + c.height > l.y + l.height - 60 ? "ArrowDown" : "ArrowUp")
+    await page.keyboard.press(c.y + c.height > bottom ? "ArrowDown" : "ArrowUp")
     await page.waitForTimeout(16)
   }
 }

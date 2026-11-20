@@ -7,9 +7,10 @@ import { f60 } from "../helpers/worldline-f60"
 import { f885 } from "../helpers/worldline-f885"
 import { ZOOM_GAP, zoomView } from "../helpers/worldline-zoom"
 
-/* docs/592 ZB-01 … ZB-24: two-line titles, timeline zoom levels, time points, stacked parents, hover. Fixtures zoomView
+/* docs/592 ZB-01 … ZB-27, docs/593 ZB-28 … ZB-33: two-line titles, timeline zoom levels, time points, stacked parents, hover. Fixtures zoomView
  * (tests/helpers/worldline-zoom.ts), F60 and F885 on the in-memory fixture API (not a real-target proof, §8). Zoom
- * levels are on (`zoomLevels: true`). Expected values follow docs/592 (thresholds 160 / 40 / 10 / 2.5 px, ×1.15 back;
+ * levels are on (`zoomLevels: true`). Expected values follow docs/592 / docs/593 (thresholds 160 / 40 / 10 / 2.5 / 0.6 /
+ * 0.15 px, ×1.15 back;
  * zoom 0.75 at d ≤ 40), not the page's code. d is read from the page: 720 h × plot width / window span. */
 let browser: Browser
 test.before(async () => { browser = await launch() })
@@ -183,29 +184,30 @@ test("ZB-05b: a family folded in the event table opens and folds again on the ti
   await tab(page, "事件表")
   await expect(page.locator('[data-event-table] [data-event-card][data-event-id="r2"]')).toHaveAttribute("data-stacked", "")
 }, Z))
-test("ZB-06: at d < 2.5 only 关键 events (and parents of one) are cards; the status note counts 17 and toggles", () => W(zoomView(), async page => {
+test("ZB-06: at 0.15 ≤ d < 0.6 only 关键 events are cards, 重要 are points, 一般 are gone; the note counts 9 and toggles", () => W(zoomView(), async page => {
   await openTimeline(page)
-  await zoomTo(page, 0.3, 2.4)
+  await zoomTo(page, 0.2, 0.55, "r4")
   await frames(page)
-  // zoomView(24) at level 4: the 关键 roots are r4, r5, r11, r14, r17, r20, r23 (7 cards); the other 17 roots are points,
-  // r2 and r8 included (their 重要 child does not reach the 关键 bar). Every parent folds, so no child is a point.
-  // Checked once against zoomPlan before writing this case (docs/592 §6.2).
+  // docs/593 §4.2, checked against zoomPlan: the 7 关键 roots (r4, r5, r11, r14, r17, r20, r23) are cards; the 7 重要
+  // roots and r2, r8 (一般 parents of a 重要 child) are points; the other 一般 roots are hidden.
   const note = page.locator("[data-zoom-note]")
-  await expect(note).toHaveText(/^17 个一般和重要事件显示为时间点/)
+  await expect(note).toHaveText(/^9 个重要事件显示为时间点/)
   const order = await page.evaluate(() => { const a = document.querySelector("[aria-live=polite]")!, b = document.querySelector("[data-zoom-note]")!; return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) })
   assert.ok(order, "the note follows 「N 件事件」 on the status line")
-  for (const id of ["r1", "r7"]) { await expect(cardById(page, id)).toHaveCount(0) }
+  await expect(pointById(page, "r1")).toHaveCount(1); await expect(cardById(page, "r1")).toHaveCount(0)
+  for (const id of ["r0", "r3"]) await expect(page.locator(`[data-timeline-plane] [data-event-id="${id}"]`)).toHaveCount(0)
   await expect(cardById(page, "r4")).toHaveCount(1)
   await note.getByRole("button", { name: "显示为卡片" }).click(); await frames(page)
   await expect(page.locator("[data-timeline-plane] [data-event-point]")).toHaveCount(0)
-  await expect(note).toHaveText(/^一般和重要事件已显示为卡片/)
+  await expect(cardById(page, "r1")).toHaveCount(1)
+  await expect(page.locator('[data-timeline-plane] [data-event-id="r0"]')).toHaveCount(0)
+  await expect(note).toHaveText(/^重要事件已显示为卡片/)
   await note.getByRole("button", { name: "改回时间点" }).click(); await frames(page)
   await expect(page.locator("[data-timeline-plane] [data-event-point]")).not.toHaveCount(0)
-  // showAll resets once the zoom leaves the point levels.
+  // showAll belongs to the 重要 points: at the 一般 point levels it is off again.
   await note.getByRole("button", { name: "显示为卡片" }).click(); await frames(page)
-  await zoomTo(page, 47, 150)
-  await expect(note).toHaveCount(0)
-  await zoomTo(page, 12, 39)
+  await zoomTo(page, 12, 39, "r4")
+  await expect(note).toHaveText(/个一般事件显示为时间点/)
   await expect(page.locator("[data-timeline-plane] [data-event-point]")).not.toHaveCount(0)
 }, Z))
 
@@ -222,9 +224,9 @@ test("ZB-07: hysteresis: points stay between d 40 and 46 on the way up, leave ab
   assert.equal(await pts(), 0, `no points back at d ${await dOf(page)}`)
 }, Z))
 
-test("ZB-08: at level 4 a tree click on a 一般 child makes it a card in view, opens its family, and leaves the table folding", () => W(zoomView(), async page => {
+test("ZB-08: at level 6 a tree click on a 一般 child makes it a card in view, opens its family, and leaves the table folding", () => W(zoomView(), async page => {
   await openTimeline(page)
-  await zoomTo(page, 0.3, 2.4)
+  await zoomTo(page, 0.02, 0.13, "r4")
   await expect(page.locator('[data-timeline-plane] [data-event-id="r8c0"]')).toHaveCount(0)
   await page.locator('[role="treeitem"]').filter({ hasText: "·阶段1" }).nth(1).click()
   await expect(cardById(page, "r8c0")).toHaveCount(1)
@@ -370,18 +372,21 @@ test("ZB-15: a folded timeline parent is a stacked leaf: its own collapsed width
   }
 }, Z))
 
-test("ZB-16: a worldline without 关键 events opened at level 4 shows its points, centred, with no 「视图内没有事件」", () => W(zoomView(60, { withKey: false }), async page => {
+test("ZB-16: a worldline without 关键 events at level 6 keeps its 重要 events as points, drops 一般, no 「视图内没有事件」", () => W(zoomView(60, { withKey: false }), async page => {
   await openTimeline(page)
-  await zoomTo(page, 0.3, 2.4)
-  await page.getByRole("button", { name: "复位" }).first().click().catch(() => {})
+  await zoomTo(page, 0.02, 0.13, "r1")
   await frames(page, 4)
+  // docs/593 §1.2: hiding stops at the highest importance present (重要), so the 重要 roots stay as points.
+  await expect(pointById(page, "r1")).toHaveCount(1)
+  await expect(page.locator('[data-timeline-plane] [data-event-id="r0"]')).toHaveCount(0)
+  await expect(page.locator("[data-zoom-note]")).toHaveText(/个重要事件显示为时间点/)
   await expect(page.locator("[data-empty-view]")).toHaveCount(0)
   const lane = await rect(page.locator("[data-timeline-lane]"))
   const inside = await page.locator("[data-timeline-plane] [data-event-point]").evaluateAll((l, lane) => l.filter(e => { const r = e.getBoundingClientRect(); return r.x >= lane.x && r.right <= lane.x + lane.w && r.y >= lane.y && r.bottom <= lane.y + lane.h }).length, lane)
   assert.ok(inside > 0, "points in the lane")
 }, Z))
 
-test("ZB-17: the edited 一般 event stays a card with its draft when the zoom reaches level 4", () => W(zoomView(), async page => {
+test("ZB-17: the edited 一般 event stays a card with its draft when the zoom reaches level 6", () => W(zoomView(), async page => {
   await openTimeline(page)
   await zoomTo(page, 160, 1e9, "r6")
   const c = cardById(page, "r6")
@@ -389,7 +394,7 @@ test("ZB-17: the edited 一般 event stays a card with its draft when the zoom r
   await c.locator("[data-card-title]").dblclick()
   const title = page.getByLabel("事件标题")
   await title.fill("改过的标题草稿")
-  await zoomTo(page, 0.3, 2.4)
+  await zoomTo(page, 0.02, 0.13, "r6")
   await expect(cardById(page, "r6")).toHaveCount(1)
   await expect(pointById(page, "r6")).toHaveCount(0)
   await expect(page.getByLabel("事件标题")).toHaveValue("改过的标题草稿")
@@ -418,7 +423,7 @@ test("ZB-18: of two 一般 search hits, the current one is a card and the other 
 const renders = (page: Page) => page.evaluate(() => ({ ...(globalThis as any).renders })) as Promise<Record<string, number>>
 const reset = (page: Page) => page.evaluate(() => { (globalThis as any).renders = {} })
 
-test("ZB-19: crossing 40 / 10 / 2.5, 显示为卡片, an auto-folded fold button and hovering 20 cards render PlanningWorkspace 0 times", () => W(zoomView(60), async page => {
+test("ZB-19: crossing 40 / 10 / 2.5 / 0.6 / 0.15, 显示为卡片, an auto-folded fold button and hovering 20 cards render PlanningWorkspace 0 times", () => W(zoomView(60), async page => {
   await openTimeline(page)
   // Positive control: a view switch renders the workspace.
   await reset(page)
@@ -428,15 +433,20 @@ test("ZB-19: crossing 40 / 10 / 2.5, 显示为卡片, an auto-folded fold button
   await reset(page)
   const l = (await page.locator("[data-timeline-lane]").boundingBox())!
   await page.mouse.move(l.x + l.width / 2, l.y + 40)
-  for (let i = 0; i < 60 && (await dOf(page)) > 2; i++) { await page.mouse.wheel(0, 100); await frames(page, 1) }
-  assert.ok((await dOf(page)) < 2.5, "crossed every threshold")
+  for (let i = 0; i < 90 && (await dOf(page)) > 0.1; i++) { await page.mouse.wheel(0, 100); await frames(page, 1) }
+  assert.ok((await dOf(page)) < 0.15, "crossed every threshold")
   assert.equal((await renders(page)).PlanningWorkspace ?? 0, 0, "zoom steps")
+  // docs/593 review P1-2: the note button and the fold click at the levels that have them (2 and 3).
+  await zoomTo(page, 12, 39)
+  await reset(page)
   await page.locator("[data-zoom-note] button").click(); await frames(page)
   await page.locator("[data-zoom-note] button").click(); await frames(page)
+  assert.equal((await renders(page)).PlanningWorkspace ?? 0, 0, "显示为卡片 / 改回时间点")
   // Bring r2 into view with the tree (a locate renders the workspace), then measure only the fold click.
   await page.locator('[role="treeitem"]').filter({ hasText: /^旧书星图3/ }).first().click()
   const p = cardById(page, "r2")
   await expect(p).toHaveCount(1); await revealTimelineCard(page, p); await frames(page, 4); await reset(page)
+  await zoomTo(page, 3, 9.5, "r2"); await revealTimelineCard(page, p); await frames(page, 4); await reset(page)
   await p.locator("[data-fold]").click(); await frames(page)
   // The click must do something (code review P1-2: a selected parent's fold used to be a no-op).
   await expect(p).not.toHaveAttribute("data-stacked", "")
@@ -447,9 +457,9 @@ test("ZB-19: crossing 40 / 10 / 2.5, 显示为卡片, an auto-folded fold button
   assert.equal((await renders(page)).PlanningWorkspace ?? 0, 0, "hover")
 }, { ...Z, profiling: true }))
 
-test("ZB-20: F885 opened at level 4: 30 pan frames and 30 box frames render PlanningWorkspace 0 times, under 16ms each, no repack", () => W(f885(), async page => {
-  await openTimeline(page)
-  assert.ok(await page.locator("[data-timeline-plane] [data-event-point]").count() > 0, "level 4 has points")
+/** docs/593 review P1-1: F885 opens at d ≈ 0.4–1.4 (median root gap 36 h). */
+const F885_GAP = 36
+async function panAndBox(page: Page) {
   await reset(page)
   const l = (await page.locator("[data-timeline-lane]").boundingBox())!
   const empty = await page.evaluate(() => {
@@ -475,6 +485,17 @@ test("ZB-20: F885 opened at level 4: 30 pan frames and 30 box frames render Plan
   const st = await frameStats()
   // Headless Chromium paces rAF at 60Hz; a frame that misses its slot shows up as ≥ 33ms. p95 under one slot.
   assert.ok(st.n > 20 && st.p95 < 20, `frames ${JSON.stringify(st)}`)
+}
+test("ZB-20: F885 at level 4 (all cards) and level 5 (points): 30 pan and 30 box frames render PlanningWorkspace 0 times, p95 under 20ms", () => W(f885(), async page => {
+  await openTimeline(page)
+  const d = await dOf(page, F885_GAP)
+  assert.ok(d >= 0.6 && d < 2.5, `opens at level 4: d ${d}`)
+  assert.equal(await page.locator("[data-timeline-plane] [data-event-point]").count(), 0, "level 4 has no points")
+  await panAndBox(page)
+  await page.keyboard.press("Escape")
+  await zoomTo(page, 0.2, 0.55, undefined, F885_GAP)
+  assert.ok(await page.locator("[data-timeline-plane] [data-event-point]").count() > 0, "level 5 has points")
+  await panAndBox(page)
 }, { ...Z, profiling: true }))
 
 test("ZB-23: at zoom 0.75 a stacked card's fold button and dot sit on its title's first line", () => W(zoomView(), async page => {
@@ -494,7 +515,21 @@ test("ZB-24: two worldline panels: only the zoomed-out one shows the zoom note",
   await frames(page, 4)
   const l = (await panels.nth(0).locator("[data-timeline-lane]").boundingBox())!
   await page.mouse.move(l.x + l.width / 2, l.y + 30)
-  for (let i = 0; i < 30; i++) { await page.mouse.wheel(0, 100); await frames(page, 1) }
+  // docs/593 review P1-2: stop at the 一般 point levels (levels 4 and 6 have no note).
+  for (let i = 0; i < 30; i++) {
+    const d = await panels.nth(0).evaluate((p, g) => { const t = p.querySelector("[data-timeline]")!, w = p.querySelector("[data-timeline-lane]")!.clientWidth - 28; return g * w / Number(t.getAttribute("data-view-span")) }, ZOOM_GAP)
+    if (d < 39) break
+    await page.mouse.wheel(0, 100); await frames(page, 1)
+  }
+  // Code review P2: the panel must actually be at the 一般 point levels (the narrow panels may open below them).
+  if (await panels.nth(0).evaluate((p, g) => { const t = p.querySelector("[data-timeline]")!, w = p.querySelector("[data-timeline-lane]")!.clientWidth - 28; return g * w / Number(t.getAttribute("data-view-span")) }, ZOOM_GAP) < 10)
+    for (let i = 0; i < 30; i++) {
+      const d = await panels.nth(0).evaluate((p, g) => { const t = p.querySelector("[data-timeline]")!, w = p.querySelector("[data-timeline-lane]")!.clientWidth - 28; return g * w / Number(t.getAttribute("data-view-span")) }, ZOOM_GAP)
+      if (d >= 12) break
+      await page.mouse.wheel(0, -20); await frames(page, 1)
+    }
+  const d0 = await panels.nth(0).evaluate((p, g) => { const t = p.querySelector("[data-timeline]")!, w = p.querySelector("[data-timeline-lane]")!.clientWidth - 28; return g * w / Number(t.getAttribute("data-view-span")) }, ZOOM_GAP)
+  assert.ok(d0 >= 10 && d0 < 40, `panel 0 at d ${d0}`)
   const l1 = (await panels.nth(1).locator("[data-timeline-lane]").boundingBox())!
   await page.mouse.move(l1.x + l1.width / 2, l1.y + 30)
   for (let i = 0; i < 30; i++) { await page.mouse.wheel(0, -100); await frames(page, 1) }
@@ -502,17 +537,21 @@ test("ZB-24: two worldline panels: only the zoomed-out one shows the zoom note",
   await expect(panels.nth(1).locator("[data-zoom-note]")).toHaveCount(0)
 }, { ...Z, panels: 2 }))
 
-test("ZB-21: without a Provider (the product default) zoom levels are on: F885 opens with points", () => W(f885(), async page => {
+test("ZB-21: without a Provider (the product default) zoom levels are on: F885 opens with its 一般 roots hidden", () => W(f885(), async page => {
   await openTimeline(page)
-  await expect(page.locator("[data-timeline-plane] [data-event-point]").first()).toBeVisible()
+  assert.ok((await dOf(page, F885_GAP)) < 2.5)
+  await expect(page.locator('[data-timeline-plane] [data-event-id="n1"]')).toHaveCount(0)
+  await expect(page.locator('[data-timeline-plane] [data-event-card][data-importance="2"]').first()).toBeAttached()
+  // Code review P2: not a vertical clip. No 一般 event is drawn at all, except as a stacked parent of a 重要 child.
+  assert.equal(await page.locator('[data-timeline-plane] [data-event-point][data-importance="1"], [data-timeline-plane] [data-event-card][data-importance="1"]:not([data-stacked])').count(), 0)
 }, { zoomLevels: "default" }))
 
 test("ZB-22: zooming, 显示为卡片, opening an auto-folded family and hovering never save the work", () => W(zoomView(), async page => {
   await openTimeline(page)
-  await zoomTo(page, 0.3, 2.4)
+  await zoomTo(page, 0.2, 0.55, "r4")
   await page.locator("[data-zoom-note] button").click(); await frames(page)
   await page.locator("[data-zoom-note] button").click(); await frames(page)
-  await zoomTo(page, 3, 9.5)
+  await zoomTo(page, 3, 9.5, "r2")
   await revealTimelineCard(page, cardById(page, "r2"))
   await cardById(page, "r2").locator("[data-fold]").click(); await frames(page)
   await cardById(page, "r2").hover(); await frames(page)
@@ -558,4 +597,193 @@ test("ZB-27: a timeline parent card keeps its type-tinted header (approved desig
     assert.match(bg, /linear-gradient/)
     assert.notEqual(bg, leaf, "the parent header differs from a leaf card")
   }
+}, Z))
+
+test("ZB-28: at 0.6 ≤ d < 2.5 the 一般 events are gone; 重要 and 关键 are cards, parents stacked, no zoom note", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  await zoomTo(page, 0.7, 2.4, "r4")
+  for (const id of ["r0", "r3", "r6"]) await expect(page.locator(`[data-timeline-plane] [data-event-id="${id}"]`)).toHaveCount(0)
+  for (const id of ["r1", "r5"]) await expect(cardById(page, id)).toHaveCount(1)
+  await expect(cardById(page, "r2")).toHaveAttribute("data-stacked", "")
+  await expect(page.locator("[data-timeline-plane] [data-event-point]")).toHaveCount(0)
+  await expect(page.locator("[data-zoom-note]")).toHaveCount(0)
+}, Z))
+
+test("ZB-29: at d < 0.15 only the 7 关键 roots are cards, no points, no note; back past 0.15 × 1.15 the 重要 points return", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  await zoomTo(page, 0.02, 0.13, "r4")
+  const ids = await page.locator("[data-timeline-plane] [data-event-card]").evaluateAll(l => [...new Set(l.map(e => e.getAttribute("data-event-id")))].sort())
+  // The plane draws a build range around the window; every card drawn is a 关键 root (r4 stacked with its 一般 children).
+  assert.ok(ids.length > 0 && ids.every(id => ["r4", "r5", "r11", "r14", "r17", "r20", "r23"].includes(id!)), ids.join())
+  await expect(cardById(page, "r4")).toHaveAttribute("data-stacked", "")
+  await expect(page.locator("[data-timeline-plane] [data-event-point]")).toHaveCount(0)
+  await expect(page.locator("[data-zoom-note]")).toHaveCount(0)
+  await zoomTo(page, 0.152, 0.17, "r4")
+  await expect(page.locator("[data-timeline-plane] [data-event-point]")).toHaveCount(0)
+  await zoomTo(page, 0.18, 0.55, "r4")
+  await expect(page.locator("[data-timeline-plane] [data-event-point]")).not.toHaveCount(0)
+}, Z))
+
+test("ZB-30: the minimap, the event tree and the legend counts are the same at level 0 and level 6", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  const read = () => page.evaluate(() => ({
+    // docs/596: every root keeps one mark (laid out at its height, or in the bottom row when hidden or out of range).
+    mini: document.querySelectorAll("[data-minimap] i[data-mini-root]").length,
+    tree: document.querySelectorAll('[role="treeitem"]').length,
+    count: document.querySelector("[data-filter-count]")?.textContent ?? document.querySelector("[aria-live=polite]")?.textContent,
+  }))
+  await zoomTo(page, 160, 1e9)
+  const a = await read()
+  await zoomTo(page, 0.02, 0.13, "r4")
+  assert.deepEqual(await read(), a)
+}, Z))
+
+test("ZB-31: at level 6 a located 一般 parent folds; its fold button shows its children as cards and folds them again", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  await zoomTo(page, 0.02, 0.13, "r4")
+  await expect(page.locator('[data-timeline-plane] [data-event-id="r2"]')).toHaveCount(0)
+  await page.locator('[role="treeitem"][data-tree-id="r2"]').click()
+  const p = cardById(page, "r2")
+  await expect(p).toHaveCount(1); await revealTimelineCard(page, p)
+  await expect(p).toHaveAttribute("data-stacked", "")
+  await p.locator("[data-fold]").click(); await frames(page)
+  await expect(p).not.toHaveAttribute("data-stacked", "")
+  await expect(p.locator("[data-fold]")).toHaveAttribute("aria-expanded", "true")
+  await expect(page.locator('[data-timeline-plane] [data-event-card][data-event-id^="r2c"]')).toHaveCount(3)
+  await p.locator("[data-fold]").click(); await frames(page)
+  await expect(p).toHaveAttribute("data-stacked", "")
+  await expect(page.locator('[data-timeline-plane] [data-event-id^="r2c"]')).toHaveCount(0)
+}, Z))
+
+test("ZB-32: when the event under the wheel is hidden, the drawn event nearest the pointer lands 6px above it; the lane never empties", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  // Code review P1: the position itself, not just a non-empty lane (a small fixture keeps something in the lane anyway).
+  // Nearest in x to the pointer (distance to the box), then in y, as the fallback picks from the layout.
+  const nearest = (px: number, py: number) => page.evaluate(([px, py]) => {
+    let best: { top: number; dx: number; dy: number } | null = null
+    for (const e of document.querySelectorAll("[data-timeline-plane] [data-event-card], [data-timeline-plane] [data-event-point]")) {
+      const b = e.getBoundingClientRect(); if (!(b.width > 0)) continue
+      const dx = Math.max(0, b.left - px, px - b.right), dy = Math.abs(b.top - py)
+      if (!best || dx < best.dx - 0.5 || (Math.abs(dx - best.dx) <= 0.5 && dy < best.dy)) best = { top: b.top, dx, dy }
+    }
+    return best
+  }, [px, py])
+  for (const [id, lo, hi, stop] of [["r6", 2.6, 3.5, 2.2], ["r7", 0.16, 0.2, 0.12]] as const) {
+    await zoomTo(page, lo, hi, id)
+    // Push the plane down so the anchor sits low in the lane: without the fallback, the shrunken canvas stays put.
+    const el = page.locator(`[data-timeline-plane] [data-event-id="${id}"]`).first()
+    const b = (await el.boundingBox())!
+    await page.mouse.move(b.x + 3, b.y + 6)
+    let crossed = false
+    for (let i = 0; i < 40 && (await dOf(page)) > stop; i++) {
+      await page.mouse.wheel(0, 20); await frames(page, 3)
+      await expect(page.locator("[data-empty-view]")).toHaveCount(0)
+      if (!crossed && (await page.locator(`[data-timeline-plane] [data-event-id="${id}"]`).count()) === 0) {
+        crossed = true
+        const n = await nearest(b.x + 3, b.y + 6)
+        assert.ok(n && Math.abs(n.top - (b.y + 6 - 6)) <= 3, `fallback top ${n?.top} vs ${b.y}`)
+      }
+    }
+    assert.ok(crossed, `${id} was hidden on the way past ${stop}`)
+  }
+}, Z))
+
+test("ZB-33: with 关键 hidden in the legend, level 6 keeps the 重要 events as points and the note counts them", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  await page.locator('[data-legend-importance="3"]').click(); await frames(page)
+  await zoomTo(page, 0.02, 0.13, "r1")
+  await expect(pointById(page, "r1")).toHaveCount(1)
+  await expect(page.locator('[data-timeline-plane] [data-event-id="r0"]')).toHaveCount(0)
+  await expect(page.locator("[data-zoom-note]")).toHaveText(/个重要事件显示为时间点/)
+}, Z))
+
+/* docs/594 ZB-34 … ZB-36: hovering a time point shows its whole title above the other cards; the title does not move. */
+const bgVar = (page: Page) => page.evaluate(() => { const el = document.createElement("i"); el.style.backgroundColor = "var(--background)"; document.querySelector("[data-worldline-panel]")!.appendChild(el); const c = getComputedStyle(el).backgroundColor; el.remove(); return c })
+const pointParts = (p: Locator) => p.evaluate(e => {
+  const r = (q: string) => { const b = e.querySelector(q)!.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width } }
+  const t = e.querySelector<HTMLElement>("[data-point-title]")!
+  return { dot: r(":scope > span:first-child"), time: r("[data-point-time]"), title: r("[data-point-title]"), clipped: t.scrollWidth > t.clientWidth + 1, text: t.textContent }
+})
+
+for (const [id, lo, hi] of [["r3", 20, 26], ["r8", 0.2, 0.55]] as const)
+  test(`ZB-34 (${id}): hovering a point shows its whole title, no fade, same left edge, opaque backing; leaving restores the fade`, () => W(zoomView(), async page => {
+    await openTimeline(page)
+    await zoomTo(page, lo, hi, id)
+    const p = pointById(page, id)
+    await revealTimelineCard(page, p)
+    // zoomTo leaves the pointer on the point; move off so the "before" read is not hovered.
+    await page.mouse.move(5, 5); await frames(page)
+    const t = p.locator("[data-point-title]")
+    await expect(t).toHaveAttribute("data-fade", "")
+    const before = await pointParts(p)
+    assert.ok(before.clipped && before.title.w <= 94.5, `clipped before: ${before.title.w}`)
+    if (id === "r8") await expect(p.locator(":scope > b")).toHaveText(/▸ \d+/)
+    await t.hover(); await frames(page)
+    const after = await pointParts(p)
+    const title = await page.evaluate(i => (globalThis as any).planningState().data.events.find((e: any) => e.id === i).title, id)
+    assert.equal(after.text, title)
+    assert.ok(!after.clipped, "whole title")
+    assert.ok(after.title.w > before.title.w + 20, `wider: ${after.title.w} vs ${before.title.w}`)
+    for (const k of ["dot", "time", "title"] as const) {
+      assert.ok(Math.abs(after[k].x - before[k].x) <= 0.5 && Math.abs(after[k].y - before[k].y) <= 0.5, `${k} moved`)
+    }
+    assert.equal(await t.evaluate(e => getComputedStyle(e).maskImage || getComputedStyle(e).webkitMaskImage), "none")
+    assert.equal(await p.evaluate(e => getComputedStyle(e).backgroundColor), await bgVar(page))
+    if (id === "r8") {
+      const b = await rect(p.locator(":scope > b")), box = await rect(p)
+      assert.ok(b.x + b.w <= box.x + box.w + 0.5, "▸ N inside the backing")
+    }
+    await page.mouse.move(5, 5); await frames(page)
+    await expect.poll(() => pointParts(p).then(r => Math.round(r.title.w))).toBe(Math.round(before.title.w))
+    await expect(t).toHaveAttribute("data-fade", "")
+    assert.notEqual(await t.evaluate(e => getComputedStyle(e).maskImage || getComputedStyle(e).webkitMaskImage), "none")
+  }, Z))
+
+test("ZB-35: at 17.5 ≤ d < 24.4 a hovered point's whole title covers the card under it; a press there selects the point", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  await zoomTo(page, 17.5, 24.4)
+  await page.mouse.move(5, 5); await frames(page)
+  // In zoomView r3's whole title runs over a card (r16, r17, r19 or r20) for 17.5 ≤ d < 24.4 (docs/594 §5). A point whose whole title (scrollWidth) would run over a card on its own line, and a spot 3px inside that card.
+  const hit = await page.evaluate(() => {
+    for (const pt of document.querySelectorAll<HTMLElement>("[data-timeline-plane] [data-event-point]")) {
+      const t = pt.querySelector<HTMLElement>("[data-point-title]")!, r = t.getBoundingClientRect(), full = r.x + t.scrollWidth, y = r.y + r.height / 2
+      for (const c of document.querySelectorAll<HTMLElement>("[data-timeline-plane] [data-event-card]")) {
+        const b = c.getBoundingClientRect()
+        const x = Math.max(b.left, r.right) + 3
+        if (b.top < y && b.bottom > y && x + 3 < Math.min(full, b.right)) return { id: pt.dataset.eventId!, card: c.dataset.eventId!, x, y }
+      }
+    }
+    return null
+  })
+  assert.ok(hit, "some point's whole title runs over a card at this zoom")
+  const at = () => page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-event-card],[data-event-point]")?.dataset.eventId ?? null, [hit.x, hit.y])
+  assert.equal(await at(), hit.card, "not hovered, the spot is the card")
+  const p = pointById(page, hit.id), t = p.locator("[data-point-title]")
+  await t.hover({ position: { x: 4, y: 6 } }); await frames(page)
+  assert.equal(await at(), hit.id, "hovered, the title is on top")
+  const pz = Number(await p.evaluate(e => getComputedStyle(e.parentElement!).zIndex))
+  const cardZ = await page.evaluate(() => Math.max(...[...document.querySelectorAll("[data-timeline-plane] [data-event-card]")].map(c => Number(getComputedStyle(c.closest("[data-event]")!).zIndex) || 0)))
+  assert.ok(pz > cardZ, `point z ${pz} over cards ${cardZ}`)
+  // Moving along the title onto the covered spot keeps the hover; a press there selects the point (it becomes a card).
+  await page.mouse.move(hit.x, hit.y, { steps: 4 }); await frames(page)
+  assert.equal(await at(), hit.id)
+  await page.mouse.down(); await page.mouse.up(); await frames(page)
+  await expect(cardById(page, hit.id)).toHaveCount(1)
+  await expect(cardById(page, hit.id)).toHaveAttribute("data-selected", "")
+  await expect(cardById(page, hit.card)).not.toHaveAttribute("data-selected", "")
+}, Z))
+
+test("ZB-36: a dimmed point is opaque while hovered and dimmed again after", () => W(zoomView(), async page => {
+  await openTimeline(page)
+  await zoomTo(page, 20, 26, "r3")
+  await page.getByRole("searchbox", { name: "搜索事件" }).fill("北塔钟声")
+  const p = pointById(page, "r3"), op = () => p.evaluate(e => Number(getComputedStyle(e).opacity))
+  await revealTimelineCard(page, p)
+  // zoomTo leaves the pointer on r3; move off so the dimmed read is not hovered (code review P2-1).
+  await page.mouse.move(5, 5); await frames(page)
+  await expect.poll(op).toBeLessThanOrEqual(0.35)
+  await p.locator("[data-point-title]").hover()
+  await expect.poll(op).toBe(1)
+  await page.mouse.move(5, 5)
+  await expect.poll(op).toBeLessThanOrEqual(0.35)
 }, Z))

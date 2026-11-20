@@ -1066,8 +1066,11 @@ test('ZP-05: with widths, a 2-line card is 52 and pushes the next 18 down; folde
  assert.equal(c('f').stacked,true);assert.equal(c('f').height,48);assert.equal(c('f').head,c('f').top+20);assert.equal(lay.groups.some(g=>g.id==='f'),false)
  assert.equal(c('a').lines,2);assert.equal(c('b').lines,1)
 })
-test('ZP-06: zoomLevel thresholds 160 / 40 / 10 / 2.5 with a 15% way back',()=>{
- assert.deepEqual([200,100,30,5,1].map(d=>L.zoomLevel(d,0)),[0,1,2,3,4])
+test('ZP-06: zoomLevel thresholds 160 / 40 / 10 / 2.5 / 0.6 / 0.15 with a 15% way back (docs/593)',()=>{
+ assert.deepEqual([200,100,30,5,1,0.3,0.1].map(d=>L.zoomLevel(d,0)),[0,1,2,3,4,5,6])
+ assert.equal(L.zoomLevel(0.68,5),5);assert.equal(L.zoomLevel(0.7,5),4)
+ assert.equal(L.zoomLevel(0.17,6),6);assert.equal(L.zoomLevel(0.175,6),5)
+ assert.equal(L.zoomLevel(Infinity,6),0)
  assert.equal(L.zoomLevel(11,3),3);assert.equal(L.zoomLevel(11.6,3),2)
  assert.equal(L.zoomLevel(45,2),2);assert.equal(L.zoomLevel(46.1,2),1)
  assert.equal(L.zoomLevel(2.8,4),4);assert.equal(L.zoomLevel(2.9,4),3)
@@ -1111,10 +1114,18 @@ test('ZP-09: level 2: 一般 → points; a 一般 parent with a 重要 child sta
  // A family the user folded draws no children, so none of them is a point.
  assert.deepEqual([...L.zoomPlan(t,2,0.75,{...noKeep,folded:new Set(['p'])}).points].sort(),['n','q'])
 })
-test('ZP-10: level 4: 重要 too → points; only 关键, ancestors of 关键 and kept events are cards',()=>{
- const t=zTree(),z=L.zoomPlan(t,4,0.75,{...noKeep,unfolded:new Set(['p','q','r'])})
- // p (一般, its child only 重要) is a point and hides p1 / p2; r stays a card for its 关键 child r1.
- assert.deepEqual([...z.points].sort(),['m','n','p','q'])
+const ids=(s:ReadonlySet<string>)=>[...s].sort()
+test('ZP-10: docs/593 levels 4 / 5 / 6: 一般 hidden, then 重要 → points, then 重要 hidden; a parent shows for a shown child',()=>{
+ const t=zTree()
+ // Level 4: n, q (一般, no shown child) are hidden; p shows for its 重要 child p1 and is a card; card parents fold.
+ const a=L.zoomPlan(t,4,0.75,noKeep)
+ assert.deepEqual([ids(a.hidden),ids(a.points),ids(a.autoFolded)],[['n','q'],[],['p','r']])
+ // Level 5: m and p (its child only 重要) become points; r stays a card for its 关键 child r1.
+ const b=L.zoomPlan(t,5,0.75,noKeep)
+ assert.deepEqual([ids(b.hidden),ids(b.points),ids(b.autoFolded)],[['n','q'],['m','p'],['r']])
+ // Level 6: only 关键 and their ancestors are drawn.
+ const c=L.zoomPlan(t,6,0.75,noKeep)
+ assert.deepEqual([ids(c.hidden),ids(c.points),ids(c.autoFolded)],[['m','n','p','q'],[],['r']])
 })
 test('ZP-11: level 3 folds every card parent except unfolded ones and strict ancestors of kept events; folded descendants are not points',()=>{
  const t=zTree(),z=L.zoomPlan(t,3,0.75,noKeep)
@@ -1127,9 +1138,11 @@ test('ZP-11: level 3 folds every card parent except unfolded ones and strict anc
  // Code review P1-2: a selected parent is not its own ancestor, so it still folds.
  assert.deepEqual([...L.zoomPlan(t,3,0.75,{...noKeep,cards:new Set(['p'])}).autoFolded].sort(),['p','r'])
 })
-test('ZP-12: showAll empties the points at levels 2–4; below level 2 points, autoFolded, unfolded and showAll are moot',()=>{
+test('ZP-12: showAll empties the points at levels 2–6; below level 2 points, autoFolded, unfolded and showAll are moot',()=>{
  const t=zTree()
- for(const lv of [2,3,4] as const){const z=L.zoomPlan(t,lv,0.75,{...noKeep,showAll:true});assert.equal(z.points.size,0);assert.equal(z.autoFolded.size,lv>=3?3:0)}
+ // docs/593: from level 4 the hidden events stay hidden, so fewer parents are drawn to fold (4/5: p, r; 6: r).
+ const folds={2:0,3:3,4:2,5:2,6:1} as const
+ for(const lv of [2,3,4,5,6] as const){const z=L.zoomPlan(t,lv,0.75,{...noKeep,showAll:true});assert.equal(z.points.size,0,`${lv}`);assert.equal(z.autoFolded.size,folds[lv],`${lv}`)}
  const low=L.zoomPlan(t,1,0.9,{cards:new Set(),unfolded:new Set(['p']),showAll:true})
  assert.equal(low.points.size,0);assert.equal(low.autoFolded.size,0)
 })
@@ -1138,6 +1151,49 @@ test('ZP-13: an unchanged plan keeps the previous set objects',()=>{
  assert.equal(b.points,a.points);assert.equal(b.autoFolded,a.autoFolded)
  const c=L.zoomPlan(t,2,0.75,noKeep,a)
  assert.notEqual(c.points,a.points)
+ const h=L.zoomPlan(t,6,0.75,noKeep),h2=L.zoomPlan(t,6,0.75,noKeep,h)
+ assert.equal(h2.hidden,h.hidden);assert.notEqual(L.zoomPlan(t,4,0.75,noKeep,h).hidden,h.hidden)
+})
+test('ZP-17: zoomBars per level; hide is capped by the highest importance, so a worldline never empties',()=>{
+ const b=(lv:L.ZoomLevel,max=3)=>{const x=L.zoomBars(lv,max);return [x.hide,x.bar,x.pointClass]}
+ assert.deepEqual([0,1,2,3,4,5,6].map(lv=>b(lv as L.ZoomLevel)),[[0,0,0],[0,0,0],[0,2,1],[0,2,1],[2,2,0],[2,3,2],[3,3,0]])
+ assert.deepEqual(b(6,2),[2,3,2]);assert.deepEqual(b(4,2),[2,2,0])
+ for(const lv of [4,5,6] as const)assert.deepEqual(b(lv,1),[1,lv===4?2:3,1])
+ // Without 关键 (max 2), level 6 keeps the 重要 points of level 5.
+ const t=treeOf(plan([{id:'a',at:0,importance:1},{id:'b',at:10,importance:2}],FIXED24))
+ const z=L.zoomPlan(t,6,0.75,noKeep)
+ assert.deepEqual([ids(z.hidden),ids(z.points)],[['a'],['b']])
+})
+test('ZP-18: kept events show with their ancestors at level 6; at level 4 an unfolded parent shows its direct children as cards (docs/593 review P1-3)',()=>{
+ const t=zTree(),z=L.zoomPlan(t,6,0.75,{...noKeep,cards:new Set(['p2'])})
+ assert.ok(!z.hidden.has('p')&&!z.hidden.has('p2')&&!z.points.has('p')&&!z.points.has('p2'))
+ assert.ok(!z.autoFolded.has('p'));assert.ok(z.hidden.has('p1'))
+ const u=L.zoomPlan(t,4,0.75,{...noKeep,unfolded:new Set(['p'])})
+ assert.deepEqual([ids(u.hidden),ids(u.points)],[['n','q'],[]])
+ // Level 5: p has no card child left (p1 is 重要), so p itself is a point and the unfold does not apply.
+ const v=L.zoomPlan(t,5,0.75,{...noKeep,unfolded:new Set(['p'])})
+ assert.deepEqual([ids(v.hidden),ids(v.points)],[['n','q'],['m','p']])
+})
+test('ZP-19: showAll turns points into cards and leaves the hidden ones hidden',()=>{
+ const t=zTree(),z=L.zoomPlan(t,5,0.75,{...noKeep,showAll:true})
+ assert.deepEqual([ids(z.hidden),ids(z.points)],[['n','q'],[]])
+ assert.deepEqual(ids(L.zoomPlan(t,4,0.75,{...noKeep,showAll:true}).hidden),['n','q'])
+})
+test('ZP-20: buildFamilies(hidden) skips hidden roots and hidden children; timelineStep draws none of them',()=>{
+ const d=plan([{id:'a',at:0,title:'甲'},{id:'b',at:5,title:'乙'},{id:'p',at:10,title:'父'},{id:'c1',at:11,parent:'p'},{id:'c2',at:12,parent:'p'}],FIXED24)
+ const tree=treeOf(d),hidden=new Set(['a','c1'])
+ const fams=L.buildFamilies(tree.roots,{scale:10,hidden})
+ assert.deepEqual(fams.map(f=>f.id).sort(),['b','p'])
+ assert.deepEqual(fams.find(f=>f.id==='p')!.pieces.filter(x=>x.kind==='card').map(x=>x.id).sort(),['c2','p'])
+ const st=L.timelineStep({packed:null,base:0,build:null} as any,{tree,view:{start:-10,span:40},width:400,hidden})
+ const drawn=st.elements.filter(e=>e.kind==='card'||e.kind==='point').map(e=>e.id)
+ assert.ok(!drawn.includes('a')&&!drawn.includes('c1')&&drawn.includes('b')&&drawn.includes('c2'),drawn.join())
+})
+test('ZP-21: a located hidden parent the user unfolds at level 6 draws its children as cards (docs/593 review P1-3)',()=>{
+ const t=zTree(),z=L.zoomPlan(t,6,0.75,{...noKeep,cards:new Set(['p']),unfolded:new Set(['p'])})
+ assert.ok(!z.autoFolded.has('p'));assert.deepEqual(ids(z.points),[])
+ assert.ok(!z.hidden.has('p1')&&!z.hidden.has('p2'))
+ assert.ok(L.zoomPlan(t,6,0.75,{...noKeep,cards:new Set(['p'])}).autoFolded.has('p'),'folded again without the exception')
 })
 test('ZP-14: buildFamilies(points): a root point is its own family, 18 high, centred on its time; child points share rows without overlap',()=>{
  const d=plan([{id:'a',at:100,title:'一个时间点'},{id:'p',at:0,title:'父'},{id:'c1',at:1,parent:'p'},{id:'c2',at:1.5,parent:'p'},{id:'c3',at:2,parent:'p'}],FIXED24)
@@ -1183,4 +1239,60 @@ test('ZP-16: packFamilies with 6 / 16 / 30 gaps: no overlap and the lowest free 
    placed.push({f,y})
   }
  }
+})
+
+/* docs/595 MM-01 … MM-03: the minimap with many rail segments. Synthetic data only. */
+const MM_YEAR=8640
+/** `n` segments on FIXED24, each 2000 years apart (far over the break limit), with 1 … 20 roots one year apart. */
+function mmSegments(n:number,extra:(i:number,k:number,at:number)=>Partial<Ev>=()=>({})):Ev[]{
+ const out:Ev[]=[]
+ for(let i=0;i<n;i++){const c=1+((i*7)%20);for(let k=0;k<c;k++){const at=(i*2000+k)*MM_YEAR;out.push({id:`s${i}k${k}`,at,...extra(i,k,at)})}}
+ return out
+}
+function mmCheck(m:L.MinimapModel,segs:L.RailSegment[],W:number,label:string){
+ const n=segs.length,widths=m.segments.reduce((s,g)=>s+g.width,0)
+ const gaps=n>1?m.segments[n-1].x0+m.segments[n-1].width-widths:0
+ assert.ok(Math.abs(widths+gaps-W)<1e-6,`${label}: widths + gaps = W (${widths}+${gaps})`)
+ assert.ok(gaps<=0.2*W+1e-9,`${label}: gaps ${gaps} ≤ 20%`)
+ const min=Math.min(4,(W-gaps)/n)
+ m.segments.forEach(g=>{assert.ok(Number.isFinite(g.width)&&g.width>=min-1e-9,`${label}: seg ${g.index} width ${g.width}`)})
+ for(let i=1;i<n;i++)assert.ok(m.segments[i-1].t1<=m.segments[i].t0,`${label}: seg ${i-1} t1 ≤ seg ${i} t0`)
+ segs.forEach((s,i)=>{const g=m.segments[i]
+  for(const r of s.roots){const x=m.toX(r.start!);assert.ok(x>=g.x0-1e-9&&x<=g.x0+g.width+1e-9,`${label}: ${r.id} at ${x} not in seg ${i} [${g.x0}, ${g.x0+g.width}]`)
+   assert.ok(Math.abs(m.toT(x)-r.start!)<1,`${label}: ${r.id} toT(toX) ${m.toT(x)} vs ${r.start}`)}
+  const c=m.toT(g.x0+g.width/2);assert.ok(c>=g.t0-1e-9&&c<=g.t1+1e-9,`${label}: centre of seg ${i} → ${c} not in [${g.t0}, ${g.t1}]`)})
+ let lx=-Infinity,lt=-Infinity
+ for(let x=0;x<=W;x+=W/2000){const t=m.toT(x);assert.ok(t>=lt-1e-6,`${label}: toT monotonic at ${x}`);lt=t;const xx=m.toX(t);assert.ok(xx>=lx-1e-6,`${label}: toX monotonic`);lx=xx}
+}
+
+test('MM-01: 30 segments at 420 and 120px: gaps ≤ 20%, every segment ≥ MIN, every root in its own segment, toX / toT inverse and monotonic',()=>{
+ const tree=treeOf(plan(mmSegments(30),FIXED24)),ad=L.createCalendarAdapter(FIXED24),segs=L.railSegments(tree.roots,ad)
+ assert.equal(segs.length,30)
+ for(const W of [420,120]){
+  const m=L.minimapModel(tree.roots,W,ad)
+  mmCheck(m,segs,W,`W=${W}`)
+  if(W===420){const xs=new Set(tree.roots.map(r=>m.toX(r.start!).toFixed(2)));assert.ok(xs.size>=0.8*tree.roots.length,`distinct x ${xs.size} of ${tree.roots.length}`)}
+ }
+})
+
+test('MM-02: a segment-2 event lasting past segment 20 does not pull later roots into segment 2, and segment 2 marks spread over ≥ 80% of it',()=>{
+ const tree=treeOf(plan(mmSegments(30,(i,k)=>i===2&&k===0?{dur:45000*MM_YEAR}:{}),FIXED24)),ad=L.createCalendarAdapter(FIXED24),segs=L.railSegments(tree.roots,ad)
+ assert.equal(segs.length,30)
+ const m=L.minimapModel(tree.roots,420,ad)
+ mmCheck(m,segs,420,'long')
+ assert.ok(segs[2].roots.length>=10)
+ const g=m.segments[2],xs=segs[2].roots.map(r=>m.toX(r.start!))
+ assert.ok(Math.max(...xs)-Math.min(...xs)>=0.8*g.width,`segment 2 spread ${Math.max(...xs)-Math.min(...xs)} of ${g.width}`)
+})
+
+test('MM-03: no roots, one segment at one time, and 30 segments in 30px give finite widths that sum to W',()=>{
+ const ad=L.createCalendarAdapter(FIXED24)
+ const empty=L.minimapModel([],420,ad);assert.equal(empty.segments.length,0);assert.equal(empty.toX(5),0);assert.equal(empty.toT(5),0)
+ const one=treeOf(plan([{id:'a',at:100},{id:'b',at:100},{id:'c',at:100}],FIXED24)),m1=L.minimapModel(one.roots,420,ad)
+ assert.equal(m1.segments.length,1);assert.ok(Math.abs(m1.segments[0].width-420)<1e-9)
+ for(const r of one.roots){const x=m1.toX(r.start!);assert.ok(x>=0&&x<=420);assert.ok(Math.abs(m1.toT(x)-100)<1)}
+ const tree=treeOf(plan(mmSegments(30),FIXED24)),segs=L.railSegments(tree.roots,ad),m=L.minimapModel(tree.roots,30,ad)
+ mmCheck(m,segs,30,'W=30')
+ // Every segment is at the equal-share minimum here (the all-fixed branch): widths are equal.
+ const w0=m.segments[0].width;assert.ok(m.segments.every(g=>Math.abs(g.width-w0)<1e-9),'equal shares')
 })

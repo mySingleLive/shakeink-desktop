@@ -139,6 +139,12 @@ test("WU-66f: rebinding the arrow commands leaves canvas, tree and minimap arrow
   const check = async () => {
     await mm.focus(); const v = await mm.getAttribute("aria-valuenow")
     await page.keyboard.press("ArrowRight"); await expect.poll(() => mm.getAttribute("aria-valuenow")).not.toBe(v)
+    // docs/596: ↑ ↓ on the minimap move the view vertically (MM-B6) and leave the time (aria-valuenow).
+    const n0 = await mm.getAttribute("aria-valuenow")
+    await page.keyboard.press("ArrowUp"); await page.keyboard.press("ArrowDown")
+    assert.equal(await mm.getAttribute("aria-valuenow"), n0)
+    // Their handler still runs after the rebinding: the view text names a vertical screen (MM-B6 measures the move).
+    await expect(mm).toHaveAttribute("aria-valuetext", /纵向 第 \d+ \/ \d+ 屏/)
     await page.locator("[data-timeline]").focus(); const v2 = await mm.getAttribute("aria-valuenow")
     await page.keyboard.press("ArrowLeft"); await expect.poll(() => mm.getAttribute("aria-valuenow")).not.toBe(v2)
     const first = page.getByRole("tree", { name: "事件目录" }).getByRole("treeitem").first()
