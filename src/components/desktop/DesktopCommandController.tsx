@@ -4,7 +4,7 @@ import {toast} from "sonner"
 import {useDesktopStore,updateDesktopSettings} from "@/stores/desktop"
 import {useTabsStore} from "@/stores/tabs"
 import {ShortcutDispatcher} from "@desktop/core/shortcut-dispatch"
-import {shortcutScopeEnables,bindingsFor,canonicalKey,capturedKey} from "@desktop/core/shortcuts"
+import {shortcutScopeEnables,bindingsFor,canonicalKey,capturedKey,shortcutNamespace} from "@desktop/core/shortcuts"
 import {desktopCommandCatalog,desktopCommandTargets,desktopCommandTarget,desktopEditorTarget,rememberDesktopCommandTarget} from "@/lib/desktop/command-runtime"
 import {useDesktopCommands} from "@/lib/desktop/use-command-target"
 import {installInputCommands,isAPIKeyControl} from "@/lib/desktop/input-commands"
@@ -69,7 +69,7 @@ export function DesktopCommandController(){
    if(document.querySelector('[data-desktop-recording="true"]')||isAPIKeyControl(target))return false
    const stroke=capturedKey({key:event.key,code:event.code,metaKey:event.metaKey,ctrlKey:event.ctrlKey,altKey:event.altKey,shiftKey:event.shiftKey,isComposing:event.isComposing,repeat:false,keyCode:event.keyCode},bootstrap.platform)
    if(!stroke)return false
-   const commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[bootstrap.platform],currentScope=scope(target)
+   const commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[shortcutNamespace(bootstrap.platform)],currentScope=scope(target)
    const markdown=currentScope==="markdown"
    // In the editor Monaco resolves its own (conditional) bindings first, e.g.
    // suggestWidgetCopy on Cmd+C; the text path runs at bubble time only if it
@@ -114,7 +114,7 @@ export function DesktopCommandController(){
    // even when an ordinary input's cancel binding was removed or rebound.
    // An open context menu may leave focus on its row, so check the open menu itself.
    if(document.querySelector(dialogSelector+',[role="menu"][data-open]')&&event.key==="Escape"&&!event.metaKey&&!event.ctrlKey&&!event.altKey&&!event.shiftKey){dispatcher.reset();return}
-   const currentScope=scope(target),commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[bootstrap.platform]
+   const currentScope=scope(target),commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[shortcutNamespace(bootstrap.platform)]
    const stroke=capturedKey({...event,key:event.key,code:event.code,metaKey:event.metaKey,ctrlKey:event.ctrlKey,altKey:event.altKey,shiftKey:event.shiftKey,isComposing:event.isComposing,repeat:false,keyCode:event.keyCode},bootstrap.platform)
    if(!stroke){if(!["Control","Shift","Alt","Meta","AltGraph"].includes(event.key))dispatcher.reset();return}
    const normalized=canonicalKey(stroke)
