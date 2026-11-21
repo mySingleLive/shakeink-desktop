@@ -1,3 +1,4 @@
+import { eraLabel, ERA_YEAR_HOURS, type EraPrecision } from "./era-calendar";
 import {
   findEvent,
   resolveTime,
@@ -50,8 +51,34 @@ export type Calendar = PlanningData["worlds"][number]["calendar"];
 export function timeUnit(calendar: Calendar) {
   return calendar.kind === "years" ? "年" : "小时";
 }
-export function formatTime(value: number, calendar: Calendar, span: number) {
+export type AxisPrecision = "year" | "month" | "day" | "hour";
+/** docs/585 §1: the precision the timeline axis reads at a window span. Era calendars use formatTime's thresholds;
+ * fixed calendars use its strict ones; plain gregorian follows the tick spacing (its labels only switch minute/day). */
+export function axisPrecision(span: number, calendar: Calendar): AxisPrecision {
+  if (calendar.kind === "years") return "year";
+  if (calendar.kind === "gregorian")
+    return span >= ERA_YEAR_HOURS * 3 ? "year" : span >= 24 * 90 ? "month" : span >= 48 ? "day" : "hour";
+  const day = calendar.hoursPerDay,
+    month = day && calendar.daysPerMonth ? day * calendar.daysPerMonth : null,
+    year = month && calendar.monthsPerYear ? month * calendar.monthsPerYear : null;
+  return year && span > year * 3 ? "year" : month && span > month * 3 ? "month" : day && span > day * 3 ? "day" : "hour";
+}
+export function formatTime(
+  value: number,
+  calendar: Calendar,
+  span: number,
+  precision?: EraPrecision,
+) {
   if (calendar.kind === "years") return `${+value.toFixed(3)}年`;
+  // docs/572: a gregorian calendar with novel eras reads "第五纪1349年6月28日", cut to the event precision or the span.
+  if (calendar.kind === "gregorian" && calendar.eras?.length)
+    return eraLabel(
+      value,
+      calendar.eras,
+      precision && precision !== "hour"
+        ? precision
+        : ((p) => (p === "hour" ? "day" : p))(axisPrecision(span, calendar)),
+    );
   if (calendar.kind === "gregorian") {
     const epoch = Date.parse(calendar.epoch);
     if (Number.isFinite(epoch)) {
@@ -139,6 +166,24 @@ export function fitTimelineWindow(
   return { start: first - span * 0.05, span };
 }
 
+/** docs/572 R14: the shortest stretch holding at least 80% of the events, fitted like fitTimelineWindow, so a few
+ * events thousands of years earlier do not squeeze the main story into one column. Even spreads give the full fit. */
+export function fitDenseTimelineWindow(
+  items: { start: number; end: number | null }[],
+  width: number,
+) {
+  const full = fitTimelineWindow(items, width);
+  if (items.length < 5) return full;
+  const sorted = [...items].sort((a, b) => a.start - b.start),
+    k = Math.ceil(sorted.length * 0.8);
+  let best = 0;
+  for (let i = 1; i + k <= sorted.length; i++)
+    if (sorted[i + k - 1].start - sorted[i].start < sorted[best + k - 1].start - sorted[best].start) best = i;
+  const dense = fitTimelineWindow(sorted.slice(best, best + k), width);
+  // Only narrow when the dense stretch is far smaller than the whole (a crowded present and distant backstory).
+  return dense.span * 20 < full.span ? dense : full;
+}
+
 /** Pack full reading surfaces, not just temporal intervals. World coordinates make
  * the lane assignment invariant under panning. Measured heights include the bar. */
 export function layoutTimelineCards(
@@ -188,6 +233,16 @@ export function timelineTicks(
   width: number,
 ) {
   const target = span / Math.max(2, Math.floor(width / 120));
+  // docs/572: era calendars tick in whole mean years once a tick spans a year.
+  if (calendar.kind === "gregorian" && calendar.eras?.length && target >= ERA_YEAR_HOURS) {
+    const raw = target / ERA_YEAR_HOURS,
+      power = 10 ** Math.floor(Math.log10(raw)),
+      step = ([1, 2, 5, 10].find((n) => n * power >= raw) ?? 10) * power * ERA_YEAR_HOURS,
+      ticks: number[] = [];
+    for (let i = Math.ceil(start / step); i * step <= start + span && ticks.length < 100; i++)
+      ticks.push(i * step);
+    return ticks;
+  }
   const day = calendar.kind === "years" ? null : calendar.hoursPerDay;
   const month =
     day && calendar.daysPerMonth ? day * calendar.daysPerMonth : null;

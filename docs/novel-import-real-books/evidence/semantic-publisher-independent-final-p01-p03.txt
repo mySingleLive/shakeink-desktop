@@ -1,0 +1,11 @@
+✔ NI-SEM-P01: native publication populates characters places worlds and nine editable setting types (6304.674083ms)
+✔ NI-SEM-P02: publication preserves attributed events and qualified narrative references (3912.751459ms)
+✔ NI-SEM-P03: new semantic runs leave legacy publication receipts and hashes unchanged (1914.990167ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13215.80575

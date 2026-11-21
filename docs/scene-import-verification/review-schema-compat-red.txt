@@ -1,0 +1,237 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (62.034375ms)
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (23.755125ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.151541ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (1.012ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (11.294167ms)
+  ✖ each entry has its own safe path and other stages keep their original schema (4.307375ms)
+✖ NI-J03: evidence location uses the existing bounded correction without transforming quotes (18.249167ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (7.625333ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (21.49275ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (2.716292ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.362167ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.075709ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.142667ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (34.29325ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.379167ms)
+  ✔ ordinary narrative fixtures now reject early after native format validation (1.262708ms)
+  ✔ actual reconcile field edits reach both distinct character-reference late failures (1.767375ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.034042ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (5.805542ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (16.304375ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (4.811625ms)
+  ✔ empty results retain the late gate while narrative references reject early and reconcile still rejects late (1.205541ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (22.767833ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✔ original native constraints enter the real bridge correction without transforming values (25.211666ms)
+  ✔ strict catalog and global chapter constraints enter the same bounded correction (14.948583ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (10.641916ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (1.039375ms)
+✔ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (52.514834ms)
+▶ NI-J08: final character schema errors expose only bounded static business labels
+  ✔ actual bridge generateJSON Zod runImportAi and main safeError preserve final bounded diagnostics (1.471334ms)
+  ✔ first bad then good and first good remain exact successes with two or one calls (1.241ms)
+  ✔ actual Zod unknown and truncated paths cannot echo or falsely identify known fields (4.517583ms)
+  ✔ synthetic typed metadata covers full-path allowlist and first-six bounds only (1.972459ms)
+  ✔ all unrelated phases kinds legacy and original error identities pass through (1.9885ms)
+✔ NI-J08: final character schema errors expose only bounded static business labels (11.614ms)
+▶ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance
+  ✔ array aliases uses the actual bounded correction (1.97775ms)
+  ✔ object relationships uses the actual bounded correction (1.275291ms)
+  ✔ numeric age uses the actual bounded correction (1.222375ms)
+  ✔ boolean occupation uses the actual bounded correction (1.204875ms)
+  ✔ null clothing uses the actual bounded correction (1.159625ms)
+  ✔ literal old acceptance cases for strings nonstrings optional shape and prototype keys remain unchanged (5.257125ms)
+  ✔ other kind phase reconcile and legacy string validation retains the original error (1.99675ms)
+  ✔ string encoding does not bypass original knowledge source native and link gates (3.991042ms)
+✔ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance (56.553167ms)
+▶ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority
+  ✔ unknown-unit uses the production bridge and preserves exact late-gate evidence (1.234542ms)
+  ✔ too-short uses the production bridge and preserves exact late-gate evidence (1.032667ms)
+  ✔ ambiguous uses the production bridge and preserves exact late-gate evidence (1.040417ms)
+  ✔ no-match uses the production bridge and preserves exact late-gate evidence (1.039959ms)
+  ✔ all twelve ordinary target schemas reject the same four reasons without transforming input (27.565ms)
+  ✔ a quote verbatim-unique in one other supplied unit is rebound; two owners are not (1.177125ms)
+  ✔ Abort identity remains unchanged through the real correction bridge (0.329792ms)
+✔ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority (33.769584ms)
+ℹ tests 51
+ℹ suites 0
+ℹ pass 48
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 917.920333
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:16984
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (23.755125ms)
+  AssertionError [ERR_ASSERTION]: other semantic phases share the original schema object
+  + actual - expected
+  ... Skipped lines
+  
+    ZodObject {
+      def: {
+        catchall: ZodNever {
+          def: {
+            type: 'never'
+  ...
+                      },
+  +                   shape: [Getter] {
+  -                   shape: {
+                        artifactId: ZodString {
+                          def: {
+                            checks: [
+                              ZodCustom {
+                                def: {
+  ...
+                                },
+  +                             shape: [Getter] {
+  -                             shape: {
+                                  quote: ZodString {
+                                    def: {
+                                      checks: [
+                                        ZodCustom {
+                                          def: {
+  ...
+                                    },
+  +                                 shape: [Getter] {
+  -                                 shape: {
+                                      after: ZodString {
+                                        check: [Function: bound check],
+                                        clone: [Function: bound clone],
+                                        def: {
+                                          checks: [
+  ...
+                      },
+  +                   shape: [Getter] {
+  -                   shape: {
+                        kind: ZodEnum {
+                          def: {
+                            entries: {
+                              body: 'body',
+                              character: 'character',
+  ...
+                      },
+  +                   shape: [Getter] {
+  -                   shape: {
+                        candidate: ZodObject {
+                          def: {
+                            catchall: ZodNever {
+                              def: {
+                                type: 'never'
+  ...
+                            },
+  +                         shape: [Getter] {
+  -                         shape: {
+                              artifactId: ZodOptional {
+                                def: {
+                                  innerType: ZodString {
+                                    def: {
+                                      type: 'string'
+  ...
+                      ],
+  +                   shape: [Getter] {
+  -                   shape: {
+                        artifactId: ZodOptional {
+                          def: {
+                            innerType: ZodString {
+                              check: [Function: bound check],
+                              clone: [Function: bound clone],
+  ...
+                      },
+  +                   shape: [Getter] {
+  -                   shape: {
+                        after: ZodString {
+                          def: {
+                            type: 'string'
+                          },
+                          type: 'string'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:82:74)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ZodObject],
+    expected: [ZodObject],
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:37227
+✖ each entry has its own safe path and other stages keep their original schema (4.307375ms)
+  AssertionError [ERR_ASSERTION]: Values have same structure but are not reference-equal:
+  
+  ... Skipped lines
+  ZodObject {
+    def: {
+      catchall: ZodNever {
+        def: {
+          type: 'never'
+        },
+        type: 'never'
+      },
+      checks: [
+        $ZodCheck {}
+      ],
+      shape: [Getter] {
+        artifactEdits: ZodOptional {
+          def: {
+            innerType: ZodArray {
+              def: {
+                element: ZodObject {
+                  def: {
+                    catchall: ZodNever {
+                      def: {
+                        type: 'never'
+                      },
+                      type: 'never'
+                    },
+                    shape: {
+                      artifactId: ZodString {
+                        def: {
+                          checks: [
+                            ZodCustom {
+                              def: {
+                                check: 'custom',
+                                error: [Function: error],
+                                fn: [Function (anonymous)],
+                                type: 'custom'
+                              },
+                              type: 'custom'
+                            },
+                            ZodCustom {
+                              def: {
+                                check: 'custom',
+                                error: [Function: error],
+                                fn: [Function (anonymous)],
+                                type: 'custom'
+                              },
+                              type: 'custom'
+                            }
+                          ],
+                          type: 'string'
+                        },
+                        optional: [Function: bound optional],
+  ...}
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:151:65)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:146:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ZodObject],
+    expected: [ZodObject],
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,597 @@
+{
+  "scope": "D-01..D-12 synthetic local HTML only; no product tests, no Electron/native/installed acceptance",
+  "status": "pass",
+  "checks": [
+    {
+      "id": "D-01",
+      "name": "12 source categories; found checked, absent disabled, empty selection blocks next",
+      "status": "pass"
+    },
+    {
+      "id": "D-02",
+      "name": "Inference independent of disabled source categories; closed targets skipped, deselected body uses copy path",
+      "status": "pass"
+    },
+    {
+      "id": "D-03",
+      "name": "Settings-only has no body inference or rewrite choice; result explicitly says no full-book inference",
+      "status": "pass"
+    },
+    {
+      "id": "D-04",
+      "name": "File inclusion, ordering and pre-classification consent; revisiting preview preserves category exclusions",
+      "status": "pass"
+    },
+    {
+      "id": "D-05",
+      "name": "No model blocks inference; disabling inference permits local copy",
+      "status": "pass"
+    },
+    {
+      "id": "D-06",
+      "name": "Required title and separate target directory; failed files must be explicitly excluded",
+      "status": "pass"
+    },
+    {
+      "id": "D-07",
+      "name": "Conflict has no default; explanation, focus-preserving radio arrows, explicit setting confirmation and selected diff approval; body-only adapted",
+      "status": "pass"
+    },
+    {
+      "id": "D-08",
+      "name": "Pause/resume and same-entry task recovery; keep/discard; folder chooser; completed result closes without pending task and next import starts fresh",
+      "status": "pass"
+    },
+    {
+      "id": "D-09",
+      "name": "Full paragraphs, invalid ranges and remainder gate; entry from selection returns to source and cannot bypass selection or start gates",
+      "status": "pass"
+    },
+    {
+      "id": "D-10",
+      "name": "Both themes × 4 sizes × 3 key states: 16px minimum margin, visible footer, no horizontal overflow",
+      "status": "pass"
+    },
+    {
+      "id": "D-11",
+      "name": "Native dialog focus stays inside, scrollable short window, Escape preserves draft and close returns to trigger",
+      "status": "pass"
+    },
+    {
+      "id": "D-12",
+      "name": "No runtime errors or HTTP requests; synthetic result distinguishes found vs not-found targets",
+      "status": "pass"
+    }
+  ],
+  "errors": [],
+  "httpRequests": [],
+  "screenshots": [
+    "preview-selection-ink.png",
+    "preview-settings-conflict.png",
+    "preview-settings-result.png",
+    "preview-recognition-consent.png",
+    "preview-source-error.png",
+    "preview-conflict-ink.png",
+    "preview-body-diff.png",
+    "preview-select-ink-390x600.png",
+    "preview-conflict-ink-390x600.png",
+    "preview-select-paper-1280x800.png",
+    "preview-body-result.png"
+  ],
+  "productTests": "not-run",
+  "fullSuite": "not-run",
+  "browser": "155.0.8059.86",
+  "geometry": [
+    {
+      "theme": "ink",
+      "size": "1280,800",
+      "step": "select",
+      "viewport": [
+        1278,
+        798
+      ],
+      "rect": {
+        "left": 179,
+        "right": 1099,
+        "top": 46.875,
+        "bottom": 751.109375
+      },
+      "headerTop": 47.875,
+      "footer": {
+        "top": 679.671875,
+        "bottom": 750.109375
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "1280,800",
+      "step": "conflict",
+      "viewport": [
+        1278,
+        798
+      ],
+      "rect": {
+        "left": 179,
+        "right": 1099,
+        "top": 58.421875,
+        "bottom": 739.5625
+      },
+      "headerTop": 59.421875,
+      "footer": {
+        "top": 668.125,
+        "bottom": 738.5625
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "1280,800",
+      "step": "done",
+      "viewport": [
+        1278,
+        798
+      ],
+      "rect": {
+        "left": 179,
+        "right": 1099,
+        "top": 48.078125,
+        "bottom": 749.921875
+      },
+      "headerTop": 49.078125,
+      "footer": {
+        "top": 678.484375,
+        "bottom": 748.921875
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "900,640",
+      "step": "select",
+      "viewport": [
+        898,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 882,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 550.5625,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "900,640",
+      "step": "conflict",
+      "viewport": [
+        898,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 882,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 550.5625,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "900,640",
+      "step": "done",
+      "viewport": [
+        898,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 882,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 550.5625,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "560,640",
+      "step": "select",
+      "viewport": [
+        558,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 542,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 528.421875,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "560,640",
+      "step": "conflict",
+      "viewport": [
+        558,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 542,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 528.421875,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "560,640",
+      "step": "done",
+      "viewport": [
+        558,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 542,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 528.421875,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "390,600",
+      "step": "select",
+      "viewport": [
+        388,
+        598
+      ],
+      "rect": {
+        "left": 16,
+        "right": 372,
+        "top": 16,
+        "bottom": 582
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 492.0625,
+        "bottom": 581
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "390,600",
+      "step": "conflict",
+      "viewport": [
+        388,
+        598
+      ],
+      "rect": {
+        "left": 16,
+        "right": 372,
+        "top": 16,
+        "bottom": 582
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 492.0625,
+        "bottom": 581
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "ink",
+      "size": "390,600",
+      "step": "done",
+      "viewport": [
+        388,
+        598
+      ],
+      "rect": {
+        "left": 16,
+        "right": 372,
+        "top": 16,
+        "bottom": 582
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 492.0625,
+        "bottom": 581
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "1280,800",
+      "step": "select",
+      "viewport": [
+        1278,
+        798
+      ],
+      "rect": {
+        "left": 179,
+        "right": 1099,
+        "top": 46.875,
+        "bottom": 751.109375
+      },
+      "headerTop": 47.875,
+      "footer": {
+        "top": 679.671875,
+        "bottom": 750.109375
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "1280,800",
+      "step": "conflict",
+      "viewport": [
+        1278,
+        798
+      ],
+      "rect": {
+        "left": 179,
+        "right": 1099,
+        "top": 58.421875,
+        "bottom": 739.5625
+      },
+      "headerTop": 59.421875,
+      "footer": {
+        "top": 668.125,
+        "bottom": 738.5625
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "1280,800",
+      "step": "done",
+      "viewport": [
+        1278,
+        798
+      ],
+      "rect": {
+        "left": 179,
+        "right": 1099,
+        "top": 48.078125,
+        "bottom": 749.921875
+      },
+      "headerTop": 49.078125,
+      "footer": {
+        "top": 678.484375,
+        "bottom": 748.921875
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "900,640",
+      "step": "select",
+      "viewport": [
+        898,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 882,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 550.5625,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "900,640",
+      "step": "conflict",
+      "viewport": [
+        898,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 882,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 550.5625,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "900,640",
+      "step": "done",
+      "viewport": [
+        898,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 882,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 550.5625,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "560,640",
+      "step": "select",
+      "viewport": [
+        558,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 542,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 528.421875,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "560,640",
+      "step": "conflict",
+      "viewport": [
+        558,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 542,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 528.421875,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "560,640",
+      "step": "done",
+      "viewport": [
+        558,
+        638
+      ],
+      "rect": {
+        "left": 16,
+        "right": 542,
+        "top": 16,
+        "bottom": 622
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 528.421875,
+        "bottom": 621
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "390,600",
+      "step": "select",
+      "viewport": [
+        388,
+        598
+      ],
+      "rect": {
+        "left": 16,
+        "right": 372,
+        "top": 16,
+        "bottom": 582
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 492.0625,
+        "bottom": 581
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "390,600",
+      "step": "conflict",
+      "viewport": [
+        388,
+        598
+      ],
+      "rect": {
+        "left": 16,
+        "right": 372,
+        "top": 16,
+        "bottom": 582
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 492.0625,
+        "bottom": 581
+      },
+      "overflow": 0
+    },
+    {
+      "theme": "paper",
+      "size": "390,600",
+      "step": "done",
+      "viewport": [
+        388,
+        598
+      ],
+      "rect": {
+        "left": 16,
+        "right": 372,
+        "top": 16,
+        "bottom": 582
+      },
+      "headerTop": 17,
+      "footer": {
+        "top": 492.0625,
+        "bottom": 581
+      },
+      "overflow": 0
+    }
+  ],
+  "sources": {
+    "index.html": "cc664c3bd242727870a97e799b25dc06cdb70054d0ceb54a4ad1c46162475119",
+    "flow.html": "865919e2b995a4e23fc78e0c3f8199ee5b6a150077dbde4a495e7133c331f48a",
+    "preview.css": "672e0ae4cc56d6ed2f137b3ed72fb069b3cd111a4c406e1b24ca933c797a4c1e",
+    "preview.js": "123dcff422b1fb6d3b644cefb38dd0d9227321b48233718454d733908fd17dca",
+    "verify-preview.mjs": "bae8d96d3e1e7655ee9d2384a16416e1d14412ef30502f61c3e7b9d2c8142277"
+  }
+}

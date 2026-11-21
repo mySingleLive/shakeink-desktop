@@ -1,0 +1,14 @@
+Executed with Node 24.18.0, only --test-name-pattern='^NI-PDF15:' tests/packaging/novel-import-pdf-package.test.ts
+SHAKEINK_PDF_PACKAGE_ROOT=/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/shakeink-novel-pdf-package-N9r591/app
+Exit 0. Actual unsigned builder staging novel-pdf-iOU9BE; independent 23 execution review remains required.
+
+✔ NI-PDF15: packaged PDF rendering resolves only bundled CJK fonts, maps and native canvas offline (4834.719625ms)
+ℹ {"passed":true,"systemFonts":false,"network":false,"nativeArchitecture":"arm64","checkedResources":201,"renderedPages":3,"negativeResources":3,"inspectedPages":178,"sourceDecodedCharacters":269,"workerHash":"52645a7d85a982d1b4135fb09109061162d596f450c37abbc07be2e32e6e810a"}
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4997.497041

@@ -1,0 +1,41 @@
+✔ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (2084.60925ms)
+✖ NI-PDF06: OCR-only image decisions persist without admitting the source (1214.747667ms)
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (2.140541ms)
+✔ NI-PDF07: controller sending, retry, conflict and patch actions cannot bypass pending pages (709.255416ms)
+✔ NI-PDF07: source replacement after an AI send discards the late response before coverage adoption (657.586458ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5400.690625
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:35844
+✖ NI-PDF06: OCR-only image decisions persist without admitting the source (1214.747667ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /PDF|OCR|核对/u. Input:
+  
+  'Error: 导入操作参数无效'
+  
+      at async <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:174:2)
+      at async controllerFixture (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:151:74)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: 导入操作参数无效
+        at NovelImportController.act (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:120:77)
+        at command (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:153:178)
+        at async waitForActual (node:assert:646:5)
+        at async strict.rejects (node:assert:769:25)
+        at async <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:174:2)
+        at async controllerFixture (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:151:74)
+        at async Test.run (node:internal/test_runner/test:1332:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:911:7),
+    expected: /PDF|OCR|核对/u,
+    operator: 'rejects',
+    diff: 'simple'
+  }

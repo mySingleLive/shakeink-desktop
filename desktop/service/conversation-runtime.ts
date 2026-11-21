@@ -30,7 +30,9 @@ export function configureConversationTransfers(works:Workspaces,call:Conversatio
    return receipt(record)
   },
  },ledger)
- active={works,manager,tasks};return()=>{if(active?.manager===manager)active=previous}
+ // docs/567 2R: a listed work replaced by a new work in its emptied folder loses its conversations, as a removal does.
+ const previousHook=works.staleWorkHook;works.staleWorkHook=id=>manager.forgetWorkspace(id)
+ active={works,manager,tasks};return()=>{if(active?.manager===manager){active=previous;works.staleWorkHook=previousHook}}
 }
 export const conversationTransfersFor=(works:Workspaces)=>active?.works===works?active.manager:undefined
 export function withConversationContext<T>(id:string,run:()=>Promise<T>):Promise<T>{return active?active.manager.bind(id,run):run()}

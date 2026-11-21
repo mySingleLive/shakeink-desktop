@@ -1,0 +1,172 @@
+✖ NI-S12: local and synthetic AI source confirmation retain manual chapters across reopen (78.028ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 561.905083
+
+✖ failing tests:
+
+test at tests/unit/novel-import-session.test.ts:2:21774
+✖ NI-S12: local and synthetic AI source confirmation retain manual chapters across reopen (78.028ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      {
+  +     content: '合成前记😀。\r\n' +
+  +       '\r\n' +
+  +       '合成记事1。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事2。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事3。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事4。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事5。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事6。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事7。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事8。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事9。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事10。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事11。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事12。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n' +
+  +       '合成记事13。\r\n' +
+  +       '这一则的完整合成文字。\r\n' +
+  +       '\r\n',
+  +     end: 314,
+  -     content: '合成前记😀。\r\n\r\n',
+  -     end: 11,
+        id: 'chapter-1',
+        start: 0,
+  +     title: '未分章正文'
+  -     title: '人工确认前记'
+      },
+  -   {
+  -     content: '合成记事1。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 34,
+  -     id: 'chapter-2',
+  -     start: 11,
+  -     title: '人工确认记事1'
+  -   },
+  -   {
+  -     content: '合成记事2。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 57,
+  -     id: 'chapter-3',
+  -     start: 34,
+  -     title: '人工确认记事2'
+  -   },
+  -   {
+  -     content: '合成记事3。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 80,
+  -     id: 'chapter-4',
+  -     start: 57,
+  -     title: '人工确认记事3'
+  -   },
+  -   {
+  -     content: '合成记事4。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 103,
+  -     id: 'chapter-5',
+  -     start: 80,
+  -     title: '人工确认记事4'
+  -   },
+  -   {
+  -     content: '合成记事5。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 126,
+  -     id: 'chapter-6',
+  -     start: 103,
+  -     title: '人工确认记事5'
+  -   },
+  -   {
+  -     content: '合成记事6。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 149,
+  -     id: 'chapter-7',
+  -     start: 126,
+  -     title: '人工确认记事6'
+  -   },
+  -   {
+  -     content: '合成记事7。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 172,
+  -     id: 'chapter-8',
+  -     start: 149,
+  -     title: '人工确认记事7'
+  -   },
+  -   {
+  -     content: '合成记事8。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 195,
+  -     id: 'chapter-9',
+  -     start: 172,
+  -     title: '人工确认记事8'
+  -   },
+  -   {
+  -     content: '合成记事9。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 218,
+  -     id: 'chapter-10',
+  -     start: 195,
+  -     title: '人工确认记事9'
+  -   },
+  -   {
+  -     content: '合成记事10。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 242,
+  -     id: 'chapter-11',
+  -     start: 218,
+  -     title: '人工确认记事10'
+  -   },
+  -   {
+  -     content: '合成记事11。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 266,
+  -     id: 'chapter-12',
+  -     start: 242,
+  -     title: '人工确认记事11'
+  -   },
+  -   {
+  -     content: '合成记事12。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 290,
+  -     id: 'chapter-13',
+  -     start: 266,
+  -     title: '人工确认记事12'
+  -   },
+  -   {
+  -     content: '合成记事13。\r\n这一则的完整合成文字。\r\n\r\n',
+  -     end: 314,
+  -     id: 'chapter-14',
+  -     start: 290,
+  -     title: '人工确认记事13'
+  -   }
+    ]
+  
+      at assertRetained (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:83:51)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-session.test.ts:84:83)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ { id: 'chapter-1', title: '未分章正文', start: 0, end: 314, content: '合成前记😀。\r\n\r\n合成记事1。\r\n这一则的完整合成文字。\r\n\r\n合成记事2。\r\n这一则的完整合成文字。\r\n\r\n合成记事3。\r\n这一则的完整合成文字。\r\n\r\n合成记事4。\r\n这一则的完整合成文字。\r\n\r\n合成记事5。\r\n这一则的完整合成文字。\r\n\r\n合成记事6。\r\n这一则的完整合成文字。\r\n\r\n合成记事7。\r\n这一则的完整合成文字。\r\n\r\n合成记事8。\r\n这一则的完整合成文字。\r\n\r\n合成记事9。\r\n这一则的完整合成文字。\r\n\r\n合成记事10。\r\n这一则的完整合成文字。\r\n\r\n合成记事11。\r\n这一则的完整合成文字。\r\n\r\n合成记事12。\r\n这一则的完整合成文字。\r\n\r\n合成记事13。\r\n这一则的完整合成文字。\r\n\r\n' } ],
+    expected: [ { id: 'chapter-1', title: '人工确认前记', start: 0, end: 11, content: '合成前记😀。\r\n\r\n' }, { id: 'chapter-2', title: '人工确认记事1', start: 11, end: 34, content: '合成记事1。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-3', title: '人工确认记事2', start: 34, end: 57, content: '合成记事2。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-4', title: '人工确认记事3', start: 57, end: 80, content: '合成记事3。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-5', title: '人工确认记事4', start: 80, end: 103, content: '合成记事4。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-6', title: '人工确认记事5', start: 103, end: 126, content: '合成记事5。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-7', title: '人工确认记事6', start: 126, end: 149, content: '合成记事6。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-8', title: '人工确认记事7', start: 149, end: 172, content: '合成记事7。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-9', title: '人工确认记事8', start: 172, end: 195, content: '合成记事8。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-10', title: '人工确认记事9', start: 195, end: 218, content: '合成记事9。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-11', title: '人工确认记事10', start: 218, end: 242, content: '合成记事10。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-12', title: '人工确认记事11', start: 242, end: 266, content: '合成记事11。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-13', title: '人工确认记事12', start: 266, end: 290, content: '合成记事12。\r\n这一则的完整合成文字。\r\n\r\n' }, { id: 'chapter-14', title: '人工确认记事13', start: 290, end: 314, content: '合成记事13。\r\n这一则的完整合成文字。\r\n\r\n' } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

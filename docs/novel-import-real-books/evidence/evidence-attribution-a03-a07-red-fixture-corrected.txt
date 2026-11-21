@@ -1,0 +1,34 @@
+✔ NI-A03: missing ids, unknown categories and fabricated evidence are rejected (4.07825ms)
+✔ NI-A05: phase output contracts allow empty no-op arrays while rejecting actual cross-phase mutations (1.411875ms)
+✔ NI-A06: evidence layout anchoring restores unique exact source spans without changing text or word boundaries (2.550042ms)
+▶ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority
+  ✖ actual analyze, reconcile and review prompts keep guidance outside untrusted data (5.635167ms)
+  ✔ true preimplementation prompt and serialization goldens protect unchanged branches (1.043125ms)
+  ✔ projection and locked targeted-reconcile gates still reject unauthorized results (3.943875ms)
+✖ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority (19.017ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 5
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 346.771417
+
+✖ failing tests:
+
+test at tests/unit/novel-import-ai.test.ts:4:10043
+✖ actual analyze, reconcile and review prompts keep guidance outside untrusted data (5.635167ms)
+  AssertionError [ERR_ASSERTION]: fixed guidance must be on the actual generation path
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:186:122)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:176:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

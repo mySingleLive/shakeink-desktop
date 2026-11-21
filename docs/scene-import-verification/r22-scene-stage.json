@@ -1,0 +1,35 @@
+{
+  "sessionId": "ed43dce6-b099-4a13-8c89-b7fea4790cef",
+  "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+  "chapters": 1402,
+  "units": 5589,
+  "covered": 5589,
+  "scenes": 935,
+  "states": {
+    "done": 935
+  },
+  "artifacts": 935,
+  "parents": 324,
+  "dropped": 0,
+  "skipped": 0,
+  "mappingWarnings": 0,
+  "bodyUnchanged": true,
+  "pageErrors": [],
+  "selected": [
+    "body",
+    "outline"
+  ],
+  "targets": [
+    "scene"
+  ],
+  "sceneStartedAt": "2026-10-31T01:59:18.195Z",
+  "sceneEntityStartedAt": "2026-10-31T01:59:47.571Z",
+  "completedAt": "2026-10-31T02:04:12.210Z",
+  "durationMs": 294014.56,
+  "entityDurationMs": 264637.830458,
+  "deadlineMs": 420000,
+  "performancePassed": true,
+  "fullBookAcceptance": false,
+  "publicationVerified": false,
+  "reopenVerified": false
+}

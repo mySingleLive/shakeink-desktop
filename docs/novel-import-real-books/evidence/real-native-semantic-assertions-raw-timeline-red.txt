@@ -1,0 +1,31 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: raw-only-worldline-invalid-people-with-explicit-reliability-needs-structural-warning-only
++ actual - expected
+
++ [
++   {
++     name: 'semantic-source-copy-unmapped-timelines-explicitly-warn-reliability',
++     passed: false
++   }
++ ]
+- []
+
+    at positive (/private/tmp/real-novel-semantic-assertions-check.mts:33:179)
+    at <anonymous> (/private/tmp/real-novel-semantic-assertions-check.mts:85:567) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      name: 'semantic-source-copy-unmapped-timelines-explicitly-warn-reliability',
+      passed: false
+    }
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

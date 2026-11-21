@@ -1,0 +1,34 @@
+{
+  "scope": "source reselection UI NI-U12",
+  "baselineProductionSha256": "6335444f8bd92029990b049b577faf4fa3d252c34c34708cbe809b70fd69515f",
+  "initialRed": {
+    "execSessionId": 80143,
+    "exitCode": 1,
+    "tests": 6,
+    "pass": 0,
+    "fail": 6,
+    "reason": "ordinary source reselect controls absent",
+    "log": "source-reselection-ui-initial-red.txt"
+  },
+  "firstGreen": {
+    "execSessionId": 64905,
+    "exitCode": 0,
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "skipped": 0,
+    "log": "source-reselection-ui-first-green.txt"
+  },
+  "originalBrowserTestsPrefixSha256": "0393063f5a73cc0f98dbc89469f36e9fdd89c621a95e21f190c22dcceaa83516",
+  "originalBrowserTestsUnchanged": true,
+  "files": {
+    "src/components/desktop/NovelImportDialog.tsx": "f3459f47b2b59ccd3ba10d2e703e888700e2175d89e80737b6ccb6066a6ea046",
+    "tests/browser/novel-import.test.ts": "c1a664b9555721cf88f049db1100fd05e9bc1e578e0a7d17a966b2f235f5325c",
+    "tests/helpers/novel-import-ui-fixture.tsx": "2143e959cdf4f73f699568a945678440d6a4f38c65896410b736deeb90b2e72d"
+  },
+  "logs": {
+    "source-reselection-ui-initial-red.txt": "0c465bfa73e32ec77d42b8f536cf5a4204c589ec02d35d1d924a5eff186d7fcf",
+    "source-reselection-ui-first-green.txt": "ceb70785cdb7b7c1acc3747982aeb705a041762a109ec4dfd82aef9a9b92e253"
+  },
+  "realNativeClaim": false
+}

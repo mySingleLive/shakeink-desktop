@@ -1,0 +1,15 @@
+# 场景复核有界并发方案
+
+2026-10-31。独立于296引用正确性修复。R22原review按91单元级包串行执行；前三包分别约178秒、302秒、266秒，全文5589单元及完整资料分片均须复核。不得跳过复核或用抽样代替，审核模型/思考配置保持原样。
+
+仅wizardVersion1、semanticVersion1、targets恰为scene的普通review()使用固定最多31包的wave；作者解释复核不进入pool，其它导入仍串行。复用原stageRequests预算、contextArtifacts、requestSnapshot和iterateImportReviewTasks几何。正文阶段全部完成后才构造资料分片阶段，保持原barrier、包内容/顺序/完整任务键不变；不因发现pending conflict中止其它包，仍交作者处理。
+
+每wave最多31个请求，同时调用原ai，保留每个请求前后真实来源校验、模型/授权/预算、operation/runtime/取消门。所有在途Promise.allSettled排空后，逐包捕获包括末端证据/遗漏投影验证在内的成功或失败，再按原包序记录conflicts/missing及coverage；中间坏包不能丢后位有效结果。失败包不记成功。任意包失败不再启动下一wave，所有已发请求先排空并保留仍有效的成功结果，然后报告原错误；epoch/停止/作者修改后的旧结果不得记coverage或冲突。
+
+成功结果可能早于wave末端数分钟返回，落盘前在真正serial提交边界内重新核对来源、epoch与text/review授权快照；授权变化、runtime记录失败、来源/epoch/持久化失败均为全局失效，整wave无新credit。仅普通模型/结果失败可保留同wave有效成功。使用现有commitCandidate原子写入，成功前不改变owner.coverage/conflicts/semanticState；写失败不得在内存给未落盘credit。必须保留runVerify/runWizard持有的原wizard对象引用（该wave不修改wizard），不能owner替换造成检查写入旧对象。post-rename异常沿既有candidateBlocked门阻止继续；UI不得显示保存成功。
+
+正常重试只发未覆盖正文/未完成facts，不清除待作者冲突；没有初始pending conflict的失败样例才用正常重试验证。覆盖集合按原body单位顺序和importReviewTaskKeys全序归一化，含facts失败后后位成功、补前位的情况，不能append造成永久乱序。最多只持有一wave的请求/响应，不预先展开整书请求队列；全序可缓存仅任务键而不是全体请求/资料副本。
+
+主进程只在上述精确pool门生成内部executionLane='scene-review-wave-v1'标记；共享ImportAiRequest及请求边界只允许该字面量。服务须同时验证标记和普通scene-only review谓词，才使用runInsideLongTask，绕开默认聊天2个名额，由上述31上限控制；无标记的非wizard/作者解释/其它请求保持原slot。标记只表示调度，不产生模型授权，仍走原main/service/gateway门。不能将review加入lightImportGeneration，它会改变审核模型thinking。importGenerationModel、provider选型、API、JSON两生成、输出容量、用量事务、源文本和默认设置均不变。
+
+流程：独立方案/用例审核→RED/GREEN→独立code review→定向回归/类型/构建→真实新会话默认全选全部场景、所有body/facts复核、冲突门、正常保存/重开/逐字段核对。无全仓测试，不把合成并发测试当实际性能或语义通过。

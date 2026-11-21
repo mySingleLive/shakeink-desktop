@@ -1,0 +1,186 @@
+{
+  "scope": "AST extraction of the actual pre-APP_ROOT semantic guard only; synthetic plain data, actual pure core APIs; no main, app, user corpus, journal, Workspaces, DB or model execution",
+  "scriptSha256": "1460b0441c9d2f431126e499298fe205ac901442d2a15e09ac985b3c609d0acb",
+  "extractedGuardSha256": "c6a3ee0a40c23ecb66d3fab5e9e6257abe9cfa142ab4bc51b4f8d5f1ae171f8d",
+  "guardSourceLines": [
+    85,
+    92
+  ],
+  "caseCount": 29,
+  "cases": [
+    {
+      "name": "complete-ready-with-committed-repair-and-covered-omission",
+      "passed": true,
+      "expected": "accepted",
+      "actual": "accepted"
+    },
+    {
+      "name": "complete-empty-repair-omission-arrays",
+      "passed": true,
+      "expected": "accepted",
+      "actual": "accepted"
+    },
+    {
+      "name": "legacy-no-sem-fields",
+      "passed": true,
+      "expected": "accepted",
+      "actual": "accepted"
+    },
+    {
+      "name": "legacy-state-without-version",
+      "passed": true,
+      "expected": "ImportSemanticStateError",
+      "actual": "ImportSemanticStateError"
+    },
+    {
+      "name": "unknown-sem-version",
+      "passed": true,
+      "expected": "ImportSemanticStateError",
+      "actual": "ImportSemanticStateError"
+    },
+    {
+      "name": "missing-sem-state",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "non-ready-repair",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "non-ready-review",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "non-ready-blocked",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "stale-input-hash",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "stale-decision-hash",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "stale-working-revision",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "stale-verified-result",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "missing-verified-result",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "changed-decision-after-verification",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "changed-result-facts-after-verification",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "changed-lock-after-verification",
+      "passed": true,
+      "expected": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED",
+      "actual": "SEMANTIC_COMPLETE_CHECKPOINT_BINDING_REQUIRED"
+    },
+    {
+      "name": "persistent-conflict",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "uncommitted-repair",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "repair-original-id-mismatch",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "repair-original-base-hash-mismatch",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "repair-task-not-done",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "omission-not-done",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "omission-kind-not-selected",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "omission-completed-units-missing",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "omission-completed-units-partial",
+      "passed": true,
+      "expected": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE",
+      "actual": "SEMANTIC_REPAIR_OR_OMISSION_INCOMPLETE"
+    },
+    {
+      "name": "correct-source-copy-warning",
+      "passed": true,
+      "expected": "accepted",
+      "actual": "accepted"
+    },
+    {
+      "name": "missing-source-copy-warning",
+      "passed": true,
+      "expected": "SEMANTIC_SOURCE_MAPPING_WARNINGS_MISSING",
+      "actual": "SEMANTIC_SOURCE_MAPPING_WARNINGS_MISSING"
+    },
+    {
+      "name": "changed-source-copy-warning",
+      "passed": true,
+      "expected": "SEMANTIC_SOURCE_MAPPING_WARNINGS_MISSING",
+      "actual": "SEMANTIC_SOURCE_MAPPING_WARNINGS_MISSING"
+    }
+  ]
+}

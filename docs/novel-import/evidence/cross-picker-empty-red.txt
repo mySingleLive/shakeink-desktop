@@ -1,0 +1,25 @@
+✖ CP-F02: confirming an empty folder reports no importable text without creating a task (102.978958ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 575.982209
+
+✖ failing tests:
+
+test at tests/unit/novel-import-picker.test.ts:2:7731
+✖ CP-F02: confirming an empty folder reports no importable text without creating a task (102.978958ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-picker.test.ts:59:36)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /没有可导入的文本文件/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

@@ -1,0 +1,21 @@
+✖ NI-B01: the runtime dependency resolver retains ZIP dependencies whose npm names also match Node builtins (24.781541ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 644.023083
+
+✖ failing tests:
+
+test at tests/unit/novel-import-integration.test.ts:2:1558
+✖ NI-B01: the runtime dependency resolver retains ZIP dependencies whose npm names also match Node builtins (24.781541ms)
+  Error: Missing packaged dependency (no parent fallback): string_decoder
+      at packageAt (file:///Users/dt_flys/Projects/shakeink-desktop/scripts/runtime-dependencies.mjs:132:21)
+      at visit (file:///Users/dt_flys/Projects/shakeink-desktop/scripts/runtime-dependencies.mjs:165:101)
+      at verifyRuntimeDependencies (file:///Users/dt_flys/Projects/shakeink-desktop/scripts/runtime-dependencies.mjs:172:25)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:19:435)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

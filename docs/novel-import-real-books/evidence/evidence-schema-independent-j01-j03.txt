@@ -1,0 +1,16 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (48.1435ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (17.200625ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (2.418084ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.82025ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (6.91525ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.240375ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (11.905291ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 752.488416

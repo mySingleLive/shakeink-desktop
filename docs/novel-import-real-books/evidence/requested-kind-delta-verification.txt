@@ -1,0 +1,3 @@
+Production reverse-delta byte identity: PASS (IMPORT_TARGETS import + whitelist lookup + fixed kind suffix only).
+All old AI test bytes including NI-A07: PASS (exact unchanged prefix; only NI-A08 appended).
+73 guidance, serialization, budgets, legacy and all nonordinary phases, schemas, anchor and late gates: unchanged.

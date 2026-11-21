@@ -54,6 +54,7 @@ export function recordUsage(input: RecordUsageInput): Promise<number> {
   const scope = currentChatExecution()
   return outsideChatExecution(() => recordActualUsage({ ...input, turnId: input.turnId ?? scope?.turnId, attemptId: input.attemptId ?? scope?.attemptId }))
 }
+const importUsageActions = new Set(["novel.import.classify", "novel.import.analyze", "novel.import.review", "novel.import.patch"])
 async function recordActualUsage(input: RecordUsageInput): Promise<number> {
   const model = structuredClone(input.modelSnapshot)
   if (model.id !== input.modelId || input.userId !== LOCAL_AUTHOR_ID) throw new Error("用量记录的模型或作者不匹配")
@@ -61,6 +62,8 @@ async function recordActualUsage(input: RecordUsageInput): Promise<number> {
   const cost = priceConfigured ? estimateCost({ inputCostPer1k: model.inputCostPer1k!, outputCostPer1k: model.outputCostPer1k! }, input.promptTokens, input.completionTokens) : 0
   const total = input.promptTokens + input.completionTokens
 
+  // Concurrent imports share PGlite's connection. Allow acquisition to queue;
+  // keep the execution timeout and the three writes' atomicity unchanged.
   await prisma.$transaction(async tx => {
     // References are inert and local. Removing a configured model never deletes usage history.
     await tx.aIModel.upsert({ where: { id: model.id }, create: { id: model.id, name: model.name, provider: model.provider, modelId: model.modelId, kind: model.kind, apiKeyEncrypted: "", baseUrl: null, enabled: false, free: false, inputCostPer1k: 0, outputCostPer1k: 0 }, update: {} })
@@ -84,7 +87,7 @@ async function recordActualUsage(input: RecordUsageInput): Promise<number> {
       data: { tokenUsed: { increment: total } },
     }),
   ])
-  })
+  }, importUsageActions.has(input.action) ? { maxWait: 60000 } : undefined)
 
   return cost
 }

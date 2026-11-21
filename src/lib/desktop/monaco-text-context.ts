@@ -38,7 +38,9 @@ export function bindMonacoTextContext(editor:Editor){
    if(id==='text.delete'){editor.pushUndoStop();editor.executeEdits('text-context-menu',ordered.map(range=>({range,text:'',forceMoveMarkers:true})));editor.pushUndoStop();return}
    if(id==='text.paste'||id==='text.pastePlain'){
     const bridge=root.ownerDocument.defaultView?.desktop;if(!bridge)throw new Error('本地剪贴板尚未就绪')
-    const value=await bridge.readClipboardText();assertCurrent();if(!current())throw new Error('正文选区已变化');editor.trigger('text-context-menu','type',{text:value})
+    const value=await bridge.readClipboardText();assertCurrent();if(!current())throw new Error('正文选区已变化')
+    // docs/598 §4 P2-2: a paste is its own undo step, not merged with prior typing.
+    editor.pushUndoStop();editor.trigger('text-context-menu','paste',{text:value});editor.pushUndoStop()
    }
   }}
  }

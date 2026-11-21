@@ -7,6 +7,7 @@ import {createRequire, isBuiltin} from 'node:module'
 import {fileURLToPath, pathToFileURL} from 'node:url'
 import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
+import {gunzipSync} from 'node:zlib'
 import {runtimeEntries,verifyRuntimeDependencies} from './runtime-dependencies.mjs'
 import {readDatabaseSeed} from '../desktop/shared/database-seed.ts'
 
@@ -38,10 +39,11 @@ export async function verifyProjectResources(project, appRoot) {
     if (!path.startsWith('node_modules/') && !allowed(path)) throw new Error(`包中含禁止的项目文件：${path}`)
     if (/^node_modules\/.*\/(test|tests|__tests__|example|examples)\//.test(path)) throw new Error(`包中含依赖开发资源：${path}`)
   }
-  const expected = [...entries, 'dist/runtime-dependencies.json', ...seedResources, 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'out/index.html', 'out/fonts/noto-sans-sc/NotoSansSC-Regular.ttf.gz', 'out/brand/logo-icon-paper.svg', 'runtime-licenses/provenance.json']
+  const expected = [...entries, 'dist/runtime-dependencies.json', ...seedResources, 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'out/index.html', 'out/fonts/noto-sans-sc/NotoSansSC-Regular.ttf.gz', 'out/fonts/noto-sans-sc/LICENSE', 'out/fonts/noto-sans-sc/README.md', 'out/brand/logo-icon-paper.svg', 'runtime-licenses/provenance.json']
   for (const directory of ['out', 'prisma/migrations', 'runtime-licenses']) for (const file of await walk(join(project, directory))) {
     const path = `${directory}/${relative(join(project, directory), file.path).split(sep).join('/')}`
-    if (!path.endsWith('.map') && !expected.includes(path)) expected.push(path)
+    // electron-builder excludes Finder metadata even below positive patterns.
+    if (!path.endsWith('.map') && !path.endsWith('/.DS_Store') && !expected.includes(path)) expected.push(path)
   }
   if (!expected.some(path => path.startsWith('prisma/migrations/') && path.endsWith('/migration.sql'))) throw new Error('迁移SQL输入缺失')
   for (const path of expected) {
@@ -49,6 +51,11 @@ export async function verifyProjectResources(project, appRoot) {
     if (hash(actual) !== hash(await readFile(join(project, path)))) throw new Error(`运行资源与输入不一致：${path}`)
   }
   if (!packaged.some(path => /^out\/_next\/static\/media\/editor\.worker\..+\.js$/.test(path))) throw new Error('Monaco 离线 worker 缺失')
+  const pdf=JSON.parse(await readFile(join(project,'desktop/main/novel-import-pdf-resource-manifest.json'),'utf8'))
+  for(const [path,sha256] of Object.entries(pdf.files))if(hash(await readFile(join(root,'node_modules/pdfjs-dist',path)))!==sha256)throw new Error('PDF 离线资源缺失或版本不一致')
+  const font=await readFile(join(root,'out/fonts/noto-sans-sc/NotoSansSC-Regular.ttf.gz'))
+  if(hash(font)!==pdf.fontGzipHash||hash(gunzipSync(font,{maxOutputLength:12*1024*1024}))!==pdf.fontHash)throw new Error('PDF 离线字体身份不一致')
+  if(JSON.parse(await readFile(join(root,'node_modules/@napi-rs/canvas/package.json'),'utf8')).version!==pdf.canvasVersion)throw new Error('PDF 原生渲染依赖版本不一致')
   return {projectResources: expected.length, packaged}
 }
 

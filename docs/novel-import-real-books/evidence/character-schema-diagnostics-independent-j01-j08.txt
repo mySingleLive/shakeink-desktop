@@ -1,0 +1,48 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (52.147584ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (18.438209ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (0.969375ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.80575ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (7.485583ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.32575ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (11.122459ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (7.676833ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (21.829ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (2.613417ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.343208ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.078042ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.154583ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (34.656042ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.3495ms)
+  ✔ ordinary narrative fixtures now reject early after native format validation (1.143875ms)
+  ✔ actual reconcile field edits reach both distinct character-reference late failures (1.443458ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.271333ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (5.60025ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (16.288375ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (4.913834ms)
+  ✔ empty results retain the late gate while narrative references reject early and reconcile still rejects late (1.242333ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (23.016958ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✔ original native constraints enter the real bridge correction without transforming values (25.059584ms)
+  ✔ strict catalog and global chapter constraints enter the same bounded correction (16.371708ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (11.192791ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (1.086417ms)
+✔ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (54.443ms)
+▶ NI-J08: final character schema errors expose only bounded static business labels
+  ✔ actual bridge generateJSON Zod runImportAi and main safeError preserve final bounded diagnostics (1.620125ms)
+  ✔ first bad then good and first good remain exact successes with two or one calls (1.342709ms)
+  ✔ actual Zod unknown and truncated paths cannot echo or falsely identify known fields (4.846958ms)
+  ✔ synthetic typed metadata covers full-path allowlist and first-six bounds only (1.784333ms)
+  ✔ all unrelated phases kinds legacy and original error identities pass through (2.123584ms)
+✔ NI-J08: final character schema errors expose only bounded static business labels (12.19525ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 887.076042

@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { z } from 'zod';
 import type { RootIdentity } from './data-root';
 import {BRAND_NAMES} from '../shared/brand-names';
+import {novelImportOwnedDirectory,novelImportOwnedFile} from './root-inventory-paths';
 export const rootIdentitySchema = z.object({ path: z.string().min(1).max(4096), device: z.string().regex(/^\d+$/), inode: z.string().regex(/^\d+$/) }).strict();
 export const rootMarkerSchema = z.object({ schemaVersion: z.literal(1), app: z.enum(['Xuanxiangxiezuo-Desktop','ShakeInk']), id: z.uuid(), phase: z.enum(['initializing', 'ready']), inboxReady: z.boolean() }).strict();
 export interface FileIdentity {
@@ -26,6 +27,7 @@ export function safeRelative(path: string) { return path.length > 0 && path.leng
 export function allowedManagedFile(path: string):boolean {
     if (!safeRelative(path))
         return false;
+    if(novelImportOwnedFile(path))return true;
     const packagePath=/^backups\/application\/packages\/([^/]+)\/(.+)$/.exec(path);
     if(packagePath){
         if(!z.uuid().safeParse(packagePath[1]).success)return false;
@@ -46,6 +48,7 @@ export function allowedManagedFile(path: string):boolean {
 /** A second boundary; the trusted host still enumerates exact engine-owned paths. */
 export function allowedManagedDirectory(path:string):boolean{
     if(!safeRelative(path))return false;
+    if(novelImportOwnedDirectory(path))return true;
     if(['backups','backups/application','backups/application/packages','backups/application/staging','backups/application/validation'].includes(path))return true;
     const packagePath=/^backups\/application\/packages\/([^/]+)(?:\/(.+))?$/.exec(path);
     if(packagePath){

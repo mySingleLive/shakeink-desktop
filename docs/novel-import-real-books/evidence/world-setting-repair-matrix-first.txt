@@ -1,0 +1,158 @@
+✔ NI-WR01: explicit legacy repair is read-only by default, atomic and idempotent (1733.077209ms)
+▶ NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative
+  ✖ cross-novel Review incoming edge (22.267917ms)
+  ✔ TextComment unknown target type (20.826583ms)
+  ✔ PreparedTextChange (17.855209ms)
+  ✔ SubAgentRun (19.536583ms)
+  ✔ SopNodeRun (20.575208ms)
+  ✖ ForeshadowReference (2.539625ms)
+  ✔ ChatWriteEffect metadata-only target (25.696417ms)
+  ✔ ContentCandidate historical chapterId (17.7055ms)
+  ✖ ContentImprovementRun historical chapterId (1.296292ms)
+  ✔ ContentVersion target history (16.812125ms)
+  ✔ ContentMutation target history (16.520417ms)
+  ✔ TargetTextRevision global bounded target (16.213083ms)
+  ✔ SopPlan conservative own-novel block (21.010333ms)
+  ✖ CascadeJob conservative own-novel block (0.772042ms)
+  ✔ world children and attached settings block without cascade deletion (16.24875ms)
+  ✖ planning parse, world pointer and opaque artifact link are closed guards (54.946084ms)
+  ✔ actual transaction failures after writes and before commit restore all business and audit rows (105.573834ms)
+  ✔ ack export failures and lost commit acknowledgements confirm without duplicate writes (197.505125ms)
+✖ NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative (13428.410209ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 14
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15698.912417
+
+✖ failing tests:
+
+test at tests/integration/novel-import-world-repair.test.ts:2:24455
+✖ cross-novel Review incoming edge (22.267917ms)
+  PrismaClientValidationError: 
+  Invalid `edge',create:()=>m.review.create()` invocation in
+  /Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:88:64
+  
+    85 const matrix=await fixture(api),m=matrix.database,targetId=matrix.plan.expectedWorlds[0].id
+    86 const foreign=await m.novel.create({data:{userId:owner,title:'隔离其他作品'}}),conversation=await m.conversation.create({data:{userId:owner,novelId:matrix.novelId,title:'隔离工具链'}}),turn=await m.chatTurn.create({data:{userId:owner,conversationId:conversation.id,userMessageId:randomUUID(),clientRequestId:randomUUID()}}),attempt=await m.chatAttempt.create({data:{turnId:turn.id,attemptNo:1,assistantMessageId:randomUUID(),executionEpoch:1}}),tool=await m.chatToolExecution.create({data:{turnId:turn.id,attemptId:attempt.id,toolCallId:'synthetic-tool',toolName:'synthetic',operationId:randomUUID(),requestHash:hex('tool'),input:{}}}),touch=await m.foreshadowTouch.create({data:{novelId:matrix.novelId,foreshadowId:matrix.baseline.foreshadows[0].id,kind:'MENTION'}})
+    87 const history=[
+  → 88  {name:'cross-novel Review incoming edge',create:()=>m.review.create({
+          data: {
+            novelId: "cmvpgwpcc00110r6v8ahaeo4p",
+            targetType: "WORLD",
+                        ~~~~~~~
+            targetId: "wr-5a62fd8b-eda1-408f-a608-7976ee962f40-world-0"
+          }
+        })
+  
+  Invalid value for argument `targetType`. Expected ReviewTargetType.
+      at throwValidationException (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:9)
+      at zr.handleRequestError (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:211:7)
+      at zr.handleAndLogRequestError (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:12)
+      at zr.request (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:103:77)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:103:29)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+
+test at tests/integration/novel-import-world-repair.test.ts:2:24455
+✖ ForeshadowReference (2.539625ms)
+  Error [DriverAdapterError]: new row for relation "ForeshadowReference" violates check constraint "ForeshadowReference_targetType_check"
+      at PrismaPGliteAdapter.onError (/Users/dt_flys/Projects/shakeink-desktop/node_modules/pglite-prisma-adapter/dist/index.cjs:530:75)
+      at PrismaPGliteAdapter.performIO (/Users/dt_flys/Projects/shakeink-desktop/node_modules/pglite-prisma-adapter/dist/index.cjs:525:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async PrismaPGliteAdapter.queryRaw (/Users/dt_flys/Projects/shakeink-desktop/node_modules/pglite-prisma-adapter/dist/index.cjs:490:28) {
+    cause: { originalCode: '23514', originalMessage: 'new row for relation "ForeshadowReference" violates check constraint "ForeshadowReference_targetType_check"', kind: 'postgres', code: '23514', severity: 'ERROR', message: 'new row for relation "ForeshadowReference" violates check constraint "ForeshadowReference_targetType_check"', detail: 'Failing row contains (cmvpgwpfd001b0r6vegy4je91, wr-5a62fd8b-eda1-408f-a608-7976ee962f40, cmvpgwpci00160r6vns5svcf2, UNKNOWN, wr-5a62fd8b-eda1-408f-a608-7976ee962f40-world-0, fixture, null, null, null, null, null, 2026-10-26 16:25:16.729, 2026-10-26 16:25:16.729).', column: undefined, hint: undefined },
+    clientVersion: '7.8.0'
+  }
+
+test at tests/integration/novel-import-world-repair.test.ts:2:24455
+✖ ContentImprovementRun historical chapterId (1.296292ms)
+  PrismaClientValidationError: 
+  Invalid `chapterId',create:()=>m.contentImprovementRun.create()` invocation in
+  /Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:96:89
+  
+    93 {name:'ForeshadowReference',create:()=>m.foreshadowReference.create({data:{novelId:matrix.novelId,touchId:touch.id,targetType:'UNKNOWN',targetId,identityKey:'fixture'}}),remove:(id:string)=>m.foreshadowReference.delete({where:{id}})},
+    94 {name:'ChatWriteEffect metadata-only target',create:()=>m.chatWriteEffect.create({data:{toolExecutionId:tool.id,targetModel:'UNKNOWN',targetId,operation:'fixture',receipt:{privateFixture:'must-not-be-exported'}}}),remove:(id:string)=>m.chatWriteEffect.delete({where:{id}})},
+    95 {name:'ContentCandidate historical chapterId',create:()=>m.contentCandidate.create({data:{userId:owner,novelId:matrix.novelId,chapterId:targetId,operationId:randomUUID(),baseVersion:1,baseHash:hex('base'),content:'合成稿件不得读',contentHash:hex('draft'),source:'fixture',status:'ready',checks:{}}}),remove:(id:string)=>m.contentCandidate.delete({where:{id}})},
+  → 96 {name:'ContentImprovementRun historical chapterId',create:()=>m.contentImprovementRun.create({
+         data: {
+           userId: "world-repair-synthetic-owner",
+           novelId: "wr-5a62fd8b-eda1-408f-a608-7976ee962f40",
+           chapterId: "wr-5a62fd8b-eda1-408f-a608-7976ee962f40-world-0",
+           operationId: "6e361597-9ff2-4935-8d2c-70976e44f1d1",
+           requestHash: "62a4a0e9fbff1ed4b03bd12357240ba193b915b612e8e0638e27e6ffbbefe423",
+           baseVersion: 1,
+           baseHash: "cae662172fd450bb0cd710a769079c05bfc5d8e35efa6576edc7d0377afdd4a2",
+           baseContent: "合成稿件不得读",
+           authorInstructions: "",
+           comments: [],
+           boundaries: {},
+       +   wordRequirement: JsonNullValueInput | Json
+         }
+       })
+  
+  Argument `wordRequirement` is missing.
+      at throwValidationException (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:9)
+      at zr.handleRequestError (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:211:7)
+      at zr.handleAndLogRequestError (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:12)
+      at zr.request (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:103:77)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:103:29)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+
+test at tests/integration/novel-import-world-repair.test.ts:2:24455
+✖ CascadeJob conservative own-novel block (0.772042ms)
+  PrismaClientValidationError: 
+  Invalid `block',create:()=>m.cascadeJob.create()` invocation in
+  /Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:101:75
+  
+     98 {name:'ContentMutation target history',create:()=>m.contentMutation.create({data:{userId:owner,novelId:matrix.novelId,targetType:'WORLD',targetId,operationId:randomUUID(),requestHash:hex('history'),beforeHash:hex('old'),afterHash:hex('new'),result:{}}}),remove:(id:string)=>m.contentMutation.delete({where:{id}})},
+     99 {name:'TargetTextRevision global bounded target',create:()=>m.targetTextRevision.create({data:{operationId:randomUUID(),targetType:'WORLD',targetId,field:'description',side:'before',text:'旧历史',hash:hex('history')}}),remove:(id:string)=>m.targetTextRevision.delete({where:{id}})},
+    100 {name:'SopPlan conservative own-novel block',create:()=>m.sopPlan.create({data:{novelId:matrix.novelId,conversationId:conversation.id,title:'合成计划',items:[]}}),remove:(id:string)=>m.sopPlan.delete({where:{id}})},
+  → 101 {name:'CascadeJob conservative own-novel block',create:()=>m.cascadeJob.create({
+          data: {
+            novelId: "wr-5a62fd8b-eda1-408f-a608-7976ee962f40",
+            triggerType: "MANUAL",
+                         ~~~~~~~~
+            triggerId: "fixture",
+            affectedItems: []
+          }
+        })
+  
+  Invalid value for argument `triggerType`. Expected CascadeTriggerType.
+      at throwValidationException (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:9)
+      at zr.handleRequestError (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:211:7)
+      at zr.handleAndLogRequestError (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:12)
+      at zr.request (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async a (/Users/dt_flys/Projects/shakeink-desktop/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:24)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:103:77)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:103:29)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+
+test at tests/integration/novel-import-world-repair.test.ts:2:25720
+✖ planning parse, world pointer and opaque artifact link are closed guards (54.946084ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:110:146)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:108:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /WR_PLANNING_INVALID/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

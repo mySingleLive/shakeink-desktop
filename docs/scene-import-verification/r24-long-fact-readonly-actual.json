@@ -1,0 +1,29 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "observations": [
+        {
+          "reason": "stop",
+          "promptTokens": 117721,
+          "completionTokens": 18927,
+          "textCharacters": 1007,
+          "maxOutputTokens": null
+        }
+      ],
+      "artifacts": 0
+    }
+  ],
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "scope": "one legal complete real R23 scene facts packet; current R24 frozen build",
+  "maximumNativeFieldCharacters": 27529,
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "build": "build-identity-r24.json",
+  "requestSha256": "224fed8c45c909b4951eab8dd4dbcf88cf69e0b7572b8ab043d5eb72a1250df9"
+}

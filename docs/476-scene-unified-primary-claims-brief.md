@@ -1,0 +1,15 @@
+# 476 · 统一主生成格式并提示无源候选
+
+475及独审确认R70失败：35请求32成功/3拒绝、64代完整输入SHA匹配；一包selection数组后完整第三代资料超固定桶1079B，一包连续把selection答为完整claimChoices，一包无源称呼仍强造证据。全部原门正确拒绝，不能猜[3]、缩资料或自动跳过。原文/1402章/4912分区保持，全文、发布及重开未通过。用户当前DeepSeek/原小说与按具体地点拆分授权持续。
+
+本次只改变可信准备阶段的主生成表示和静态说明，不扩接受来源或资格。fresh targeted对完整classified patch且不可整行拒绝的行直接使用已实测claims，绑定同一完整claimIndexes、原CF域及不可变proof；不先生成局部selection选项再要求模型切换数字语义。未分类、unknown、metadata、partial、发生位置不足仍保留完整replacement。旧selection仅明确的可信旧deck/独立兼容入口及原repairs维持原义；新claims解析失败绝不尝试裸数、singleton数组或旧selection，不从[3]猜CF/option。内部策略不能成为用户/model可指定的请求参数。旧编译器与原阈值可保在兼容路径，fresh主路径避免不必要的组合枚举；联合合法性仍由原patch.apply/select/groupEvidence和完整source/owner/retention决定。
+
+准备状态单调有界：fresh完整patch从claims起，只可因预算转为原完整replacement一次；无patch/原canReject行保持replacement。旧显式selection准备路径仍最多selection→claims→replacement两次。总转换仍不超过2*rowCount，激活后kind/claim/domain/Native不变，四代、usage/auth/abort/HTTP、全部三预算桶及16KiB完整可选focus均不变。
+
+无源候选只调整Native主表示，不删除本地合法纠错能力。primaryRejectOnly只能由可信prepare事实建立：该行严格完整分类、有完整patch；全部keep mentions/context/links均空；原canReject和boundCanReject均真；至少有原raw称呼且全部由保守hasSource证明无源（包括真实相邻单位检查，不用空eligible代替）。未知/partial/任何proof/有效good incoming/crossunit存在原称呼均禁用。该项仍kind=replacement，仅在Native主生成合同显示精确原已实测的{type:'integer',enum:[0]}叶，要求模型显式答0；程序不补0、不删原行。原decoder/apply仍接受0或完整replacement/legacy事务：新称呼若实际有源仍须允许经全部原门成功，坏source仍拒。其它坏行后来依赖被拒行时，原target remap/owner/retention仍完整拒绝，不能跳过关系。
+
+全部原raw/current失败答复、来源、keep、CF八列表与完整位置资料保留。仅压缩重复静态指南，明确本轮claims的局部键与共享CF号、replacement及主0；不再给不存在的primary selection任务大量局部option说明。不得以摘掉背景字段、缩窗、截域或raise cap节约预算。R70源码/工件先冻结，原静态outer false及R70正常失败永久保留。
+
+主claims和enum0均使用已实际成功的相同闭合对象、整数数组/enum关键字；primary0叶须逐值等于R70实际schema对应原0叶，旧同deck Native工厂对原描述仍保持逐值相同。本次无新provider语法，不重复静态API探针。方案与477用例按序独审后，限定TDD并最终独审；新表示改变task arity/数字语义，历史答复仅在原actual前缀SHA和全部metadata/任务/域/CF窗/Native绑定相同时复用，否则SDK前停止。后续335请求/660捕获互斥记账，旧实际结论不重分类；新129/旧130首轮、所有已知首稿准备及完整2/3/4代预算均重测。
+
+根代理组合验收。拟B owner负责bound/targeted及主策略测试，AI owner只改静态guide与集成测试，claim-patch/reference/proof/原门不改；具体范围在准入时明确。原47测试扩必要范围、类型/desktop build、实际schema等价、预算与最终code review通过后，fresh正常全文仍从原按钮计时420000ms，无skip/drop，全部场景及完整资料复核、发布、正常重开和DB比较实际通过才完成。不跑全仓，不修改上游Web，不把替代wire、本地反事实或单次启动充作全文成功。

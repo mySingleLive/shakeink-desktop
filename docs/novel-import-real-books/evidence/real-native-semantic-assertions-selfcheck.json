@@ -1,0 +1,126 @@
+{
+  "scope": "RB-P01 pure semantic row assertion helper only",
+  "helperSha256": "7a382e40d103e80f2400cff897b7e1b0402b7c396d32c02b0566ff73bb7355c7",
+  "executedAt": "2026-10-26T00:37:35.057Z",
+  "selfcheckCommand": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx /tmp/real-novel-semantic-assertions-check.mts",
+  "selfcheckDriverSha256": "a2b26f3a0909f1d1ef12d2cdcc62c62b678b849dce21c5ffe4bfc7b0e22bb9ed",
+  "checks": [
+    {
+      "name": "exact-native-positive",
+      "passed": true,
+      "assertions": 30
+    },
+    {
+      "name": "explicit-source-copy-role-compatibility-is-marked-not-inferred",
+      "passed": true,
+      "assertions": 30
+    },
+    {
+      "name": "wrong-role",
+      "passed": true,
+      "rejectedBy": "semantic-character-all-supported-profile-fields-exact"
+    },
+    {
+      "name": "empty-world-setting",
+      "passed": true,
+      "rejectedBy": "semantic-nine-world-setting-content-world-and-map-parent-exact"
+    },
+    {
+      "name": "wrong-place-parent",
+      "passed": true,
+      "rejectedBy": "semantic-scenes-only-place-exact-parent-tree-coordinates-text"
+    },
+    {
+      "name": "lost-event-knowledge-qualifier",
+      "passed": true,
+      "rejectedBy": "semantic-world-event-facts-retain-full-knowledge-qualified-text"
+    },
+    {
+      "name": "lost-profile-knowledge-qualifier",
+      "passed": true,
+      "rejectedBy": "semantic-character-all-supported-profile-fields-exact"
+    },
+    {
+      "name": "fake-world-for-unmapped-source",
+      "passed": true,
+      "rejectedBy": "semantic-unmapped-source-materials-create-no-fake-native-entities"
+    },
+    {
+      "name": "wrong-relationship-actual-id",
+      "passed": true,
+      "rejectedBy": "semantic-character-two-pass-relationships-own-actual-ids"
+    },
+    {
+      "name": "wrong-map-parent",
+      "passed": true,
+      "rejectedBy": "semantic-nine-world-setting-content-world-and-map-parent-exact"
+    },
+    {
+      "name": "lost-reference-reliability",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-ref-event-character-reliability-kind-qualified-source"
+    },
+    {
+      "name": "lost-reference-kind",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-ref-event-character-reliability-kind-qualified-source"
+    },
+    {
+      "name": "foreign-novel-row",
+      "passed": true,
+      "rejectedBy": "semantic-native-rows-only-own-novel"
+    },
+    {
+      "name": "inferred-source-copy-bypass",
+      "passed": true,
+      "rejectedBy": "semantic-artifact-and-source-copy-identities-unique"
+    },
+    {
+      "name": "projectable-cannot-exempt-inferred-role",
+      "passed": true,
+      "rejectedBy": "semantic-projectable-selection-cannot-exempt-derived-artifacts"
+    },
+    {
+      "name": "required-source-role-missing-from-projection",
+      "passed": true,
+      "rejectedBy": "semantic-characters-exact-population-and-artifact-ids"
+    },
+    {
+      "name": "lost-source-material-warning",
+      "passed": true,
+      "rejectedBy": "semantic-unmapped-source-native-materials-have-explicit-warnings"
+    },
+    {
+      "name": "lost-narrative-knowledge-qualifier",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-intents-retain-full-knowledge-qualified-text"
+    },
+    {
+      "name": "qualified-native-event-fragments-fit-100000-and-retain-every-character",
+      "passed": true,
+      "assertions": 30
+    },
+    {
+      "name": "unmapped-source-timeline-material-warning-without-native-row",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "full-target-only-unmapped-source-cannot-pass",
+      "passed": true,
+      "rejectedBy": "semantic-full-selected-targets-not-satisfied-by-unmapped-source-materials"
+    }
+  ],
+  "passed": true,
+  "limitations": [
+    "sourceCopyIds and projectableIds are explicit actual runtime sets; no derived artifact may be exempted",
+    "unmapped source IDs and mapping warnings report an unconfirmed mapping, not a correct literary exclusion",
+    "raw-source/snapshot retention and semanticAudit persistence are checked separately by the caller",
+    "mechanical native matching is not independent whole-book oracle acceptance"
+  ],
+  "productionPublisherCalled": false,
+  "databaseOpened": false,
+  "realDataRead": false,
+  "sourceBookOrModelUsed": false,
+  "independentCodeReview": "pending"
+}

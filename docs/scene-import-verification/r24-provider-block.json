@@ -1,0 +1,50 @@
+{
+  "run": "R24",
+  "status": "external-provider-http-402-stopped",
+  "build": "build-identity-r24.json",
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "allCandidatesSelected": true,
+  "sceneCandidates": 976,
+  "initialFailureSnapshot": {
+    "done": 555,
+    "running": 30,
+    "failed": 5,
+    "waiting": 386
+  },
+  "beforeCloseSnapshot": {
+    "done": 560,
+    "running": 21,
+    "failed": 18,
+    "waiting": 377
+  },
+  "observedFailureCodes": [
+    "HTTP_402"
+  ],
+  "chapters": 1402,
+  "chapterBoundariesAndNamesUnchanged": true,
+  "workingRevision": 0,
+  "workingBodySha256": "81d901770a84a1280664fa77dbf30922aa5b8d52a208417af0c99dbb7ad07414",
+  "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+  "sourceUnchanged": true,
+  "skipped": 0,
+  "dropped": 0,
+  "pageErrors": [],
+  "driverExitCode": 2,
+  "appExit": {
+    "code": 0,
+    "signal": null
+  },
+  "osAppPidAbsent": 14801,
+  "observerStop": {
+    "stopped": 1,
+    "pending": 0,
+    "workers": 0,
+    "samples": 41,
+    "unavailable": 0,
+    "writeFailures": 0,
+    "timeouts": 0
+  },
+  "providerCodeReference": "https://api-docs.deepseek.com/zh-cn/quick_start/error_codes/"
+}

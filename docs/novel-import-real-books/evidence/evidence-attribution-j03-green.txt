@@ -1,0 +1,14 @@
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (9.991417ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (1.544916ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (14.261333ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.652667ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (28.603042ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 849.179125

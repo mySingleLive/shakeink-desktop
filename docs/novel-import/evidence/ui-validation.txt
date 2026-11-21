@@ -1,0 +1,49 @@
+Novel import UI scoped verification, 2026-10-25 / 2026-10-26
+
+Runner:
+/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test tests/browser/novel-import.test.ts
+
+TDD evidence:
+- ui-red.txt: 7 failures before the production React components/store existed.
+- ui-patches-red.txt -> ui-patches-green.txt: NI-U06 proves an asynchronous patch response cannot be assumed immediate; actual waiting persists until the controlled bridge event delivers patches.
+- ui-draft-red.txt -> ui-draft-green.txt: NI-U06 proves unsent decision/explanation survives hide/reopen within the same UI session.
+- ui-responsive.txt: NI-U02 narrow/short viewport check after fixing border-box sizing; 1/1 pass.
+- ui-record-green.txt: NI-U06/U07 targeted review fixes; 2/2 pass.
+- ui-inference-green.txt: NI-U06 additional assertion of the inferred-setting second confirmation gate; 1/1 pass.
+- ui-failed-source-red.txt -> ui-failed-source-green.txt: NI-U03 review fix adds an actionable return to source review after a failed classification/import, preserving the session.
+- ui-recovery-green.txt: NI-U03/U04 review follow-up; 2/2 pass. A frozen publication disables title/edit-back actions and can restore the original target/save without current AI models or a new analysis grant.
+- ui-translation-red.txt -> ui-translation-green.txt: native acceptance exposed double translation from shared Tailwind popup `translate` plus import `transform`. The fixture now includes the shared independent translate property; the import dialog explicitly resets `translate:none`. NI-U02/U04 pass 2/2 with default, narrow/short, source and confirmation viewport bounds. Earlier fixture results did not cover this production CSS composition; they were not sufficient evidence of native popup placement.
+- Production follow-up supersedes the translate:none reset: Lightning CSS removed that default-valued reset, so the compiled asset retained both positioning mechanisms. The final CSS removes the import popup's own translate AND transform and relies entirely on shared DialogContent. ui-built-position-red.txt verifies the actual old Next asset fails the no-own-transform invariant; ui-shared-position-green.txt is NI-U02/U04 2/2 using the shared translation. tests/helpers/novel-import-css-check.mjs checks both source and compiled CSS, retaining the shared Tailwind translation; run it after the main agent's real Next rebuild for production artifact evidence.
+- The main agent completed that real Next rebuild and checker: ui-built-position-green.txt reports 3 source rules / 3 built rules, ownTranslation:false, sharedTranslation:true (import asset 07htfn2yqpmyr.css; shared translation may live in another chunk). Latest ui-final.txt is 7/7 pass. The UI agent read both raw logs; it did not rerun the main agent's build or native workflow.
+- ui-title-picker-red.txt -> ui-title-picker-green.txt: NI-U04 holds set-title until explicit release, clicks choose-directory only once, then verifies exactly one set-title followed by one choose-target at the next acknowledged revision. Removed title onBlur IPC; the same click handler commits the draft title before choosing a directory, and start reuses that commit helper. Frozen publications never submit a title change. Only NI-U04 was rerun for this native-found interaction fix.
+- ui-completion-cache-red.txt -> ui-completion-cache-green.txt: NI-U05/U07 use a real QueryClient with a fresh novels cache. Completion now invalidates that cache from a phase+session-ID effect even when the completion dialog is simply closed or stays hidden in the background; opening a work is no longer required. The background assertion also checks that completion leaves the dialog hidden. Only the affected NI-U05/U07 were rerun.
+- ui-green.txt: combined NI-U01..07 run; 7/7 pass, 0 skipped, about 8 seconds. Subsequent review changes were rerun only under their affected IDs above.
+
+Covered production React behavior:
+- Local licensed SVGs actually load in an isolated page; inclusion/order/native file-pick bridge actions, read-only text, manual classification, encoding and chapter cuts.
+- 13 ordinary source checkboxes, independent source inspection, 12 whole-card native checkbox targets, no collapse action, master off only disables targets, no-body pure copy.
+- First classification consent, real pending bridge state, local/no-model route, background result keeps the dialog hidden.
+- Second scope/model consent, title and native empty-target selection gating; pure-copy start sends consent:false with no configured models.
+- Pause/resume/retain; completed Escape hides without invoking cancellation.
+- Three conflict types, no default; explanation requirement, inferred setting second confirmation, deferred patch preview, per-patch second approval; scope reauthorization returns to pending conflict; local unsent draft survives hiding.
+- Real tab store opens the existing novel tab. Import record changes novel ID without leaking the previous material selection; read-only outline pagination follows actual server offsets, including surrogate-pair normalization.
+- Ink/paper at 1280x800, narrow 390x640 and short 680x460; bounded dialog, no horizontal overflow, pointer cards, keyboard focus containment, reduced-motion styling.
+
+Environment and limits:
+- Headless installed Chrome in a fresh Playwright profile. External network is aborted. Only explicitly matched /import-file-icons/*.svg is fulfilled from the bundled public assets; no listening HTTP server.
+- Tests mount the real React Dialog/Button/tabs/query components with an isolated controlled public desktop bridge. Synthetic fixture text remains only under tests/helpers.
+- This proves renderer interactions and command contracts, not a native picker, parser, PGlite publication, real AI endpoint, macOS installation acceptance, or Windows acceptance. Those are separate targeted groups owned by the main agent.
+- Initial sandbox launch failed with Chrome SIGABRT/EPERM. The same scoped command was run with approved isolated-browser execution; it did not access the user's existing Chrome profile.
+- No npm test, broad browser suite, unit wildcard, full regression, or acceptance script was run.
+
+Build validation:
+/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node node_modules/typescript/bin/tsc --noEmit --incremental false
+Latest completed run exit 0 (no output). This is compilation, not an additional test suite.
+
+Exports for integration:
+- requestNovelImport('files'|'folder'), useNovelImportStore
+- NovelImportDialog({suspended}), NovelImportTaskButton
+- NovelImportRecord({novelId, outlineOnly?}) using the existing Dialog and import-record API
+
+Independent publisher review:
+docs/novel-import/11-review-publish.md records the initial four findings and their source-based closure. Publishing tests were not re-executed by this UI agent; the supplied main-agent 12/12 log was read and explicitly attributed.

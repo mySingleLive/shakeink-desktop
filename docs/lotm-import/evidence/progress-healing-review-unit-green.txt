@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely
+ok 1 - LOTM-E01: complete local schema evidence provenance survives actual generation and RPC safely # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.934667
+  ...
+# Subtest: LOTM-E02: exact failed units halve through RPC with fresh context and frozen budget, then do not re-expand
+ok 2 - LOTM-E02: exact failed units halve through RPC with fresh context and frozen budget, then do not re-expand # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.177208
+  ...
+# Subtest: LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay
+ok 3 - LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay
+  ---
+  duration_ms: 409.854833
+  ...
+# Subtest: LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split
+ok 4 - LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.359709
+  ...
+# Subtest: LOTM-E05: pause drains a late right result without covering or publishing it
+ok 5 - LOTM-E05: pause drains a late right result without covering or publishing it
+  ---
+  duration_ms: 109.861709
+  ...
+# Subtest: LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback
+ok 6 - LOTM-E06: legacy, review and classify evidence-shaped errors do not use semantic analyze fallback # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.102583
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 4
+# todo 0
+# duration_ms 1520.367291

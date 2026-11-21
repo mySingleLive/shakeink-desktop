@@ -1,0 +1,1437 @@
+{
+ "1M": [
+  {
+   "key": "analyze/entity/character//",
+   "units": [
+    "f-notes:16:27",
+    "working-0:12033:12088",
+    "working-0:48198:48263",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为c-31112fdf4e8a0c46的角色，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"c-3b1c7489969b99aa\",\"name\":\"沈砚\",\"aliases\":[],\"roleType\":\"PROTAGONIST\"},{\"id\":\"c-31112fdf4e8a0c46\",\"name\":\"林舟\",\"aliases\":[],\"roleType\":\"SUPPORTING\"}]",
+   "evidence": [
+    {
+     "unitId": "f-notes:16:27",
+     "quote": "林舟：沈砚的朋友。\n\n"
+    },
+    {
+     "unitId": "working-0:12033:12088",
+     "quote": "东流，\n\n第二章 承\n\n林舟在北城南巷拾起青铜钥匙。承之夜。"
+    },
+    {
+     "unitId": "working-0:48198:48263",
+     "quote": "乙卷\n\n第一章 再起\n\n林舟在北城南巷拾起青铜钥匙。再起之夜。"
+    },
+    {
+     "unitId": "working-0:108499:108556",
+     "quote": "流，\n\n第三章 三终\n\n林舟在北城南巷拾起青铜钥匙。三终之夜。"
+    }
+   ],
+   "prompt": "8c35cf534491418e2fb8fbf00aee8a15bd0f8439ba08be4eb35a97640c1b6ff5"
+  },
+  {
+   "key": "analyze/entity/character//",
+   "units": [
+    "working-0:24088:24143",
+    "working-0:60263:60320",
+    "working-0:84377:84442"
+   ],
+   "instruction": "只导入id为c-6806fdc523ede9d8的角色，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"c-6806fdc523ede9d8\",\"name\":\"顾三\",\"aliases\":[],\"roleType\":\"ANTAGONIST\"}]",
+   "evidence": [
+    {
+     "unitId": "working-0:24088:24143",
+     "quote": "东流，\n\n第三章 转\n\n顾三在北城南巷拾起青铜钥匙。转之夜。"
+    },
+    {
+     "unitId": "working-0:60263:60320",
+     "quote": "流，\n\n第二章 再承\n\n顾三在北城南巷拾起青铜钥匙。再承之夜。"
+    },
+    {
+     "unitId": "working-0:84377:84442",
+     "quote": "丙卷\n\n第一章 三起\n\n顾三在北城南巷拾起青铜钥匙。三起之夜。"
+    }
+   ],
+   "prompt": "b53f7987297f0b55427326e25632d127159dc7ec3bf286a8c9f0027d48ec7fa5"
+  },
+  {
+   "key": "analyze/entity/character//",
+   "units": [
+    "working-0:0:33",
+    "f-notes:0:6",
+    "f-notes:6:16",
+    "working-0:36143:36198",
+    "working-0:72320:72377",
+    "working-0:96442:96499"
+   ],
+   "instruction": "只导入id为c-3b1c7489969b99aa的角色，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"c-3b1c7489969b99aa\",\"name\":\"沈砚\",\"aliases\":[],\"roleType\":\"PROTAGONIST\"}]",
+   "evidence": [
+    {
+     "unitId": "working-0:0:33",
+     "quote": " 甲卷\n\n第一章 起\n\n沈砚在北城南巷拾起青铜钥匙。起之夜。"
+    },
+    {
+     "unitId": "f-notes:6:16",
+     "quote": "沈砚：渡口少年。\n\n"
+    },
+    {
+     "unitId": "working-0:36143:36198",
+     "quote": "东流，\n\n第四章 终\n\n沈砚在北城南巷拾起青铜钥匙。终之夜。"
+    },
+    {
+     "unitId": "working-0:72320:72377",
+     "quote": "流，\n\n第三章 再终\n\n沈砚在北城南巷拾起青铜钥匙。再终之夜。"
+    },
+    {
+     "unitId": "working-0:96442:96499",
+     "quote": "流，\n\n第二章 三承\n\n沈砚在北城南巷拾起青铜钥匙。三承之夜。"
+    }
+   ],
+   "prompt": "d1c6f6ebec98ff47b66067f7c619787607a87cccf84296542c049107a1003326"
+  },
+  {
+   "key": "analyze/entity/item//",
+   "units": [
+    "working-0:0:33",
+    "working-0:12033:12088",
+    "working-0:24088:24143",
+    "working-0:36143:36198",
+    "working-0:48198:48263",
+    "working-0:60263:60320",
+    "working-0:72320:72377",
+    "working-0:84377:84442",
+    "working-0:96442:96499",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为i-800a3869c063646c的物品，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"i-800a3869c063646c\",\"name\":\"青铜钥匙\",\"aliases\":[]}]",
+   "evidence": [
+    {
+     "unitId": "working-0:0:33",
+     "quote": "起\n\n沈砚在北城南巷拾起青铜钥匙。起之夜。"
+    },
+    {
+     "unitId": "working-0:12033:12088",
+     "quote": "承\n\n林舟在北城南巷拾起青铜钥匙。承之夜。"
+    },
+    {
+     "unitId": "working-0:36143:36198",
+     "quote": "终\n\n沈砚在北城南巷拾起青铜钥匙。终之夜。"
+    },
+    {
+     "unitId": "working-0:48198:48263",
+     "quote": "起\n\n林舟在北城南巷拾起青铜钥匙。再起之夜。"
+    },
+    {
+     "unitId": "working-0:60263:60320",
+     "quote": "承\n\n顾三在北城南巷拾起青铜钥匙。再承之夜。"
+    },
+    {
+     "unitId": "working-0:72320:72377",
+     "quote": "终\n\n沈砚在北城南巷拾起青铜钥匙。再终之夜。"
+    },
+    {
+     "unitId": "working-0:96442:96499",
+     "quote": "承\n\n沈砚在北城南巷拾起青铜钥匙。三承之夜。"
+    },
+    {
+     "unitId": "working-0:108499:108556",
+     "quote": "终\n\n林舟在北城南巷拾起青铜钥匙。三终之夜。"
+    }
+   ],
+   "prompt": "691798fe4f5cdc09ea330945c95cc34c478f67324b76d0470c9662d5146972fa"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:84377:84442"
+   ],
+   "instruction": "只导入id为ws-c6192682be86bf6a的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"ws-c6192682be86bf6a\",\"name\":\"城制\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "0867d9eaa7f7f68823509e189a59e224a9df9de5c38d112cc6b4b0e733a73a10"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:84377:84442"
+   ],
+   "instruction": "只导入id为w-e601cfd93f9665bf的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"w-e601cfd93f9665bf\",\"name\":\"南巷梦境\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "0ec4cc5acba02d29dc5f235346a393391fb6478fa71865864504fe3453e24dd4"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "f-notes:27:34",
+    "working-0:84377:84442"
+   ],
+   "instruction": "只导入id为w-759a94d56dc663b9的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]}]",
+   "evidence": null,
+   "prompt": "15d43d5957661a782bdbdbc37be665859f07c5bb465d177ce6c3f436c687f1e8"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:84377:84442"
+   ],
+   "instruction": "只导入id为ws-f4874c07e32fbaad的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"ws-f4874c07e32fbaad\",\"name\":\"山川\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "75bee744607ca6962ea5cf37c464a619d2e7eb3ff17dc5f8a5a4f88f4e1f5ce6"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:84377:84442"
+   ],
+   "instruction": "只导入id为ws-4d8bc0292d46ebc4的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"w-e601cfd93f9665bf\",\"name\":\"南巷梦境\",\"aliases\":[]},{\"id\":\"ws-4d8bc0292d46ebc4\",\"name\":\"梦俗\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "b85f1f005ae56c720c31ae3726fabce48b06666381dbd0f55af9b4f3a1d1892e"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:0:33",
+    "working-0:33:1033",
+    "working-0:1033:2033",
+    "working-0:2033:3033",
+    "working-0:3033:4033",
+    "working-0:4033:5033",
+    "working-0:5033:6033",
+    "working-0:6033:7033",
+    "working-0:7033:8033",
+    "working-0:8033:9033",
+    "working-0:9033:10033",
+    "working-0:10033:11033",
+    "working-0:11033:12033",
+    "working-0:12033:12088",
+    "working-0:12088:13088",
+    "working-0:13088:14088",
+    "working-0:14088:15088",
+    "working-0:15088:16088",
+    "working-0:16088:17088",
+    "working-0:17088:18088",
+    "working-0:18088:19088",
+    "working-0:19088:20088",
+    "working-0:20088:21088",
+    "working-0:21088:22088",
+    "working-0:22088:23088",
+    "working-0:23088:24088",
+    "working-0:24088:24143",
+    "working-0:24143:25143",
+    "working-0:25143:26143",
+    "working-0:26143:27143",
+    "working-0:27143:28143",
+    "working-0:28143:29143",
+    "working-0:29143:30143",
+    "working-0:30143:31143",
+    "working-0:31143:32143",
+    "working-0:32143:33143",
+    "working-0:33143:34143",
+    "working-0:34143:35143",
+    "working-0:35143:36143",
+    "working-0:36143:36198",
+    "working-0:36198:37198",
+    "working-0:37198:38198",
+    "working-0:38198:39198",
+    "working-0:39198:40198",
+    "working-0:40198:41198",
+    "working-0:41198:42198",
+    "working-0:42198:43198",
+    "working-0:43198:44198",
+    "working-0:44198:45198",
+    "working-0:45198:46198",
+    "working-0:46198:47198",
+    "working-0:47198:48198",
+    "working-0:48198:48263",
+    "working-0:48263:49263",
+    "working-0:49263:50263",
+    "working-0:50263:51263",
+    "working-0:51263:52263",
+    "working-0:52263:53263",
+    "working-0:53263:54263",
+    "working-0:54263:55263",
+    "working-0:55263:56263",
+    "working-0:56263:57263",
+    "working-0:57263:58263",
+    "working-0:58263:59263",
+    "working-0:59263:60263",
+    "working-0:60263:60320",
+    "working-0:60320:61320",
+    "working-0:61320:62320",
+    "working-0:62320:63320",
+    "working-0:63320:64320",
+    "working-0:64320:65320",
+    "working-0:65320:66320",
+    "working-0:66320:67320",
+    "working-0:67320:68320",
+    "working-0:68320:69320",
+    "working-0:69320:70320",
+    "working-0:70320:71320",
+    "working-0:71320:72320",
+    "working-0:72320:72377",
+    "working-0:72377:73377",
+    "working-0:73377:74377",
+    "working-0:74377:75377",
+    "working-0:75377:76377",
+    "working-0:76377:77377",
+    "working-0:77377:78377",
+    "working-0:78377:79377",
+    "working-0:79377:80377",
+    "working-0:80377:81377"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "25680913472a229920652fe436f49dcbd2e0f5897b4dd5e1a4845a006f53ee3d"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:81377:82377",
+    "working-0:82377:83377",
+    "working-0:83377:84377",
+    "working-0:84377:84442",
+    "working-0:84442:85442",
+    "working-0:85442:86442",
+    "working-0:86442:87442",
+    "working-0:87442:88442",
+    "working-0:88442:89442",
+    "working-0:89442:90442",
+    "working-0:90442:91442",
+    "working-0:91442:92442",
+    "working-0:92442:93442",
+    "working-0:93442:94442",
+    "working-0:94442:95442",
+    "working-0:95442:96442",
+    "working-0:96442:96499",
+    "working-0:96499:97499",
+    "working-0:97499:98499",
+    "working-0:98499:99499",
+    "working-0:99499:100499",
+    "working-0:100499:101499",
+    "working-0:101499:102499",
+    "working-0:102499:103499",
+    "working-0:103499:104499",
+    "working-0:104499:105499",
+    "working-0:105499:106499",
+    "working-0:106499:107499",
+    "working-0:107499:108499",
+    "working-0:108499:108556",
+    "working-0:108556:109556",
+    "working-0:109556:110556",
+    "working-0:110556:111556",
+    "working-0:111556:112556",
+    "working-0:112556:113556",
+    "working-0:113556:114556",
+    "working-0:114556:115556",
+    "working-0:115556:116556",
+    "working-0:116556:117556",
+    "working-0:117556:118556",
+    "working-0:118556:119556",
+    "working-0:119556:120556",
+    "working-0:120556:120596"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "b112b638dc0c9034ea36af4525301ac0e6dd07bfe0a958cb8a55f667e821e5f5"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:81377:82377",
+    "working-0:82377:83377",
+    "working-0:83377:84377",
+    "working-0:84377:84442",
+    "working-0:84442:85442",
+    "working-0:85442:86442",
+    "working-0:86442:87442",
+    "working-0:87442:88442",
+    "working-0:88442:89442",
+    "working-0:89442:90442",
+    "working-0:90442:91442",
+    "working-0:91442:92442",
+    "working-0:92442:93442",
+    "working-0:93442:94442",
+    "working-0:94442:95442",
+    "working-0:95442:96442",
+    "working-0:96442:96499",
+    "working-0:96499:97499",
+    "working-0:97499:98499",
+    "working-0:98499:99499",
+    "working-0:99499:100499",
+    "working-0:100499:101499",
+    "working-0:101499:102499",
+    "working-0:102499:103499",
+    "working-0:103499:104499",
+    "working-0:104499:105499",
+    "working-0:105499:106499",
+    "working-0:106499:107499",
+    "working-0:107499:108499",
+    "working-0:108499:108556",
+    "working-0:108556:109556",
+    "working-0:109556:110556",
+    "working-0:110556:111556",
+    "working-0:111556:112556",
+    "working-0:112556:113556",
+    "working-0:113556:114556",
+    "working-0:114556:115556",
+    "working-0:115556:116556",
+    "working-0:116556:117556",
+    "working-0:117556:118556",
+    "working-0:118556:119556",
+    "working-0:119556:120556",
+    "working-0:120556:120596"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "b06117842b161b623ad29bca8261b897f3ef9d1e3842d5b95ba87f4e3e66d6d1"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:0:33",
+    "working-0:33:1033",
+    "working-0:1033:2033",
+    "working-0:2033:3033",
+    "working-0:3033:4033",
+    "working-0:4033:5033",
+    "working-0:5033:6033",
+    "working-0:6033:7033",
+    "working-0:7033:8033",
+    "working-0:8033:9033",
+    "working-0:9033:10033",
+    "working-0:10033:11033",
+    "working-0:11033:12033",
+    "working-0:12033:12088",
+    "working-0:12088:13088",
+    "working-0:13088:14088",
+    "working-0:14088:15088",
+    "working-0:15088:16088",
+    "working-0:16088:17088",
+    "working-0:17088:18088",
+    "working-0:18088:19088",
+    "working-0:19088:20088",
+    "working-0:20088:21088",
+    "working-0:21088:22088",
+    "working-0:22088:23088",
+    "working-0:23088:24088",
+    "working-0:24088:24143",
+    "working-0:24143:25143",
+    "working-0:25143:26143",
+    "working-0:26143:27143",
+    "working-0:27143:28143",
+    "working-0:28143:29143",
+    "working-0:29143:30143",
+    "working-0:30143:31143",
+    "working-0:31143:32143",
+    "working-0:32143:33143",
+    "working-0:33143:34143",
+    "working-0:34143:35143",
+    "working-0:35143:36143",
+    "working-0:36143:36198",
+    "working-0:36198:37198",
+    "working-0:37198:38198",
+    "working-0:38198:39198",
+    "working-0:39198:40198",
+    "working-0:40198:41198",
+    "working-0:41198:42198",
+    "working-0:42198:43198",
+    "working-0:43198:44198",
+    "working-0:44198:45198",
+    "working-0:45198:46198",
+    "working-0:46198:47198",
+    "working-0:47198:48198",
+    "working-0:48198:48263",
+    "working-0:48263:49263",
+    "working-0:49263:50263",
+    "working-0:50263:51263",
+    "working-0:51263:52263",
+    "working-0:52263:53263",
+    "working-0:53263:54263",
+    "working-0:54263:55263",
+    "working-0:55263:56263",
+    "working-0:56263:57263",
+    "working-0:57263:58263",
+    "working-0:58263:59263",
+    "working-0:59263:60263",
+    "working-0:60263:60320",
+    "working-0:60320:61320",
+    "working-0:61320:62320",
+    "working-0:62320:63320",
+    "working-0:63320:64320",
+    "working-0:64320:65320",
+    "working-0:65320:66320",
+    "working-0:66320:67320",
+    "working-0:67320:68320",
+    "working-0:68320:69320",
+    "working-0:69320:70320",
+    "working-0:70320:71320",
+    "working-0:71320:72320",
+    "working-0:72320:72377",
+    "working-0:72377:73377",
+    "working-0:73377:74377",
+    "working-0:74377:75377",
+    "working-0:75377:76377",
+    "working-0:76377:77377",
+    "working-0:77377:78377",
+    "working-0:78377:79377",
+    "working-0:79377:80377",
+    "working-0:80377:81377"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "ec3577ac6bff795dcf03c30ccc7cde7b809642b48cee3ef158adf63b1d5804a3"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:33:1033",
+    "working-0:1033:2033",
+    "working-0:2033:3033",
+    "working-0:3033:4033",
+    "working-0:4033:5033",
+    "working-0:5033:6033",
+    "working-0:6033:7033",
+    "working-0:7033:8033",
+    "working-0:8033:9033",
+    "working-0:9033:10033",
+    "working-0:10033:11033",
+    "working-0:11033:12033",
+    "working-0:12033:12088",
+    "working-0:12088:13088",
+    "working-0:13088:14088",
+    "working-0:14088:15088",
+    "working-0:15088:16088",
+    "working-0:16088:17088",
+    "working-0:17088:18088",
+    "working-0:18088:19088",
+    "working-0:19088:20088",
+    "working-0:20088:21088",
+    "working-0:21088:22088",
+    "working-0:22088:23088",
+    "working-0:23088:24088",
+    "working-0:24088:24143",
+    "working-0:24143:25143",
+    "working-0:25143:26143",
+    "working-0:26143:27143",
+    "working-0:27143:28143",
+    "working-0:28143:29143",
+    "working-0:29143:30143",
+    "working-0:30143:31143",
+    "working-0:31143:32143",
+    "working-0:32143:33143",
+    "working-0:33143:34143",
+    "working-0:34143:35143",
+    "working-0:35143:36143",
+    "working-0:36143:36198",
+    "working-0:36198:37198",
+    "working-0:37198:38198",
+    "working-0:38198:39198",
+    "working-0:39198:40198",
+    "working-0:40198:41198",
+    "working-0:41198:42198",
+    "working-0:42198:43198",
+    "working-0:43198:44198",
+    "working-0:44198:45198",
+    "working-0:45198:46198",
+    "working-0:46198:47198",
+    "working-0:47198:48198",
+    "working-0:48198:48263",
+    "working-0:48263:49263",
+    "working-0:49263:50263",
+    "working-0:50263:51263",
+    "working-0:51263:52263",
+    "working-0:52263:53263",
+    "working-0:53263:54263",
+    "working-0:54263:55263",
+    "working-0:55263:56263",
+    "working-0:56263:57263",
+    "working-0:57263:58263",
+    "working-0:58263:59263",
+    "working-0:59263:60263",
+    "working-0:60263:60320",
+    "working-0:60320:61320",
+    "working-0:61320:62320",
+    "working-0:62320:63320",
+    "working-0:63320:64320",
+    "working-0:64320:65320",
+    "working-0:65320:66320",
+    "working-0:66320:67320",
+    "working-0:67320:68320",
+    "working-0:68320:69320",
+    "working-0:69320:70320",
+    "working-0:70320:71320",
+    "working-0:71320:72320",
+    "working-0:72320:72377",
+    "working-0:72377:73377",
+    "working-0:73377:74377",
+    "working-0:74377:75377",
+    "working-0:75377:76377",
+    "working-0:76377:77377",
+    "working-0:77377:78377",
+    "working-0:78377:79377",
+    "working-0:79377:80377",
+    "working-0:80377:81377"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "2190fe1dc6f0c3124f01678686da383bb58e22a5802d3a5c609970b05e32b41f"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:81377:82377",
+    "working-0:82377:83377",
+    "working-0:83377:84377",
+    "working-0:84377:84442",
+    "working-0:84442:85442",
+    "working-0:85442:86442",
+    "working-0:86442:87442",
+    "working-0:87442:88442",
+    "working-0:88442:89442",
+    "working-0:89442:90442",
+    "working-0:90442:91442",
+    "working-0:91442:92442",
+    "working-0:92442:93442",
+    "working-0:93442:94442",
+    "working-0:94442:95442",
+    "working-0:95442:96442",
+    "working-0:96442:96499",
+    "working-0:96499:97499",
+    "working-0:97499:98499",
+    "working-0:98499:99499",
+    "working-0:99499:100499",
+    "working-0:100499:101499",
+    "working-0:101499:102499",
+    "working-0:102499:103499",
+    "working-0:103499:104499",
+    "working-0:104499:105499",
+    "working-0:105499:106499",
+    "working-0:106499:107499",
+    "working-0:107499:108499",
+    "working-0:108499:108556",
+    "working-0:108556:109556",
+    "working-0:109556:110556",
+    "working-0:110556:111556",
+    "working-0:111556:112556",
+    "working-0:112556:113556",
+    "working-0:113556:114556",
+    "working-0:114556:115556",
+    "working-0:115556:116556",
+    "working-0:116556:117556",
+    "working-0:117556:118556",
+    "working-0:118556:119556",
+    "working-0:119556:120556",
+    "working-0:120556:120596"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "91c94aaad92007d550e745ad9ac906f411a64ef22d02cd2ac6f17a64feaec746"
+  }
+ ],
+ "256K": [
+  {
+   "key": "analyze/entity/character//",
+   "units": [
+    "f-notes:16:27",
+    "working-0:12033:12088",
+    "working-0:48198:48263",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为c-31112fdf4e8a0c46的角色，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"c-3b1c7489969b99aa\",\"name\":\"沈砚\",\"aliases\":[],\"roleType\":\"PROTAGONIST\"},{\"id\":\"c-31112fdf4e8a0c46\",\"name\":\"林舟\",\"aliases\":[],\"roleType\":\"SUPPORTING\"}]",
+   "evidence": [
+    {
+     "unitId": "f-notes:16:27",
+     "quote": "林舟：沈砚的朋友。\n\n"
+    },
+    {
+     "unitId": "working-0:12033:12088",
+     "quote": "东流，\n\n第二章 承\n\n林舟在北城南巷拾起青铜钥匙。承之夜。"
+    },
+    {
+     "unitId": "working-0:48198:48263",
+     "quote": "乙卷\n\n第一章 再起\n\n林舟在北城南巷拾起青铜钥匙。再起之夜。"
+    },
+    {
+     "unitId": "working-0:108499:108556",
+     "quote": "流，\n\n第三章 三终\n\n林舟在北城南巷拾起青铜钥匙。三终之夜。"
+    }
+   ],
+   "prompt": "8c35cf534491418e2fb8fbf00aee8a15bd0f8439ba08be4eb35a97640c1b6ff5"
+  },
+  {
+   "key": "analyze/entity/character//",
+   "units": [
+    "working-0:24088:24143",
+    "working-0:60263:60320",
+    "working-0:84377:84442"
+   ],
+   "instruction": "只导入id为c-6806fdc523ede9d8的角色，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"c-6806fdc523ede9d8\",\"name\":\"顾三\",\"aliases\":[],\"roleType\":\"ANTAGONIST\"}]",
+   "evidence": [
+    {
+     "unitId": "working-0:24088:24143",
+     "quote": "东流，\n\n第三章 转\n\n顾三在北城南巷拾起青铜钥匙。转之夜。"
+    },
+    {
+     "unitId": "working-0:60263:60320",
+     "quote": "流，\n\n第二章 再承\n\n顾三在北城南巷拾起青铜钥匙。再承之夜。"
+    },
+    {
+     "unitId": "working-0:84377:84442",
+     "quote": "丙卷\n\n第一章 三起\n\n顾三在北城南巷拾起青铜钥匙。三起之夜。"
+    }
+   ],
+   "prompt": "b53f7987297f0b55427326e25632d127159dc7ec3bf286a8c9f0027d48ec7fa5"
+  },
+  {
+   "key": "analyze/entity/character//",
+   "units": [
+    "working-0:0:33",
+    "f-notes:0:6",
+    "f-notes:6:16",
+    "working-0:36143:36198",
+    "working-0:72320:72377",
+    "working-0:96442:96499"
+   ],
+   "instruction": "只导入id为c-3b1c7489969b99aa的角色，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"c-3b1c7489969b99aa\",\"name\":\"沈砚\",\"aliases\":[],\"roleType\":\"PROTAGONIST\"}]",
+   "evidence": [
+    {
+     "unitId": "working-0:0:33",
+     "quote": " 甲卷\n\n第一章 起\n\n沈砚在北城南巷拾起青铜钥匙。起之夜。"
+    },
+    {
+     "unitId": "f-notes:6:16",
+     "quote": "沈砚：渡口少年。\n\n"
+    },
+    {
+     "unitId": "working-0:36143:36198",
+     "quote": "东流，\n\n第四章 终\n\n沈砚在北城南巷拾起青铜钥匙。终之夜。"
+    },
+    {
+     "unitId": "working-0:72320:72377",
+     "quote": "流，\n\n第三章 再终\n\n沈砚在北城南巷拾起青铜钥匙。再终之夜。"
+    },
+    {
+     "unitId": "working-0:96442:96499",
+     "quote": "流，\n\n第二章 三承\n\n沈砚在北城南巷拾起青铜钥匙。三承之夜。"
+    }
+   ],
+   "prompt": "d1c6f6ebec98ff47b66067f7c619787607a87cccf84296542c049107a1003326"
+  },
+  {
+   "key": "analyze/entity/item//",
+   "units": [
+    "working-0:0:33",
+    "working-0:12033:12088",
+    "working-0:24088:24143",
+    "working-0:36143:36198",
+    "working-0:48198:48263",
+    "working-0:60263:60320",
+    "working-0:72320:72377",
+    "working-0:84377:84442",
+    "working-0:96442:96499",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为i-800a3869c063646c的物品，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"i-800a3869c063646c\",\"name\":\"青铜钥匙\",\"aliases\":[]}]",
+   "evidence": [
+    {
+     "unitId": "working-0:0:33",
+     "quote": "起\n\n沈砚在北城南巷拾起青铜钥匙。起之夜。"
+    },
+    {
+     "unitId": "working-0:12033:12088",
+     "quote": "承\n\n林舟在北城南巷拾起青铜钥匙。承之夜。"
+    },
+    {
+     "unitId": "working-0:36143:36198",
+     "quote": "终\n\n沈砚在北城南巷拾起青铜钥匙。终之夜。"
+    },
+    {
+     "unitId": "working-0:48198:48263",
+     "quote": "起\n\n林舟在北城南巷拾起青铜钥匙。再起之夜。"
+    },
+    {
+     "unitId": "working-0:60263:60320",
+     "quote": "承\n\n顾三在北城南巷拾起青铜钥匙。再承之夜。"
+    },
+    {
+     "unitId": "working-0:72320:72377",
+     "quote": "终\n\n沈砚在北城南巷拾起青铜钥匙。再终之夜。"
+    },
+    {
+     "unitId": "working-0:96442:96499",
+     "quote": "承\n\n沈砚在北城南巷拾起青铜钥匙。三承之夜。"
+    },
+    {
+     "unitId": "working-0:108499:108556",
+     "quote": "终\n\n林舟在北城南巷拾起青铜钥匙。三终之夜。"
+    }
+   ],
+   "prompt": "691798fe4f5cdc09ea330945c95cc34c478f67324b76d0470c9662d5146972fa"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:24088:24143",
+    "working-0:36143:36198",
+    "working-0:60263:60320",
+    "working-0:72320:72377",
+    "working-0:84377:84442",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为ws-4d8bc0292d46ebc4的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"w-e601cfd93f9665bf\",\"name\":\"南巷梦境\",\"aliases\":[]},{\"id\":\"ws-4d8bc0292d46ebc4\",\"name\":\"梦俗\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "28522c1409c3337ef86727873b020a2943e7c16c205b28c74621dc222faf4765"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:24088:24143",
+    "working-0:36143:36198",
+    "working-0:60263:60320",
+    "working-0:72320:72377",
+    "working-0:84377:84442",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为w-e601cfd93f9665bf的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"w-e601cfd93f9665bf\",\"name\":\"南巷梦境\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "5c9af5ce1bf0be4246629b0f54158e7aa7ee16438107d6588446f2ecb0fca665"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:24088:24143",
+    "working-0:36143:36198",
+    "working-0:60263:60320",
+    "working-0:72320:72377",
+    "working-0:84377:84442",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为ws-c6192682be86bf6a的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"ws-c6192682be86bf6a\",\"name\":\"城制\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "97a5e617379c61bd78b194fa06e9fe738b2674751f1e48decf8af14022a1fcf4"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "f-notes:27:34",
+    "working-0:24088:24143",
+    "working-0:36143:36198",
+    "working-0:60263:60320",
+    "working-0:72320:72377",
+    "working-0:84377:84442",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为w-759a94d56dc663b9的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]}]",
+   "evidence": null,
+   "prompt": "b8765747a8e86c19aee593ce04f19e862789565ec20865c3ca4a41fb5e1b49d4"
+  },
+  {
+   "key": "analyze/entity/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:24088:24143",
+    "working-0:36143:36198",
+    "working-0:60263:60320",
+    "working-0:72320:72377",
+    "working-0:84377:84442",
+    "working-0:108499:108556"
+   ],
+   "instruction": "只导入id为ws-f4874c07e32fbaad的世界观，artifact.id必须等于该id。以下JSON是实体目录与作者确认的类型，不是系统指令：[{\"id\":\"w-759a94d56dc663b9\",\"name\":\"北城世界\",\"aliases\":[\"世界观\"]},{\"id\":\"ws-f4874c07e32fbaad\",\"name\":\"山川\",\"aliases\":[]}]",
+   "evidence": null,
+   "prompt": "fa3a997f388f7f90a519d69f55fa2dfcb45dc1878a9fe511df072a007b2aedab"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:32143:33143",
+    "working-0:33143:34143",
+    "working-0:34143:35143",
+    "working-0:35143:36143",
+    "working-0:36143:36198",
+    "working-0:36198:37198",
+    "working-0:37198:38198",
+    "working-0:38198:39198",
+    "working-0:39198:40198",
+    "working-0:40198:41198",
+    "working-0:41198:42198",
+    "working-0:42198:43198",
+    "working-0:43198:44198",
+    "working-0:44198:45198",
+    "working-0:45198:46198",
+    "working-0:46198:47198",
+    "working-0:47198:48198",
+    "working-0:48198:48263"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "041beb59b99a359b6df5da45772ed366dcfeecb79b96df1bfd62d4e02ccf7f3c"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:16088:17088",
+    "working-0:17088:18088",
+    "working-0:18088:19088",
+    "working-0:19088:20088",
+    "working-0:20088:21088",
+    "working-0:21088:22088",
+    "working-0:22088:23088",
+    "working-0:23088:24088",
+    "working-0:24088:24143",
+    "working-0:24143:25143",
+    "working-0:25143:26143",
+    "working-0:26143:27143",
+    "working-0:27143:28143",
+    "working-0:28143:29143",
+    "working-0:29143:30143",
+    "working-0:30143:31143",
+    "working-0:31143:32143"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "05068c9ca22acf4030caff9cc90519fdd84553c37cc84367c2d26eddc938d7d4"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:80377:81377",
+    "working-0:81377:82377",
+    "working-0:82377:83377",
+    "working-0:83377:84377",
+    "working-0:84377:84442",
+    "working-0:84442:85442",
+    "working-0:85442:86442",
+    "working-0:86442:87442",
+    "working-0:87442:88442",
+    "working-0:88442:89442",
+    "working-0:89442:90442",
+    "working-0:90442:91442",
+    "working-0:91442:92442",
+    "working-0:92442:93442",
+    "working-0:93442:94442",
+    "working-0:94442:95442",
+    "working-0:95442:96442",
+    "working-0:96442:96499"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "783cd32d3c2766243984343f2dfdad2e52084947b6d5f33ea25646eafa0fe41e"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:48263:49263",
+    "working-0:49263:50263",
+    "working-0:50263:51263",
+    "working-0:51263:52263",
+    "working-0:52263:53263",
+    "working-0:53263:54263",
+    "working-0:54263:55263",
+    "working-0:55263:56263",
+    "working-0:56263:57263",
+    "working-0:57263:58263",
+    "working-0:58263:59263",
+    "working-0:59263:60263",
+    "working-0:60263:60320",
+    "working-0:60320:61320",
+    "working-0:61320:62320",
+    "working-0:62320:63320",
+    "working-0:63320:64320"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "be2c19940e8d36fe14af599dddba410b2e6938d8ce03a5100d9f05da4c93ed88"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:0:33",
+    "working-0:33:1033",
+    "working-0:1033:2033",
+    "working-0:2033:3033",
+    "working-0:3033:4033",
+    "working-0:4033:5033",
+    "working-0:5033:6033",
+    "working-0:6033:7033",
+    "working-0:7033:8033",
+    "working-0:8033:9033",
+    "working-0:9033:10033",
+    "working-0:10033:11033",
+    "working-0:11033:12033",
+    "working-0:12033:12088",
+    "working-0:12088:13088",
+    "working-0:13088:14088",
+    "working-0:14088:15088",
+    "working-0:15088:16088"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "dfc17c6d9f8321c51a10c0ee49ca0d8f5f5669daea111013c73c1ea76ca52899"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:64320:65320",
+    "working-0:65320:66320",
+    "working-0:66320:67320",
+    "working-0:67320:68320",
+    "working-0:68320:69320",
+    "working-0:69320:70320",
+    "working-0:70320:71320",
+    "working-0:71320:72320",
+    "working-0:72320:72377",
+    "working-0:72377:73377",
+    "working-0:73377:74377",
+    "working-0:74377:75377",
+    "working-0:75377:76377",
+    "working-0:76377:77377",
+    "working-0:77377:78377",
+    "working-0:78377:79377",
+    "working-0:79377:80377"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "e1d493049f8b4e8738fd0415158809fd2817f357b1dcdc483029c7a4c2c66b84"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:112556:113556",
+    "working-0:113556:114556",
+    "working-0:114556:115556",
+    "working-0:115556:116556",
+    "working-0:116556:117556",
+    "working-0:117556:118556",
+    "working-0:118556:119556",
+    "working-0:119556:120556",
+    "working-0:120556:120596"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "efac89853d708e93ff8893845bbac287cf0ae76ba42269433e025b0b545621c9"
+  },
+  {
+   "key": "analyze/roster/character//",
+   "units": [
+    "working-0:96499:97499",
+    "working-0:97499:98499",
+    "working-0:98499:99499",
+    "working-0:99499:100499",
+    "working-0:100499:101499",
+    "working-0:101499:102499",
+    "working-0:102499:103499",
+    "working-0:103499:104499",
+    "working-0:104499:105499",
+    "working-0:105499:106499",
+    "working-0:106499:107499",
+    "working-0:107499:108499",
+    "working-0:108499:108556",
+    "working-0:108556:109556",
+    "working-0:109556:110556",
+    "working-0:110556:111556",
+    "working-0:111556:112556"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"沈砚\",\"林舟\"]",
+   "evidence": null,
+   "prompt": "f084d9249c4acbd07e192e7ca392d16f1d6f869e5dc99f8b4cf830208a6660f3"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:80377:81377",
+    "working-0:81377:82377",
+    "working-0:82377:83377",
+    "working-0:83377:84377",
+    "working-0:84377:84442",
+    "working-0:84442:85442",
+    "working-0:85442:86442",
+    "working-0:86442:87442",
+    "working-0:87442:88442",
+    "working-0:88442:89442",
+    "working-0:89442:90442",
+    "working-0:90442:91442",
+    "working-0:91442:92442",
+    "working-0:92442:93442",
+    "working-0:93442:94442",
+    "working-0:94442:95442",
+    "working-0:95442:96442",
+    "working-0:96442:96499"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "063841fef3c142152d1051e81fa905639a6d971607022e1c23b46105318fca44"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:32143:33143",
+    "working-0:33143:34143",
+    "working-0:34143:35143",
+    "working-0:35143:36143",
+    "working-0:36143:36198",
+    "working-0:36198:37198",
+    "working-0:37198:38198",
+    "working-0:38198:39198",
+    "working-0:39198:40198",
+    "working-0:40198:41198",
+    "working-0:41198:42198",
+    "working-0:42198:43198",
+    "working-0:43198:44198",
+    "working-0:44198:45198",
+    "working-0:45198:46198",
+    "working-0:46198:47198",
+    "working-0:47198:48198",
+    "working-0:48198:48263"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "06e40fc44b3a53b3312d9f00686e512142316ed2b035c45a61b52ba8f9209b72"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:48263:49263",
+    "working-0:49263:50263",
+    "working-0:50263:51263",
+    "working-0:51263:52263",
+    "working-0:52263:53263",
+    "working-0:53263:54263",
+    "working-0:54263:55263",
+    "working-0:55263:56263",
+    "working-0:56263:57263",
+    "working-0:57263:58263",
+    "working-0:58263:59263",
+    "working-0:59263:60263",
+    "working-0:60263:60320",
+    "working-0:60320:61320",
+    "working-0:61320:62320",
+    "working-0:62320:63320",
+    "working-0:63320:64320"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "0abf999e0dbaf229083d74b564161f3c32810be58aa037fa3b728dac1d84ffb7"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:112556:113556",
+    "working-0:113556:114556",
+    "working-0:114556:115556",
+    "working-0:115556:116556",
+    "working-0:116556:117556",
+    "working-0:117556:118556",
+    "working-0:118556:119556",
+    "working-0:119556:120556",
+    "working-0:120556:120596"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "232bf779594e85a2c94fcb9cd0f076390d3b84b30ef8d2fde0fd146a25971c40"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:0:33",
+    "working-0:33:1033",
+    "working-0:1033:2033",
+    "working-0:2033:3033",
+    "working-0:3033:4033",
+    "working-0:4033:5033",
+    "working-0:5033:6033",
+    "working-0:6033:7033",
+    "working-0:7033:8033",
+    "working-0:8033:9033",
+    "working-0:9033:10033",
+    "working-0:10033:11033",
+    "working-0:11033:12033",
+    "working-0:12033:12088",
+    "working-0:12088:13088",
+    "working-0:13088:14088",
+    "working-0:14088:15088",
+    "working-0:15088:16088"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "593ee0409a124d92570a69ce3d5f1fd404879012382b71a44eaf1fe183c440bf"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:16088:17088",
+    "working-0:17088:18088",
+    "working-0:18088:19088",
+    "working-0:19088:20088",
+    "working-0:20088:21088",
+    "working-0:21088:22088",
+    "working-0:22088:23088",
+    "working-0:23088:24088",
+    "working-0:24088:24143",
+    "working-0:24143:25143",
+    "working-0:25143:26143",
+    "working-0:26143:27143",
+    "working-0:27143:28143",
+    "working-0:28143:29143",
+    "working-0:29143:30143",
+    "working-0:30143:31143",
+    "working-0:31143:32143"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "df7c46b70e9dd7f83ed7b487c7fccbe2a1528e2c3254d9708a8e51b64fad7173"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:96499:97499",
+    "working-0:97499:98499",
+    "working-0:98499:99499",
+    "working-0:99499:100499",
+    "working-0:100499:101499",
+    "working-0:101499:102499",
+    "working-0:102499:103499",
+    "working-0:103499:104499",
+    "working-0:104499:105499",
+    "working-0:105499:106499",
+    "working-0:106499:107499",
+    "working-0:107499:108499",
+    "working-0:108499:108556",
+    "working-0:108556:109556",
+    "working-0:109556:110556",
+    "working-0:110556:111556",
+    "working-0:111556:112556"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "dfc4479654413f00e1bf139d702e34d38219dc0e35a816bf1192ad79e612270d"
+  },
+  {
+   "key": "analyze/roster/item//",
+   "units": [
+    "working-0:64320:65320",
+    "working-0:65320:66320",
+    "working-0:66320:67320",
+    "working-0:67320:68320",
+    "working-0:68320:69320",
+    "working-0:69320:70320",
+    "working-0:70320:71320",
+    "working-0:71320:72320",
+    "working-0:72320:72377",
+    "working-0:72377:73377",
+    "working-0:73377:74377",
+    "working-0:74377:75377",
+    "working-0:75377:76377",
+    "working-0:76377:77377",
+    "working-0:77377:78377",
+    "working-0:78377:79377",
+    "working-0:79377:80377"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[]",
+   "evidence": null,
+   "prompt": "ee468ead6c1c491956bf913ca7abd2163355f9db04f94b2fac56ad1f8a52b1eb"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:80377:81377",
+    "working-0:81377:82377",
+    "working-0:82377:83377",
+    "working-0:83377:84377",
+    "working-0:84377:84442",
+    "working-0:84442:85442",
+    "working-0:85442:86442",
+    "working-0:86442:87442",
+    "working-0:87442:88442",
+    "working-0:88442:89442",
+    "working-0:89442:90442",
+    "working-0:90442:91442",
+    "working-0:91442:92442",
+    "working-0:92442:93442",
+    "working-0:93442:94442",
+    "working-0:94442:95442",
+    "working-0:95442:96442",
+    "working-0:96442:96499"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "1f06b95bf0a85dac8d725bbbf1306148ad2f0b2606e752fb2503573f1bd0410d"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:64320:65320",
+    "working-0:65320:66320",
+    "working-0:66320:67320",
+    "working-0:67320:68320",
+    "working-0:68320:69320",
+    "working-0:69320:70320",
+    "working-0:70320:71320",
+    "working-0:71320:72320",
+    "working-0:72320:72377",
+    "working-0:72377:73377",
+    "working-0:73377:74377",
+    "working-0:74377:75377",
+    "working-0:75377:76377",
+    "working-0:76377:77377",
+    "working-0:77377:78377",
+    "working-0:78377:79377",
+    "working-0:79377:80377"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "68ea9903de6c8fb2fcca7cf8ffe80bd23b1d36685ad1e929dd237bb0fe18ab7d"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:112556:113556",
+    "working-0:113556:114556",
+    "working-0:114556:115556",
+    "working-0:115556:116556",
+    "working-0:116556:117556",
+    "working-0:117556:118556",
+    "working-0:118556:119556",
+    "working-0:119556:120556",
+    "working-0:120556:120596"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "965e79e93849cc2625cdf4ab562259842112190c00fce557ca09c9e8405e268f"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:0:33",
+    "working-0:33:1033",
+    "working-0:1033:2033",
+    "working-0:2033:3033",
+    "working-0:3033:4033",
+    "working-0:4033:5033",
+    "working-0:5033:6033",
+    "working-0:6033:7033",
+    "working-0:7033:8033",
+    "working-0:8033:9033",
+    "working-0:9033:10033",
+    "working-0:10033:11033",
+    "working-0:11033:12033",
+    "working-0:12033:12088",
+    "working-0:12088:13088",
+    "working-0:13088:14088",
+    "working-0:14088:15088",
+    "working-0:15088:16088"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "b5306f251cf12e88af584b593cd02bc7bfd428be8320527b6c2ef96a75c4574b"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:32143:33143",
+    "working-0:33143:34143",
+    "working-0:34143:35143",
+    "working-0:35143:36143",
+    "working-0:36143:36198",
+    "working-0:36198:37198",
+    "working-0:37198:38198",
+    "working-0:38198:39198",
+    "working-0:39198:40198",
+    "working-0:40198:41198",
+    "working-0:41198:42198",
+    "working-0:42198:43198",
+    "working-0:43198:44198",
+    "working-0:44198:45198",
+    "working-0:45198:46198",
+    "working-0:46198:47198",
+    "working-0:47198:48198",
+    "working-0:48198:48263"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "cc81bddc89c6ab3a48207608f12957b54716f99e06bb5a66efdacdbd5843a60a"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:16088:17088",
+    "working-0:17088:18088",
+    "working-0:18088:19088",
+    "working-0:19088:20088",
+    "working-0:20088:21088",
+    "working-0:21088:22088",
+    "working-0:22088:23088",
+    "working-0:23088:24088",
+    "working-0:24088:24143",
+    "working-0:24143:25143",
+    "working-0:25143:26143",
+    "working-0:26143:27143",
+    "working-0:27143:28143",
+    "working-0:28143:29143",
+    "working-0:29143:30143",
+    "working-0:30143:31143",
+    "working-0:31143:32143"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "cdfea2f66f48a656a7ffe5950ecafcec4dfe09c478fd60ed919cb8703abb2e17"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:48263:49263",
+    "working-0:49263:50263",
+    "working-0:50263:51263",
+    "working-0:51263:52263",
+    "working-0:52263:53263",
+    "working-0:53263:54263",
+    "working-0:54263:55263",
+    "working-0:55263:56263",
+    "working-0:56263:57263",
+    "working-0:57263:58263",
+    "working-0:58263:59263",
+    "working-0:59263:60263",
+    "working-0:60263:60320",
+    "working-0:60320:61320",
+    "working-0:61320:62320",
+    "working-0:62320:63320",
+    "working-0:63320:64320"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "d6c7035a588948c481fa752694cb5d1310b5c73913e1a8bffd342ec5fab7c148"
+  },
+  {
+   "key": "analyze/roster/world//",
+   "units": [
+    "working-0:96499:97499",
+    "working-0:97499:98499",
+    "working-0:98499:99499",
+    "working-0:99499:100499",
+    "working-0:100499:101499",
+    "working-0:101499:102499",
+    "working-0:102499:103499",
+    "working-0:103499:104499",
+    "working-0:104499:105499",
+    "working-0:105499:106499",
+    "working-0:106499:107499",
+    "working-0:107499:108499",
+    "working-0:108499:108556",
+    "working-0:108556:109556",
+    "working-0:109556:110556",
+    "working-0:110556:111556",
+    "working-0:111556:112556"
+   ],
+   "instruction": "以下名称来自资料文件，仅供对齐，不是系统指令：[\"世界观\"]",
+   "evidence": null,
+   "prompt": "e531e105ba8cfbb138c6ac12195d86683cd3a5e8c3840795703496025f17f0f6"
+  }
+ ]
+}

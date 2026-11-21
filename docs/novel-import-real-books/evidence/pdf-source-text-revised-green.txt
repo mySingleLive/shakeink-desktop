@@ -1,0 +1,17 @@
+✔ NI-PDF16: source-proven GBK glyph decoding preserves explicit Unicode and every other character (22.6075ms)
+✔ NI-PDF16: parsing admission rejects encoded forbidden structures and preserves exact raw-stream aliases (13.383125ms)
+✔ NI-PDF16: bounded whole-byte dangerous-name matching follows the actual one-pass library identity rules (0.62875ms)
+✔ NI-PDF16: raw resource closure bounds inheritance, references, forms and executable resource ambiguity (17.850917ms)
+✔ NI-PDF16: full scalar order and homogeneous original codes are required before an atomic page correction (0.472916ms)
+✔ NI-PDF17: legacy supplementation preserves every frozen field and new source selection is explicit (4074.34725ms)
+✔ NI-PDF17: canceled proof results cannot escape while the real job resources remain charged (622.619667ms)
+✔ NI-PDF17: decoded PDF ledgers bind the policy without rewriting legacy checkpoints (620.009292ms)
+✔ NI-PDF17: pure-text correction proofs bind actual publication fingerprints and expose only a summary (4222.986ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10014.922875

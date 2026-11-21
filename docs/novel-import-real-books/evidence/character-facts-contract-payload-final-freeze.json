@@ -1,0 +1,43 @@
+{
+  "scope": "106 payload ordinary-character encoding contract only",
+  "files": {
+    "desktop/core/novel-import-ai-payload.ts": "4cdd2e4e1461c209b7ef60d491584910393c5e11870a92ae685ac1347bf38c59",
+    "tests/unit/novel-import-ai.test.ts": "1bb78bd1f79d4f00bf32640f5f223036d464b38b6fc1aa1626aed22219f688e6"
+  },
+  "entirePayloadReversedToBaseline": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+  "oldAiTestsExactPrefix": "401630f0fbef55ad0c4d7fed37d491c66e2d69050786a9ea94d2e14b898d2d28",
+  "tdd": {
+    "red": {
+      "exitCode": 1,
+      "tests": 19,
+      "pass": 17,
+      "fail": 2,
+      "log": "character-facts-contract-a07-a11-initial-red.txt",
+      "cause": "missing new ordinary character encoding guidance only"
+    },
+    "green": {
+      "exitCode": 0,
+      "tests": 19,
+      "pass": 19,
+      "fail": 0,
+      "skipped": 0,
+      "log": "character-facts-contract-a07-a11-first-green.txt"
+    }
+  },
+  "unrelatedPreImplementationNineHashes": "character-facts-prompt-unrelated-baseline.json",
+  "typeCorrection": {
+    "scope": "new A11 cases annotation only",
+    "beforeAtestSha256": "a71749c6158228642febcfe8085beade075fa87f69c8b0bb2423052485d1b86e",
+    "newAtestSha256": "1bb78bd1f79d4f00bf32640f5f223036d464b38b6fc1aa1626aed22219f688e6",
+    "initialGlobalTypeExitCode": 2,
+    "initialGlobalTypeLog": "character-facts-contract-root-tsc.txt",
+    "productionChanged": false
+  },
+  "finalGreen": {
+    "exitCode": 0,
+    "tests": 19,
+    "pass": 19,
+    "skipped": 0,
+    "log": "character-facts-contract-a07-a11-final-green.txt"
+  }
+}

@@ -1,0 +1,35 @@
+--- before/desktop/service/novel-import-ai.ts
++++ after/desktop/service/novel-import-ai.ts
+@@ -34,7 +34,7 @@
+  const requestedEvidence=evidence.superRefine((entry,ctx)=>{
+   // Check with the exact late matcher, without replacing the raw quote. The
+   // late gate still restores source layout after the final schema parse.
+-  try{anchorEvidence([entry],request.units)}catch{ctx.addIssue({code:'custom',message:'证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'})}
++  try{anchorEvidence([entry],request.units)}catch(error){ctx.addIssue({code:'custom',message:error instanceof ImportEvidenceAnchorError?IMPORT_EVIDENCE_FEEDBACK[error.reason]:IMPORT_EVIDENCE_GUIDANCE})}
+  })
+  const requestedArtifact=artifact.extend({text:z.string(),kind:z.literal(kind,{error:'kind必须为本次唯一目标 '+kind+'，子类型不能放到kind'}),origin:z.literal('inferred',{error:'origin必须为 inferred'}),sourceUnitIds:z.array(z.string()).min(1,{error:'必须提供本次来源单元'}).refine(ids=>ids.every(id=>unitIds.has(id)),{error:'来源单元必须全部属于本次输入'}),facts,evidence:z.array(requestedEvidence).min(1)}).strict()
+  const checkedArtifact=kind==='worldline'?requestedArtifact.superRefine((item,ctx)=>{
+@@ -154,11 +154,22 @@
+  }
+  return {chars,ranges}
+ }
++type ImportEvidenceAnchorReason='unknown-unit'|'too-short'|'ambiguous'|'no-match'
++class ImportEvidenceAnchorError extends Error{
++ constructor(readonly reason:ImportEvidenceAnchorReason){super(`模型证据无法定位（${reason}）`)}
++}
++const IMPORT_EVIDENCE_GUIDANCE='证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
++const IMPORT_EVIDENCE_FEEDBACK:Record<ImportEvidenceAnchorReason,string>={
++ 'unknown-unit':IMPORT_EVIDENCE_GUIDANCE+'；unitId必须逐字取自本次输入单元；quote只能复制该单元text，不得借其它单元',
++ 'too-short':IMPORT_EVIDENCE_GUIDANCE+'；此非精确引文非空白字符不足8，不能恢复排版；从声明单元text复制原文，保留空白与标点；精确短引文仍允许',
++ ambiguous:IMPORT_EVIDENCE_GUIDANCE+'；排版恢复出现多个命中；从声明单元text复制含必要上下文的连续原文并保留原排版，不得任选位置',
++ 'no-match':IMPORT_EVIDENCE_GUIDANCE+'；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点'
++}
+ function anchorEvidence(entries:ImportEvidence[],units:ImportUnit[]):ImportEvidence[]{
+  const lookup=new Map(units.map(unit=>[unit.id,unit.text]))
+  return entries.map(entry=>{
+   const text=lookup.get(entry.unitId)
+-  const fail=(reason:string):never=>{throw Error(`模型证据无法定位（${reason}）`)}
++  const fail=(reason:ImportEvidenceAnchorReason):never=>{throw new ImportEvidenceAnchorError(reason)}
+   if(text===undefined)return fail('unknown-unit')
+   if(entry.quote&&text.includes(entry.quote))return {...entry}
+   const wanted=evidenceLayout(entry.quote)

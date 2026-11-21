@@ -1,0 +1,50 @@
+✖ NI-C01: source classification uses a separate contract without changing other AI phases (16.790416ms)
+▶ NI-C02: changed classification contracts invalidate old credit while matching contracts resume
+  ✖ old-contract-reopens-neutral-copies-with-atomic-invalid-response (2436.1375ms)
+  ✔ same-contract-pause-reopen-only-uncovered-and-stale-epoch-no-credit (152.325541ms)
+  ✔ legacy-formula-and-working-geometry-and-source-only-zero-AI (306.645334ms)
+✖ NI-C02: changed classification contracts invalidate old credit while matching contracts resume (2896.425041ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 2
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3659.259917
+
+✖ failing tests:
+
+test at tests/unit/novel-import-classification.test.ts:2:5317
+✖ NI-C01: source classification uses a separate contract without changing other AI phases (16.790416ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(!fixed.includes('<semantic-native-contract>'))
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-classification.test.ts:71:635)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-classification.test.ts:2:12883
+✖ old-contract-reopens-neutral-copies-with-atomic-invalid-response (2436.1375ms)
+  AssertionError [ERR_ASSERTION]: controlled classification window reached
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-classification.test.ts:76:119)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-classification.test.ts:83:969)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-classification.test.ts:83:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

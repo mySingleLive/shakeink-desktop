@@ -1,6 +1,6 @@
 import { _electron } from 'playwright-core'
 import { execFile } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, lstat } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, lstat, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
@@ -15,19 +15,17 @@ import { Workspaces } from '../desktop/service/workspaces.ts'
 // D5 同现场选「退出」→ 进程退出、配置目录原样保留。
 // 证据写入 docs/evidence/config-deletion/。
 const run = promisify(execFile)
-const temporary = await mkdtemp(join(tmpdir(), 'shakeink-config-deletion-demo-'))
+// Canonical: the isolated root must equal its realpath (macOS tmpdir is a symlink).
+const temporary = await realpath(await mkdtemp(join(tmpdir(), 'shakeink-config-deletion-demo-')))
 const evidence = resolve('docs/evidence/config-deletion')
 await mkdir(evidence, { recursive: true })
-const report = { scope: 'Windows development Electron（隔离数据根，完整 adopt 后破坏）', startedAt: new Date().toISOString(), checks: [], errors: [] }
+const report = { scope: `${process.platform} development Electron（隔离数据根，完整 adopt 后破坏）`, startedAt: new Date().toISOString(), checks: [], errors: [] }
 const check = (name, ok, detail = '') => { report.checks.push({ name, ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ' — ' + detail : ''}`) }
 const step = name => console.log(`[step ${new Date().toISOString()}] ${name}`)
 const exists = async path => { try { await lstat(path); return true } catch { return false } }
 const environment = { ...process.env }
 delete environment.ELECTRON_RUN_AS_NODE
 const powershell = script => run('powershell', ['-NoProfile', '-Command', script])
-async function sendKeys(keys) {
-  await powershell(`[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.SendKeys]::SendWait('${keys}')`)
-}
 const onlyScenario = process.env.DEMO_ONLY ? process.env.DEMO_ONLY.split(',') : null
 const scenarioEnabled = name => !onlyScenario || onlyScenario.includes(name)
 
@@ -60,6 +58,12 @@ async function purge(path) {
   }
 }
 async function killByCommandLine(fragment) {
+  if (process.platform !== 'win32') {
+    // A relaunched app does not carry the isolated path in argv; it does in its environment (ps eww).
+    const { stdout } = await run('ps', ['eww', '-ax', '-o', 'pid=,command=']).catch(() => ({ stdout: '' }))
+    for (const line of stdout.split('\n')) if (line.includes(fragment) && line.includes('Electron')) { const pid = Number(line.trim().split(/\s+/)[0]); if (pid && pid !== process.pid) try { process.kill(pid, 'SIGKILL') } catch {} }
+    return
+  }
   // Child processes carry the isolated bootstrap path in --user-data-dir; walk
   // each match up to its topmost electron ancestor so the tree (and the single
   // instance lock it holds) is actually released.
@@ -83,27 +87,6 @@ async function killByCommandLine(fragment) {
 }
 const markerOf = async root => JSON.parse(await readFile(join(root, 'shakeink-app.json'), 'utf8'))
 
-const activateOfferAndSend = async keys => {
-  await powershell(`$w = New-Object -ComObject WScript.Shell; [void]$w.AppActivate('配置数据无法自动修复'); Start-Sleep -Milliseconds 500; $w.SendKeys('${keys}')`)
-}
-// UIA InvokePattern：直接调用原生 TaskDialog 按钮，不依赖前台焦点/按键时序。
-// 按钮按整棵 UIA 树（Descendants）查找，覆盖 owned 对话框不挂在根子级的情况。
-// Win32 EnumWindows 前缀匹配对话框标题（TaskDialog 实际标题可能带后缀），
-// 再枚举其子按钮控件发 BM_CLICK；不依赖前台焦点与 UIA 树形态。
-const win32ClickOfferButton = async name => {
-  const { stdout } = await powershell(`Add-Type 'using System;using System.Text;using System.Runtime.InteropServices;public static class W32{[DllImport("user32.dll",CharSet=CharSet.Unicode)]public static extern int GetWindowText(IntPtr h,StringBuilder s,int n);[DllImport("user32.dll")]public static extern bool EnumWindows(EnumProc cb,IntPtr l);[DllImport("user32.dll")]public static extern bool EnumChildWindows(IntPtr h,EnumProc cb,IntPtr l);[DllImport("user32.dll")]public static extern bool IsWindowVisible(IntPtr h);public delegate bool EnumProc(IntPtr h,IntPtr l);[DllImport("user32.dll")]public static extern IntPtr SendMessage(IntPtr h,int msg,IntPtr w,IntPtr l);}' -ErrorAction Stop
-$script:dlg = [IntPtr]::Zero
-$find = [W32+EnumProc]{ param($h, $l) $sb = New-Object System.Text.StringBuilder 256; [void][W32]::GetWindowText($h, $sb, 256); if ($sb.ToString().StartsWith('配置数据无法自动修复') -and [W32]::IsWindowVisible($h)) { $script:dlg = $h; return $false }; return $true }
-[void][W32]::EnumWindows($find, [IntPtr]::Zero)
-if ($script:dlg -eq [IntPtr]::Zero) { Write-Output 'DLG_NOT_FOUND'; return }
-$script:target = [IntPtr]::Zero
-$cb = [W32+EnumProc]{ param($h, $l) $sb = New-Object System.Text.StringBuilder 256; [void][W32]::GetWindowText($h, $sb, 256); if ($sb.ToString() -eq '${name}') { $script:target = $h; return $false }; return $true }
-[void][W32]::EnumChildWindows($script:dlg, $cb, [IntPtr]::Zero)
-if ($script:target -eq [IntPtr]::Zero) { Write-Output 'BTN_NOT_FOUND'; return }
-[void][W32]::SendMessage($script:target, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)
-Write-Output 'INVOKED'`)
-  return stdout.trim()
-}
 
 try {
   if (scenarioEnabled('D1')) {
@@ -156,19 +139,32 @@ try {
     const offered = await launch()
     await offered.page.waitForFunction(() => typeof window.desktop?.bootstrap === 'function', null, { timeout: 45000 })
     check('D4 主界面已打开（临时根降级工作台）', true)
-    await new Promise(resolve => setTimeout(resolve, 2500))
+    // 510: the offer is the workbench's React prompt, not a native TaskDialog.
+    const offer = offered.page.getByRole('dialog', { name: '配置数据无法自动修复', exact: true })
+    await offer.waitFor({ timeout: 45000 })
+    check('D4 HTML 对话框显示，默认焦点在「退出」', await offered.page.evaluate(() => !!document.activeElement?.closest('.desktop-prompt') && document.activeElement?.textContent === '退出'))
     await offered.page.screenshot({ path: join(evidence, 'd4-reset-offer.png') })
-    step('D4 通过 Win32 点击「清空全部配置并重启」')
+    step('D4 重新载入页面（新文档导航）后提示仍在、进程仍在')
+    await offered.page.reload()
+    await offer.waitFor({ timeout: 45000 })
+    check('D4 新文档导航后待答提示保留，应用未退出', offered.app.process().exitCode === null && offered.app.process().signalCode === null)
+    step('D4 点击「清空全部配置并重启」')
+    void offer.getByRole('button', { name: '清空全部配置并重启', exact: true }).click({ noWaitAfter: true, timeout: 10000 }).catch(() => {})
     let rebuilt = false
     for (let count = 0; count < 90 && !rebuilt; count++) {
-      await win32ClickOfferButton('清空全部配置并重启').catch(() => {})
       await new Promise(resolve => setTimeout(resolve, 1000))
       rebuilt = await exists(join(root, 'inbox', 'database', 'PG_VERSION'))
     }
     check('D4 清空后应用自动重启并全新重建配置目录', rebuilt)
     await closeApp(offered.app).catch(() => {})
-    await killByCommandLine(root + '-bootstrap')
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // The app relaunches itself after the wipe; that instance holds the single-instance lock, so stop it first.
+    for (let count = 0; count < 20; count++) {
+      const { stdout } = process.platform === 'win32' ? { stdout: '' } : await run('ps', ['eww', '-ax', '-o', 'pid=,command=']).catch(() => ({ stdout: '' }))
+      if (process.platform === 'win32' || stdout.split('\n').some(line => line.includes(temporary) && line.includes('Electron'))) break
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    await killByCommandLine(process.platform === 'win32' ? root + '-bootstrap' : temporary)
+    await new Promise(resolve => setTimeout(resolve, 2500))
     if (rebuilt) {
       const fresh = await launch()
       await workbench(fresh.page)
@@ -186,16 +182,15 @@ try {
     const offered = await launch()
     await offered.page.waitForFunction(() => typeof window.desktop?.bootstrap === 'function', null, { timeout: 45000 })
     check('D5 主界面已打开（临时根降级工作台）', true)
-    await new Promise(resolve => setTimeout(resolve, 2500))
     const before = await readdir(root)
-    step('D5 通过 Win32 点击「退出」（前缀匹配，轮询重试）')
-    let exited = false, lastProbe = ''
-    for (let count = 0; count < 30 && !exited; count++) {
-      lastProbe = await win32ClickOfferButton('退出').catch(() => 'invoke-error')
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      try { process.kill(offered.app.process().pid, 0) } catch { exited = true }
-    }
-    check('D5 选「退出」后应用进程退出', exited, lastProbe)
+    const offer = offered.page.getByRole('dialog', { name: '配置数据无法自动修复', exact: true })
+    await offer.waitFor({ timeout: 45000 })
+    await offered.page.screenshot({ path: join(evidence, 'd5-reset-offer.png') })
+    step('D5 点击 HTML 对话框「退出」')
+    const gone = new Promise(resolve => offered.app.process().once('exit', () => resolve(true)))
+    void offer.getByRole('button', { name: '退出', exact: true }).click({ noWaitAfter: true, timeout: 10000 }).catch(() => {})
+    const exited = await Promise.race([gone, new Promise(resolve => setTimeout(() => resolve(false), 30000))])
+    check('D5 选「退出」后应用进程退出', exited)
     check('D5 配置目录原样保留（双品牌现场未动）', JSON.stringify((await readdir(root)).sort()) === JSON.stringify(before.sort()))
     await closeApp(offered.app).catch(() => {})
   }

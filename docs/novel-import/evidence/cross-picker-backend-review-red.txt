@@ -1,0 +1,56 @@
+✔ CP-P01: source picker protocol only accepts opaque commands and cancellation has no revision (2.947041ms)
+✔ CP-F01: actual metadata list combines naturally ordered directories and seven file formats, disabling unsafe entries (47.45525ms)
+✔ CP-F01: directory list limit is explicit and never presented as complete truncated content (6.092917ms)
+✔ CP-F02: cross-directory selections, current folder and opaque confirmation produce trusted grants for the actual scanner (27.464875ms)
+✔ CP-F02: removing/clearing selections and canceling do not read bodies or mutate sources (14.01825ms)
+✔ CP-F03: identity changes after selection are rejected by confirmation and can be reselected explicitly (13.204416ms)
+✔ CP-F03: scan boundary rejects swapped file, directory and ancestor after the trusted grant was issued (4.93825ms)
+✖ CP-F03: grant capture fixes the original path chain before realpath and refuses late links or directory replacement (3.375333ms)
+✔ CP-F03: custom picker grants reject an existing ancestor link instead of canonicalizing its target (1.303583ms)
+✔ CP-L01: cancel bypasses pending navigation/revision and late directory handles close without reopening (9.35025ms)
+✔ CP-L01: cancel releases a confirmation waiting for identity checks and revoked owner cannot act (13.993667ms)
+✔ CP-L02: actual unsettled IO retains the cross-session budget after timeout/cancel; late handles close (31.180917ms)
+✖ CP-L02: production default reserves thread-pool capacity across repeatedly canceled stuck sessions (80.386792ms)
+✔ CP-L02: Windows root candidates are probed serially within the same budget and stop at first timeout (30.669416ms)
+✔ CP-F01/CP-L02: one stalled common place preserves other usable places and a directory can recover after IO failure (34.103208ms)
+✔ CP-F02/CP-L01: controller receives grants at scan boundary and pure cancel after owner revocation is harmless (22.231083ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 14
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 645.336167
+
+✖ failing tests:
+
+test at tests/unit/novel-import-source-picker.test.ts:2:11988
+✖ CP-F03: grant capture fixes the original path chain before realpath and refuses late links or directory replacement (3.375333ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-picker.test.ts:80:3)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-picker.test.ts:14:144)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /来源|符号链接/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-source-picker.test.ts:2:17204
+✖ CP-L02: production default reserves thread-pool capacity across repeatedly canceled stuck sessions (80.386792ms)
+  AssertionError [ERR_ASSERTION]: default must leave capacity for save/close; observed 4
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-picker.test.ts:114:170)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-source-picker.test.ts:14:144)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

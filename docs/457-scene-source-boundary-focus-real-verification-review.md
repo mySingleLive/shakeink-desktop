@@ -1,0 +1,13 @@
+# R66 实际失败证据独立审核
+
+结论：457报告、安全JSON与台账准确，无记录阻塞。R66为actualFailed，完整场景导入、七分钟完成、发布和重开均未通过；本审核不批准后续实现，也不代替三包细分首拒诊断。审核报告SHA `2db574ef4593e9c1ff90dd1f6fbcc5a68a3143c512300747701db5891af7ff8a`，安全JSON SHA `9c6bc22fb50da91d879e560205c7e7fe8f1621c70a6e772976f093e48f182ebb`。
+
+独立核runtime31项全部settled，28fulfilled/3rejected；零API回放31项逐operationId/payloadHash和结果对应。61次生成逐transferId/ordinal/operationId/payloadSHA、delta字符数及重算SHA匹配原捕获，61 inputTextHashEqual全true、finishReason全stop。61/61均captureComplete/streamClosed/provider completed，逐份delta、done、completed文本完全相等，parseErrors/utf8Errors/terminalConflicts均0。回放providerCalls0、复现28/3，文件SHA `d6a2b40ce1ead8e8a5b43b36fe8686bee8fcb8d9df5f0f9624672e24ac68c066` 与公开记录相同。完整捕获与可重放不等于生成内容合法。
+
+journal停在detect-scene failed，覆盖1039/4912单元；ledger699成员、425记录、422身份、16关系，artifacts0、workingRevision0。实际采用sentence-1000-v3；独立按UTF16LE重核4912个连续真实slice及ID范围，最大1000，正文重拼一致。4,785,312 UTF16正文及1402章start/end/content/title与R65逐值一致，正文SHA、私有session SHA与安全记录匹配，导入快照中的源文件hash亦与R65相同；没有复读小说原文件或把分区保真称为所有实体已可锚定。
+
+允许分析11:41:38.207、失败11:42:30.590、关闭11:42:33.373 UTC均与events对应；52,383ms是至失败时长。App原退出code0/signal=null，driver2；对本次launch记录PID作只读存在性检查为absent。page-errors0；文本观察器31requests/61transfers/61captured，pending/unmatched/ambiguous/观察失败/限制失败/retainedBytes/写失败均0并恢复，RPC亦排空恢复。数字观察器停止结果与公开JSON完全一致，pending/workers/timeouts/writeFailures均0。
+
+独立复核R66冻结身份57源码、8bundles、303renderer、38测试、22helper、3份审核hash、私有driver/runtime均匹配；沿用renderer没有冒称新UI构建。721定向、独审155及types/build/diff通过属于构建前证据，两组重叠不相加。129新首轮、130旧首轮和357历史生成的预算及146/27保持不是R66实际全书成功。观察器源/产物和21依赖沿456已核的当前版本，无新hook改动。台账latestRun R66/status actualFailed、activeRun=null，latestCountsScope明确场景识别失败、实体导入/完整review/发布/重开未到达；四项未通过及R65历史结果保持。
+
+实际独立命令为Python只读runtime/捕获/回放绑定与计数/SHA、UTF16分区及R65正文/章tuple比较、events与观察器停止/冻结身份/台账断言、本次PID信号0存在性检查及本文件diff检查。未App、未调用模型API、未语义读取真实生成内容/小说或Key，未修改产品/测试。诊断所得任何人工修改或表示兼容反事实须另行记录与审核，不能回填为本轮供应商或全文通过。

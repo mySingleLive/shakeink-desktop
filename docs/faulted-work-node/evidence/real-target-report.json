@@ -1,0 +1,109 @@
+{
+  "scope": "macOS arm64 built Electron (npm run build), isolated SHAKEINK_TEST_ROOT",
+  "startedAt": "2026-11-12T04:51:21.741Z",
+  "checks": [
+    {
+      "name": "sidebar never shows native paths or raw errors",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "three faulted works are tree rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no legacy card container or global reload button",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fault tones missing=error, stale=warning, damaged=error",
+      "ok": true,
+      "detail": "error,warning,error"
+    },
+    {
+      "name": "ink title colors",
+      "ok": true,
+      "detail": "rgb(224, 138, 128) / rgb(217, 180, 95)"
+    },
+    {
+      "name": "paper title colors",
+      "ok": true,
+      "detail": "rgb(163, 70, 60) / rgb(126, 98, 28)"
+    },
+    {
+      "name": "click opens missing menu",
+      "ok": true,
+      "detail": "重新加载作品,删除"
+    },
+    {
+      "name": "right-click opens stale-lease menu",
+      "ok": true,
+      "detail": "修复作品锁,重新加载作品,删除"
+    },
+    {
+      "name": "healthy right-click menu unchanged",
+      "ok": true,
+      "detail": "重命名,删除"
+    },
+    {
+      "name": "no native menu for navigation rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "settings view shows faulted group with icon",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deleted missing work from the list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deleted stale work from the list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "deleted damaged work from the list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "conversation view loads and hides the removed work conversation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "missing directory bytes unchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "stale directory bytes unchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "damaged directory bytes unchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "stale lock folder still present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "restart succeeds with only the healthy work listed",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "errors": [],
+  "finishedAt": "2026-11-12T04:51:51.901Z",
+  "passed": true
+}

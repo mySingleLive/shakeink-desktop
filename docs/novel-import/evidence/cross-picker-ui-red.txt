@@ -1,0 +1,110 @@
+✖ CP-U01: real metadata rows/icons, disabled items, current directory, filtering and cross-directory removal (32.922625ms)
+✖ CP-U01: folder double click restores only its first-click selection before navigating (1.059541ms)
+✖ CP-U02: errors, empty/loading, keyboard navigation and short viewports retain focus and footer (0.089833ms)
+✖ CP-L01: immediate cancel bypasses navigation/checking and late replies/events cannot reopen or replace a new picker (0.049792ms)
+✖ CP-L01: canceled initial current response is retired and suspension releases the pending choose (0.034917ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 431.246292
+
+✖ failing tests:
+
+test at tests/browser/novel-import-source-picker.test.ts:2:3104
+✖ CP-U01: real metadata rows/icons, disabled items, current directory, filtering and cross-directory removal (32.922625ms)
+  Error: Build failed with 2 errors:
+  tests/helpers/novel-import-source-picker-fixture.tsx:4:44: ERROR: Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"
+  tests/helpers/novel-import-source-picker-fixture.tsx:5:46: ERROR: Could not resolve "../../src/lib/desktop/novel-import-source-picker"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import-source-picker"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import-source-picker.test.ts:2:5384
+✖ CP-U01: folder double click restores only its first-click selection before navigating (1.059541ms)
+  Error: Build failed with 2 errors:
+  tests/helpers/novel-import-source-picker-fixture.tsx:4:44: ERROR: Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"
+  tests/helpers/novel-import-source-picker-fixture.tsx:5:46: ERROR: Could not resolve "../../src/lib/desktop/novel-import-source-picker"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import-source-picker"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import-source-picker.test.ts:2:6365
+✖ CP-U02: errors, empty/loading, keyboard navigation and short viewports retain focus and footer (0.089833ms)
+  Error: Build failed with 2 errors:
+  tests/helpers/novel-import-source-picker-fixture.tsx:4:44: ERROR: Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"
+  tests/helpers/novel-import-source-picker-fixture.tsx:5:46: ERROR: Could not resolve "../../src/lib/desktop/novel-import-source-picker"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import-source-picker"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import-source-picker.test.ts:2:8822
+✖ CP-L01: immediate cancel bypasses navigation/checking and late replies/events cannot reopen or replace a new picker (0.049792ms)
+  Error: Build failed with 2 errors:
+  tests/helpers/novel-import-source-picker-fixture.tsx:4:44: ERROR: Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"
+  tests/helpers/novel-import-source-picker-fixture.tsx:5:46: ERROR: Could not resolve "../../src/lib/desktop/novel-import-source-picker"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import-source-picker"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import-source-picker.test.ts:2:10053
+✖ CP-L01: canceled initial current response is retired and suspension releases the pending choose (0.034917ms)
+  Error: Build failed with 2 errors:
+  tests/helpers/novel-import-source-picker-fixture.tsx:4:44: ERROR: Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"
+  tests/helpers/novel-import-source-picker-fixture.tsx:5:46: ERROR: Could not resolve "../../src/lib/desktop/novel-import-source-picker"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportSourcePickerDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import-source-picker"' } ],
+    warnings: []
+  }

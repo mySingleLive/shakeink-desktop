@@ -1,0 +1,75 @@
+▶ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority
+  ✔ actual analyze, reconcile and review prompts keep guidance outside untrusted data (10.559125ms)
+  ✔ true preimplementation prompt and serialization goldens protect unchanged branches (1.320416ms)
+  ✔ projection and locked targeted-reconcile gates still reject unauthorized results (2.975917ms)
+✔ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority (21.648084ms)
+▶ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract
+  ✔ all twelve actual generation paths retain exact data, notFound, role and signal (9.128209ms)
+  ✔ invalid and missing targets keep the original helper contract and zero-resolution guard (0.60125ms)
+  ✔ independent preimplementation hashes retain every unaffected phase (0.913292ms)
+✔ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract (12.001959ms)
+▶ NI-A09: emotional-impact business guidance follows selected and explicit trope targets only
+  ✔ real ordinary, explicit reconcile and selected review prompts preserve authority and data (5.421167ms)
+  ✔ true baseline hashes protect irrelevant targets and all unrelated phases (1.177083ms)
+  ✔ guidance does not authorize cross-phase notFound, unverified omissions or locked edits (0.986375ms)
+✔ NI-A09: emotional-impact business guidance follows selected and explicit trope targets only (8.331625ms)
+▶ NI-A10: world grouping guidance follows actual world targets without merging supported worlds
+  ✖ real ordinary, targeted reconcile and selected review paths retain native structures and data (6.085833ms)
+  ✔ independent true-baseline hashes protect unrelated targets, phases and legacy (1.274917ms)
+  ✖ world guidance preserves projection, target, lock and native graph rejection gates (1.711375ms)
+✖ NI-A10: world grouping guidance follows actual world targets without merging supported worlds (9.696291ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 13
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 369.859083
+
+✖ failing tests:
+
+test at tests/unit/novel-import-ai.test.ts:4:47604
+✖ real ordinary, targeted reconcile and selected review paths retain native structures and data (6.085833ms)
+  AssertionError [ERR_ASSERTION]: actual generation path must carry the independent world-setting grouping contract
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:351:11)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:343:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-ai.test.ts:4:56669
+✖ world guidance preserves projection, target, lock and native graph rejection gates (1.711375ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /归属引用/. Input:
+  
+  'Error: 模型结果含无效实体引用'
+  
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:390:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:382:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: 模型结果含无效实体引用
+        at typed (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:99:125)
+        at validateSemanticLinks (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:104:65)
+        at runImportAi (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:198:33)
+        at async waitForActual (node:assert:646:5)
+        at async strict.rejects (node:assert:769:25)
+        at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:390:3)
+        at async Test.run (node:internal/test_runner/test:1332:7)
+        at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:382:2)
+        at async Test.run (node:internal/test_runner/test:1332:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:911:7),
+    expected: /归属引用/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

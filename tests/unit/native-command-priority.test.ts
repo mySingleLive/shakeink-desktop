@@ -6,6 +6,7 @@ import {ShortcutDispatcher} from '../../desktop/core/shortcut-dispatch'
 import * as keys from '../../desktop/core/shortcuts'
 import {commandScope} from '../../src/lib/desktop/command-scope'
 import {CommandTargets} from '../../src/lib/desktop/command-targets'
+import * as textShortcutsModule from "../../src/lib/desktop/text-shortcuts"
 // Explicit capture → native target → bubble phases around the real Controller.
 // The native resolver is a controlled consumer; actual Monaco is checked in Electron.
 function fixture(){
@@ -17,6 +18,7 @@ function fixture(){
  cleanups.push(bus.register({owner:{},accepts:()=>true,commands:{'text.copy':()=>{calls.push('copy')},'chat.search':()=>{calls.push('search')},'md.fold':()=>{calls.push('fold')}}}))
  const dependencies:Record<string,unknown>={react:{useEffect(fn:()=>()=>void){cleanups.push(fn())}},sonner:{toast:{info(){},error(){}}},'@/stores/desktop':{useDesktopStore:{getState:()=>({bootstrap:{platform:'darwin',settings:{shortcuts:{darwin:{},win32:{}}}}})}},'@/stores/tabs':{useTabsStore:{getState:()=>({})}},'@desktop/core/shortcut-dispatch':{ShortcutDispatcher},'@desktop/core/shortcuts':keys,'@/lib/desktop/command-runtime':{desktopCommandCatalog:()=>commands,desktopCommandTargets:bus,desktopCommandTarget:()=>target,desktopEditorTarget:()=>target,rememberDesktopCommandTarget(){}},'@/lib/desktop/use-command-target':{useDesktopCommands(){}},'@/lib/desktop/input-commands':{installInputCommands:()=>()=>{},installInputContextMenu:()=>()=>{},isAPIKeyControl:()=>false},'@/lib/desktop/native-text-edits':{nativeTextEdits:()=>({run(){},dispose(){}})},'@/lib/desktop/composer-text-commands':{installComposerTextCommands:()=>()=>{}},'@/lib/desktop/command-scope':{commandScope}}
  dependencies['@/lib/desktop/text-context-menu']={installTextContextMenu:()=>()=>{}}
+ dependencies['@/lib/desktop/text-shortcuts']=textShortcutsModule;dependencies['@/lib/desktop/text-shortcut-source']={captureTextShortcut:()=>null,copySpanningSelection:()=>false}
  dependencies['@/stores/chat']={useChatStore:{getState:()=>({accountId:'local',conversationId:null,draftId:'shortcut-fixture',draftNovelId:null,recoveryStatus:'ready',creatingNovel:false,requestedConversationId:null,newConversationRequested:false}),subscribe:()=>()=>{}}}
  dependencies['@/stores/tabs']={useTabsStore:{getState:()=>({}),subscribe:()=>()=>{}}}
  const original=['window','document','HTMLElement'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)] as const)

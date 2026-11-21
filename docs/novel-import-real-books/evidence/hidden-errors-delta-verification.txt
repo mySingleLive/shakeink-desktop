@@ -1,0 +1,4 @@
+Main reverse-delta byte identity: PASS (sixteen exact dictionary entries and required comma only).
+All old J01-J04 bytes: PASS (unchanged prefix; only NI-J05 appended).
+Service d86/payload 239/AI test 663 control SHA: unchanged.
+79 maps/unknown-time guard/long lists, three knowledge maps, own-property guard and all old fallback bytes: unchanged.

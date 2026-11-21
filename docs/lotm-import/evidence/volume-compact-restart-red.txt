@@ -1,0 +1,38 @@
+✖ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (9.472125ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1034.161708
+
+✖ failing tests:
+
+test at tests/unit/novel-import-volumes.test.ts:7:2042
+✖ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (9.472125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      '初卷',
+      '初卷',
+  +   '初卷',
+  +   '初卷'
+  -   undefined,
+  -   undefined
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:29:68)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '初卷', '初卷', '初卷', '初卷' ],
+    expected: [ '初卷', '初卷', undefined, undefined ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

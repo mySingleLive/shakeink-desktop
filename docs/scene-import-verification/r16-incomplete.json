@@ -1,0 +1,20 @@
+{
+  "run": "R16",
+  "scenes": 913,
+  "chapters": 1402,
+  "units": 5589,
+  "states": {
+    "done": 859,
+    "failed": 1,
+    "running": 30,
+    "waiting": 23
+  },
+  "sceneArtifacts": 859,
+  "failure": "incomplete model output",
+  "fullImportVerified": false,
+  "published": false,
+  "reopened": false,
+  "normalElectronExit": true,
+  "driverExit": 2,
+  "sourceUnchanged": true
+}

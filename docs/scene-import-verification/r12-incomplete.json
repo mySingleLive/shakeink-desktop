@@ -1,0 +1,32 @@
+{
+  "run": "R12",
+  "sessionId": "b60ab60a-07c4-4d9b-a58a-49a870dd0140",
+  "chapters": 1402,
+  "units": 5589,
+  "covered": 5589,
+  "scenes": 976,
+  "states": {
+    "done": 810,
+    "failed": 1,
+    "running": 30,
+    "waiting": 135
+  },
+  "sceneArtifacts": 810,
+  "errorCategories": [
+    "模型返回的场景资料结构无效（场景身份与上级关系），请重新导入"
+  ],
+  "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+  "sourceUnchanged": true,
+  "importExit": {
+    "at": "2026-10-30T21:03:28.628Z",
+    "event": "shutdown",
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "exitCode": 2
+  },
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false
+}

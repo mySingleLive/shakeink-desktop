@@ -1,0 +1,30 @@
+▶ NI-PDF08: initial choose real worker exit precedes migration data close and owner revocation drain
+  ✔ migration-close (140.750458ms)
+  ✔ owner-revoked (43.379167ms)
+✔ NI-PDF08: initial choose real worker exit precedes migration data close and owner revocation drain (184.688875ms)
+✔ NI-PDF08: close deadline preserves the data root while a real source read remains outstanding (46.331375ms)
+▶ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains
+  ✖ legacy PDF supplementation is owned and canceled without changing frozen checkpoints (765.764583ms)
+  ✔ actual beginClose revokes initial choose before its real FS and BusinessGate settle (41.648333ms)
+✖ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains (807.898167ms)
+▶ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits
+  ✔ initial choose keeps one admitted real FS chain and an empty session until canceled resources settle (29.938ms)
+  ✔ renderer cancel enters before a reselect inspection queued inside the real controller tail (673.78975ms)
+  ✔ real worker exit remains charged after pending preview is canceled (628.529083ms)
+✔ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits (1332.723458ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 9
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3194.38675
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:9410
+✖ legacy PDF supplementation is owned and canceled without changing frozen checkpoints (765.764583ms)
+  Error: 请恢复原模型预算记录，无法证明旧检查点分片范围
+      at captureImportLegacyBudget (/Users/dt_flys/Projects/shakeink-desktop/desktop/core/novel-import-budget-policy.ts:44:198)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:103:4)

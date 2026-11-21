@@ -1,0 +1,148 @@
+▶ NI-R01: bounded review projections and targeted omissions preserve full artifacts
+  ✖ position-bound-projections-and-partial-transport (128.736292ms)
+  ✖ two-fields-extra-units-use-reconcile-with-exact-context (73.099209ms)
+  ✖ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (120.729083ms)
+  ✖ invalid-triples-and-unseen-text-have-no-review-credit (468.3725ms)
+✖ NI-R01: bounded review projections and targeted omissions preserve full artifacts (792.140417ms)
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✖ same-draft-migrates-old-pending-after-authorization (27.139667ms)
+  ✖ all-preflight-refusals-keep-credit-and-policy (22.047333ms)
+  ✔ same-policy-reopen-keeps-successful-credit (142.565291ms)
+  ✖ first-omission-conflict-stops-before-later-work (109.496833ms)
+✖ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (302.290292ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 1
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1542.896875
+
+✖ failing tests:
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:11321
+✖ position-bound-projections-and-partial-transport (128.736292ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:54:84)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:49:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:13907
+✖ two-fields-extra-units-use-reconcile-with-exact-context (73.099209ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:63:162)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:59:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:16504
+✖ new-entity-passes-exact-reason-evidence-and-never-rebuilds-existing-id (120.729083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:66:900)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:65:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:17885
+✖ invalid-triples-and-unseen-text-have-no-review-credit (468.3725ms)
+  TypeError: Cannot read properties of undefined (reading 'id')
+      at evidence (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:22:43)
+      at make (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:23:159)
+      at person (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:24:82)
+      at s (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:69:1132)
+      at Object.rewrite (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:42:421)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:69:1099)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:68:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:21596
+✖ same-draft-migrates-old-pending-after-authorization (27.139667ms)
+  TypeError: Cannot read properties of undefined (reading 'id')
+      at evidence (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:22:43)
+      at make (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:23:159)
+      at person (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:24:82)
+      at credit (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:74:116)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:76:258)
+      at Object.rewrite (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:42:421)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:76:239)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:76:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:22382
+✖ all-preflight-refusals-keep-credit-and-policy (22.047333ms)
+  TypeError: Cannot read properties of undefined (reading 'id')
+      at evidence (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:22:43)
+      at make (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:23:159)
+      at person (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:24:82)
+      at credit (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:74:116)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:77:324)
+      at Object.rewrite (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:42:421)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:77:304)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:77:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+
+test at tests/unit/novel-import-semantic-session.test.ts:2:25412
+✖ first-omission-conflict-stops-before-later-work (109.496833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'conflicts'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:82:642)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-semantic-session.test.ts:82:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'conflicts',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

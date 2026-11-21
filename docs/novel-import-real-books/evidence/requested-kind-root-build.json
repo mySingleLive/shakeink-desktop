@@ -1,0 +1,39 @@
+{
+  "recordedAt": "2026-10-26T12:57:43.081289+00:00",
+  "scope": "76 requested kind fixed contract; actual S02 retest pending",
+  "commands": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "execSession": 75669
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false -p /tmp/shakeink-real-audit-tsconfig.json",
+      "exitCode": 0,
+      "execSession": 20691
+    },
+    {
+      "command": "node scripts/build-desktop.mjs",
+      "exitCode": 0,
+      "execSession": 73370
+    }
+  ],
+  "files": {
+    "desktop/core/novel-import-ai-payload.ts": "953d4a39701748dead1ee1e52e4a37306bc87f3d77fd012a0e0b58c499335298",
+    "tests/unit/novel-import-ai.test.ts": "800a96245c22473cc83699711cbac74f173656308ab28eae903a28fce0e8eff8",
+    "desktop/service/novel-import-ai.ts": "c88cf7f8941edcb4ab97449d244687f254db22aad5d1348404ef25a6d16d29c6",
+    "desktop/main/novel-import.ts": "e5e6b028ccdad762366aa70cab06b3ee6d56836a1e23b1b0461dda2660145bf8",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "dist/main/index.cjs": "2a86a459a89b160b4af06b7d47e7d3cbdcb3252c0585b7c034674d05168b9804",
+    "dist/service/index.cjs": "d00ea3474785e8c3096b990273e932fbecea638317d0c51123a39d7f92e1dade",
+    "dist/main/novel-import-pdf-worker.cjs": "52645a7d85a982d1b4135fb09109061162d596f450c37abbc07be2e32e6e810a",
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92"
+  },
+  "monacoWorkers": [
+    "out/_next/static/media/css.worker.2r476vc_4i3t-.js",
+    "out/_next/static/media/editor.worker.1duyl2hr9iop5.js",
+    "out/_next/static/media/html.worker.37dgn6mporn0e.js",
+    "out/_next/static/media/json.worker.14wrjaz43tsbz.js",
+    "out/_next/static/media/ts.worker.30escle32bmbw.js"
+  ]
+}

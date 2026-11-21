@@ -1,0 +1,19 @@
+✔ LOTM-V04: native eight-volume publication retains per-volume chapter indices, full-book narrative references and idempotent receipts (3808.429083ms)
+✔ LOTM-V05: legacy/default/outline-only publication survives and invalid volume groupings are rejected before creation (3349.598375ms)
+✔ LOTM-V01: explicit eight-volume headings preserve sixteen source chapters, repeated numbers and exact prose (2.995084ms)
+✔ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (0.705042ms)
+▶ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership
+  ✔ metadata binds analysis and plan; legacy goldens remain byte-identical (1.509375ms)
+  ✔ manual re-confirmation derives labels and rejects moved/deleted boundaries (1.232166ms)
+  ✔ v2 missing-volume warnings remain visible after unchanged manual confirmation and recovery (0.581167ms)
+  ✔ normal controller choose/set-chapters/save/reopen and old journal recovery (74.613ms)
+✔ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership (78.534042ms)
+✔ LOTM-V05: optional volume fields and unknown chapter versions reject invalid data (3.170208ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8195.354833

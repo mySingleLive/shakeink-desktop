@@ -1,0 +1,45 @@
+✖ LOTM-V04: native eight-volume publication retains per-volume chapter indices, full-book narrative references and idempotent receipts (3460.088458ms)
+✖ LOTM-V05: legacy/default/outline-only publication survives and invalid volume groupings are rejected before creation (5911.833834ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10937.998583
+
+✖ failing tests:
+
+test at tests/integration/novel-import-publish.test.ts:2:20406
+✖ LOTM-V04: native eight-volume publication retains per-volume chapter indices, full-book narrative references and idempotent receipts (3460.088458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 8
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-publish.test.ts:86:153)
+      at async Workspaces.run (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/workspaces.ts:388:14)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-publish.test.ts:85:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 8,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/integration/novel-import-publish.test.ts:7:2677
+✖ LOTM-V05: legacy/default/outline-only publication survives and invalid volume groupings are rejected before creation (5911.833834ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-publish.test.ts:95:326)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /卷|归属|边界/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

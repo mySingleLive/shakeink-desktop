@@ -1,0 +1,13 @@
+✔ CP-U01: real metadata rows/icons, disabled items, current directory, filtering and cross-directory removal (2839.989959ms)
+✔ CP-U01: folder double click restores only its first-click selection before navigating (3358.255041ms)
+✔ CP-U02: errors, empty/loading, keyboard navigation and short viewports retain focus and footer (442.126375ms)
+✔ CP-L01: immediate cancel bypasses navigation/checking and late replies/events cannot reopen or replace a new picker (1145.065208ms)
+✔ CP-L01: canceled initial current response is retired and suspension/unmount release the pending choose (677.34025ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8944.971625

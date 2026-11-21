@@ -1,4 +1,6 @@
 import "./console-write-guard"
+import {NovelImportSourcePicker} from "./novel-import-source-picker"
+import {sourcePickerActionSchema} from "../shared/novel-import-source-picker"
 import { app, BaseWindow, BrowserWindow, ImageView, clipboard, dialog, ipcMain, Menu, MessageChannelMain, nativeImage, nativeTheme, protocol, safeStorage, screen, session, shell, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from "electron"
 import { Worker } from "node:worker_threads"
 import {randomUUID} from "node:crypto"
@@ -6,7 +8,7 @@ import {DraftJournal,validateDraftSnapshot} from "./draft-journal"
 import {CloseCoordinator,type CloseIntent,type CloseOwner} from "./close-coordinator"
 import {RendererCloseChannel} from "./renderer-close-channel"
 import { homedir,tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { join, resolve, parse } from "node:path"
 import { lstat,mkdtemp,readdir } from "node:fs/promises"
 import { mkdirSync,realpathSync } from "node:fs"
 import { z } from "zod"
@@ -63,7 +65,14 @@ import { OnboardingService } from "./onboarding-service"
 import { OnboardingError, onboardingActionSchema } from "../shared/onboarding"
 import {PROJECT_REPOSITORY_URL,PROJECT_WEBSITE_URL,PROJECT_DOCS_URL,PROJECT_GUIDE_URL,PROJECT_FAQ_URL,displayAppVersion} from '../shared/project-info'
 import { ModelCatalogRepository } from './model-catalog-repository'
-import {projectAboutHtml,installProjectAboutLinks} from './project-about'
+import {projectAboutHtml,installProjectAboutLinks,PROJECT_ABOUT_LINK_ERROR_SCRIPT} from './project-about'
+import {NovelImportController} from './novel-import'
+import {NovelImportPdfClient} from './novel-import-pdf-client'
+import {importActionSchema,type ImportModel,type ImportSession} from '../shared/novel-import'
+import {importPlanHash} from '../core/novel-import'
+import {WorkLeaseRecovery,type WorkLeaseRecoveryPreview} from '../core/work-lease-recovery'
+import {RendererPrompts} from './renderer-prompts'
+import {promptReplySchema} from '../shared/prompt'
 
 app.enableSandbox()
 protocol.registerSchemesAsPrivileged([{ scheme: "shakeink", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, codeCache: true } }])
@@ -94,6 +103,11 @@ let onboardingService: OnboardingService
 let repository: ModelRepository
 let configurationFiles:ConfigurationFiles
 let fileExports:FileExports
+let novelImport:NovelImportController
+let novelImportOwner:{window:BrowserWindow;session:NonNullable<typeof draftSession>}|null=null
+let novelImportRepairing=false
+let novelImportServiceLost=false
+let novelImportCloseIntent:CloseIntent|null=null
 let recoveryExports:FileExports
 let service: RpcPeer
 let worker: Worker
@@ -127,8 +141,126 @@ const send = (event: DesktopEvent) => {
   if (event.type === "state"&&event.state.revision>=menuRevision) refreshMenus(event.state)
   if (window && !window.isDestroyed()) window.webContents.send("desktop:event", event)
 }
+// Questions shown by the workbench's React prompt host instead of native message boxes.
+// A crashed renderer cannot answer; resolving to the cancel value keeps close/quit from waiting forever.
+const appPrompts=new RendererPrompts(prompts=>{if(!window||window.isDestroyed()||window.webContents.isCrashed())return false;send({type:"prompts",prompts});return true})
 function trusted(event: IpcMainInvokeEvent) {
   if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || (new URL(event.senderFrame.url).protocol !== "shakeink:" || new URL(event.senderFrame.url).host !== "app")) throw new Error("不受信的桌面请求")
+}
+function assertNovelImportOwner(){
+  const owner=novelImportOwner
+  if(!owner||window!==owner.window||owner.window.isDestroyed()||draftSession!==owner.session||!owner.session.ready||draftSession.owner!==window.webContents.id||closingFlow||quitting||businessGate.closed||migrationHandoff?.pending||workLease?.pending)throw Error('导入所属窗口已变化或正在关闭')
+}
+const novelImportSourcePicker = new NovelImportSourcePicker({
+  places:async()=>[
+    {name:'文档',path:app.getPath('documents')},
+    {name:'下载',path:app.getPath('downloads')},
+    {name:'桌面',path:app.getPath('desktop')},
+    {name:'个人文件夹',path:app.getPath('home')},
+    {name:'本机磁盘',path:parse(app.getPath('home')).root},
+  ],
+  roots:process.platform==='win32'?Array.from({length:26},(_,index)=>String.fromCharCode(65+index)+':\\'):[],
+  protectedRoots:async()=>[dataRoot,bootstrapPath,...await service.call<string[]>('protected-directories')],
+  changed:view=>send({type:'novel-import-picker',view}),
+})
+async function chooseNovelSources(mode?:'files'|'folder'){
+  assertNovelImportOwner();const owner=novelImportOwner
+  if(process.platform!=='darwin'){
+    const selected=await novelImportSourcePicker.choose(()=>{assertNovelImportOwner();if(novelImportOwner!==owner)throw Error('导入所属窗口已变化')})
+    if(!selected)return null
+    assertNovelImportOwner();if(novelImportOwner!==owner)throw Error('导入所属窗口已变化')
+    return selected
+  }
+  const selected=await dialog.showOpenDialog(window!,{
+    title:'选择小说文本文件或文件夹',
+    properties:['openFile','openDirectory','multiSelections'],
+    filters:[{name:'小说文本',extensions:['txt','md','doc','docx','pdf','html','htm']}],
+  })
+  if(selected.canceled)return null
+  assertNovelImportOwner();if(novelImportOwner!==owner)throw Error('导入所属窗口已变化')
+  if(!Array.isArray(selected.filePaths)||!selected.filePaths.length||selected.filePaths.some(path=>typeof path!=='string'))throw Error('原生文件选择结果无效')
+  return selected.filePaths
+}
+async function chooseNovelTarget(title:string){
+  assertNovelImportOwner();const owner=novelImportOwner!,grantOwner=`novel-import:${owner.window.webContents.id}:${owner.session.id}`
+  try{
+    const settings=await repository.read();assertNovelImportOwner()
+    const selected=await dialog.showOpenDialog(owner.window,{title:`为《${title||'导入作品'}》选择独立目录`,defaultPath:settings.settings.general.defaultParent||homedir(),properties:['openDirectory','createDirectory']})
+    assertNovelImportOwner();if(novelImportOwner!==owner)throw Error('导入所属窗口已变化');if(selected.canceled)return null
+    if(selected.filePaths.length!==1||typeof selected.filePaths[0]!=='string')throw Error('原生目录选择结果无效')
+    const grant=await authority.issue(selected.filePaths[0],'create-work',grantOwner);assertNovelImportOwner()
+    const target=await authority.consume(grant.id,'create-work',grantOwner);assertNovelImportOwner();return target
+  }finally{authority.revokeOwner(grantOwner)}
+}
+async function novelImportModels():Promise<{text?:ImportModel;review?:ImportModel}>{
+  const state=await repository.read()
+  const snapshot=(id:string|null):ImportModel|undefined=>{const model=state.models.find(model=>model.id===id&&model.enabled&&model.kind==='TEXT');return model?{id:model.id,name:model.name,modelId:model.modelId,endpoint:model.endpoint,authRevision:model.authRevision,contextWindow:model.contextWindow,provider:model.provider,protocol:model.protocol}:undefined}
+  return {text:snapshot(state.settings.agent.textModelId),review:snapshot(state.settings.agent.reviewModelId)}
+}
+/** The default image model, as the renderer's image panels resolve it. */
+async function novelImportImageModel():Promise<ImportModel|undefined>{
+  const state=await repository.read(),model=state.models.find(m=>m.id===state.settings.agent.imageModelId&&m.enabled&&m.kind==='IMAGE')
+  return model?{id:model.id,name:model.name,modelId:model.modelId,endpoint:model.endpoint,authRevision:model.authRevision,contextWindow:0}:undefined
+}
+/** Same transfer protocol and limits as the service-side generateLocalImage, called directly in main. */
+async function generateNovelImportImage(model:ImportModel,prompt:string,sizes:readonly string[]|undefined,signal:AbortSignal){
+  const id=randomUUID(),abort=()=>{void modelService.cancel(id).catch(()=>undefined)}
+  signal.addEventListener('abort',abort,{once:true})
+  try{
+    const header=await modelService.startImage({id,modelId:model.id,authRevision:model.authRevision,prompt,...(sizes?{sizes:[...sizes]}:{})});signal.throwIfAborted()
+    const mime=header.headers['content-type'];if(header.id!==id||header.status!==200||!['image/png','image/jpeg','image/webp'].includes(mime))throw Error('IMAGE_RESPONSE_INVALID')
+    const chunks:Uint8Array[]=[];let length=0
+    for(;;){const frame=await modelService.read(id);signal.throwIfAborted();if(frame.done)break;if(!(frame.bytes instanceof Uint8Array)||!frame.bytes.length||frame.bytes.length>65536)throw Error('IMAGE_RESPONSE_INVALID');length+=frame.bytes.length;if(length>10*1024*1024)throw Error('IMAGE_RESPONSE_TOO_LARGE');chunks.push(frame.bytes)}
+    if(!length||header.headers['content-length']!==String(length))throw Error('IMAGE_RESPONSE_INVALID')
+    return {bytes:new Uint8Array(Buffer.concat(chunks,length)),mime}
+  }finally{signal.removeEventListener('abort',abort);void modelService.cancel(id).catch(()=>undefined)}
+}
+async function repairNovelImportTarget(session:ImportSession){
+  assertNovelImportOwner()
+  if(novelImportRepairing||closingFlow||migrationHandoff||workLease||!session.target||!session.publication?.hash)throw Error('当前没有可安全修复的导入保存记录')
+  const owner=novelImportOwner!,root=dataRoot
+  const assertCurrent=()=>{if(window!==owner.window||owner.window.isDestroyed()||draftSession!==owner.session||dataRoot!==root||closingFlow||quitting||!app.hasSingleInstanceLock())throw Error('导入锁修复所属窗口或数据根已变化')}
+  novelImportRepairing=true
+  novelImportServiceLost=false
+  let workerClosed=false,serviceUsable=true,approved:WorkLeaseRecoveryPreview|null=null,recovery:WorkLeaseRecovery|undefined
+  try{
+    // Recovery always reauthorizes the original directory through a fresh native choice.
+    const selection=await chooseNovelTarget(session.title);assertCurrent()
+    if(!selection)throw Error('已取消重新授权保存目录')
+    if(selection.path!==session.target.path||selection.device!==session.target.device||selection.inode!==session.target.inode)throw Error('请重新选择原导入保存目录')
+    const active=await service.call<{active:number}>('task-status');assertCurrent()
+    if(active.active||modelService.activeCount||modelConfiguration.activeCount||responseOwners.size)throw Error('请先停止其他创作任务再修复导入保存目录')
+    novelImport?.cancelPdfWork?.();novelImportSourcePicker.cancel();await novelImport?.drainPdfWork?.();await businessGate.close();assertCurrent()
+    const drained=await service.call<{active:number}>('task-status');assertCurrent()
+    if(drained.active||responseOwners.size)throw Error('本地任务尚未排空，请稍后重试')
+    await service.call('close');workerClosed=true;assertCurrent()
+    const input={session,selection,importHash:importPlanHash(session)}
+    // This RPC only proves an already existing reservation. It cannot reserve a new directory.
+    const target=await service.call<import('../core/data-root').RootIdentity>('novel-import-lease-target',input);assertCurrent()
+    await service.call('close');assertCurrent() // closes the transient inbox lookup before physical recovery
+    recovery=new WorkLeaseRecovery({namesForWork:workNames,assertHost:assertCurrent,
+      assertWorkClosed:()=>{assertCurrent();if(!workerClosed)throw Error('本地数据尚未关闭')},
+      assertConfirmed:(id,work,leaseOwner)=>{assertCurrent();if(!approved||approved.requestId!==id||JSON.stringify(approved.work)!==JSON.stringify(work)||JSON.stringify(approved.owner)!==JSON.stringify(leaseOwner))throw Error('锁修复尚未确认')},
+    })
+    const preview=await recovery.prepare(target);assertCurrent()
+    const confirmation=await appPrompts.ask({tone:'warning',title:'修复导入保存目录的异常退出锁',message:'移除已退出进程留下的锁并恢复原导入？',detail:`原保存目录：${preview.work.path}\n原进程：${preview.owner.pid}\n原设备：${preview.owner.host}\n已确认本机原进程退出。仅修复这次核对的锁，继续使用原请求与内容。`,buttons:[{value:'cancel',label:'取消',variant:'outline'},{value:'repair',label:'修复并继续',variant:'destructive'}],defaultValue:'cancel',cancelValue:'cancel'})
+    assertCurrent();if(confirmation!=='repair'){recovery.cancel(preview.requestId);throw Error('已取消导入目录锁修复')}
+    approved=preview
+    const result=await recovery.recover(preview.requestId);await recovery.flush();assertCurrent()
+    if(result.status!=='recovered')throw Error('导入目录锁恢复尚待收尾，请重新核对后重试')
+    serviceUsable=false;await modelService.close();service.dispose();await worker.terminate();assertCurrent()
+    const startup=createOrdinaryServiceWorker(),status=waitRootStartup(startup)
+    if(status.status!=='ready'||status.root!==root)throw Error('本地服务重建失败，请重新启动后恢复导入')
+    await service.call('ready');workerClosed=false;serviceUsable=true;novelImportServiceLost=false;assertCurrent()
+  }finally{
+    await recovery?.flush()
+    if(novelImportServiceLost||ordinaryWorkerExited||worker.threadId===-1)serviceUsable=false
+    novelImportRepairing=false
+    // The source journal remains owned by this main process; no import request is rerun here.
+    if(serviceUsable&&!closingFlow&&!quitting){novelImport?.reopenPdfWork?.();modelService.resume();businessGate.reopen()}
+    if(!serviceUsable){businessClosed=true;send({type:'service-disconnected'})}
+    const close=novelImportCloseIntent;novelImportCloseIntent=null;if(close)queueMicrotask(()=>beginClose(close))
+  }
 }
 const directoryPurpose = z.enum(["create-work", "open-work", "data-root", "default-parent"])
 function makeRecoveryExports(){
@@ -149,6 +281,9 @@ async function exportDraftSnapshot(input:unknown) {
   return result.status==="saved"
 }
 function beginClose(intent:CloseIntent){
+  novelImport?.cancelPdfWork?.()
+  novelImportSourcePicker.cancel()
+  if(novelImportRepairing){if(novelImportCloseIntent!=='quit')novelImportCloseIntent=intent;return}
   if(!closeCoordinator)return
   if(workLease)intent="quit"
   if(!closingFlow&&migrationHandoff?.pending&&businessGate.closed){void retryMigrationCancellation().then(()=>beginClose(intent)).catch(()=>send({type:"migration-cancel-pending"}));return}
@@ -209,15 +344,21 @@ function createOrdinaryServiceWorker(){
     throw new Error("未知主进程服务命令")
   })
   const disconnected = () => {
+    if(worker!==currentWorker)return
+    novelImport?.cancelPdfWork?.()
+    if(novelImportRepairing){novelImportServiceLost=true;service.dispose();return}
     applicationMetadata.revoke()
     conversationDirectories.revokeAll()
     service.dispose()
+    novelImportSourcePicker.cancel()
+    if(!novelImportRepairing)void novelImport?.close().catch(()=>undefined)
     void modelService?.close().catch(() => undefined)
     send({ type: "service-disconnected" })
     const responses = [...responseOwners.values()]; responseOwners.clear()
     void Promise.allSettled(responses.map(response => response.cancel()))
   }
-  worker.on("error", disconnected); worker.on("exit", () => {ordinaryWorkerExited=true;conversationDirectories.workerStopped();disconnected()})
+  const currentWorker=worker
+  worker.on("error", disconnected); worker.on("exit", () => {if(worker===currentWorker){ordinaryWorkerExited=true;conversationDirectories.workerStopped();disconnected()}})
   ordinaryWorkerExited=false
   return startup
 }
@@ -253,6 +394,15 @@ async function launch() {
     return selected.canceled?null:selected.filePath??null
   },guardTarget:async target=>guardFileExportTarget(target,{dataRoots:[dataRoot,bootstrapPath],workRoots:await service.call<string[]>("protected-directories")})})
   recoveryExports=makeRecoveryExports()
+  const importRoot=dataRoot,pdfClient=new NovelImportPdfClient({appRoot:app.getAppPath()})
+  novelImport=new NovelImportController({wizard:true,imageModel:novelImportImageModel,generateImage:generateNovelImportImage,root:importRoot,pdfClient,assertPdfOwner:assertNovelImportOwner,choose:chooseNovelSources,chooseTarget:chooseNovelTarget,
+    protectedDirectories:async()=>[bootstrapPath,...await service.call<string[]>('protected-directories')],models:novelImportModels,
+    ai:request=>businessGate.run(()=>service.call('novel-import-ai',request)),cancelAi:async operationId=>{await service.call('novel-import-cancel',operationId)},
+    publish:input=>businessGate.run(()=>service.call('novel-import-publish',input)),repairTarget:repairNovelImportTarget,
+    discardPublication:input=>businessGate.run(()=>service.call('novel-import-discard',input)),
+    changed:view=>send({type:'novel-import',view}),reading:active=>send({type:'novel-import-reading',active}),assertCurrent:()=>{if(dataRoot!==importRoot||businessClosed)throw Error('导入数据根已关闭或变化')},
+  })
+  await novelImport.initialize()
   draftJournal = new DraftJournal(dataRoot,metadataWrites)
   protocol.handle("shakeink", async request => {
     const url = new URL(request.url)
@@ -285,16 +435,22 @@ async function launch() {
   registerIpc()
   closeCoordinator=new CloseCoordinator({
     current:()=>window&&draftSession?{owner:window.webContents.id,sessionId:draftSession.id}:null,
-    busy:async()=>{const status=await service.call<{active:number}>("task-status");return status.active>0||modelService.activeCount>0||modelConfiguration.activeCount>0},
-    confirmStop:async()=>{const options={type:"question" as const,title:"仍有创作任务运行",message:"停止正在执行的任务后关闭？",detail:"已保存的内容和待确认草稿会保留。",buttons:["取消关闭","停止任务并继续"],defaultId:0,cancelId:0};const result=window?await dialog.showMessageBox(window,options):await dialog.showMessageBox(options);return result.response===1},
+    busy:async()=>{const status=await service.call<{active:number}>("task-status");return status.active>0||modelService.activeCount>0||modelConfiguration.activeCount>0||!!novelImport?.active},
+    confirmStop:async()=>await appPrompts.ask({tone:"question",title:"仍有创作任务运行",message:"停止正在执行的任务后关闭？",detail:"已保存的内容和待确认草稿会保留。",buttons:[{value:"cancel",label:"取消关闭",variant:"outline"},{value:"stop",label:"停止任务并继续",variant:"destructive"}],defaultValue:"cancel",cancelValue:"cancel"})==="stop",
     stopTasks:async()=>{
+      novelImport?.cancelPdfWork?.()
+      novelImportSourcePicker.cancel()
       if(window)modelConfiguration.cancelOwner(String(window.webContents.id))
       const timeout=Promise.withResolvers<never>(),timer=setTimeout(()=>timeout.reject(new Error("停止任务超时，窗口与草稿已保留")),10000)
-      try{await Promise.race([Promise.all([modelService.close(),service.call("stop-tasks")]),timeout.promise])}
+      try{await Promise.race([(async()=>{await novelImport?.pauseAll();await Promise.all([modelService.close(),service.call("stop-tasks")])})(),timeout.promise])}
       finally{clearTimeout(timer)}
     },
     flush:flushDraftForClose,
     closeData:async()=>{
+      novelImport?.cancelPdfWork?.()
+      novelImportSourcePicker.cancel()
+      await novelImport?.drainPdfWork?.()
+      await novelImport?.close()
       if(window){recoveryExports.cancelWindow(`${window.webContents.id}:`);fileExports.cancelWindow(`${window.webContents.id}:`);configurationFiles.cancelWindow(`${window.webContents.id}:`);modelConfiguration.cancelOwner(String(window.webContents.id));avatarAssets.cancelOwner(String(window.webContents.id))}
       const drained=businessGate.close()
       conversationDirectories.revokeAll()
@@ -308,8 +464,9 @@ async function launch() {
     closedHandoffPending:()=>!!workLease?.requiresRestart,
     afterClose:async()=>{await workLease?.finishClosed()},
     failed:async()=>{
-      if(workLease?.requiresRestart){const options={type:"warning" as const,title:"作品锁修复交接尚未完成",message:"作品锁修复状态尚未确认保存。",detail:"原文件与恢复草稿已保留。工作台暂不接受修改，请重试完成交接后重新启动。",buttons:["重试交接","稍后重试"],defaultId:1,cancelId:1};const result=window?await dialog.showMessageBox(window,options):await dialog.showMessageBox(options);return result.response===0?"retry":"cancel"}
-      const options={type:"warning" as const,title:"尚不能关闭",message:"部分修改尚未确认保存。",detail:"窗口和原草稿已保留。可以重试、导出恢复草稿，或返回继续处理。",buttons:["重试","导出草稿","取消关闭"],defaultId:2,cancelId:2};const result=window?await dialog.showMessageBox(window,options):await dialog.showMessageBox(options);return(["retry","export","cancel"] as const)[result.response]??"cancel"
+      if(workLease?.requiresRestart)return await appPrompts.ask({tone:"warning",title:"作品锁修复交接尚未完成",message:"作品锁修复状态尚未确认保存。",detail:"原文件与恢复草稿已保留。工作台暂不接受修改，请重试完成交接后重新启动。",buttons:[{value:"cancel",label:"稍后重试",variant:"outline"},{value:"retry",label:"重试交接",variant:"default"}],defaultValue:"cancel",cancelValue:"cancel"})==="retry"?"retry":"cancel"
+      const choice=await appPrompts.ask({tone:"warning",title:"尚不能关闭",message:"部分修改尚未确认保存。",detail:"窗口和原草稿已保留。可以重试、导出恢复草稿，或返回继续处理。",buttons:[{value:"cancel",label:"取消关闭",variant:"outline"},{value:"export",label:"导出草稿",variant:"outline"},{value:"retry",label:"重试",variant:"default"}],defaultValue:"cancel",cancelValue:"cancel"})
+      return choice==="retry"||choice==="export"?choice:"cancel"
     },
     exportDraft:async owner=>{const reply=await closeChannel.request(owner,"export");if(!window||window.isDestroyed()||window.webContents.id!==owner.owner||draftSession?.owner!==owner.owner||draftSession.id!==owner.sessionId)throw new Error("草稿所属窗口已变化");if(reply.status!=="export")throw new Error("无法读取草稿");await exportDraftSnapshot(reply.snapshot)},
     commit:async intent=>{migrationHandoff?.commit();workLease?.commit();closeCommitted=true;if(window)closePermits.add(window);if(intent==="quit"){quitting=true;void worker.terminate();app.quit()}else window?.close()},
@@ -335,7 +492,7 @@ async function launch() {
     beginClose("quit")
   })
 }
-async function restoreBusiness(){if(workLease?.requiresRestart)throw Error("作品锁修复交接必须完成后重新启动");if(businessGate.closed)await businessGate.close();businessGate.reopen();businessClosed=false;modelService.resume();send({type:"close-cancelled"})}
+async function restoreBusiness(){if(workLease?.requiresRestart)throw Error("作品锁修复交接必须完成后重新启动");if(novelImportServiceLost||ordinaryWorkerExited||worker.threadId===-1)throw Error('本地服务已断开，请重新启动后恢复导入');if(businessGate.closed)await businessGate.close();novelImport?.reopenPdfWork?.();businessGate.reopen();businessClosed=false;modelService.resume();send({type:"close-cancelled"})}
 async function retryMigrationCancellation(){
   if(closingFlow)throw Error("迁移交接仍在处理中")
   await migrationHandoff?.cancelPrepared();await restoreBusiness();migrationHandoff=null
@@ -344,13 +501,28 @@ function businessHandle(channel:string,handler:(event:IpcMainInvokeEvent,...args
   ipcMain.handle(channel,(event,...args)=>businessGate.run(async()=>handler(event,...args)))
 }
 function registerIpc() {
+  ipcMain.handle('desktop:novel-import-sources',async(event,input)=>{
+    trusted(event);const action=sourcePickerActionSchema.parse(input)
+    if(action.type==='current'&&!novelImportOwner)return null
+    assertNovelImportOwner()
+    return businessGate.run(()=>novelImportSourcePicker.act(action))
+  })
+  ipcMain.handle('desktop:novel-import',async(event,input)=>{
+    trusted(event);const action=importActionSchema.parse(input)
+    if(!window||window.isDestroyed()||!draftSession?.ready||draftSession.owner!==event.sender.id||closingFlow||quitting||businessGate.closed||migrationHandoff?.pending||workLease?.pending||novelImportRepairing)throw Error('请等待工作台就绪，或完成当前关闭与维护操作')
+    const ownerWindow=window,ownerSession=draftSession
+    if(!novelImportOwner||novelImportOwner.window!==ownerWindow||novelImportOwner.session!==ownerSession)novelImportOwner={window:ownerWindow,session:ownerSession}
+    if(action.type==='cancel-pdf-preview')return novelImport.cancelPdfPreview(action.id,action.requestId)
+    if(action.type==='repair-target')return novelImport.act(action)
+    return businessGate.run(()=>novelImport.act(action))
+  })
   ipcMain.handle("desktop:work-lease",async(event,input)=>{
     trusted(event);const action=workLeaseRequestSchema.parse(input)
     if(action.type==="retry"){
       if(!workLease?.requiresRestart)throw Error("没有待完成的作品锁恢复")
       beginClose("quit");return closingFlow&&await closingFlow?"restarting":"pending"
     }
-    if(closingFlow||migrationHandoff||workLease||businessGate.closed)throw Error("恢复、迁移或关闭仍在处理中")
+    if(closingFlow||migrationHandoff||workLease||businessGate.closed||novelImportRepairing)throw Error("恢复、迁移或关闭仍在处理中")
     const ownerWindow=window,ownerSession=draftSession
     if(!ownerWindow||!ownerSession?.ready)throw Error("请等待工作台加载完成")
     const identity={owner:ownerWindow.webContents.id,sessionId:ownerSession.id}
@@ -362,11 +534,11 @@ function registerIpc() {
       target:workId=>service.call("closed-work-lease-target",workId),
       confirm:async(preview,signal)=>{
         assertOwner(identity)
-        const result=await dialog.showMessageBox(ownerWindow,{type:"warning",title:"修复异常退出锁",message:"移除已退出进程留下的作品锁？",detail:`作品目录：${preview.work.path}\n原进程：${preview.owner.pid}\n原设备：${preview.owner.host}\n已确认该本机进程退出。只处理这次确认的锁，作品内容保持原样。完成或取消后应用都会重新启动。`,buttons:["取消","修复并重新启动"],defaultId:0,cancelId:0,signal})
-        assertOwner(identity);return !signal.aborted&&result.response===1
+        const result=await appPrompts.ask({tone:"warning",title:"修复异常退出锁",message:"移除已退出进程留下的作品锁？",detail:`作品目录：${preview.work.path}\n原进程：${preview.owner.pid}\n原设备：${preview.owner.host}\n已确认该本机进程退出。只处理这次确认的锁，作品内容保持原样。完成或取消后应用都会重新启动。`,buttons:[{value:"cancel",label:"取消",variant:"outline"},{value:"repair",label:"修复并重新启动",variant:"destructive"}],defaultValue:"cancel",cancelValue:"cancel"},{signal})
+        assertOwner(identity);return !signal.aborted&&result==="repair"
       },
       close:async()=>{beginClose("quit");return closingFlow?await closingFlow:false},
-      notice:async message=>{assertOwner(identity);await dialog.showMessageBox(ownerWindow,{type:"info",title:"作品锁恢复结果",message,buttons:["重新启动"],defaultId:0,cancelId:0});assertOwner(identity)},
+      notice:async message=>{assertOwner(identity);await appPrompts.ask({tone:"info",title:"作品锁恢复结果",message,buttons:[{value:"ok",label:"重新启动",variant:"default"}],defaultValue:"ok",cancelValue:"ok"});assertOwner(identity)},
       restart:()=>app.relaunch(),
     })
     workLease=handoff
@@ -377,7 +549,7 @@ function registerIpc() {
     trusted(event)
     const action=z.enum(["start","cancel"]).parse(input)
     if(action==="cancel"){await retryMigrationCancellation();return false}
-    if(closingFlow||migrationHandoff||workLease)throw Error("作品锁修复、迁移或关闭仍在处理中")
+    if(closingFlow||migrationHandoff||workLease||novelImportRepairing)throw Error("作品锁修复、迁移或关闭仍在处理中")
     const ownerWindow=window,ownerSession=draftSession
     if(!ownerWindow||!ownerSession?.ready)throw Error("请等待工作台加载完成")
     const source=new DataRootManager(bootstrapPath,dataRoot)
@@ -390,8 +562,8 @@ function registerIpc() {
       if((await readdir(target.path)).length)throw Error("请选择一个空目录用于迁移应用数据")
       return target
     },confirm:async target=>{
-      const result=await dialog.showMessageBox(ownerWindow,{type:"question",title:"迁移应用数据",message:"迁移应用数据并重新启动？",detail:`目标目录：${target.path}\n草稿和设置保存后会重新启动，显示迁移进度。作品继续存放在各自的目录中。`,buttons:["取消","迁移并重新启动"],defaultId:0,cancelId:0})
-      assertOwner();return result.response===1
+      const result=await appPrompts.ask({tone:"question",title:"迁移应用数据",message:"迁移应用数据并重新启动？",detail:`目标目录：${target.path}\n草稿和设置保存后会重新启动，显示迁移进度。作品继续存放在各自的目录中。`,buttons:[{value:"cancel",label:"取消",variant:"outline"},{value:"migrate",label:"迁移并重新启动",variant:"default"}],defaultValue:"cancel",cancelValue:"cancel"})
+      assertOwner();return result==="migrate"
     },close:async()=>{beginClose("quit");return closingFlow?await closingFlow:false},restart:()=>app.relaunch()})
     migrationHandoff=handoff
     try{return await handoff.start()}
@@ -424,6 +596,9 @@ function registerIpc() {
     if(!draftSession||draftSession.owner!==event.sender.id)throw Error("导出所属窗口已变化")
     fileExports.cancel(`${event.sender.id}:${draftSession.id}`,z.uuid().parse(input))
   })
+  // Not business-gated: the close flow asks after the gate closed.
+  ipcMain.handle("desktop:prompts",async event=>{trusted(event);return appPrompts.list()})
+  ipcMain.handle("desktop:prompt-reply",async(event,input)=>{trusted(event);const reply=promptReplySchema.parse(input);return appPrompts.reply(reply.id,reply.value)})
   ipcMain.handle("desktop:close-reply",async(event,sessionId,id,reply)=>{
     trusted(event)
     if(!draftSession||draftSession.owner!==event.sender.id||draftSession.id!==z.uuid().parse(sessionId))throw new Error("草稿所属窗口已变化")
@@ -666,7 +841,7 @@ function menuTemplate(): MenuItemConstructorOptions[] {
     id:`menu.${group.id}`, label:group.label, submenu:group.items.map(command => {
       const accelerator=electronAccelerator(command.binding)
       return { id:command.id, label:command.label + (command.binding && !accelerator ? `（${command.binding}）` : ""), role:roles[command.id], enabled:command.enabled, accelerator,
-        click:() => { void executeCommand(command.id).catch(() => dialog.showErrorBox("操作未完成","请检查当前窗口或任务状态后重试。")) } }
+        click:() => { void executeCommand(command.id).catch(() => send({type:"notice",tone:"error",message:"操作未完成，请检查当前窗口或任务状态后重试。"})) } }
     }),
   }))
 }
@@ -714,7 +889,7 @@ async function executeCommand(id: string, fromRenderer=false) {
     else {
       const theme=(await repository.read()).settings.appearance.theme
       const about = new BrowserWindow({ width: 440, height: 400, resizable: false, minimizable: false, maximizable: false, parent: window ?? undefined, modal: true, title: "关于玄印写作", webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } })
-      installProjectAboutLinks(about.webContents,url=>shell.openExternal(url),()=>{if(!about.isDestroyed())void dialog.showMessageBox(about,{type:'error',message:'无法打开浏览器，请稍后重试。'})})
+      installProjectAboutLinks(about.webContents,url=>shell.openExternal(url),()=>{if(!about.isDestroyed())void about.webContents.executeJavaScript(PROJECT_ABOUT_LINK_ERROR_SCRIPT).catch(()=>{})})
       about.setMenu(null); await about.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(projectAboutHtml(displayAppVersion(app.getVersion()),theme==='ink'||theme==='system'&&nativeTheme.shouldUseDarkColors?'ink':'paper')))
     }
     return
@@ -756,8 +931,10 @@ async function createWindow() {
   current.webContents.on("will-navigate", event => event.preventDefault())
   current.webContents.on("will-attach-webview", event => event.preventDefault())
   const releaseOwner = () => {
+    if(novelImportOwner?.window===current){novelImport?.cancelPdfWork?.();novelImportSourcePicker.cancel();novelImportOwner=null;void novelImport?.close().catch(()=>undefined)}
     conversationDirectories.revokeOwner(String(ownerId))
     closeChannel.cancel()
+    appPrompts.cancelAll()
     recoveryExports.cancelWindow(`${ownerId}:`)
     fileExports.cancelWindow(`${ownerId}:`)
     configurationFiles.cancelWindow(`${ownerId}:`)
@@ -775,7 +952,7 @@ async function createWindow() {
     // a new (or unknown) main document revokes them and creates a fresh session.
     if(mainFrame!==false&&sameDocument!==true){releaseOwner();if((details.url??legacyUrl)==="shakeink://app/")draftSession={owner:ownerId,id:randomUUID(),ready:false,release:draftJournal.activate(String(ownerId))}}
   })
-  current.on("closed", () => { releaseOwner(); if (window === current) window = null })
+  current.on("closed", () => { releaseOwner(); if (window === current) window = null; appPrompts.cancelAll({force:true}) })
   current.on("close",event=>{if(quitting||closePermits.delete(current))return;event.preventDefault();beginClose(process.platform==="darwin"?"window":"quit")})
   refreshMenus(state)
   if (process.platform === "win32") current.setMenu(null)
@@ -800,7 +977,8 @@ else {
     return offerConfigReset({reason,rootPath:recoveryRoot,host:{
       launchDegradedWorkbench:async()=>{
         assertLock()
-        const temporary=await mkdtemp(join(tmpdir(),'shakeink-reset-offer-'))
+        // Canonical path: macOS tmpdir is a symlink, and the root must equal its realpath.
+        const temporary=realpathSync(await mkdtemp(join(tmpdir(),'shakeink-reset-offer-')))
         startupPaths={bootstrap:join(temporary,'bootstrap'),defaultRoot:join(temporary,'root'),encryptionFamily:family}
         startupSelectionError=null
         mkdirSync(startupPaths.bootstrap,{recursive:true})
@@ -810,8 +988,8 @@ else {
         return window
       },
       confirm:async({rootPath,window:degraded})=>{
-        const answer=await dialog.showMessageBox(degraded as BrowserWindow,{type:'warning',title:'配置数据无法自动修复',message:'本地配置数据已损坏且无法自动修复',detail:`已尝试自动修复但无法恢复配置数据。\n\n选择「清空全部配置并重启」将删除以下目录中的全部文件（包括作品数据，不可撤销），随后自动重启应用并重建配置：\n${rootPath}\n\n选择「退出」将直接关闭应用，原文件保持原样。`,buttons:['退出','清空全部配置并重启'],defaultId:0,cancelId:0,noLink:true})
-        return answer.response===1
+        const answer=await appPrompts.ask({tone:'warning',title:'配置数据无法自动修复',message:'本地配置数据已损坏且无法自动修复',detail:`已尝试自动修复但无法恢复配置数据。\n\n选择「清空全部配置并重启」将删除以下目录中的全部文件（包括作品数据，不可撤销），随后自动重启应用并重建配置：\n${rootPath}\n\n选择「退出」将直接关闭应用，原文件保持原样。`,buttons:[{value:'quit',label:'退出',variant:'outline'},{value:'wipe',label:'清空全部配置并重启',variant:'destructive'}],defaultValue:'quit',cancelValue:'quit'},{persistent:true})
+        void degraded;return answer==='wipe'
       },
       wipe:()=>executeStartupReset({bootstrap:originalBootstrap,recoveryRoot},{home:homedir(),isolatedRoot,family},{assertLock}),
       relaunch(){app.relaunch();app.exit(0)},

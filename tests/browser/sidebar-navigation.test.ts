@@ -102,10 +102,18 @@ test('SN-05 cancel a pending leave immediately dismisses the modal and late comp
 }))
 
 test('SN-15 unavailable repairs retain one flight across category changes and folding',()=>withSidebar(browser,{},async page=>{
- await page.evaluate(()=>{const f=(window as any).sidebarFixture;let count=0;(window as any).desktop={repairWorkLease:async()=>{count++;return new Promise(()=>{})}};f.repairCount=()=>count;f.query.setQueryData(['novels'],{...f.data['/api/novels'],unavailableWorks:[{workId:'bad-a',title:'不可用甲',reason:'stale-lease'},{workId:'bad-b',title:'不可用乙',reason:'stale-lease'}]})})
- await page.getByRole('button',{name:'修复作品锁',exact:true}).first().click();await page.getByRole('tab',{name:'角色',exact:true}).click()
- const repair=page.getByRole('button',{name:'正在准备修复…',exact:true});assert.equal(await repair.count(),2);assert.equal(await repair.first().isDisabled(),true)
- await page.getByRole('tab',{name:'设定',exact:true}).click();assert.equal(await page.getByRole('button',{name:'正在准备修复…',exact:true}).count(),2)
+ await page.evaluate(()=>{const f=(window as any).sidebarFixture;let count=0;(window as any).desktop={repairWorkLease:async()=>{count++;return new Promise(()=>{})}};f.repairCount=()=>count;f.query.setQueryData(['novels'],{...f.data['/api/novels'],unavailableWorks:[{workId:'bad-a',novelId:'bad-a-novel',title:'不可用甲',reason:'stale-lease'},{workId:'bad-b',novelId:'bad-b-novel',title:'不可用乙',reason:'stale-lease'}]})})
+ // WN-60: the repair flight lives in SidebarTree, so menus, views and folding share it.
+ const row=(title:string)=>page.locator('.tree-row',{hasText:title}),menu=page.locator('[role=menu][data-open]')
+ const repairItem=(name:string)=>page.locator('[role=menu][data-open]').getByRole('menuitem',{name,exact:true})
+ await row('不可用甲').click();await menu.waitFor();await repairItem('修复作品锁').click();await page.waitForFunction(()=>!document.querySelector('[role=menu]'))
+ await row('不可用乙').click();await menu.waitFor();assert.equal(await repairItem('正在准备修复…').isDisabled(),true);await page.keyboard.press('Escape')
+ await page.getByRole('tab',{name:'角色',exact:true}).click()
+ const group=(title:string)=>page.locator('.nav-work-group',{hasText:title})
+ for(const title of ['不可用甲','不可用乙']){await group(title).getByRole('button',{name:'作品操作',exact:true}).click();await menu.waitFor();assert.equal(await repairItem('正在准备修复…').isDisabled(),true);await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[role=menu][data-open]'))}
+ assert.ok((await group('不可用甲').innerText()).includes('正在准备修复作品锁'))
+ await group('不可用甲').locator('.nav-group-toggle').click();await page.getByRole('tab',{name:'设定',exact:true}).click()
+ await group('不可用乙').getByRole('button',{name:'作品操作',exact:true}).click();await menu.waitFor();assert.equal(await repairItem('正在准备修复…').isDisabled(),true)
  assert.equal(await page.evaluate(()=>(window as any).sidebarFixture.repairCount()),1)
 }))
 
@@ -153,4 +161,21 @@ test('SN-10 unbound conversation failure is visible even when there are no real 
  await page.evaluate(async()=>{const f=(window as any).sidebarFixture;f.query.setQueryData(['novels'],{novels:[],unavailableWorks:[]});f.failures['/api/chat/conversations']='隔离会话读取失败';await f.query.resetQueries({queryKey:['chat-conversations']})})
  await page.getByRole('tab',{name:'对话',exact:true}).click();await page.getByRole('alert').waitFor();assert.match(await page.getByRole('alert').innerText(),/会话|对话/);assert.equal(await page.getByText('暂无对话',{exact:true}).count(),0)
  assert(await page.getByRole('button',{name:/重试|重新加载/}).count()>=1)
+}))
+
+for (const [theme, expected] of [
+ ['paper', { error: 'rgb(163, 70, 60)', warning: 'rgb(126, 98, 28)', errorBadge: 'rgb(155, 44, 31)', warningBadge: 'rgb(143, 107, 35)' }],
+ ['ink', { error: 'rgb(224, 138, 128)', warning: 'rgb(217, 180, 95)', errorBadge: 'rgb(229, 83, 75)', warningBadge: 'rgb(217, 164, 91)' }],
+] as const) test(`WN-41' faulted work rows use the approved ${theme} colors and the healthy row height`, () => withSidebar(browser, { theme }, async page => {
+ const healthyBefore = await page.locator('.tree-row', { hasText: '隔离作品甲' }).first().locator('.nav-label').evaluate(e => getComputedStyle(e).color)
+ await page.evaluate(() => { const f = (window as any).sidebarFixture; f.query.setQueryData(['novels'], { ...f.data['/api/novels'], unavailableWorks: [{ workId: 'bad-e', novelId: 'bad-e-n', title: '错误作品', reason: 'missing' }, { workId: 'bad-w', novelId: 'bad-w-n', title: '警告作品', reason: 'in-use' }] }) })
+ const row = (title: string) => page.locator('.tree-row', { hasText: title })
+ await row('错误作品').waitFor()
+ const read = (title: string) => row(title).evaluate(element => ({ text: getComputedStyle(element.querySelector('.nav-label')!).color, badge: getComputedStyle(element.querySelector('[data-fault-icon] circle[r="5.6"]')!).fill, height: element.getBoundingClientRect().height }))
+ const error = await read('错误作品'), warning = await read('警告作品')
+ assert.equal(error.text, expected.error); assert.equal(warning.text, expected.warning)
+ assert.equal(error.badge, expected.errorBadge); assert.equal(warning.badge, expected.warningBadge)
+ const healthy = page.locator('.tree-row', { hasText: '隔离作品甲' }).first()
+ assert.equal(error.height, 28); assert.equal(warning.height, await healthy.evaluate(e => e.getBoundingClientRect().height))
+ assert.equal(await healthy.locator('.nav-label').evaluate(e => getComputedStyle(e).color), healthyBefore)
 }))

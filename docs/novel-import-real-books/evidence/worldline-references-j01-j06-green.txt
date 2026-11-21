@@ -1,0 +1,34 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (51.456583ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (19.485125ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.063709ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.829958ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (7.849084ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.272375ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (11.506625ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (13.537458ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (20.054041ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (5.737667ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.358542ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.087666ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.160625ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (41.841334ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.420459ms)
+  ✔ actual valid narrative requests reach both distinct character-reference late failures (1.382291ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.272166ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (4.451334ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (16.5165ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (5.399833ms)
+  ✔ empty results keep the original late gate and narrative references stay at the original late helper (1.18075ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (23.783125ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 979.25575

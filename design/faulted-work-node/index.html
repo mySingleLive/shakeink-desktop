@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN" class="ink">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>玄印 · 异常作品导航节点设计审核 v3</title>
+<!-- Offline review artifact with synthetic data. Never imported into product code. -->
+<style>
+.paper{--bg:#f8f3e4;--fg:#2b251b;--muted-fg:#7d7157;--sidebar:#efe6cf;--sidebar-border:#ddd0ae;--border:#d8cba6;--popover:#fcf8ee;--accent:#e9dfc4;--destructive:#9b2c1f;--warning:#8f6b23;--primary:#b03524;--hover:rgba(96,74,38,.06);--active:rgba(176,53,36,.09);--icon-work:#657077;--icon-settings:#78694a;--icon-characters:#766656;--icon-content:#756b62;--icon-workflow:#637746;--icon-review:#44737e;--icon-conv:#55779c;--icon-theme:#87732b;--shadow:0 12px 32px rgba(96,74,38,.14),0 2px 8px rgba(96,74,38,.08);--fault-fg:#fcf8ee;--fault-error-text:#a3463c;--fault-warning-text:#7e621c;--tab-bg:#f8f3e4;--tab-border:#d8cba6}
+.ink{--bg:#0d0b0a;--fg:#ece7e1;--muted-fg:#9a918a;--sidebar:#100d0c;--sidebar-border:rgba(255,248,240,.07);--border:rgba(255,248,240,.09);--popover:#171312;--accent:#1c1815;--destructive:#e5534b;--warning:#d9a45b;--primary:#e07a5f;--hover:rgba(255,248,240,.05);--active:rgba(224,122,95,.14);--icon-work:#a6b0b8;--icon-settings:#bbaa87;--icon-characters:#c6b098;--icon-content:#bdb2a7;--icon-workflow:#a9ba84;--icon-review:#8eb6c0;--icon-conv:#95b3d3;--icon-theme:#c6b473;--shadow:0 12px 32px rgba(0,0,0,.28),0 2px 8px rgba(0,0,0,.18);--fault-fg:#171312;--fault-error-text:#e08a80;--fault-warning-text:#d9b45f;--tab-bg:#2a2826;--tab-border:#4b4640}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#1d1b19;color:#ddd;display:flex;min-height:100vh}
+.paper body,html.paper body{background:#ddd5c2;color:#2b251b}
+aside.review{width:340px;flex-shrink:0;padding:18px;border-right:1px solid rgba(128,128,128,.25);overflow:auto;max-height:100vh;position:sticky;top:0}
+aside.review h1{font-size:16px;margin:0 0 4px}
+aside.review .sub{opacity:.7;font-size:12px;margin-bottom:14px}
+.ctl{margin:12px 0}.ctl b{display:block;font-size:12px;margin-bottom:6px;opacity:.8}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{font:inherit;font-size:12px;padding:4px 9px;border-radius:6px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit;cursor:pointer}
+.seg button[aria-pressed=true]{background:#b03524;border-color:#b03524;color:#fff}
+.notes{font-size:12px;line-height:1.65;border-top:1px solid rgba(128,128,128,.25);padding-top:10px;margin-top:14px}
+.notes h3{font-size:13px;margin:10px 0 4px}.notes ul{margin:0;padding-left:18px}.notes li{margin:2px 0}
+.notes code{font-size:11px;background:rgba(128,128,128,.18);padding:0 3px;border-radius:3px}
+main{flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;align-items:flex-start;overflow:auto}
+.window{position:relative;display:flex;width:880px;height:640px;border-radius:10px;overflow:hidden;background:var(--bg);color:var(--fg);box-shadow:0 10px 40px rgba(0,0,0,.35);border:1px solid var(--border)}
+.sidebar{width:280px;flex-shrink:0;background:var(--sidebar);border-right:1px solid var(--sidebar-border);display:flex;flex-direction:column}
+.traffic{height:38px;display:flex;align-items:center;gap:8px;padding:0 14px}.traffic i{width:12px;height:12px;border-radius:50%;background:#ff5f57}.traffic i:nth-child(2){background:#febc2e}.traffic i:nth-child(3){background:#28c840}
+.brand{display:flex;align-items:center;gap:10px;height:44px;margin:4px 0 8px;padding:0 20px;font:600 17px/24px "Songti SC","Noto Serif SC",serif;letter-spacing:.06em}
+.brand .seal{width:30px;height:30px;border-radius:6px;background:var(--primary);color:var(--fault-fg);display:grid;place-items:center;font-size:15px}
+.create{display:grid;gap:4px;padding:8px}.create div{display:flex;align-items:center;gap:10px;height:32px;padding:0 12px;border-radius:6px;font-size:14px;font-weight:500}.create svg{width:18px;height:18px;color:var(--muted-fg)}
+.tabs{display:flex;gap:4px;height:36px;margin:16px 8px 12px}.tabs span{flex:1;display:flex;align-items:center;justify-content:center;height:28px;border:1px solid transparent;border-radius:6px;color:var(--muted-fg);font-size:12px}.tabs span.on{background:var(--tab-bg);border-color:var(--tab-border);color:var(--fg);font-weight:600}
+.tree{flex:1;overflow:hidden;padding:2px 6px 12px}
+.row{position:relative;display:flex;align-items:center;gap:5px;height:28px;padding-right:6px;border-radius:5px;font-size:13px;white-space:nowrap;cursor:pointer;user-select:none}
+.row:hover,.row.hover{background:var(--hover)}.row.focus{outline:2px solid color-mix(in srgb,var(--fg) 40%,transparent);outline-offset:-2px}
+.row .chev{width:14px;height:14px;display:grid;place-items:center;color:var(--muted-fg);flex-shrink:0}.row .chev svg{width:12px;height:12px}.row .chev.open svg{transform:rotate(90deg)}
+.row .ico{width:14px;height:14px;flex-shrink:0}
+.row .label{flex:1;min-width:0;overflow:hidden}
+.row .more{width:24px;height:24px;display:grid;place-items:center;border-radius:6px;color:var(--muted-fg);opacity:0}.row:hover .more,.row.hover .more,.row .more.open{opacity:1}.row .more.open{background:color-mix(in srgb,var(--muted-fg) 15%,transparent)}.row .more svg{width:16px;height:16px}
+.tone-work{color:var(--icon-work)}.tone-settings{color:var(--icon-settings)}.tone-characters{color:var(--icon-characters)}.tone-content{color:var(--icon-content)}.tone-workflow{color:var(--icon-workflow)}.tone-review{color:var(--icon-review)}.tone-conv{color:var(--icon-conv)}.tone-theme{color:var(--icon-theme)}
+.group-body .line{padding:2px 6px 6px 31px;font-size:12px;color:var(--muted-fg)}
+.workspace{flex:1;display:grid;place-items:center;color:var(--muted-fg);font-size:12px}
+.menu{position:absolute;z-index:20;min-width:148px;padding:4px;border-radius:8px;background:var(--popover);color:var(--fg);box-shadow:0 4px 12px rgba(0,0,0,.18);outline:1px solid color-mix(in srgb,var(--fg) 10%,transparent)}
+.menu .item{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;font-size:14px;white-space:nowrap}.menu .item svg{width:16px;height:16px;flex-shrink:0}
+.menu .item.focus{background:var(--accent)}.menu .item.danger{color:var(--destructive)}.menu .item.danger.focus{background:color-mix(in srgb,var(--destructive) 14%,transparent)}.menu .item.disabled{opacity:.5}
+.menu .sep{height:1px;margin:4px -4px;background:var(--border)}
+.menu .label{padding:4px 6px 2px;font-size:12px;color:var(--muted-fg);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card{position:absolute;z-index:20;width:256px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--popover);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.card .head{display:flex;gap:8px;align-items:center}.card .badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--fault) 14%,transparent);color:var(--fault)}.card .badge svg{width:16px;height:16px}
+.card .t{font-weight:600;font-size:13px}.card .s{font-size:12px;color:var(--fault)}.card p{margin:0;font-size:12px;color:var(--muted-fg);line-height:1.6}.card .hint{font-size:11.5px;color:var(--muted-fg);border-top:1px solid var(--border);padding-top:6px}
+.overlay{position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.10);display:grid;place-items:center}
+.dialog{width:440px;border-radius:12px;background:var(--popover);border:1px solid var(--border);box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:10px}
+.dialog h2{margin:0;font-size:16px}.dialog p{margin:0;font-size:13px;color:var(--muted-fg);line-height:1.7}.dialog .warn{display:flex;gap:8px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--warning) 12%,transparent);color:var(--fg);font-size:12.5px;line-height:1.6}.dialog .warn svg{width:16px;height:16px;color:var(--warning);flex-shrink:0;margin-top:2px}
+.dialog .alert{font-size:12px;color:var(--destructive)}
+.dialog .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}.btn{font:inherit;font-size:13px;height:32px;padding:0 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--fg)}.btn.danger{background:var(--destructive);border-color:var(--destructive);color:#fff}
+.spec{display:flex;gap:24px;flex-wrap:wrap;padding:16px 20px;border-radius:10px;background:var(--bg);color:var(--fg);border:1px solid var(--border)}
+.spec figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11.5px;color:var(--muted-fg)}.spec .sizes{display:flex;align-items:flex-end;gap:14px;color:var(--icon-work)}
+.cursor{position:absolute;z-index:25;width:14px;height:20px;pointer-events:none}
+</style>
+</head>
+<body>
+<aside class="review">
+<h1>异常作品导航节点 · 设计审核 v3</h1>
+<div class="sub">合成数据，离线静态页面。依据 <code>docs/550-faulted-work-node-research.md</code>。</div>
+<div class="ctl"><b>主题</b><div class="seg" id="theme"></div></div>
+<div class="ctl"><b>图标配色方案（请选择）</b><div class="seg" id="scheme"></div></div>
+<div class="ctl"><b>场景</b><div class="seg" id="scene"></div></div>
+<div class="notes" id="notes"></div>
+</aside>
+<main><div class="window" id="win"></div><div class="spec" id="spec"></div></main>
+<script>
+// lucide-react 1.52 path data (ISC), copied for an offline static preview.
+const P={
+ folder:['M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z','M2 10h20'],
+ folderOpen:['m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2'],
+ chev:['m9 18 6-6-6-6'],
+ refresh:['M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8','M21 3v5h-5','M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16','M8 16H3v5'],
+ trash:['M3 6h18','M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6','M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2','M10 11v6','M14 11v6'],
+ lockOpen:['M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z','M7 11V7a5 5 0 0 1 9.9-1'],
+ pencil:['M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z','m15 5 4 4'],
+ settings:['M14 17H5','M19 7h-9','M20 17a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z','M10 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'],
+ users:['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2','M16 3.128a4 4 0 0 1 0 7.744','M22 21v-2a4 4 0 0 0-3-3.87','M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z'],
+ file:['M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z','M14 2v4a2 2 0 0 0 2 2h4','M10 9H8','M16 13H8','M16 17H8'],
+ workflow:['M5 3h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z','M7 11v4a2 2 0 0 0 2 2h4','M15 13h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2Z'],
+ review:['M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z','M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2','m9 14 2 2 4-4'],
+ msg:['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+ bulb:['M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5','M9 18h6','M10 22h4'],
+ alert:['M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z','M12 8v4','M12 16h.01'],
+ triangle:['m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3','M12 9v4','M12 17h.01'],
+ notebook:['M2 6h4','M2 10h4','M2 14h4','M2 18h4','M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z'],
+ import:['M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4','M14 2v4a2 2 0 0 0 2 2h4','M2 15h10','m9 18 3-3-3-3'],
+ newChat:['M7.9 20A9 9 0 1 0 4 16.1L2 22Z','M8 12h8','M12 8v8'],
+}
+const svg=(name,cls='ico',size)=>`<svg class="${cls}" ${size?`width="${size}" height="${size}"`:''} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name].map(d=>`<path d="${d}"/>`).join('')}</svg>`
+let maskSeq=0
+/** Composite: closed work folder with a cut-out exclamation badge at bottom-right. */
+function faultIcon(color,size=14,open=false){
+ const id='fm'+(++maskSeq)
+ return `<svg class="ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-fault-icon>
+  <defs><mask id="${id}" maskUnits="userSpaceOnUse"><rect width="24" height="24" fill="#fff"/><circle cx="18.5" cy="18.5" r="7.2" fill="#000"/></mask></defs>
+  <g mask="url(#${id})" stroke="var(--icon-work)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[open?'folderOpen':'folder'].map(d=>`<path d="${d}"/>`).join('')}</g>
+  <circle cx="18.5" cy="18.5" r="5.6" fill="${color}"/>
+  <path d="M18.5 15.6v3.3" stroke="var(--fault-fg)" stroke-width="2.1" stroke-linecap="round"/><circle cx="18.5" cy="21.4" r="1.15" fill="var(--fault-fg)"/>
+ </svg>`
+}
+const REASONS={
+ missing:{level:'error',title:'作品目录不可用',text:'作品目录已被移动、改名或删除，内容无法读取。',hint:'恢复目录后重新加载，或从作品列表中删除。'},
+ 'stale-lease':{level:'warning',title:'作品锁未释放',text:'上次异常退出留下了写入锁，作品内容已保留。',hint:'修复作品锁后即可正常打开。'},
+ 'in-use':{level:'warning',title:'作品正在别处使用',text:'该作品正被其他进程或设备打开。',hint:'在另一处关闭作品后重新加载。'},
+ changed:{level:'error',title:'作品目录已变化',text:'目录身份与作品记录不一致，可能被替换或复制。',hint:'从作品列表删除后，用“打开作品目录”重新加入。'},
+ damaged:{level:'error',title:'作品数据无法读取',text:'作品数据库缺失或无法打开，目录中的文件已保留。',hint:'恢复备份后重新加载，或从作品列表中删除。'},
+}
+const WORKS=[
+ {id:'w1',title:'雨灯纪事',ok:true,open:true},
+ {id:'w2',title:'诡秘之主',reason:'missing'},
+ {id:'w3',title:'风渡行记',reason:'stale-lease'},
+ {id:'w4',title:'长夜行船',reason:'in-use'},
+ {id:'w5',title:'青石城旧事',reason:'damaged'},
+ {id:'w6',title:'山海归途',ok:true},
+]
+const state={theme:'ink',scheme:'split',scene:'overview'}
+const textColor=reason=>state.scheme==='red'||REASONS[reason].level==='error'?'var(--fault-error-text)':'var(--fault-warning-text)'
+const color=reason=>state.scheme==='red'||REASONS[reason].level==='error'?'var(--destructive)':'var(--warning)'
+const SCENES=[
+ ['overview','作品视图总览'],['more','… 菜单（目录缺失）'],['context-lease','右键菜单（作品锁）'],['context-ok','右键菜单（正常作品）'],
+ ['hover','悬停卡片'],['delete','删除确认'],['delete-lease','删除确认（作品锁）'],['delete-busy','删除中'],['delete-error','删除失败'],
+ ['repairing','修复作品锁进行中'],['settings-view','设定视图'],['before','当前实现（对照）'],
+]
+function treeRow({icon,label,depth=0,chev=null,tone='',more=false,moreOpen=false,cls='',id='',labelColor=''}){
+ const c=chev===null?'<span class="chev"></span>':`<span class="chev ${chev?'open':''}">${svg('chev','')}</span>`
+ return `<div class="row ${cls}" ${id?`data-id="${id}"`:''} role="button" style="padding-left:${depth*14+6}px">${c}${icon.startsWith('<svg')?icon:`<span class="tone-${tone}" style="display:flex">${svg(icon)}</span>`}<span class="label" ${labelColor?`style="color:${labelColor}"`:''}>${label}</span>${more?`<span class="more ${moreOpen?'open':''}">${svg('chev','').replace(/<path[^>]*>/,'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>')}</span>`:''}</div>`
+}
+function workRows(w,opts={}){
+ if(w.ok){
+  let html=treeRow({icon:w.open?'folderOpen':'folder',tone:'work',label:w.title,chev:!!w.open,more:true,id:w.id,cls:opts.focus===w.id?'hover':''})
+  if(w.open)html+=[['settings','settings','设定',false],['users','characters','角色',false],['file','content','正文',false],['workflow','workflow','创作进度',null],['review','review','创作评审',null],['msg','conv','对话',false]].map(([i,t,l,c])=>treeRow({icon:i,tone:t,label:l,depth:1,chev:c})).join('')
+  return html
+ }
+ return treeRow({icon:faultIcon(color(w.reason)),label:w.title,labelColor:textColor(w.reason),chev:null,more:true,id:w.id,cls:opts.focus===w.id?'hover':'',moreOpen:opts.moreOpen===w.id})
+}
+function menuFor(w,{x,y,focus=0,busy=false}){
+ const items=[]
+ if(w.ok){items.push(['pencil','重命名']);items.push(['trash','删除','danger'])} // unchanged from current product menu
+ else{
+  if(w.reason==='stale-lease')items.push(['lockOpen',busy?'正在准备修复…':'修复作品锁',busy?'disabled':''])
+  items.push(['refresh','重新加载作品',busy?'disabled':''])
+  items.push('sep');items.push(['trash','删除',busy?'danger disabled':'danger'])
+ }
+ let n=0
+ return `<div class="menu" role="menu" style="left:${x}px;top:${y}px">${w.ok?'':`<div class="label">${REASONS[w.reason].title}</div>`}${items.map(it=>it==='sep'?'<div class="sep"></div>':`<div class="item ${it[2]||''} ${n++===focus?'focus':''}" role="menuitem">${svg(it[0],'')}${it[1]}</div>`).join('')}</div>`
+}
+function hoverCard(w,{x,y}){
+ const r=REASONS[w.reason]
+ return `<div class="card" style="left:${x}px;top:${y}px;--fault:${color(w.reason)}"><div class="head"><span class="badge">${svg(r.level==='error'?'alert':'triangle','')}</span><div><div class="t">${w.title}</div><div class="s">${r.title}</div></div></div><p>${r.text}</p><div class="hint">${r.hint}</div></div>`
+}
+function deleteDialog(w,mode=''){
+ const lease=w.reason==='stale-lease'
+ return `<div class="overlay"><div class="dialog" role="dialog"><h2>删除作品</h2>
+ <p>确定要从作品列表中删除《${w.title}》吗？与该作品关联的对话将一并删除。</p>
+ <p>作品目录中的文件不会被改动。${lease?'':'目录恢复后，可通过“打开作品目录”重新加入。'}</p>
+ ${lease?`<div class="warn">${svg('triangle','')}<span>该作品只是留有异常退出的写入锁，建议先使用“修复作品锁”。删除后如需重新加入，需要先手动移除作品目录中的锁文件夹。</span></div>`:''}
+ ${mode==='error'?'<div class="alert" role="alert">暂时无法删除作品，原数据已保留，请重试。</div>':''}
+ <div class="btns"><button class="btn" ${mode==='busy'?'disabled style="opacity:.5"':''}>取消</button><button class="btn danger" ${mode==='busy'?'disabled style="opacity:.7"':''}>${mode==='busy'?'正在删除…':'确认删除'}</button></div></div></div>`
+}
+const byId=id=>WORKS.find(w=>w.id===id)
+function sidebar(view,opts){
+ const tabs=['作品','设定','角色','正文','对话'].map((t,i)=>`<span class="${i===view?'on':''}">${t}</span>`).join('')
+ let tree=treeRow({icon:'bulb',tone:'theme',label:'小说创作指引（0）',chev:false})
+ if(view===0)tree+=WORKS.map(w=>workRows(w,opts)).join('')
+ else tree+=WORKS.slice(0,4).map(w=>{
+  const icon=w.ok?svg('folderOpen','ico'):faultIcon(color(w.reason),14,true)
+  const head=`<div class="row" style="font-size:12px;font-weight:500;padding-left:6px"><span class="chev open">${svg('chev','')}</span><span class="tone-work" style="display:flex">${icon}</span><span class="label" ${w.ok?'':`style="color:${textColor(w.reason)}"`}>${w.title}</span>${w.ok?'':`<span class="more">${svg('chev','').replace(/<path[^>]*>/,'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>')}</span>`}</div>`
+  const body=w.ok?['主题','文风','世界观'].map(l=>treeRow({icon:'settings',tone:'settings',label:l,depth:1})).join(''):`<div class="group-body"><div class="line">${REASONS[w.reason].title}，${REASONS[w.reason].hint}</div></div>`
+  return `<div style="margin-bottom:10px">${head}${body}</div>`
+ }).join('')
+ return `<div class="sidebar"><div class="traffic"><i></i><i></i><i></i></div><div class="brand"><span class="seal">玄</span>玄印写作</div>
+ <div class="create"><div>${svg('notebook','')}创建作品</div><div>${svg('import','')}导入作品</div><div>${svg('newChat','')}新对话</div></div>
+ <div class="tabs">${tabs}</div><div class="tree">${tree}</div></div>`
+}
+function beforeSidebar(){
+ const card=w=>`<div style="border:1px solid var(--border);border-radius:6px;padding:8px 0;margin:0 0 8px"><div style="display:flex;gap:8px;align-items:center;padding:0 12px;font-weight:500;font-size:14px"><span style="color:var(--destructive);display:flex">${svg('alert','',16)}</span>${w.title}</div><div style="display:flex;gap:8px;padding:6px 12px 0;font-size:12px;color:var(--muted-fg)"><span style="color:var(--destructive);display:flex">${svg('alert','',16)}</span>${w.reason==='stale-lease'?'上次异常退出留下了写入锁，作品内容已保留。':'作品目录暂不可用，请检查目录后重新加载。'}</div>${w.reason==='stale-lease'?'<div style="padding:8px 12px 0"><button class="btn" style="height:28px;font-size:12px">修复作品锁</button></div>':''}</div>`
+ const s=sidebar(0,{})
+ const faulted=WORKS.filter(w=>!w.ok)
+ return s.replace(/<div class="tree">[\s\S]*<\/div><\/div>$/,`<div class="tree"><div style="padding:8px">${faulted.slice(0,2).map(card).join('')}<button class="btn" style="height:28px;font-size:12px;display:flex;align-items:center;gap:6px">${svg('refresh','',14)}重新加载作品</button></div>${WORKS.filter(w=>w.ok).map(w=>workRows({...w,open:false})).join('')}</div></div>`)
+}
+function render(){
+ document.documentElement.className=state.theme
+ const sc=state.scene,win=document.getElementById('win')
+ const opts={}
+ if(sc==='more'||sc==='hover'||sc==='context-lease'||sc==='context-ok')opts.focus={more:'w2',hover:'w2','context-lease':'w3','context-ok':'w6'}[sc]
+ if(sc==='more')opts.moreOpen='w2'
+ const view=sc==='settings-view'?1:0
+ win.innerHTML=(sc==='before'?beforeSidebar():sidebar(view,opts))+`<div class="workspace">${sc==='before'?'当前实现：异常作品为卡片 + 全局按钮，与作品节点样式不一致':'工作区（与本设计无关）'}</div>`
+ const W=win.getBoundingClientRect(),pos=id=>{const r=win.querySelector(`.row[data-id="${id}"]`)?.getBoundingClientRect();return r&&{left:r.left-W.left,top:r.top-W.top,right:r.right-W.left,bottom:r.bottom-W.top}}
+ let extra=''
+ if(sc==='more'){const p=pos('w2');extra=menuFor(byId('w2'),{x:p.right-30,y:p.bottom+2,focus:0})}
+ if(sc==='context-lease'){const p=pos('w3');extra=menuFor(byId('w3'),{x:118,y:p.top+16,focus:0})+cursor(114,p.top+12)}
+ if(sc==='context-ok'){const p=pos('w6');extra=menuFor(byId('w6'),{x:100,y:p.top+16,focus:-1})+cursor(96,p.top+12)}
+ if(sc==='repairing'){const p=pos('w3');extra=menuFor(byId('w3'),{x:p.right-30,y:p.bottom+2,focus:-1,busy:true})}
+ if(sc==='hover'){const p=pos('w2');extra=hoverCard(byId('w2'),{x:p.right+8,y:p.top})}
+ if(sc==='delete')extra=deleteDialog(byId('w2'))
+ if(sc==='delete-lease')extra=deleteDialog(byId('w3'))
+ if(sc==='delete-busy')extra=deleteDialog(byId('w2'),'busy')
+ if(sc==='delete-error')extra=deleteDialog(byId('w2'),'error')
+ win.insertAdjacentHTML('beforeend',extra)
+ // Same collision rule as the product popup: flip above the anchor when clipped.
+ for(const el of win.querySelectorAll('.menu,.card')){const r=el.getBoundingClientRect();if(r.bottom>W.bottom-8)el.style.top=Math.max(8,parseFloat(el.style.top)-r.height-(el.classList.contains('card')?-28:34))+'px'}
+ renderControls();renderSpec();renderNotes()
+}
+const cursor=(x,y)=>`<svg class="cursor" style="left:${x}px;top:${y}px" viewBox="0 0 14 20"><path d="M1 1v16l4.2-4 2.8 6 2.4-1.1-2.8-5.9H13Z" fill="#fff" stroke="#000" stroke-width="1"/></svg>`
+function seg(id,list,key){
+ document.getElementById(id).innerHTML=list.map(([v,l])=>`<button aria-pressed="${state[key]===v}" data-v="${v}">${l}</button>`).join('')
+ document.getElementById(id).onclick=e=>{const v=e.target.dataset.v;if(v){state[key]=v;render()}}
+}
+function renderControls(){
+ seg('theme',[['ink','玄墨'],['paper','宣纸']],'theme')
+ seg('scheme',[['split','A：错误红 / 锁类琥珀'],['red','B：全部红色']],'scheme')
+ seg('scene',SCENES,'scene')
+}
+function renderSpec(){
+ const big=s=>[faultIcon('var(--destructive)',s),faultIcon('var(--warning)',s)].join('')
+ document.getElementById('spec').innerHTML=`
+ <figure><div class="sizes">${svg('folder','ico',14)}${faultIcon(color('missing'),14)}${faultIcon(color('stale-lease'),14)}</div>实际尺寸 14px：正常 / 错误 / 锁类</figure>
+ <figure><div class="sizes">${svg('folder','ico',48)}${faultIcon(color('missing'),48)}${faultIcon(color('stale-lease'),48)}</div>放大 48px</figure>
+ <figure><div class="sizes">${faultIcon(color('missing'),48,true)}</div>其他视图展开态</figure>
+ <figure style="align-items:flex-start;max-width:300px;line-height:1.6">标题文字：错误 玄墨 <code>#e08a80</code> / 宣纸 <code>#a3463c</code>，警告 玄墨 <code>#d9b45f</code> / 宣纸 <code>#7e621c</code>；对侧栏底色对比度均 ≥ 4.5。<br>构成：lucide FolderClosed（作品色 <code>--icon-work</code>）右下角挖空 r=7.2，叠加 r=5.6 实心圆徽标 + 反色感叹号。徽标在 14px 下约 7px，与文件夹轮廓间留 1.6px 缝隙。</figure>`
+}
+const NOTES={
+ overview:'作品视图。异常作品与正常作品使用同一行组件（高度 28px、缩进、字号相同），只是图标换成合成图标、标题文字改用柔和的红色（错误）或黄色（警告）、没有展开箭头（无可显示子树）。原来的卡片和全局“重新加载作品”按钮移除。',
+ more:'悬停或聚焦时出现 <code>…</code>。异常作品单击整行也打开此菜单（没有作品 tab 可打开）。菜单顶部灰色标签显示异常类别，删除始终在分隔线后。',
+ 'context-lease':'右键与 <code>…</code> 是同一份菜单。作品锁类排在首位的是“修复作品锁”，它会打开现有原生流程的确认框并重启应用。',
+ 'context-ok':'正常作品的菜单内容与现在完全相同（重命名、删除，顺序和样式不变）。本场景只展示一个待确认的新入口：在正常作品节点上右键也能打开这份菜单。',
+ hover:'悬停卡片替代原卡片里的说明文字：异常类别、原因、建议。不显示路径或原始错误。',
+ delete:'删除 = 从作品列表移除并删除关联对话；不读写、不删除目录内任何文件。任何异常类型都可以删除，服务端不再以“作品可打开”为由拒绝。',
+ 'delete-lease':'作品锁类额外提示：删除后修复入口消失，重新打开该目录会被锁拒绝，因此建议先修复。',
+ 'delete-busy':'删除进行中：两个按钮禁用，对话框不可关闭；该作品的菜单项全部禁用。',
+ 'delete-error':'失败时对话框保持打开，在对话框内显示安全文案，可再次确认。成功后关闭对话框、关闭该作品的 tab、刷新作品与对话列表，并提示“作品已从列表中删除”。',
+ repairing:'修复作品锁进行中：菜单内所有项禁用（含删除），首项显示进度文案。修复期间不允许删除，删除期间也不允许修复和重新加载。',
+ 'settings-view':'设定、角色、正文、对话视图：分组标题使用同一合成图标（展开态），标题右侧有同一份 <code>…</code> 菜单并支持右键，组内一行说明代替原卡片。',
+ before:'当前实现（对照）：卡片 + 全局“重新加载作品”按钮，没有删除入口，与作品节点样式不一致。',
+}
+function renderNotes(){
+ document.getElementById('notes').innerHTML=`<h3>本场景</h3><p>${NOTES[state.scene]}</p>
+ <h3>异常分类与菜单</h3><ul>
+ <li><b>目录缺失</b>（错误）：重新加载作品 · 删除</li>
+ <li><b>目录已变化</b>（错误）：重新加载作品 · 删除</li>
+ <li><b>数据无法读取</b>（错误）：重新加载作品 · 删除</li>
+ <li><b>作品锁未释放</b>（锁类）：修复作品锁 · 重新加载作品 · 删除</li>
+ <li><b>正在别处使用</b>（锁类）：重新加载作品 · 删除</li>
+ <li>其他未识别原因按“作品不可用”（错误）处理</li></ul>
+ <h3>需要你决定</h3><ul>
+ <li>图标配色：方案 A（锁类琥珀）或方案 B（全部红色）</li>
+ <li>正常作品节点是否也可右键打开菜单（菜单内容保持不变，本稿默认加）</li>
+ <li>异常作品单击整行打开菜单（本稿默认如此）</li></ul>
+ <h3>不在本次范围</h3><ul><li>重新关联目录、在访达中显示：需要新的授权流程或对缺失目录无意义</li></ul>`
+}
+render()
+</script>
+</body>
+</html>

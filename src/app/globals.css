@@ -188,6 +188,14 @@
   --staged-tint: rgba(47, 111, 216, 0.1);
   --staged-tint-border: rgba(47, 111, 216, 0.34);
   --staged-count: #1f9d4d;
+  /* 世界线事件类型色（docs/580 §7.1 S11；亮色版按 WCAG 对比度 ≥ 4.5:1 调深，WU-69） */
+  --event-conflict: #bf4633;
+  --event-scheme: #8f6721;
+  --event-reveal: #29788e;
+  --event-relation: #a2538d;
+  --event-growth: #3f7b3d;
+  --event-change: #6f5bd0;
+  --event-other: #776d66;
   color-scheme: light;
 }
 
@@ -260,6 +268,14 @@
   --staged-tint: rgba(94, 157, 255, 0.15);
   --staged-tint-border: rgba(94, 157, 255, 0.38);
   --staged-count: #4ade80;
+  /* 世界线事件类型色（docs/580 §7.1 S11） */
+  --event-conflict: #e8735f;
+  --event-scheme: #d9ab5b;
+  --event-reveal: #67b6cc;
+  --event-relation: #cf8bbd;
+  --event-growth: #8cc48a;
+  --event-change: #a08cf0;
+  --event-other: #8d837c;
   /* 墨石云斑纹理（界面铬件用，正文编辑区不用） */
   --stone-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23s)' opacity='0.5'/%3E%3C/svg%3E");
   color-scheme: dark;

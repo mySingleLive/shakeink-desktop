@@ -1,0 +1,52 @@
+{
+  "run": "R47",
+  "normalFreshFullBook": true,
+  "chapters": 1402,
+  "workingUnits": 5589,
+  "consentedAt": "2026-11-01T04:31:47.113Z",
+  "failedAt": "2026-11-01T04:32:36.837Z",
+  "closedAt": "2026-11-01T04:32:39.333Z",
+  "appExit": 0,
+  "driverExit": 2,
+  "rpc": {
+    "requested": 25,
+    "fulfilled": 19,
+    "rejected": 6,
+    "pending": 0,
+    "observationFailures": 0,
+    "writeFailures": 0,
+    "restored": true
+  },
+  "textObserver": {
+    "requested": 25,
+    "transfers": 59,
+    "captured": 59,
+    "pending": 0,
+    "unmatched": 0,
+    "ambiguous": 0,
+    "observationFailures": 0,
+    "limitFailures": 0,
+    "retainedBytes": 0,
+    "writeFailures": 0,
+    "restored": true
+  },
+  "captureCount": 59,
+  "allCapturesComplete": true,
+  "deltaEqualCompleted": 59,
+  "succeededUnits": 791,
+  "members": 426,
+  "records": 315,
+  "identities": 309,
+  "relations": 31,
+  "offlineReplay": {
+    "providerCalls": 0,
+    "attempted": 25,
+    "accepted": 19,
+    "rejected": 6,
+    "allInputHashesEqual": true
+  },
+  "fullSceneImportVerified": false,
+  "fullReviewVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false
+}

@@ -1,0 +1,157 @@
+✖ NI-U01: source inclusion, real file icons, order, complete paged text and manual range/encoding/chapter controls (43.8595ms)
+✖ NI-U02: v4 ordinary source checkboxes, always expanded inference cards, independent selection and no-body eligibility (0.986084ms)
+✖ NI-U03: classification consent precedes pending recognition, background result does not reopen, no-model local path (0.082541ms)
+✖ NI-U04: title, isolated target and pinned model/range consent gate the real start action (0.030209ms)
+✖ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (0.033875ms)
+✖ NI-U06: conflict has no default; source explanation, setting confirmation, patch preview and selected second approval (0.026208ms)
+✖ NI-U07: result opens original work tabs, original outline record pages and modal keyboard remain usable (0.028833ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 0
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 449.966375
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:2670
+✖ NI-U01: source inclusion, real file icons, order, complete paged text and manual range/encoding/chapter controls (43.8595ms)
+  Error: Build failed with 3 errors:
+  tests/helpers/novel-import-ui-fixture.tsx:5:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportDialog"
+  tests/helpers/novel-import-ui-fixture.tsx:6:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportRecord"
+  tests/helpers/novel-import-ui-fixture.tsx:7:56: ERROR: Could not resolve "../../src/lib/desktop/novel-import"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportRecord"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import.test.ts:2:4444
+✖ NI-U02: v4 ordinary source checkboxes, always expanded inference cards, independent selection and no-body eligibility (0.986084ms)
+  Error: Build failed with 3 errors:
+  tests/helpers/novel-import-ui-fixture.tsx:5:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportDialog"
+  tests/helpers/novel-import-ui-fixture.tsx:6:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportRecord"
+  tests/helpers/novel-import-ui-fixture.tsx:7:56: ERROR: Could not resolve "../../src/lib/desktop/novel-import"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportRecord"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import.test.ts:2:5757
+✖ NI-U03: classification consent precedes pending recognition, background result does not reopen, no-model local path (0.082541ms)
+  Error: Build failed with 3 errors:
+  tests/helpers/novel-import-ui-fixture.tsx:5:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportDialog"
+  tests/helpers/novel-import-ui-fixture.tsx:6:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportRecord"
+  tests/helpers/novel-import-ui-fixture.tsx:7:56: ERROR: Could not resolve "../../src/lib/desktop/novel-import"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportRecord"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import.test.ts:2:6798
+✖ NI-U04: title, isolated target and pinned model/range consent gate the real start action (0.030209ms)
+  Error: Build failed with 3 errors:
+  tests/helpers/novel-import-ui-fixture.tsx:5:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportDialog"
+  tests/helpers/novel-import-ui-fixture.tsx:6:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportRecord"
+  tests/helpers/novel-import-ui-fixture.tsx:7:56: ERROR: Could not resolve "../../src/lib/desktop/novel-import"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportRecord"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import.test.ts:2:7824
+✖ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (0.033875ms)
+  Error: Build failed with 3 errors:
+  tests/helpers/novel-import-ui-fixture.tsx:5:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportDialog"
+  tests/helpers/novel-import-ui-fixture.tsx:6:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportRecord"
+  tests/helpers/novel-import-ui-fixture.tsx:7:56: ERROR: Could not resolve "../../src/lib/desktop/novel-import"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportRecord"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import.test.ts:2:8901
+✖ NI-U06: conflict has no default; source explanation, setting confirmation, patch preview and selected second approval (0.026208ms)
+  Error: Build failed with 3 errors:
+  tests/helpers/novel-import-ui-fixture.tsx:5:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportDialog"
+  tests/helpers/novel-import-ui-fixture.tsx:6:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportRecord"
+  tests/helpers/novel-import-ui-fixture.tsx:7:56: ERROR: Could not resolve "../../src/lib/desktop/novel-import"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportRecord"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import"' } ],
+    warnings: []
+  }
+
+test at tests/browser/novel-import.test.ts:2:10754
+✖ NI-U07: result opens original work tabs, original outline record pages and modal keyboard remain usable (0.028833ms)
+  Error: Build failed with 3 errors:
+  tests/helpers/novel-import-ui-fixture.tsx:5:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportDialog"
+  tests/helpers/novel-import-ui-fixture.tsx:6:34: ERROR: Could not resolve "../../src/components/desktop/NovelImportRecord"
+  tests/helpers/novel-import-ui-fixture.tsx:7:56: ERROR: Could not resolve "../../src/lib/desktop/novel-import"
+      at failureErrorWithLog (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1748:15)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1207:25
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1159:52
+      at buildResponseToResult (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1205:7)
+      at /Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:1232:16
+      at responseCallbacks.<computed> (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:884:9)
+      at handleIncomingPacket (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:939:12)
+      at Socket.readFromStdout (/Users/dt_flys/Projects/shakeink-desktop/node_modules/esbuild/lib/main.js:862:7)
+      at Socket.emit (node:events:509:28)
+      at addChunk (node:internal/streams/readable:563:12) {
+    errors: [ { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportDialog"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/components/desktop/NovelImportRecord"' }, { detail: undefined, id: '', location: [Object], notes: [], pluginName: '', text: 'Could not resolve "../../src/lib/desktop/novel-import"' } ],
+    warnings: []
+  }

@@ -1,0 +1,74 @@
+{
+  "scope": "First frozen 59 review, before post-rename P1 repair; no production or test source changes",
+  "status": "NOT_PASS",
+  "finding": "RS-CR01: successful rename followed by owner failure can leave disk candidate and live old state split",
+  "baselineSha256": {
+    "desktop/core/novel-import-ai-payload.ts": "4bc384917f7a723375090cec38be180e561bfe7b2b5b3fba8317167a4a2098e6",
+    "desktop/core/novel-import-review-tasks.ts": "2dfea1742a67f70b78b8d33353144dadfb30d13704e4a4ad1f0bbf99848a540f",
+    "desktop/core/novel-import-semantics.ts": "30ea421c4c70008ca1b975a16bfc9a83b70ed7dfbab1c9bfc7bac1312ef704ab",
+    "desktop/core/novel-import-semantic-state.ts": "57bc498f75b800fc602666f984594bb7ec10e59207d5ee709f8dacda7272f60c",
+    "desktop/main/novel-import.ts": "05a4d5d59484a4b46e09b3a66317ea1e1c623080673b2a161e8d471272b453a0",
+    "desktop/service/novel-import-ai.ts": "816982eca792a4e3a6c2de0e87e1c646ef2442056456cda68285cd04b79de446",
+    "tests/unit/novel-import-semantic-session.test.ts": "730343f42e7ddfca71fd1c9912d40966cb49c5ba22c2bbd5084101512b1aa8dc"
+  },
+  "frozenSha256": {
+    "desktop/core/novel-import-ai-payload.ts": "8edd5629d1f5153d00a5b4c0bfd90dd0bddcad29b7409f5b9546869ed6cb2d98",
+    "desktop/core/novel-import-review-tasks.ts": "89e9c39e8a0c362d34baa5b393f44ca3dbfda1a52022ebc4ce66c9e6da566a82",
+    "desktop/core/novel-import-semantics.ts": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874",
+    "desktop/core/novel-import-semantic-state.ts": "592563c09ea0a12fed399a2f8eeef8016c5e9c099d46de9ab6f66e99a99f05d5",
+    "desktop/main/novel-import.ts": "727cddac9037120c8162667c8ef213ad799da8ef43c82024ff7837910015e546",
+    "desktop/service/novel-import-ai.ts": "312fe64bf374168f6ec33267006a5c64d7e8b934093a33f4ef57398cf9271cd6",
+    "tests/unit/novel-import-semantic-session.test.ts": "e6809422606534cbd96ae207e40de9b20c984650a8d94079f6c2fc3165c89f85"
+  },
+  "independentRegeneratedFullDiffMatchesAuthorBytes": true,
+  "fullDiffSha256": "f8199fe22aa6a35adc03042cafc7128fbe6e4f8154e8cfeac09a331a5f3b061b",
+  "hunkCounts": {
+    "desktop/core/novel-import-ai-payload.ts": 2,
+    "desktop/core/novel-import-review-tasks.ts": 2,
+    "desktop/core/novel-import-semantics.ts": 2,
+    "desktop/core/novel-import-semantic-state.ts": 2,
+    "desktop/main/novel-import.ts": 11,
+    "desktop/service/novel-import-ai.ts": 4,
+    "tests/unit/novel-import-semantic-session.test.ts": 2
+  },
+  "allOriginalSEM06ThroughEndTestBytesUnchanged": true,
+  "logsSha256": {
+    "review-scope-independent-r01-r02.txt": "080dec184bc1fdf248df63f4893af7adaf7545fb7bd839e5383f6bdb820b587c",
+    "review-scope-independent-sem08-sem10.txt": "341781da45332ab73829cf3732178e0136efef4a8d73ca4ad291770ae0358546",
+    "review-scope-independent-sem04.txt": "940bf588acebc843c3274ce5d00a378bc5874417d1ed8a97b3803d35727e63b9",
+    "review-scope-r01-r02-baseline-red.txt": "fb22d2b31d0fb0dda030aba9a43f200c8c3cd90916534945c671ec69ee23373d"
+  },
+  "results": [
+    {
+      "scope": "NI-R01/02",
+      "exitCode": 0,
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 3846.639916
+    },
+    {
+      "scope": "NI-SEM08/09/10",
+      "exitCode": 0,
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 3209.005375
+    },
+    {
+      "scope": "NI-SEM04",
+      "exitCode": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 164.503667
+    }
+  ],
+  "executionBoundary": "Only three approved commands; no app, model, user journal/database, whole suite or independent typecheck"
+}

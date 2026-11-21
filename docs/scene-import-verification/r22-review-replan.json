@@ -1,0 +1,43 @@
+{
+  "ok": 1,
+  "offline": 1,
+  "sourceUnchanged": 1,
+  "privateStateUnchanged": 1,
+  "semanticStateUnchanged": 1,
+  "historicalRequestUnchanged": 1,
+  "networkCalls": 0,
+  "aiCalls": 0,
+  "waveIntercepts": 1,
+  "progressWritesSuppressed": 1,
+  "totalBodyUnits": 5589,
+  "alreadyCovered": 184,
+  "pendingBodyUnits": 5405,
+  "enumeratedPendingUnits": 5405,
+  "uniquePendingUnits": 5405,
+  "exactPendingOrderAndFullUnitData": 1,
+  "bodyPackets": 60,
+  "factsPacketsEnumerated": 0,
+  "pendingConflicts": 9,
+  "publication": 0,
+  "historicalByteEqualityClaim": 0,
+  "firstRequest": {
+    "units": 90,
+    "artifacts": 137,
+    "projections": 137,
+    "catalog": 935,
+    "payloadCharacters": 245700,
+    "payloadBytes": 447272,
+    "originalBudgetCharacters": 81920,
+    "maximumPayloadCharacters": 245760
+  },
+  "originalRequest": {
+    "units": 91,
+    "generated": 0,
+    "budgetRejected": true
+  },
+  "replannedFirstRequest": {
+    "generatedSentinel": 1,
+    "networkCalls": 0
+  },
+  "fullBookAcceptance": false
+}

@@ -1,18 +1,18 @@
 "use client";
 import {
   characterStatesAt,
-  constrainWindow,
   formatTime,
   timeUnit,
   timeBaseValue,
   zoomAt,
-  layoutTimelineCards,
-  timelineTicks,
   fitTimelineWindow,
+  fitDenseTimelineWindow,
   snapTimelineDelta,
 } from "@/lib/planning/timeline";
 import {
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -28,6 +28,7 @@ import {
 import { Slider } from "@base-ui/react/slider";
 import { BookOpen, ChevronRight, MoreHorizontal } from "lucide-react";
 import { MarkdownEditor } from "@/components/editor/MarkdownEditor";
+import {NovelImportRecord} from '@/components/desktop/NovelImportRecord';
 import { ReviewHistory } from "../ReviewHistory";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { ScoreIndicator } from "@/components/score/ScoreIndicator";
@@ -39,6 +40,8 @@ import {
   children,
   eventSchema,
   findEvent,
+  forkChangedCount,
+  EVENT_CATEGORIES,
   planningSchema,
   planningUndoTarget,
   readingCards,
@@ -54,41 +57,21 @@ import {
 } from "@/lib/planning/domain";
 import type { ContentPanelProps } from "../registry";
 import s from "./planning.module.css";
+import { Button } from "@/components/ui/button";
+import { WorldlineHeader, type WorldlineSaveState } from "./worldline/WorldlineHeader";
+import { EventCard, EventEditorContext, WorldlineCardContext, type WorldlineCardContextValue } from "./worldline/EventCard";
+import { EventTable, type RailMode } from "./worldline/EventTable";
+import { EventTimeline, TimelineTreeNav, TimelineZoomNoteContext, ViewportRange, ViewportValue, ZoomNoteLine } from "./worldline/EventTimeline";
+import { createViewportStore, createZoomNoteStore, type ViewportStore, type ZoomNoteStore } from "@/lib/planning/worldline-viewport";
+import { renderProbe } from "@/lib/planning/render-probe";
+import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
+import { EventTreeNav, TreeResizer } from "./worldline/EventTree";
+import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
+import wl from "./worldline/worldline.module.css";
+import { adapterFor, descendants, eventTree, filterEvents, matchEvent, searchTerms as toSearchTerms, railLevel, shiftSelection, tableZoomBounds, type RailLevel } from "@/lib/planning/worldline-layout";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS, type MaterialRef } from "@/lib/material-reference";
+import { useDesktopStore } from "@/stores/desktop";
 
-function MeasuredEvent({
-  id,
-  className,
-  style,
-  children,
-  onHeight,
-}: {
-  id: string;
-  className: string;
-  style: CSSProperties;
-  children: ReactNode;
-  onHeight: (id: string, height: number) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const callback = useRef(onHeight);
-  useEffect(() => {
-    callback.current = onHeight;
-  }, [onHeight]);
-  useEffect(() => {
-    if (!ref.current) return;
-    const el = ref.current;
-    const observer = new ResizeObserver(() =>
-      callback.current(id, Math.ceil(el.getBoundingClientRect().height)),
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [id]);
-  return (
-    <div ref={ref} data-event={id} className={className} style={style}>
-      {children}
-    </div>
-  );
-}
 
 type View = {
   version: number;
@@ -106,6 +89,11 @@ async function read(novelId: string): Promise<View> {
   return { ...body, data: planningSchema.parse(body.data) };
 }
 const uid = () => crypto.randomUUID();
+const EMPTY_CHARACTERS: { id: string; name: string; avatarUrl: string | null }[] = [];
+/** docs/586 §4: the event-table zoom value shows the rail level. */
+const RAIL_LEVEL_NAME: Readonly<Record<RailLevel, string>> = { year: "年", month: "月", day: "日", half: "上下午", minute: "时分" };
+/** docs/577 §9: importance 1–3 as shown to the author. */
+const IMPORTANCE_LABELS = ["一般", "重要", "关键"] as const;
 const buttonTarget = (target: EventTarget | null) =>
   target instanceof Element &&
   !!target.closest(
@@ -120,6 +108,9 @@ export function NarrativePanel(props: ContentPanelProps) {
 export function OutlineProjectionPanel(props: ContentPanelProps) {
   return <PlanningWorkspace {...props} mode="projection" />;
 }
+/** docs/583: an open card collapses after the double-click interval so the second click still finds it. */
+const COLLAPSE_DELAY_MS = 260;
+
 function PlanningWorkspace({
   novelId,
   refId,
@@ -129,6 +120,7 @@ function PlanningWorkspace({
   refId?: string;
   mode: "world" | "narrative" | "projection";
 }) {
+  const desktopPlatform = useDesktopStore((state) => state.bootstrap?.platform);
   const focusRequest = useTabsStore((v) => v.panelFocus),
     consumeFocus = useTabsStore((v) => v.consumePanelFocus);
   const qc = useQueryClient(),
@@ -151,18 +143,21 @@ function PlanningWorkspace({
     [dialog, setDialog] = useState<{
       kind: string;
       id?: string;
+      /** docs/584: several events for a batch delete. */
+      ids?: string[];
       before?: string | null;
       volume?: string;
       rangeDraft?: { start: number; end: number | null };
     } | null>(null),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
+    // docs/580 §7.1 (S9): save state kept apart from `message`, which also carries other notices.
+    [saveState, setSaveState] = useState<WorldlineSaveState>("idle"),
     [endTimeMode, setEndTimeMode] = useState(false),
     [startUnit, setStartUnit] = useState(1),
     [durationUnit, setDurationUnit] = useState(1),
     [eventSelection, setEventSelection] = useState<string | null>(null),
     [timelineWidth, setTimelineWidth] = useState(800),
-    [eventHeights, setEventHeights] = useState<Record<string, number>>({}),
     [worldPopover, setWorldPopover] = useState<
       "periods" | "pending" | "continuing" | null
     >(null),
@@ -171,8 +166,69 @@ function PlanningWorkspace({
     [timeBase, setTimeBase] = useState(""),
     [mappingEdit, setMappingEdit] = useState(""),
     [changes, setChanges] = useState(true),
-    [windowRange, setWindowRange] = useState({ start: 0, span: 240, y: 0 }),
-    [dragId, setDragId] = useState<string | null>(null);
+    [dragId, setDragId] = useState<string | null>(null),
+    // docs/580 §1 interface state of the worldline redesign; never written to the work (WU-09e).
+    [openCards, setOpenCards] = useState<ReadonlySet<string>>(new Set()),
+    // docs/584 R2: timeline multi-selection; eventSelection stays the primary (detail button, tree highlight).
+    [selectionRaw, setSelection] = useState<ReadonlySet<string>>(new Set()),
+    [pinnedCard, setPinnedCard] = useState<string | null>(null),
+    [foldedEvents, setFoldedEvents] = useState<ReadonlySet<string>>(new Set()),
+    [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<PlanningEvent["category"]>>(new Set()),
+    // docs/591: importance levels switched off in the legend (interface state, never written to the work).
+    [hiddenImportance, setHiddenImportance] = useState<ReadonlySet<number>>(new Set()),
+    [searchQuery, setSearchQuery] = useState(""),
+    // docs/577 §12: hits follow the box 120ms after typing stops; clearing is immediate.
+    [searchApplied, setSearchApplied] = useState(""),
+    [hitIndex, setHitIndex] = useState(0),
+    // docs/586 §1: event-table zoom in log scale around the reset scale (0 = reset); never rounded.
+    [tableZoom, setTableZoom] = useState(0),
+    // docs/588 §2: event-table rail mode; aligned by default, interface state only.
+    [tableRail, setTableRail] = useState<RailMode>("aligned"),
+    [treeOn, setTreeOn] = useState(true),
+    // Dragged event-directory width, shared by both views; null keeps the CSS default (260px, 200px when narrow).
+    [treeWidth, setTreeWidth] = useState<number | null>(null),
+    [currentRow, setCurrentRow] = useState<string | null>(null);
+  // docs/580 §7.2 / 581 WU-56c: one viewport store per panel is the only window state. PlanningWorkspace does not
+  // subscribe to it (a pan never re-renders the workspace); the views, ruler, tree, status line and window-dependent
+  // values subscribe themselves. setWindowRange keeps the old call shape and applies functional updates to the
+  // store's current value, so no pending pan is ever overwritten.
+  renderProbe("PlanningWorkspace");
+  const viewport = useRef<ViewportStore>(null!);
+  viewport.current ??= createViewportStore({ start: 0, span: 240 });
+  // docs/592 §2.4: one zoom-note store per panel, like the viewport store.
+  const zoomNote = useRef<ZoomNoteStore>(null!);
+  zoomNote.current ??= createZoomNoteStore();
+  type WindowValue = { start: number; span: number; y: number };
+  // docs/584 R1: y (the plane's vertical offset) lives in the store with start and span.
+  const setWindowRange = useCallback((next: WindowValue | ((v: WindowValue) => WindowValue)) => {
+    const w = viewport.current.getSnapshot();
+    const v = typeof next === "function" ? next({ start: w.start, span: w.span, y: w.y }) : next;
+    viewport.current.setWindow({ start: v.start, span: v.span, y: v.y });
+  }, []);
+  const selectionRef = useRef<ReadonlySet<string>>(new Set());
+  const openCardsRef = useRef(openCards);
+  openCardsRef.current = openCards;
+  const pendingCollapse = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const takePendingCollapse = () => {
+    const p = pendingCollapse.current;
+    if (p) clearTimeout(p.timer);
+    pendingCollapse.current = null;
+    return p;
+  };
+  useEffect(() => () => { if (pendingCollapse.current) clearTimeout(pendingCollapse.current.timer); }, []);
+  const tableScroller = useRef<HTMLDivElement>(null),
+    worldSearch = useRef<HTMLInputElement>(null),
+    actions = useRef<{
+      toggle(id: string, detail: number): void;
+      select: WorldlineCardContextValue["onSelect"];
+      expand(id: string): void;
+      boxSelect(ids: string[], additive: boolean): void;
+      clearSelection(): void;
+      deleteSelection(): void;
+      menu: WorldlineCardContextValue["onMenu"];
+      drag(ev: React.PointerEvent, id: string): void;
+      refs(e: PlanningEvent): ReactNode;
+    }>(null!);
   const editor = useRef<HTMLDivElement>(null),
     timeline = useRef<HTMLDivElement>(null),
     pan = useRef<{ x: number; y: number; start: number; top: number } | null>(
@@ -210,16 +266,64 @@ function PlanningWorkspace({
     const parentId = ancestor.parent;
     ancestor = data.cards.find((c) => c.id === parentId && c.line === lineId);
   }
-  const bounds = refinementRange(data, worldId, eventParent),
-    boundStart = bounds?.start,
-    boundEnd = bounds?.end;
-  useEffect(() => {
-    const bound =
-      boundStart !== undefined && boundEnd !== undefined
-        ? { start: boundStart, end: boundEnd }
-        : null;
-    setWindowRange((v) => constrainWindow(v, bound));
-  }, [boundStart, boundEnd, windowRange.start, windowRange.span]);
+  // docs/580 §5, §7: worldline redesign derived values (one tree for both views).
+  const worldAllEvents = useMemo(() => (mode === "world" ? worldEvents(data, worldId) : []), [mode, data, worldId]),
+    wTree = useMemo(() => eventTree(worldAllEvents, data), [worldAllEvents, data]),
+    // docs/591: the tree the views draw. Hidden types and importance levels (with their whole groups) are left out, so
+    // the table, the timeline and the event tree lay out only what is shown. Times still resolve against all of `data`.
+    wViewEvents = useMemo(() => filterEvents(worldAllEvents, { hiddenTypes, hiddenImportance }), [worldAllEvents, hiddenTypes, hiddenImportance]),
+    wViewTree = useMemo(() => (wViewEvents === worldAllEvents ? wTree : eventTree(wViewEvents, data)), [wViewEvents, worldAllEvents, wTree, data]),
+    wFiltered = wViewEvents !== worldAllEvents,
+    wShownIds = useMemo(() => new Set(wViewEvents.map((e) => e.id)), [wViewEvents]),
+    // docs/584 R2: ids no longer in this world (deleted, other world) drop out of the selection.
+    selection = useMemo<ReadonlySet<string>>(() => {
+      const kept = [...selectionRaw].filter((id) => wTree.byId.has(id));
+      return kept.length === selectionRaw.size ? selectionRaw : new Set(kept);
+    }, [selectionRaw, wTree]),
+    // docs/591 review P0-1: actions on the selection (delete, quote, group drag, count) use only the shown events; the
+    // hidden ones stay selected and come back with the filter.
+    shownSelection = useMemo<ReadonlySet<string>>(() => {
+      if (!wFiltered) return selection;
+      const kept = [...selection].filter((id) => wShownIds.has(id));
+      return kept.length === selection.size ? selection : new Set(kept);
+    }, [selection, wFiltered, wShownIds]),
+    wAdapter = useMemo(() => adapterFor(data, worldId, timeBase || null), [data, worldId, timeBase]),
+    wZoom = useMemo(() => tableZoomBounds(wViewTree, wAdapter), [wViewTree, wAdapter]),
+    wTerms = useMemo(() => toSearchTerms(searchApplied), [searchApplied]),
+    wCharacters = query.data?.characters ?? EMPTY_CHARACTERS,
+    wNames = useMemo(() => new Map(wCharacters.map((c) => [c.id, c.name])), [wCharacters]),
+    wHits = useMemo(() => {
+      if (!wTerms.length) return [] as string[];
+      const ctx = { adapter: wAdapter, names: wNames, data };
+      // docs/591: only shown events are hits, so the search never jumps to a hidden card.
+      return [...wViewTree.byId.values(), ...wViewTree.pending].filter((n) => matchEvent(n.event, wTerms, ctx)).sort((x, y) => (x.start ?? Infinity) - (y.start ?? Infinity)).map((n) => n.id);
+    }, [wTerms, wViewTree, wNames, wAdapter, data]),
+    wHitSet = useMemo(() => new Set(wHits), [wHits]),
+    // A search miss is the complement of the hit set, so the match runs once per query, not once per card. Legend
+    // filters remove events from wViewTree instead of fading them (docs/591).
+    wDimmed = useCallback((id: string) => wTerms.length > 0 && !wHitSet.has(id), [wTerms, wHitSet]),
+    wFrozen = useMemo(() => new Set(activeWorld?.fork?.events.map((e) => e.id) ?? []), [activeWorld]),
+    wCardContext = useMemo<WorldlineCardContextValue>(() => ({
+      data, adapter: wAdapter, readonly, hasDraft: !!eventDraft, characters: wCharacters, searchTerms: wTerms, frozen: wFrozen,
+      onToggle: (id, detail) => actions.current.toggle(id, detail),
+      onSelect: (id, detail, mods) => actions.current.select(id, detail, mods),
+      onExpand: (id) => actions.current.expand(id),
+      onMenu: (action, id) => actions.current.menu(action, id),
+      onStartTimeDrag: (ev, id) => actions.current.drag(ev, id),
+      renderRefs: (e) => actions.current.refs(e),
+    }), [data, wAdapter, readonly, eventDraft, wCharacters, wTerms, wFrozen]);
+  // docs/586 §1: event-table scale k = fit × exp(e), e clamped to the bounds of the current tree and calendar.
+  const tableView = useMemo(() => {
+    const { fit, min, max } = wZoom;
+    const lo = fit > 0 ? Math.log(min / fit) : 0,
+      hi = fit > 0 ? Math.log(max / fit) : 0;
+    const clamp = (e: number) => Math.min(hi, Math.max(lo, Number.isFinite(e) ? e : 0));
+    const e = clamp(tableZoom),
+      k = fit * Math.exp(e);
+    return { clamp, e, k, level: railLevel(k, wAdapter), canIn: e < hi - 1e-9, canOut: e > lo + 1e-9 };
+  }, [wZoom, wAdapter, tableZoom]);
+  // Card callbacks are stable (actions ref), so they read the latest selection here.
+  selectionRef.current = selection;
   useEffect(() => {
     const down = (e: PointerEvent) => {
       pointerInside.current = !!editor.current?.contains(e.target as Node);
@@ -298,11 +402,12 @@ function PlanningWorkspace({
           (e) => e.id === target || `${w.id}/${e.id}` === target,
         );
         if (e) {
-          setEventParent(e.parent);
-          const time = resolveTime(d, e);
-          if (time.start !== null)
-            setWindowRange((v) => ({ ...v, start: time.start! - 12, y: 0 }));
-          setTable(true);
+          // docs/577 §6 / 580 §7.5: the whole tree is shown, so a deep link opens the ancestors and locates the
+          // event in the current view. Marking the view as fitted keeps the first fit from overriding it.
+          fittedViews.current.add(`${w.id}/root`);
+          setEventParent(null);
+          pendingLocate.current = e.id;
+          setDeepLinkTick((n) => n + 1);
         }
       }
     } else if (card) {
@@ -325,37 +430,12 @@ function PlanningWorkspace({
   useEffect(() => {
     const el = timeline.current;
     if (!el) return;
+    // docs/580 §7.2: the timeline lane is the measured element; wheel zoom and pan live in EventTimeline (one
+    // handler, through the viewport store).
     const resize = new ResizeObserver(() => setTimelineWidth(el.clientWidth));
     resize.observe(el);
-    const wheel = (e: WheelEvent) => {
-      if ((e.target as Element).closest("input,textarea,.monaco-editor"))
-        return;
-      if (e.ctrlKey) {
-        e.preventDefault();
-        const ratio =
-          (e.clientX - el.getBoundingClientRect().left - 14) /
-          Math.max(1, el.clientWidth - 28);
-        setWindowRange((v) => ({
-          ...v,
-          ...zoomAt(v.start, v.span, e.deltaY > 0 ? 1.2 : 1 / 1.2, ratio),
-        }));
-      } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        e.preventDefault();
-        setWindowRange((v) => ({
-          ...v,
-          start:
-            v.start +
-            ((e.shiftKey ? e.deltaY : e.deltaX) /
-              Math.max(1, el.clientWidth - 28)) *
-              v.span,
-        }));
-      }
-    };
-    el.addEventListener("wheel", wheel, { passive: false });
-    return () => {
-      resize.disconnect();
-      el.removeEventListener("wheel", wheel);
-    };
+    setTimelineWidth(el.clientWidth);
+    return () => resize.disconnect();
   }, [mode, table, worldId, query.isPending]);
   useEffect(() => {
     if (!dialog) return;
@@ -393,7 +473,41 @@ function PlanningWorkspace({
       if (prior?.isConnected) prior.focus();
     };
   }, [dialog]);
+  // docs/580 §7.5 / 581 WU-66i, WU-92: worldline.search belongs to the panel that holds the focus; each mounted panel
+  // registers itself, so ⌘F in panel A only focuses A's search box.
+  const worldPanel = useRef<HTMLDivElement>(null);
+  // Narrow panels (≤ 640px, worldline.module.css) show the tree as an overlay: it starts closed when the panel becomes
+  // narrow and closes after it locates an event, so it never covers the cards or the editor by default.
+  const narrowPanel = useRef(false);
+  useEffect(() => {
+    const el = worldPanel.current;
+    if (!el) return;
+    const check = () => {
+      const narrow = el.clientWidth > 0 && el.clientWidth <= 640;
+      if (narrow && !narrowPanel.current) setTreeOn(false);
+      narrowPanel.current = narrow;
+    };
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    check();
+    return () => ro.disconnect();
+  }, [mode, worldId]);
+  useEffect(() => {
+    if (mode !== "world") return;
+    return registerDesktopCommandTarget({
+      owner: worldPanel,
+      accepts: (target) => !!target && !!worldPanel.current?.contains(target),
+      commands: { "worldline.search": () => { worldSearch.current?.focus(); worldSearch.current?.select(); } },
+    });
+  }, [mode]);
+  useEffect(() => {
+    if (!searchQuery) { setSearchApplied(""); return; }
+    const timer = setTimeout(() => setSearchApplied(searchQuery), 120);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const fittedViews = useRef(new Set<string>());
+  const pendingLocate = useRef<string | null>(null);
+  const [deepLinkTick, setDeepLinkTick] = useState(0);
   useEffect(() => {
     if (mode !== "world" || !query.data || !worldId) return;
     const key = `${worldId}/${eventParent ?? "root"}`;
@@ -404,20 +518,28 @@ function PlanningWorkspace({
       .filter((e) => e.parent === null)
       .map((e) => resolveTime(query.data.data, e))
       .filter((t) => t.start !== null);
+    // docs/572 R14: on a calendar with eras the first view fits the crowded stretch; 全貌 still shows everything.
+    const world = query.data.data.worlds.find((w) => w.id === worldId);
     setWindowRange({
-      ...fitTimelineWindow(
+      ...(world?.calendar.eras.length ? fitDenseTimelineWindow : fitTimelineWindow)(
         times.map((t) => ({ start: t.start!, end: t.end })),
         Math.max(1, (timeline.current?.clientWidth ?? 800) - 28),
       ),
       y: 0,
     });
+    // docs/584 R1: the first open centres the packed cards once the timeline knows their layout.
+    viewport.current.requestCenter();
   }, [mode, worldId, eventParent, query.data]);
   useEffect(() => {
     setEndTimeMode(false);
     setStartUnit(1);
     setDurationUnit(1);
   }, [eventDraft?.id]);
-  function worldTimeLabel(value: number, span = windowRange.span) {
+  function worldTimeLabel(
+    value: number,
+    span = viewport.current.getSnapshot().span,
+    precision?: PlanningEvent["time"]["precision"],
+  ) {
     const base = activeWorld?.timeBases.find((b) => b.id === timeBase);
     if (!activeWorld) return "";
     const converted = base ? timeBaseValue(data, worldId, base, value) : value;
@@ -427,6 +549,7 @@ function PlanningWorkspace({
           converted,
           base?.calendar ?? activeWorld.calendar,
           span * (base?.scale ?? 1),
+          precision,
         );
   }
   function openTab(tab: Parameters<typeof storeOpenTab>[0]) {
@@ -465,6 +588,7 @@ function PlanningWorkspace({
   ) {
     if (busy) return false;
     setBusy(true);
+    setSaveState("saving");
     setMessage("");
     try {
       const r = await fetch(`/api/novels/${novelId}/planning`, {
@@ -491,11 +615,13 @@ function PlanningWorkspace({
         ].map((queryKey) => qc.invalidateQueries({ queryKey })),
       );
       setMessage("已保存");
+      setSaveState("saved");
       return true;
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "保存失败，输入已保留",
       );
+      setSaveState("failed");
       return false;
     } finally {
       setBusy(false);
@@ -623,12 +749,15 @@ function PlanningWorkspace({
     );
   }
   function quotePlanning(
-    title: string,
-    id: string,
-    kind: "世界事件" | "叙事卡片",
+    titleOrItems: string | readonly (readonly [string, string])[],
+    idOrKind: string,
+    kind?: "世界事件" | "叙事卡片",
   ) {
+    // docs/584 A2: several events quote at once, one line each, in the given order.
+    const items = typeof titleOrItems === "string" ? [[titleOrItems, idOrKind] as const] : titleOrItems;
+    const k = (typeof titleOrItems === "string" ? kind : idOrKind) as "世界事件" | "叙事卡片";
     const current = useChatStore.getState().draft;
-    const quote = `【${kind}：${title}；ID=${id}；作品=${novelId}】请通过 getNovelPlanning 读取当前资料。`;
+    const quote = items.map(([title, id]) => `【${k}：${title}；ID=${id}；作品=${novelId}】请通过 getNovelPlanning 读取当前资料。`).join("\n");
     useChatStore.setState({
       draftNovelId: novelId,
       draft: current.trim() ? `${current.trimEnd()}\n${quote}` : quote,
@@ -1250,6 +1379,7 @@ function PlanningWorkspace({
       <>
         <div className={s.toolbar}>
           <strong>{projection ? "大纲 · 只读投影" : "卷章大纲"}</strong>
+          {projection&&<NovelImportRecord novelId={novelId} outlineOnly/>}
           {projection ? (
             <button
               onClick={() =>
@@ -1529,6 +1659,38 @@ function PlanningWorkspace({
           value={d.title}
           onChange={(e) => setEventDraft({ ...d, title: e.target.value })}
         />
+        {/* docs/580 §2 (M6): type and importance; frozen prehistory never reaches this editor (WU-71). */}
+        <div className={s.row}>
+          <label>
+            类型
+            <select
+              aria-label="事件类型"
+              value={d.category}
+              onChange={(e) =>
+                setEventDraft((v) => v && { ...v, category: e.target.value as PlanningEvent["category"] })
+              }
+            >
+              {EVENT_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <fieldset aria-label="重要程度">
+            {IMPORTANCE_LABELS.map((label, i) => (
+              <label key={label}>
+                <input
+                  type="radio"
+                  name={`importance-${d.id}`}
+                  checked={d.importance === i + 1}
+                  onChange={() => setEventDraft((v) => v && { ...v, importance: i + 1 })}
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+        </div>
         <div className={s.row}>
           <select
             aria-label="开始时间类型"
@@ -1890,7 +2052,7 @@ function PlanningWorkspace({
                 setMessage("时间窗口结束不能早于开始。");
                 return;
               }
-              if (await put("events", d)) setEventDraft(null);
+              if (await put("events", d)) { setEventDraft(null); revealEvent(d); }
             }}
           >
             保存事件
@@ -1936,173 +2098,26 @@ function PlanningWorkspace({
       </div>
     );
   }
-  function eventCard(e: PlanningEvent) {
-    if (eventDraft?.id === e.id) return renderEventEditor();
-    const t = resolveTime(data, e),
-      frozen = !!activeWorld?.fork?.events.some((v) => v.id === e.id);
-    return (
-      <article
-        className={`${s.card} ${s.worldEvent} ${eventSelection === e.id ? s.eventSelected : ""}`}
-        aria-label={e.title}
-        onClick={(ev) => {
-          if (!buttonTarget(ev.target)) setEventSelection(e.id);
-        }}
-        onDoubleClick={(ev) => {
-          if (!buttonTarget(ev.target) && !readonly && !frozen) {
-            if (eventDraft) {
-              setMessage("请先保存或取消当前事件编辑，输入已保留。");
-              return;
-            }
-            setMessage("");
-            setEventDraft(structuredClone(e));
-          }
-        }}
-      >
-        <div className={s.cardHead}>
-          <h3
-            title={frozen ? "冻结前史" : "拖动标题移动事件"}
-            onPointerDown={(ev) => startTimeDrag(ev, "events", e.id, "move")}
-          >
-            {e.title}
-          </h3>
-          <details
-            data-card-menu=""
-            onClick={(e) => {
-              if ((e.target as Element).closest("button"))
-                e.currentTarget.open = false;
-            }}
-          >
-            <summary aria-label={`${e.title}更多操作`}>
-              <MoreHorizontal size={18} />
-            </summary>
-            <div className={s.menu}>
-              <button
-                onClick={() =>
-                  quotePlanning(e.title, `${worldId}/${e.id}`, "世界事件")
-                }
-              >
-                引用到对话
-              </button>
-              <button
-                onClick={() => setDialog({ kind: "event-detail", id: e.id })}
-              >
-                详情
-              </button>
-              <button
-                disabled={readonly || frozen || !!eventDraft}
-                onClick={() => setEventDraft(structuredClone(e))}
-              >
-                编辑
-              </button>
-              <button onClick={() => navigateWorldParent(e.id)}>
-                展开子事件
-              </button>
-              <button
-                disabled={readonly || frozen || !!eventDraft}
-                onClick={() =>
-                  void put("events", {
-                    ...e,
-                    id: uid(),
-                    title: `${e.title} · 副本`,
-                  })
-                }
-              >
-                复制
-              </button>
-              <button
-                disabled={readonly || frozen || !!eventDraft}
-                onClick={() => setDialog({ kind: "delete-event", id: e.id })}
-              >
-                删除
-              </button>
-              <button
-                disabled={readonly}
-                onClick={() => setDialog({ kind: "fork", id: e.id })}
-              >
-                从此分叉
-              </button>
-            </div>
-          </details>
-        </div>
-        <small className={s.muted}>
-          {t.start === null
-            ? "待定位"
-            : worldTimeLabel(
-                t.start,
-                activeWorld?.calendar.kind === "gregorian" ||
-                  activeWorld?.timeBases.find((b) => b.id === timeBase)
-                    ?.calendar.kind === "gregorian"
-                  ? 1
-                  : windowRange.span,
-              )}
-          {e.time.kind === "window"
-            ? `～${t.windowEnd} ${timeUnit(activeWorld!.calendar)} · ${e.time.label || "时间窗口"}`
-            : e.duration === 0
-              ? " · 时点"
-              : e.duration === null
-                ? ` · ${e.ongoing ? "持续中" : "结束未定"}`
-                : ` · 持续 ${+e.duration.toFixed(3)} ${timeUnit(activeWorld!.calendar)}`}
-          {e.duration === null ? " · 宽度仅供阅读" : ""}
-          {frozen ? " · 冻结前史" : ""}
-        </small>
-        <div className={s.eventFact}>
-          <MarkdownPreview source={e.fact} />
-        </div>
-        <div className={s.pills}>
-          {e.people.map((id) => (
-            <span className={s.pill} key={id}>
-              {chip(id)}
-            </span>
-          ))}
-        </div>
-        {e.changes.map((c) => (
-          <div className={s.eventChange} key={c.id}>
-            <small className={s.muted}>
-              {query.data?.characters.find((p) => p.id === c.character)?.name} ·{" "}
-              {c.dimension} · {c.at === "start" ? "开始时" : "结束时"}
-            </small>
-            <p>
-              {c.before} → {c.after}
-            </p>
-          </div>
-        ))}
-        {worldEvents(data, worldId).some((child) => child.parent === e.id) && (
-          <button
-            className={s.eventChildren}
-            onClick={() => navigateWorldParent(e.id)}
-          >
-            展开{" "}
-            {
-              worldEvents(data, worldId).filter(
-                (child) => child.parent === e.id,
-              ).length
-            }{" "}
-            件子事件 ›
-          </button>
-        )}
-        {eventReferences(e)}
-      </article>
-    );
-  }
   const temporalDrag = useRef<{
     collection: "events" | "periods";
     id: string;
     x: number;
     edge: "move" | "start" | "end";
     delta: number;
+    /** docs/584 A3: a multi-selection moved together. */
+    group?: string[];
   } | null>(null);
   const [timePreview, setTimePreview] = useState<{
     id: string;
     delta: number;
     edge: "move" | "start" | "end";
+    /** Every event the preview shifts (moved + anchored to them, transitively). */
+    follows?: ReadonlySet<string>;
   } | null>(null);
   useEffect(() => {
     const cancel = () => {
       const origin = pan.current;
-      if (origin) {
-        setWindowRange((v) => ({ ...v, start: origin.start, y: -origin.top }));
-        if (timeline.current) timeline.current.scrollTop = origin.top;
-      }
+      if (origin) setWindowRange((v) => ({ ...v, start: origin.start, y: -origin.top }));
       pan.current = null;
       temporalDrag.current = null;
       setTimePreview(null);
@@ -2122,6 +2137,7 @@ function PlanningWorkspace({
     collection: "events" | "periods",
     id: string,
     edge: "move" | "start" | "end",
+    group?: string[],
   ) {
     if (
       readonly ||
@@ -2129,10 +2145,11 @@ function PlanningWorkspace({
       !data[collection].some((e) => e.id === id && e.line === worldId)
     )
       return;
+    if (group && group.some((g) => wFrozen.has(g))) { setMessage("所选事件中有冻结前史，不能整体调整时间"); return; }
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     suppressPeriodClick.current = false;
-    temporalDrag.current = { collection, id, x: e.clientX, edge, delta: 0 };
+    temporalDrag.current = { collection, id, x: e.clientX, edge, delta: 0, group };
   }
   async function finishTimeDrag() {
     const drag = temporalDrag.current;
@@ -2141,10 +2158,17 @@ function PlanningWorkspace({
     if (
       !drag ||
       Math.abs(drag.delta) <
-        (windowRange.span * 5) / Math.max(1, timelineWidth - 28)
+        (viewport.current.getSnapshot().span * 5) / Math.max(1, timelineWidth - 28)
     )
       return;
     suppressPeriodClick.current = true;
+    if (drag.collection === "events" && drag.group) {
+      // docs/584 A3: one save for the whole selection; anchored events follow their anchors without a put.
+      const { moved } = shiftSelection(data, drag.group, drag.delta);
+      if (moved.length > 200) { setMessage("一次最多调整 200 个事件"); return; }
+      await save(moved.map((value) => ({ kind: "put" as const, collection: "events" as const, value })));
+      return;
+    }
     if (drag.collection === "events") {
       const original = data.events.find(
         (e) => e.id === drag.id && e.line === worldId,
@@ -2202,7 +2226,7 @@ function PlanningWorkspace({
     }
   }
   function navigateWorldParent(next: string | null, nextWorld = worldId) {
-    worldViews.current.set(`${worldId}/${eventParent ?? "root"}`, windowRange);
+    worldViews.current.set(`${worldId}/${eventParent ?? "root"}`, { ...viewport.current.getSnapshot() });
     if (eventDraft) {
       setMessage("请先保存或取消当前事件编辑，输入已保留。");
       return;
@@ -2235,28 +2259,180 @@ function PlanningWorkspace({
         y: 0,
       },
     );
-    requestAnimationFrame(() => {
-      if (timeline.current) timeline.current.scrollTop = -(saved?.y ?? 0);
-    });
+    setSelection(new Set());
   }
+  const findWorldEvent = (id: string) => worldAllEvents.find((e) => e.id === id);
+  actions.current = {
+    // docs/580 §7.3 (S1) / 581 WU-32: detail 1 toggles at once; detail 2 leaves the card open and opens the editor,
+    // so the card is expanded while editing and stays expanded after save or cancel.
+    toggle(id, detail) {
+      setEventSelection(id);
+      setPinnedCard(id);
+      // docs/583 R1: a collapsed card is as wide as its title, so collapsing at once would move the card out from
+      // under the second click of a double click. An open card collapses after the double-click interval instead.
+      // A double click on the same card cancels its pending collapse; any other click carries it out first.
+      const pend = takePendingCollapse();
+      const keep = !!pend && pend.id === id && detail >= 2;
+      if (pend && !keep) setOpenCards((v) => { if (!v.has(pend.id)) return v; const n = new Set(v); n.delete(pend.id); return n; });
+      if (detail >= 2) {
+        setOpenCards((v) => (v.has(id) ? v : new Set(v).add(id)));
+        const e = findWorldEvent(id);
+        if (!e || readonly || wFrozen.has(id)) return;
+        if (eventDraft) { setMessage("请先保存或取消当前事件编辑，输入已保留。"); return; }
+        setMessage("");
+        setEventDraft(structuredClone(e));
+        return;
+      }
+      if (openCardsRef.current.has(id) && pend?.id !== id) {
+        pendingCollapse.current = { id, timer: setTimeout(() => {
+          pendingCollapse.current = null;
+          setOpenCards((v) => { if (!v.has(id)) return v; const n = new Set(v); n.delete(id); return n; });
+        }, COLLAPSE_DELAY_MS) };
+        return;
+      }
+      setOpenCards((v) => (v.has(id) ? v : new Set(v).add(id)));
+    },
+    // docs/584 R2: timeline clicks select; ⌘/Ctrl toggles, Shift adds; a double click opens the editor (and expands).
+    select(id, detail, mods) {
+      const selection = selectionRef.current;
+      if (detail >= 2) { actions.current.toggle(id, 2); setSelection(new Set([id])); return; }
+      setPinnedCard(id);
+      if (mods.toggle) {
+        const next = new Set(selection);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        setSelection(next);
+        setEventSelection((primary) => (next.has(id) ? id : primary === id ? ([...next].at(-1) ?? null) : primary));
+      } else if (mods.add) {
+        setSelection(new Set([...selection, id]));
+        setEventSelection(id);
+      } else {
+        setSelection(new Set([id]));
+        setEventSelection(id);
+      }
+    },
+    expand(id) {
+      setPinnedCard(id);
+      setOpenCards((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    },
+    boxSelect(ids, additive) {
+      const selection = selectionRef.current;
+      const next = new Set(additive ? [...selection, ...ids] : ids);
+      setSelection(next);
+      setEventSelection((primary) => (primary && next.has(primary) ? primary : ([...next].at(-1) ?? null)));
+    },
+    clearSelection() { setSelection(new Set()); setEventSelection(null); },
+    deleteSelection() {
+      const ids = [...shownSelection];
+      if (!ids.length || readonly || eventDraft) return;
+      // Frozen history belongs to the fork source and cannot be deleted here (same rule as the single 删除).
+      if (ids.some((x) => wFrozen.has(x))) { setMessage("所选事件中有冻结前史，不能删除"); return; }
+      if (ids.length === 1) { setDialog({ kind: "delete-event", id: ids[0] }); return; }
+      if (ids.length > 200) { setMessage("一次最多删除 200 个事件"); return; }
+      setDialog({ kind: "delete-event", ids });
+    },
+    menu(action, id) {
+      const e = findWorldEvent(id);
+      if (!e) return;
+      if (action === "quoteSelection") {
+        const chosen = [...shownSelection].map((x) => wTree.byId.get(x)).filter((n): n is NonNullable<typeof n> => !!n)
+          .sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity));
+        quotePlanning(chosen.map((n) => [n.event.title, `${worldId}/${n.id}`] as const), "世界事件");
+        return;
+      }
+      if (action === "deleteSelection") { actions.current.deleteSelection(); return; }
+      if (action === "quote") quotePlanning(e.title, `${worldId}/${e.id}`, "世界事件");
+      else if (action === "detail") setDialog({ kind: "event-detail", id: e.id });
+      else if (action === "edit") { revealEvent(e); setEventDraft(structuredClone(e)); }
+      else if (action === "copy") void put("events", { ...e, id: uid(), title: `${e.title} · 副本` });
+      else if (action === "delete") setDialog({ kind: "delete-event", id: e.id });
+      else if (action === "fork") setDialog({ kind: "fork", id: e.id });
+      else if (action === "newChild")
+        setEventDraft(eventSchema.parse({ id: uid(), line: worldId, parent: e.id, title: "未命名事件", time: { anchor: e.id, kind: "unknown" } }));
+      else if (action === "locateChildren") {
+        // docs/591 code review 2: the first shown child (a hidden child would clear the filter).
+        const first = wViewTree.byId.get(e.id)?.children[0];
+        setFoldedEvents((v) => { const n = new Set(v); n.delete(e.id); return n; });
+        if (first) locateWorldEvent(first.id);
+      }
+    },
+    drag(ev, id) {
+      // docs/584 A3: a title drag on a card of a ≥ 2 selection moves the whole selection.
+      if (shownSelection.size >= 2 && shownSelection.has(id)) startTimeDrag(ev, "events", id, "move", [...shownSelection]);
+      else startTimeDrag(ev, "events", id, "move");
+    },
+    refs(e) { return eventReferences(e); },
+  };
+  /** docs/580 §7.5: one locate for tree, search, rail dots, pending and deep links. */
+  /** docs/577 §13 / 581 WU-67, WU-68: the located card flashes once; CSS drops the animation under reduced motion. */
+  function flashCard(root: ParentNode | null | undefined, id: string) {
+    const el = root?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
+    if (!el) return;
+    el.removeAttribute("data-flash");
+    void el.offsetWidth;
+    el.setAttribute("data-flash", "");
+    setTimeout(() => el.removeAttribute("data-flash"), 1200);
+  }
+  function locateWorldEvent(id: string) {
+    revealEvent(wTree.byId.get(id)?.event ?? wTree.pending.find((p) => p.id === id)?.event);
+    setEventSelection(id);
+    if (narrowPanel.current) setTreeOn(false);
+    setFoldedEvents((v) => {
+      let n: Set<string> | null = null;
+      for (let p = wTree.byId.get(id)?.parent ?? null; p; p = wTree.byId.get(p)?.parent ?? null) if (v.has(p)) { n ??= new Set(v); n.delete(p); }
+      return n ?? v;
+    });
+    if (!table) {
+      // Timeline: pan the window to the event and move the plane so its card sits a third down (review R5, 584 y).
+      viewport.current.cancelCenterRequest();
+      const n = wTree.byId.get(id);
+      if (n?.start != null) setWindowRange((v) => ({ ...v, start: n.start! - v.span * 0.08 }));
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const lane = timeline.current, el = lane?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
+        if (!lane || !el) return;
+        const v = viewport.current.getSnapshot();
+        viewport.current.setWindow({ y: v.y - (el.getBoundingClientRect().top - lane.getBoundingClientRect().top - lane.clientHeight / 3) });
+        flashCard(lane, id);
+      }));
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const sc = tableScroller.current, el = sc?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
+      if (!sc || !el) return;
+      const top = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+      sc.scrollTop = top - sc.clientHeight / 3;
+      flashCard(sc, id);
+    }));
+  }
+  // docs/591 review P0-2: the hit list changes with the filter, so the position starts again at the first hit.
+  useEffect(() => { setHitIndex(0); }, [hiddenTypes, hiddenImportance]);
+  // docs/591 review P0-3/P1-4: an event that is edited, saved, created or located while its type or importance is
+  // hidden would vanish; the filter is cleared and the user is told, so it stays on screen.
+  const showAllTypes = () => { setHiddenTypes(new Set()); setHiddenImportance(new Set()); };
+  /** True when `e` (as it is now, or as it will be saved) is left out by the legend filter, its group included. */
+  const filteredOut = (e: PlanningEvent) => wFiltered && filterEvents([...worldAllEvents.filter((x) => x.id !== e.id), e], { hiddenTypes, hiddenImportance }).every((x) => x.id !== e.id);
+  const revealEvent = (e: PlanningEvent | undefined) => {
+    if (!e || !filteredOut(e)) return;
+    // docs/591 code review 4: only the types and levels of the event and its ancestors are shown again.
+    const chain: PlanningEvent[] = [], seen = new Set<string>();
+    for (let x: PlanningEvent | undefined = e; x && !seen.has(x.id); x = x.parent ? worldAllEvents.find((y) => y.id === x!.parent) : undefined) { seen.add(x.id); chain.push(x); }
+    setHiddenTypes((v) => { const n = new Set(v); for (const x of chain) n.delete(x.category); return n; });
+    setHiddenImportance((v) => { const n = new Set(v); for (const x of chain) n.delete(x.importance); return n; });
+    setMessage("已显示该事件所属的类型和重要度");
+  };
+  useEffect(() => {
+    const id = pendingLocate.current;
+    if (!id || !wTree.byId.has(id)) return;
+    pendingLocate.current = null;
+    locateWorldEvent(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkTick, wTree]);
   function renderWorld() {
     const base = activeWorld?.timeBases?.find((b) => b.id === timeBase);
     const labelTime = worldTimeLabel;
     const fork = activeWorld?.fork;
-    const forkChanged =
-      fork?.events.filter((e) => {
-        const source = findEvent(data, fork.source, e.id);
-        return (
-          !source ||
-          source.fact !== e.fact ||
-          source.title !== e.title ||
-          JSON.stringify(resolveTime(data, source)) !==
-            JSON.stringify(resolveTime(data, e)) ||
-          source.duration !== e.duration ||
-          JSON.stringify(source.changes) !== JSON.stringify(e.changes)
-        );
-      }).length ?? 0;
-    const events = worldEvents(data, worldId).filter(
+    const forkChanged = forkChangedCount(data, worldId);
+    // docs/591 review P1-5: pending, continuing, 复位/全貌 and change lanes count only the shown events.
+    const events = wViewEvents.filter(
         (e) => e.parent === eventParent,
       ),
       placed = events.filter((e) => resolveTime(data, e).start !== null),
@@ -2268,8 +2444,11 @@ function PlanningWorkspace({
           ]
         : [];
     const plotWidth = Math.max(1, timelineWidth - 28);
-    const scale = plotWidth / windowRange.span;
-    const toX = (value: number) => 14 + (value - windowRange.start) * scale;
+    // docs/584 R1: 复位 / 全貌 / the empty-view button fit every placed event and centre the cards (横纵).
+    const resetTimeline = () => {
+      setWindowRange({ ...fitTimelineWindow(placed.map((x) => { const t = resolveTime(data, x); return { start: t.start!, end: t.end } }), plotWidth), y: 0 });
+      viewport.current.requestCenter();
+    };
     const allPeriods = [
       ...(fork?.periods ?? []),
       ...data.periods.filter((p) => p.line === worldId),
@@ -2295,57 +2474,14 @@ function PlanningWorkspace({
       })
       .filter(
         (p) =>
-          p.start !== null &&
-          p.start <= windowRange.start + windowRange.span &&
-          (p.end === null || p.end >= windowRange.start),
+          p.start !== null,
       );
-    const tickCalendar = activeWorld?.calendar ?? {
-      kind: "fixed" as const,
-      epoch: "",
-      hoursPerDay: 24,
-      daysPerMonth: 30,
-      monthsPerYear: 12,
-    };
-    const baseZero = base ? timeBaseValue(data, worldId, base, 0) : null;
-    const ticks =
-      base && baseZero !== null
-        ? timelineTicks(
-            windowRange.start * base.scale + baseZero,
-            windowRange.span * base.scale,
-            base.calendar,
-            plotWidth,
-          ).map((t) => (t - baseZero) / base.scale)
-        : timelineTicks(
-            windowRange.start,
-            windowRange.span,
-            tickCalendar,
-            plotWidth,
-          );
-    const layout = layoutTimelineCards(
-      placed.map((e) => {
+    const continuingAt = (start: number) =>
+      placed.filter((e) => {
         const t = resolveTime(data, e);
-        const preview = timePreview?.id === e.id ? timePreview : null;
-        return {
-          id: e.id,
-          start:
-            t.start! + (preview && preview.edge !== "end" ? preview.delta : 0),
-          end:
-            t.end === null
-              ? null
-              : t.end +
-                (preview && preview.edge !== "start" ? preview.delta : 0),
-          height: eventHeights[e.id],
-        };
-      }),
-      scale,
-    );
-    const continuing = placed.filter((e) => {
-      const t = resolveTime(data, e);
-      return (
-        t.start! < windowRange.start &&
-        (t.end === null || t.end > windowRange.start)
-      );
-    });
+        return t.start! < start && (t.end === null || t.end > start);
+      });
+    const continuing = continuingAt(viewport.current.getSnapshot().start);
     const changeItems = changes
       ? placed.flatMap((e) =>
           e.changes.flatMap((c) => {
@@ -2362,42 +2498,6 @@ function PlanningWorkspace({
       id,
       items: changeItems.filter((c) => c.character === id),
     }));
-    let laneTop = layout.height + 28;
-    const characterLayouts = characterGroups.map((group) => {
-      const packed = layoutTimelineCards(
-        group.items.map((c) => ({
-          id: c.id,
-          start: c.time,
-          end: c.time,
-          height: Math.max(
-            94,
-            58 +
-              Math.ceil(
-                (c.before.length + c.after.length + c.event.title.length) / 15,
-              ) *
-                22,
-          ),
-        })),
-        scale,
-        230,
-      );
-      const top = laneTop;
-      laneTop += packed.height + 40;
-      return { ...group, packed, top };
-    });
-    const eventPath: PlanningEvent[] = [];
-    let eventAncestor = eventParent
-      ? findEvent(data, worldId, eventParent)
-      : undefined;
-    while (
-      eventAncestor &&
-      !eventPath.some((e) => e.id === eventAncestor?.id)
-    ) {
-      eventPath.unshift(eventAncestor);
-      eventAncestor = eventAncestor.parent
-        ? findEvent(data, worldId, eventAncestor.parent)
-        : undefined;
-    }
     const locateEvent = (e: PlanningEvent) => {
       const t = resolveTime(data, e);
       setEventSelection(e.id);
@@ -2409,227 +2509,160 @@ function PlanningWorkspace({
           y: 0,
         }));
       else setTable(true);
-      requestAnimationFrame(() => {
-        if (timeline.current)
-          timeline.current.scrollTop = Math.max(
-            0,
-            (layout.items.find((item) => item.id === e.id)?.top ?? 0) - 24,
-          );
-      });
+      viewport.current.cancelCenterRequest();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const lane = timeline.current, el = lane?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(e.id)}"]`);
+        if (lane && el) { const v = viewport.current.getSnapshot(); viewport.current.setWindow({ y: v.y - (el.getBoundingClientRect().top - lane.getBoundingClientRect().top - 24) }); }
+      }));
     };
     return (
-      <>
-        <div className={`${s.toolbar} ${s.worldToolbar}`}>
-          <select
-            aria-label="当前世界线"
-            value={worldId}
-            onChange={(e) => {
-              navigateWorldParent(null, e.target.value);
-            }}
-          >
-            {data.worlds.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-                {w.fork ? " · 分支" : ""}
-              </option>
-            ))}
-          </select>
-          <button
-            disabled={readonly}
-            onClick={() => setDialog({ kind: "world" })}
-          >
-            ＋ 世界线
-          </button>
-          <button
-            disabled={readonly || !activeWorld}
-            onClick={() => setDialog({ kind: "world", id: worldId })}
-          >
-            世界线设置
-          </button>
-          <button
-            disabled={readonly || !!eventDraft || !worldId}
-            onClick={() => setDialog({ kind: "period" })}
-          >
-            ＋ 时期
-          </button>
-          <button
-            disabled={readonly}
-            onClick={() => setDialog({ kind: "connection" })}
-          >
-            跨世界连接
-          </button>
-          <span className={s.toolbarSpacer} />
-          <label>
-            时间基准
+      <WorldlineCardContext.Provider value={wCardContext}><TimelineZoomNoteContext.Provider value={zoomNote.current}>
+      <EventEditorContext.Provider value={renderEventEditor}>
+      <div ref={worldPanel} data-worldline-root="" className={wl.root}>
+        {/* docs/577 §1, §14: one-row toolbar; every action of the old three rows is in it or under 更多. */}
+        <WorldlineToolbar
+          view={table ? "table" : "timeline"}
+          onView={(v) => setTable(v === "table")}
+          treeOn={treeOn}
+          onTree={() => setTreeOn((v) => !v)}
+          worldSelect={
+                <select
+                  aria-label="当前世界线"
+                  value={worldId}
+                  onChange={(e) => {
+                    navigateWorldParent(null, e.target.value);
+                  }}
+                >
+                  {data.worlds.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                      {w.fork ? " · 分支" : ""}
+                    </option>
+                  ))}
+                </select>
+          }
+          periodPicker={
             <select
-              aria-label="时间基准"
-              value={timeBase}
-              onChange={(e) => setTimeBase(e.target.value)}
+              aria-label="时期"
+              value=""
+              onChange={(e) => {
+                // docs/577 §9: 全部时期（全貌） fits every placed event with fitTimelineWindow (§4, M8).
+                if (e.target.value === "__all") {
+                  resetTimeline();
+                  setMessage("已显示全貌");
+                  return;
+                }
+                const p = allPeriods.find((x) => x.id === e.target.value);
+                if (!p) return;
+                const inside = wViewEvents.filter((x) => { const t = wTree.byId.get(x.id)?.start; return t != null && t >= p.start && (p.end === null || t <= p.end) }).sort((x, y) => (wTree.byId.get(x.id)!.start! - wTree.byId.get(y.id)!.start!));
+                if (table && inside[0]) locateWorldEvent(inside[0].id);
+                else setWindowRange({ start: p.start - 2, span: Math.max(24, ((p.end ?? p.start + 24) - p.start) * 1.2), y: 0 });
+                setMessage(`已定位到时期「${p.title}」· ${inside.length} 件事件`);
+              }}
             >
-              <option value="">{activeWorld?.calendar.epoch}</option>
-              {activeWorld?.timeBases?.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                  {b.offset === null ? " · 未映射" : ""}
-                </option>
-              ))}
+              <option value="">时期</option>
+              <option value="__all">全部时期（全貌）</option>
+              {allPeriods.map((p) => {
+                // docs/577 §9 / 581 WU-40c: swatch, range and event count; periods inside another one are indented.
+                const nested = allPeriods.some((o) => o.id !== p.id && o.start <= p.start && (o.end === null || (p.end !== null && p.end <= o.end)) && !(o.start === p.start && o.end === p.end));
+                const count = wViewEvents.filter((x) => { const s = wTree.byId.get(x.id)?.start; return s != null && s >= p.start && (p.end === null || s <= p.end) }).length;
+                const color = `var(--chart-${([...p.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 5) + 1})`;
+                return (
+                  <option key={p.id} value={p.id} style={{ color }}>
+                    {nested ? "\u3000" : ""}■ {p.title} · {labelTime(p.start)} — {p.end === null ? (p.ongoing ? "持续中" : "未定") : labelTime(p.end)} · {count} 件
+                  </option>
+                );
+              })}
             </select>
-          </label>
-          <button
-            disabled={readonly}
-            onClick={() => {
-              setMappingEdit(timeBase);
-              setDialog({ kind: "world", id: worldId });
-            }}
-          >
-            单位与对应
-          </button>
-        </div>
-        <div className={`${s.toolbar} ${s.worldPath}`}>
-          <nav aria-label="世界线层级" className={s.breadcrumbs}>
-            <ol>
-              <li>
-                <button onClick={() => navigateWorldParent(null)}>
-                  {activeWorld?.name || "世界线"}
-                </button>
-              </li>
-              {eventPath.map((e, i) => (
-                <li key={e.id}>
-                  <ChevronRight size={13} />
-                  {i === eventPath.length - 1 ? (
-                    <span aria-current="page">{e.title}</span>
-                  ) : (
-                    <button onClick={() => navigateWorldParent(e.id)}>
-                      {e.title}
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </nav>
-          <span className={s.toolbarSpacer} />
-          <button
-            disabled={readonly || !!eventDraft || !worldId}
-            onClick={() =>
-              setEventDraft(
-                eventSchema.parse({
-                  id: uid(),
-                  line: worldId,
-                  parent: eventParent,
-                  title: "未命名事件",
-                  time: { anchor: eventParent, kind: "unknown" },
-                }),
-              )
-            }
-          >
-            ＋ 事件
-          </button>
-        </div>
+          }
+          allExpanded={worldAllEvents.length > 0 && worldAllEvents.every((e) => openCards.has(e.id))}
+          onToggleAll={() => { takePendingCollapse(); setOpenCards((v) => (worldAllEvents.length > 0 && worldAllEvents.every((e) => v.has(e.id)) ? new Set() : new Set(worldAllEvents.map((e) => e.id)))); }}
+          zoomLabel={table ? (tableRail === "aligned" ? `${Math.round(Math.exp(tableView.e) * 100)}%` : tableView.level ? RAIL_LEVEL_NAME[tableView.level] : "按事件") : <ViewportValue store={viewport.current} render={(w) => `${Math.round(w.span)} ${timeUnit(activeWorld?.calendar ?? data.worlds[0]?.calendar)}`} />}
+          canZoomIn={tableView.canIn}
+          canZoomOut={tableView.canOut}
+          onZoom={(dir) => {
+            if (table) setTableZoom((e) => (dir === 0 ? 0 : tableView.clamp(tableView.clamp(e) + dir * Math.log(1.25))));
+            else if (dir === 0) resetTimeline();
+            else setWindowRange((v) => ({ ...v, ...zoomAt(v.start, v.span, dir > 0 ? 1 / 1.5 : 1.5, 0.5) }));
+          }}
+          query={searchQuery}
+          applied={searchApplied === searchQuery}
+          onQuery={(q) => { setSearchQuery(q); setHitIndex(0); }}
+          hitIndex={wHits.length ? Math.min(hitIndex, wHits.length - 1) : 0}
+          hitCount={wHits.length}
+          onStep={(dir) => {
+            if (!wHits.length) return;
+            const next = (hitIndex + dir + wHits.length) % wHits.length;
+            setHitIndex(next);
+            locateWorldEvent(wHits[next]);
+          }}
+          pending={pending.length}
+          continuing={<ViewportValue store={viewport.current} render={(w) => continuingAt(w.start).length} />}
+          continuingZero={continuing.length === 0}
+          onPending={() => setWorldPopover((v) => (v === "pending" ? null : "pending"))}
+          onContinuing={() => setWorldPopover((v) => (v === "continuing" ? null : "continuing"))}
+          searchRef={worldSearch}
+          more={
+            <details data-card-menu="" className="relative">
+              <summary aria-label="更多操作" className="grid size-7 cursor-pointer list-none place-items-center rounded-md text-muted-foreground hover:bg-muted">⋯</summary>
+              <div className="absolute right-0 top-8 z-30 grid min-w-48 gap-0.5 rounded-lg border bg-popover p-1 shadow-lg" onClick={(e) => { if ((e.target as Element).closest("button")) (e.currentTarget.parentElement as HTMLDetailsElement).open = false }}>
+                <button className="rounded px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-50" disabled={readonly || !activeWorld} onClick={() => setDialog({ kind: "world", id: worldId })}>世界线设置</button>
+                <button className="rounded px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-50" disabled={readonly} onClick={() => setDialog({ kind: "world" })}>＋ 世界线</button>
+                <button className="rounded px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-50" disabled={readonly || !!eventDraft || !worldId} onClick={() => setDialog({ kind: "period" })}>＋ 时期</button>
+                <button className="rounded px-2 py-1.5 text-left text-sm hover:bg-muted" onClick={() => setWorldPopover("periods")}>时期列表（{allPeriods.length}）</button>
+                <button className="rounded px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-50" disabled={readonly} onClick={() => setDialog({ kind: "connection" })}>跨世界连接</button>
+                <button className="rounded px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-50" disabled={readonly} onClick={() => { setMappingEdit(timeBase); setDialog({ kind: "world", id: worldId }); }}>单位与对应</button>
+                <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm">
+                  时间基准
+                  <select aria-label="时间基准" value={timeBase} onChange={(e) => setTimeBase(e.target.value)}>
+                    <option value="">{activeWorld?.calendar.epoch}</option>
+                    {activeWorld?.timeBases?.map((b) => (<option key={b.id} value={b.id}>{b.name}{b.offset === null ? " · 未映射" : ""}</option>))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm"><input type="checkbox" checked={periods} onChange={(e) => setPeriods(e.target.checked)} />显示时期</label>
+                <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm"><input type="checkbox" checked={changes} onChange={(e) => setChanges(e.target.checked)} />显示角色变化</label>
+              </div>
+            </details>
+          }
+          onNewEvent={
+            <Button
+              size="sm"
+              className={wl.primary}
+              disabled={readonly || !!eventDraft || !worldId}
+              onClick={() => setEventDraft(eventSchema.parse({ id: uid(), line: worldId, parent: null, title: "未命名事件", time: { kind: "unknown" } }))}
+            >
+              ＋ 事件
+            </Button>
+          }
+        />
+        {worldId && (
+          <WorldlineLegend
+            counts={Object.fromEntries(EVENT_CATEGORIES.map((c) => [c, worldAllEvents.filter((e) => e.category === c).length])) as Record<PlanningEvent["category"], number>}
+            hidden={hiddenTypes}
+            onToggle={(c) => setHiddenTypes((v) => { const n = new Set(v); if (n.has(c)) n.delete(c); else n.add(c); return n; })}
+            onSolo={(c) => setHiddenTypes(new Set(EVENT_CATEGORIES.filter((x) => x !== c)))}
+            hiddenImportance={hiddenImportance}
+            onToggleImportance={(i) => setHiddenImportance((v) => { const n = new Set(v); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
+            range={<ViewportRange store={viewport.current} label={labelTime} />}
+            total={worldAllEvents.length}
+            selected={table ? 0 : shownSelection.size}
+            shown={wFiltered ? wViewEvents.length : undefined}
+            onShowAll={showAllTypes}
+            zoomNote={table ? undefined : <ZoomNoteLine store={zoomNote.current} />}
+          />
+        )}
+        {fork && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            前史固定于源版本{fork.version}
+            {forkChanged ? ` · ${forkChanged}项源事实已有变化，当前分支保持冻结` : ""}
+          </p>
+        )}
         {!worldId ? (
           <div className={s.empty}>
             先建立一条独立世界线，记录客观发生的历史。
           </div>
         ) : (
           <>
-            <div className={s.toolbar}>
-              <button aria-pressed={!table} onClick={() => setTable(false)}>
-                时间线
-              </button>
-              <button aria-pressed={table} onClick={() => setTable(true)}>
-                事件表
-              </button>
-              <button
-                aria-label="缩小时间刻度"
-                onClick={() =>
-                  setWindowRange((v) => ({
-                    ...v,
-                    ...zoomAt(v.start, v.span, 1.5, 0.5),
-                  }))
-                }
-              >
-                −
-              </button>
-              <button
-                aria-label="放大时间刻度"
-                onClick={() =>
-                  setWindowRange((v) => ({
-                    ...v,
-                    ...zoomAt(v.start, v.span, 1 / 1.5, 0.5),
-                  }))
-                }
-              >
-                ＋
-              </button>
-              <button
-                onClick={() => {
-                  setWindowRange({
-                    ...fitTimelineWindow(
-                      placed.map((e) => {
-                        const t = resolveTime(data, e);
-                        return { start: t.start!, end: t.end };
-                      }),
-                      plotWidth,
-                    ),
-                    y: 0,
-                  });
-                  if (timeline.current) timeline.current.scrollTop = 0;
-                }}
-              >
-                全貌
-              </button>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={periods}
-                  onChange={(e) => setPeriods(e.target.checked)}
-                />
-                时期
-              </label>
-              <button
-                aria-expanded={worldPopover === "periods"}
-                onClick={() =>
-                  setWorldPopover((v) => (v === "periods" ? null : "periods"))
-                }
-              >
-                时期 {allPeriods.length}
-              </button>
-
-              <label>
-                <input
-                  type="checkbox"
-                  checked={changes}
-                  onChange={(e) => setChanges(e.target.checked)}
-                />
-                角色变化
-              </label>
-              <span className={s.toolbarSpacer} />
-              <button
-                aria-expanded={worldPopover === "continuing"}
-                onClick={() =>
-                  setWorldPopover((v) =>
-                    v === "continuing" ? null : "continuing",
-                  )
-                }
-              >
-                延续事件 {continuing.length}
-              </button>
-              <button
-                aria-expanded={worldPopover === "pending"}
-                onClick={() =>
-                  setWorldPopover((v) => (v === "pending" ? null : "pending"))
-                }
-              >
-                待定位 {pending.length}
-              </button>
-              {fork && (
-                <span>
-                  前史固定于源版本{fork.version}
-                  {forkChanged
-                    ? ` · ${forkChanged}项源事实已有变化，当前分支保持冻结`
-                    : ""}
-                </span>
-              )}
-            </div>
             {worldPopover && (
               <section
                 className={s.worldList}
@@ -2718,406 +2751,133 @@ function PlanningWorkspace({
                     )}
               </section>
             )}
-            <div className={s.worldRange}>
-              <span>
-                {labelTime(windowRange.start)} —{" "}
-                {labelTime(windowRange.start + windowRange.span)}
-              </span>
-              <span>当前层 · {events.length} 件事件</span>
-            </div>
             {eventDraft &&
-              !worldEvents(data, worldId).some((e) => e.id === eventDraft.id) &&
+              (!worldEvents(data, worldId).some((e) => e.id === eventDraft.id) || (wFiltered && !wShownIds.has(eventDraft.id))) &&
               renderEventEditor()}
             {table ? (
-              <div className={s.cards}>
-                {events.map((e) => (
-                  <div key={e.id} style={{ marginBottom: 15 }}>
-                    {eventCard(e)}
+              <>
+                  <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420, ...(treeWidth === null ? {} : { "--tree-w": `${treeWidth}px` }) } as React.CSSProperties}>
+                    <EventTreeNav
+                      tree={wViewTree}
+                      folded={foldedEvents}
+                      selected={eventSelection}
+                      current={currentRow}
+                      inView={null}
+                      dimmed={wDimmed}
+                      onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                      onLocate={locateWorldEvent}
+                    />
+                    <TreeResizer width={treeWidth} onChange={setTreeWidth} />
+                    <EventTable
+                      tree={wViewTree}
+                      emptyText={wFiltered && !wViewEvents.length ? "筛选后没有事件" : undefined}
+                      expanded={openCards}
+                      folded={foldedEvents}
+                      selected={eventSelection}
+                      editing={eventDraft && worldAllEvents.some((e) => e.id === eventDraft.id) ? eventDraft.id : null}
+                      hitId={wHits[hitIndex] ?? null}
+                      dimmed={wDimmed}
+                      scale={tableView.k}
+                      level={tableView.level}
+                      canZoomIn={tableView.canIn}
+                      canZoomOut={tableView.canOut}
+                      railMode={tableRail}
+                      onRailMode={setTableRail}
+                      periods={allPeriods.map((p) => ({ id: p.id, start: p.start ?? 0, end: p.end }))}
+                      onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                      onZoom={(step) => setTableZoom((e) => tableView.clamp(tableView.clamp(e) + step))}
+                      onScrollTop={setCurrentRow}
+                      scrollerRef={tableScroller}
+                    />
                   </div>
-                ))}
-              </div>
+              </>
             ) : (
-              <div
-                ref={timeline}
-                tabIndex={0}
-                aria-label="世界时间线"
-                className={s.timeline}
-                onScroll={(ev) => {
-                  const y = -ev.currentTarget.scrollTop;
-                  setWindowRange((v) =>
-                    v.y === y || (v.y > 0 && y === 0) ? v : { ...v, y },
-                  );
-                }}
-                onPointerDown={(ev) => {
-                  if (
-                    buttonTarget(ev.target) ||
-                    (ev.target as Element).closest(
-                      "article,[data-event], [data-period]",
-                    )
-                  )
-                    return;
-                  pan.current = {
-                    x: ev.clientX,
-                    y: ev.clientY,
-                    start: windowRange.start,
-                    top:
-                      ev.currentTarget.scrollTop - Math.max(0, windowRange.y),
-                  };
-                  ev.currentTarget.setPointerCapture(ev.pointerId);
-                }}
-                onPointerMove={(ev) => {
-                  if (temporalDrag.current) {
-                    const drag = temporalDrag.current;
-                    drag.delta = snapTimelineDelta(
-                      ((ev.clientX - drag.x) / plotWidth) * windowRange.span,
-                      windowRange.span,
-                      plotWidth,
-                      activeWorld?.calendar.kind === "years",
-                    );
-                    setTimePreview({
-                      id: drag.id,
-                      delta: drag.delta,
-                      edge: drag.edge,
-                    });
-                    return;
-                  }
-                  if (pan.current) {
-                    const origin = pan.current,
-                      dx = ev.clientX - origin.x,
-                      dy = ev.clientY - origin.y;
-                    if (Math.hypot(dx, dy) < 5) return;
-                    const vertical = origin.top - dy;
-                    ev.currentTarget.scrollTop = Math.max(0, vertical);
-                    const nextY =
-                      vertical < 0 ? -vertical : -ev.currentTarget.scrollTop;
-                    setWindowRange((v) => ({
-                      ...v,
-                      start: origin.start - (dx / plotWidth) * v.span,
-                      y: nextY,
-                    }));
-                  }
-                }}
-                onPointerUp={() => {
-                  pan.current = null;
-                  void finishTimeDrag();
-                }}
-                onPointerCancel={() => {
-                  if (pan.current) {
-                    const p = pan.current;
-                    setWindowRange((v) => ({
-                      ...v,
-                      start: p.start,
-                      y: -p.top,
-                    }));
-                    if (timeline.current) timeline.current.scrollTop = p.top;
-                  }
-                  pan.current = null;
-                  temporalDrag.current = null;
-                  setTimePreview(null);
-                }}
-                onKeyDown={(ev) => {
-                  if (ev.target !== ev.currentTarget) return;
-                  if (ev.key === "Escape") {
-                    if (pan.current) {
-                      const p = pan.current;
-                      setWindowRange((v) => ({
-                        ...v,
-                        start: p.start,
-                        y: -p.top,
-                      }));
-                      ev.currentTarget.scrollTop = p.top;
-                    }
-                    pan.current = null;
-                    temporalDrag.current = null;
-                    setTimePreview(null);
-                  }
-                  if (
-                    [
-                      "ArrowUp",
-                      "ArrowDown",
-                      "ArrowLeft",
-                      "ArrowRight",
-                    ].includes(ev.key)
-                  ) {
-                    ev.preventDefault();
-                    if (ev.key === "ArrowUp" || ev.key === "ArrowDown")
-                      ev.currentTarget.scrollTop +=
-                        ev.key === "ArrowUp" ? -60 : 60;
-                    else
-                      setWindowRange((v) => ({
-                        ...v,
-                        start:
-                          v.start +
-                          ((ev.key === "ArrowRight" ? 1 : -1) * v.span) / 10,
-                      }));
-                  }
-                }}
-              >
-                <div className={s.timelineHeader}>
-                  <div className={s.ruler}>
-                    {ticks.map((tick) => (
-                      <span key={tick} style={{ left: toX(tick) }}>
-                        {worldTimeLabel(
-                          tick,
-                          ticks.length > 1
-                            ? ticks[1] - ticks[0]
-                            : windowRange.span,
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                  {visiblePeriods.map((p) => {
-                    const left = Math.max(14, toX(p.start!)),
-                      right = Math.min(
-                        timelineWidth - 14,
-                        p.end === null ? timelineWidth - 14 : toX(p.end),
-                      );
-                    const colorIndex =
-                      [...p.id].reduce((n, c) => n + c.charCodeAt(0), 0) % 5;
-                    const clippedStart = p.start! < windowRange.start,
-                      clippedEnd =
-                        p.end !== null &&
-                        p.end > windowRange.start + windowRange.span;
-                    const mutable =
-                      !readonly &&
-                      !p.event &&
-                      data.periods.some(
-                        (v) => v.id === p.id && v.line === worldId,
-                      );
-                    return (
-                      <div key={p.id} className={s.periodRow}>
-                        <div
-                          data-period={p.id}
-                          className={`${s.period} ${p.end === null ? s.periodOpen : ""}`}
-                          style={
-                            {
-                              marginLeft: left,
-                              width: Math.max(1, right - left),
-                              "--period-color": `var(--chart-${colorIndex + 1})`,
-                              borderLeftStyle: clippedStart
-                                ? "dashed"
-                                : "solid",
-                              borderRightStyle: clippedEnd ? "dashed" : "solid",
-                            } as CSSProperties
-                          }
-                          onClick={() => {
-                            if (suppressPeriodClick.current) {
-                              suppressPeriodClick.current = false;
-                              return;
-                            }
-                            setDialog({ kind: "period-detail", id: p.id });
-                          }}
-                          onPointerDown={(ev) => {
-                            if (mutable)
-                              startTimeDrag(ev, "periods", p.id, "move");
-                          }}
-                        >
-                          {mutable && !clippedStart && right - left >= 64 && (
-                            <button
-                              aria-label={`调整${p.title}开始`}
-                              className={s.periodStart}
-                              onPointerDown={(ev) =>
-                                startTimeDrag(ev, "periods", p.id, "start")
-                              }
-                            >
-                              │
-                            </button>
-                          )}
-                          <button className={s.periodTitle} title={p.title}>
-                            {clippedStart ? "‹ " : ""}
-                            {p.title}
-                            {p.end === null
-                              ? p.ongoing
-                                ? " · 持续中 ›"
-                                : " · 结束未定"
-                              : clippedEnd
-                                ? " ›"
-                                : ""}
-                          </button>
-                          {mutable &&
-                            p.end !== null &&
-                            !clippedEnd &&
-                            right - left >= 64 && (
-                              <button
-                                className={s.periodEnd}
-                                aria-label={`调整${p.title}结束`}
-                                onPointerDown={(ev) =>
-                                  startTimeDrag(ev, "periods", p.id, "end")
-                                }
-                              >
-                                │
-                              </button>
-                            )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div
-                  className={s.eventSurface}
-                  style={{
-                    height: Math.max(300, laneTop + Math.max(0, windowRange.y)),
+              <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420, ...(treeWidth === null ? {} : { "--tree-w": `${treeWidth}px` }) } as React.CSSProperties}>
+                <TimelineTreeNav
+                  viewport={viewport.current}
+                  tree={wViewTree}
+                  folded={foldedEvents}
+                  selected={eventSelection}
+                  current={currentRow}
+                  dimmed={wDimmed}
+                  onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                  onLocate={locateWorldEvent}
+                />
+                <TreeResizer width={treeWidth} onChange={setTreeWidth} />
+                <EventTimeline
+                  tree={wViewTree}
+                  emptyText={wFiltered && !wViewTree.roots.length ? "筛选后没有已定位事件" : undefined}
+                  viewport={viewport.current}
+                  expanded={openCards}
+                  folded={foldedEvents}
+                  selected={eventSelection}
+                  editing={eventDraft && worldAllEvents.some((e) => e.id === eventDraft.id) ? eventDraft.id : null}
+                  hitId={wHits[hitIndex] ?? null}
+                  dimmed={wDimmed}
+                  pinned={pinnedCard}
+                  periods={visiblePeriods.map((p) => ({
+                    id: p.id,
+                    title: p.title,
+                    start: p.start!,
+                    end: p.end,
+                    ongoing: !!p.ongoing,
+                    mutable: !readonly && !p.event && data.periods.some((v) => v.id === p.id && v.line === worldId),
+                  }))}
+                  laneRef={timeline}
+                  timeDrag={{
+                    startPeriod: (ev, id, edge) => startTimeDrag(ev, "periods", id, edge),
+                    move(clientX, pxPerUnit) {
+                      const drag = temporalDrag.current;
+                      if (!drag) return false;
+                      // 581 WU-39c: under 5px a press is still a click; no preview moves the card under the pointer.
+                      if (!drag.delta && Math.abs(clientX - drag.x) < 5) return true;
+                      const span = viewport.current.getSnapshot().span, plot = span * pxPerUnit;
+                      drag.delta = snapTimelineDelta((clientX - drag.x) / pxPerUnit, span, plot, activeWorld?.calendar.kind === "years");
+                      setTimePreview({ id: drag.id, delta: drag.delta, edge: drag.edge, ...(drag.group ? { follows: shiftSelection(data, drag.group, drag.delta).follows } : {}) });
+                      return true;
+                    },
+                    end: () => { void finishTimeDrag(); },
+                    cancel: () => { temporalDrag.current = null; setTimePreview(null); },
+                    preview: timePreview && timePreview.id && data.events.some((e) => e.id === timePreview.id) ? timePreview : null,
+                    onPeriodClick(id) {
+                      if (suppressPeriodClick.current) { suppressPeriodClick.current = false; return; }
+                      setDialog({ kind: "period-detail", id });
+                    },
                   }}
-                >
-                  <div className={s.timelineGrid}>
-                    {ticks.map((tick) => (
-                      <i key={tick} style={{ left: toX(tick) }} />
-                    ))}
-                  </div>
-                  {!placed.length && (
-                    <p className={s.canvasEmpty}>
-                      当前层还没有已定位事件。添加事件，或为待定位事件设置时间。
-                    </p>
-                  )}
-                  {layout.items.map((item) => {
-                    const e = placed.find((e) => e.id === item.id)!;
-                    const x = toX(item.start);
-                    const barWidth =
-                      item.intervalWidth === null
-                        ? Math.max(item.width, timelineWidth - 14 - x)
-                        : item.intervalWidth;
-                    return (
-                      <MeasuredEvent
-                        key={e.id}
-                        id={e.id}
-                        className={s.eventCard}
-                        style={{
-                          left: x,
-                          top: item.top + Math.max(0, windowRange.y),
-                          width: item.width,
-                          zIndex:
-                            eventDraft?.id === e.id
-                              ? 8
-                              : eventSelection === e.id
-                                ? 4
-                                : 2,
-                        }}
-                        onHeight={(id, height) =>
-                          setEventHeights((old) =>
-                            old[id] === height ? old : { ...old, [id]: height },
-                          )
-                        }
-                      >
-                        <div
-                          className={`${s.timeBar} ${e.duration === 0 && e.time.kind !== "window" ? s.timePoint : ""} ${e.time.kind === "window" ? s.timeWindow : ""} ${e.duration === null ? s.timeOpen : ""}`}
-                          style={{
-                            width:
-                              e.time.kind === "window"
-                                ? Math.max(
-                                    1,
-                                    ((resolveTime(data, e).windowEnd ??
-                                      item.start) -
-                                      item.start) *
-                                      scale,
-                                  )
-                                : barWidth,
-                          }}
-                          title={
-                            e.duration === 0
-                              ? "时点"
-                              : "真实时间跨度 · 拖动移动"
-                          }
-                          onPointerDown={(ev) =>
-                            startTimeDrag(ev, "events", e.id, "move")
-                          }
-                        >
-                          {x < 14 && (
-                            <span
-                              className={s.barNote}
-                              style={{ left: 14 - x }}
-                            >
-                              ‹ 起点在视野外
-                            </span>
-                          )}
-                          {item.intervalWidth !== null &&
-                            x + item.intervalWidth > timelineWidth - 14 && (
-                              <span
-                                className={s.barNote}
-                                style={{
-                                  right: Math.max(
-                                    0,
-                                    item.intervalWidth -
-                                      (timelineWidth - 14 - x),
-                                  ),
-                                }}
-                              >
-                                延续到视野外 ›
-                              </span>
-                            )}
-                          {!readonly &&
-                            data.events.some(
-                              (v) => v.id === e.id && v.line === worldId,
-                            ) &&
-                            e.duration !== null &&
-                            e.duration > 0 &&
-                            barWidth >= 36 && (
-                              <>
-                                <button
-                                  aria-label={`调整${e.title}开始`}
-                                  onPointerDown={(ev) =>
-                                    startTimeDrag(ev, "events", e.id, "start")
-                                  }
-                                />
-                                <button
-                                  aria-label={`调整${e.title}结束`}
-                                  onPointerDown={(ev) =>
-                                    startTimeDrag(ev, "events", e.id, "end")
-                                  }
-                                />
-                              </>
-                            )}
-                        </div>
-                        {eventCard(e)}
-                      </MeasuredEvent>
-                    );
-                  })}
-                  {characterLayouts.map((group) => (
-                    <section
-                      key={group.id}
-                      className={s.characterLane}
-                      style={{
-                        top: group.top + Math.max(0, windowRange.y),
-                        height: group.packed.height + 32,
-                      }}
-                      aria-label={`${query.data?.characters.find((c) => c.id === group.id)?.name ?? "角色"}变化轨道`}
-                    >
-                      <div className={s.characterLaneTitle}>
+                  lanes={characterGroups.map((group) => ({
+                    id: group.id,
+                    name: `${query.data?.characters.find((c) => c.id === group.id)?.name ?? "角色"}变化轨道`,
+                    label: (
+                      <span className={s.characterLaneTitle}>
                         {chip(group.id)}
                         <span>角色变化</span>
-                      </div>
-                      {group.packed.items.map((item) => {
-                        const change = group.items.find(
-                          (c) => c.id === item.id,
-                        )!;
-                        return (
-                          <button
-                            key={item.id}
-                            className={s.characterChange}
-                            style={{
-                              left: toX(item.start),
-                              top: item.top + 22,
-                            }}
-                            onClick={() => locateEvent(change.event)}
-                          >
-                            <small>
-                              {labelTime(change.time)} · {change.dimension}
-                            </small>
-                            <span>
-                              {change.before} → {change.after}
-                            </span>
-                            <small>{change.event.title}</small>
-                          </button>
-                        );
-                      })}
-                    </section>
-                  ))}
-                </div>
+                      </span>
+                    ),
+                    items: group.items.map((change) => ({
+                      id: change.id,
+                      time: change.time,
+                      height: Math.max(94, 58 + Math.ceil((change.before.length + change.after.length + change.event.title.length) / 15) * 22),
+                      node: (
+                        <button className={s.characterChange} style={{ position: "relative", left: 0, top: 0 }} onClick={() => locateEvent(change.event)}>
+                          <small>{labelTime(change.time)} · {change.dimension}</small>
+                          <span>{change.before} → {change.after}</span>
+                          <small>{change.event.title}</small>
+                        </button>
+                      ),
+                    })),
+                  }))}
+                  onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                  selection={shownSelection}
+                  onBoxSelect={(ids, additive) => actions.current.boxSelect(ids, additive)}
+                  onClearSelection={() => actions.current.clearSelection()}
+                  onDeleteSelection={() => actions.current.deleteSelection()}
+                  onReset={resetTimeline}
+                />
               </div>
             )}
             <div className={s.timelineFooter}>
               <span>
-                拖动空白处平移 · Ctrl + 滚轮缩放 · Shift + 滚轮横移 ·
-                双击卡片原位编辑
+                拖动空白处移动画布 · 滚轮缩放 · Shift + 滚轮横移 · {desktopPlatform === "darwin" ? "⌘/⌥" : "Alt"} + 滚轮竖移 · 双击卡片原位编辑
               </span>
               <button
                 disabled={!eventSelection}
@@ -3132,17 +2892,18 @@ function PlanningWorkspace({
             {changes && (
               <details>
                 <summary>角色在视窗末端的状态（无基线的属性保持未知）</summary>
-                {characterStatesAt(
-                  data,
-                  worldId,
-                  windowRange.start + windowRange.span,
-                ).map((state) => (
-                  <p key={`${state.character}/${state.dimension}`}>
-                    {chip(state.character)} · {state.dimension}：
-                    {state.values.join(" / ")}
-                    {state.conflict ? " · 同时变化存在冲突" : ""}
-                  </p>
-                ))}
+                <ViewportValue
+                  store={viewport.current}
+                  render={(w) =>
+                    characterStatesAt(data, worldId, w.start + w.span).map((state) => (
+                      <p key={`${state.character}/${state.dimension}`}>
+                        {chip(state.character)} · {state.dimension}：
+                        {state.values.join(" / ")}
+                        {state.conflict ? " · 同时变化存在冲突" : ""}
+                      </p>
+                    ))
+                  }
+                />
               </details>
             )}
             <details>
@@ -3178,7 +2939,9 @@ function PlanningWorkspace({
             </details>
           </>
         )}
-      </>
+      </div>
+      </EventEditorContext.Provider>
+      </TimelineZoomNoteContext.Provider></WorldlineCardContext.Provider>
     );
   }
   async function submitDialog(e: FormEvent<HTMLFormElement>) {
@@ -3378,7 +3141,7 @@ function PlanningWorkspace({
       ];
     }
     if (dialog.kind === "delete-event")
-      ops = [{ kind: "delete", collection: "events", id }];
+      ops = dialog.ids ? dialog.ids.map((x) => ({ kind: "delete" as const, collection: "events" as const, id: x })) : [{ kind: "delete", collection: "events", id }];
     if (dialog.kind === "fork")
       ops = [
         { kind: "fork", id: uid(), source: worldId, event: id, name: title },
@@ -3419,7 +3182,11 @@ function PlanningWorkspace({
         },
       ];
     }
-    if (await save(ops)) {
+    const saved = await save(ops);
+    // docs/584: a blocked batch delete closes with nothing deleted; the error stays in the header and the selection stays.
+    if (!saved && dialog.kind === "delete-event" && dialog.ids) { setDialog(null); return; }
+    if (saved) {
+      if (dialog.kind === "delete-event" && dialog.ids) setSelection(new Set());
       if (dialog.kind === "group") setSelected([id]);
       if (dialog.kind === "line") {
         setLine(id);
@@ -3524,6 +3291,9 @@ function PlanningWorkspace({
         >
           <section className={s.detail}>
             <h3>{event.title}</h3>
+            <p>
+              {event.category} · {IMPORTANCE_LABELS[event.importance - 1]}
+            </p>
             <p>
               {activeWorld?.name} · {time.start ?? "未定"} —{" "}
               {time.end ?? time.windowEnd ?? "未定"}{" "}
@@ -3929,7 +3699,9 @@ function PlanningWorkspace({
           )}
           {dialog.kind.startsWith("delete") && (
             <p>
-              {dialog.kind === "delete-event"
+              {dialog.kind === "delete-event" && dialog.ids
+                ? `删除 ${dialog.ids.length} 个事件：${dialog.ids.slice(0, 5).map((x) => findWorldEvent(x)?.title ?? x).join("、")}${dialog.ids.length > 5 ? ` 等 ${dialog.ids.length} 个` : ""}。存在叙事引用、子事件或时间依赖时会阻止删除，一个都不会删除。删除后可撤销恢复。`
+                : dialog.kind === "delete-event"
                 ? "删除该事件；存在叙事引用、子事件或时间依赖时会阻止删除。删除后可撤销恢复。"
                 : "父卡片的直接子卡片会提升一级；共享事件、正文和历史保留。"}
             </p>
@@ -4041,43 +3813,50 @@ function PlanningWorkspace({
     <div
       className={`${s.workspace} ${mode === "world" ? s.worldWorkspace : ""}`}
     >
-      <header className={s.toolbar}>
-        <h2>
-          {mode === "world"
-            ? "世界线"
-            : mode === "projection"
-              ? "大纲"
-              : "叙事线"}
-        </h2>
-        <small>
-          版本 {query.data?.version} ·{" "}
-          {mode === "projection"
-            ? "只读投影"
-            : query.data?.readonly
-              ? "只读"
-              : "修改保存到当前作品"}
-        </small>
-        {mode !== "projection" && (
-          <button
-            disabled={
-              readonly ||
-              !planningUndoTarget(
-                query.data?.history ?? [],
-                query.data?.version ?? 0,
-              )
-            }
-            onClick={async () => {
-              const h = planningUndoTarget(
-                query.data?.history ?? [],
-                query.data?.version ?? 0,
-              );
-              if (h) await save([], { action: "restore", snapshotId: h.id });
-            }}
-          >
-            撤销上次规划修改
-          </button>
-        )}
-      </header>
+      {mode === "world" ? (
+        <WorldlineHeader
+          version={query.data?.version}
+          readonly={!!query.data?.readonly}
+          saveState={saveState}
+          canUndo={!readonly && !!planningUndoTarget(query.data?.history ?? [], query.data?.version ?? 0)}
+          onUndo={async () => {
+            const h = planningUndoTarget(query.data?.history ?? [], query.data?.version ?? 0);
+            if (h) await save([], { action: "restore", snapshotId: h.id });
+          }}
+        />
+      ) : (
+        <header className={s.toolbar}>
+          <h2>{mode === "projection" ? "大纲" : "叙事线"}</h2>
+          <small>
+            版本 {query.data?.version} ·{" "}
+            {mode === "projection"
+              ? "只读投影"
+              : query.data?.readonly
+                ? "只读"
+                : "修改保存到当前作品"}
+          </small>
+          {mode !== "projection" && (
+            <button
+              disabled={
+                readonly ||
+                !planningUndoTarget(
+                  query.data?.history ?? [],
+                  query.data?.version ?? 0,
+                )
+              }
+              onClick={async () => {
+                const h = planningUndoTarget(
+                  query.data?.history ?? [],
+                  query.data?.version ?? 0,
+                );
+                if (h) await save([], { action: "restore", snapshotId: h.id });
+              }}
+            >
+              撤销上次规划修改
+            </button>
+          )}
+        </header>
+      )}
       {message && (
         <div className={s.notice} role="status">
           {message}

@@ -1,0 +1,33 @@
+▶ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier
+  ✔ pending-real-promise-and-delayed-resources (66.064333ms)
+  ✔ pre-invoke-source-work-and-synchronous-throw (63.093542ms)
+  ✔ fresh-task-flushes-resolver-before-observer-race (0.822291ms)
+  ✔ settled-raw-promise-with-stale-disk-and-live-operation-is-missed (41.395833ms)
+  ✔ lineage-change-does-not-sign-or-stop-new-owner (120.423709ms)
+  ✔ hard-token-and-byte-capacity-before-invoke (4.344333ms)
+  ✖ synchronous-cancel-failure-still-waits-raw-job (39.235792ms)
+(node:86521) PromiseRejectionHandledWarning: Promise rejection was handled asynchronously (rejection id: 10)
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✔ proof-write-failure-still-drains (58.145042ms)
+✖ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier (395.926958ms)
+✔ NI-RT02: private runtime diagnostics survive restart without changing content identities (204.63475ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 8
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1040.65025
+
+✖ failing tests:
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:15406
+✖ synchronous-cancel-failure-still-waits-raw-job (39.235792ms)
+  Error: PRIVATE-RPC-ERROR-URL-KEY-BODY
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:29:206)
+      at Object.cancelAi (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:18:978)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:579:112)
+      at Array.map (<anonymous>)
+      at NovelImportController.stopAction (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:579:91)
+      at async NovelImportController.act (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:131:142)

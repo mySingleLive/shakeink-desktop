@@ -1,0 +1,14 @@
+✔ NI-C01: source classification uses a separate contract without changing other AI phases (13.993375ms)
+▶ NI-C02: changed classification contracts invalidate old credit while matching contracts resume
+  ✔ old-contract-reopens-neutral-copies-with-atomic-invalid-response (393.507833ms)
+  ✔ same-contract-pause-reopen-only-uncovered-and-stale-epoch-no-credit (168.609041ms)
+  ✔ legacy-formula-and-working-geometry-and-source-only-zero-AI (250.67175ms)
+✔ NI-C02: changed classification contracts invalidate old credit while matching contracts resume (813.552458ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1330.069583

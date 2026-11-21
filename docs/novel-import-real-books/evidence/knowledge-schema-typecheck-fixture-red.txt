@@ -1,0 +1,25 @@
+[96mtests/unit/novel-import-request-schema.test.ts[0m:[93m48[0m:[93m153[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ reliability: string; attribution?: undefined; } | { reliability: string; attribution?: undefined; } | { reliability: string; attribution: string; } | { reliability?: undefined; attribution?: undefined; } | { ...; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ reliability: string; attribution?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'attribution' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+
+[7m48[0m   const input=knowledgeRequest(item.kind),snapshot=structuredClone(input),inputPrompt=importAiPrompt(input),raw={artifacts:[knowledgeArtifact(item.kind,item.bad)]},valid={artifacts:[knowledgeArtifact(item.kind,item.good)]},prompts:string[]=[]
+[7m  [0m [91m                                                                                                                                                        ~~~~~~~~[0m
+
+[96mtests/unit/novel-import-request-schema.test.ts[0m:[93m48[0m:[93m211[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ reliability: string; temporalScope: string; attribution?: undefined; } | { reliability: string; attribution: string; temporalScope: string; } | { reliability: string; attribution: string; temporalScope: string; } | { ...; } | { ...; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ reliability: string; temporalScope: string; attribution?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'attribution' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+
+[7m48[0m   const input=knowledgeRequest(item.kind),snapshot=structuredClone(input),inputPrompt=importAiPrompt(input),raw={artifacts:[knowledgeArtifact(item.kind,item.bad)]},valid={artifacts:[knowledgeArtifact(item.kind,item.good)]},prompts:string[]=[]
+[7m  [0m [91m                                                                                                                                                                                                                  ~~~~~~~~~[0m
+
+[96mtests/unit/novel-import-request-schema.test.ts[0m:[93m70[0m:[93m155[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ reliability: string; attribution?: undefined; } | { reliability: string; attribution?: undefined; } | { reliability: string; attribution: string; } | { reliability?: undefined; attribution?: undefined; } | { ...; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ reliability: string; attribution?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'attribution' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+
+[7m70[0m  for(const item of knowledgeBadCases){const input=knowledgeRequest(item.kind),snapshot=structuredClone(input),raw={artifacts:[knowledgeArtifact(item.kind,item.bad)]},checked=factory(input).safeParse(raw);assert.equal(checked.success,false,item.name+' is rejected before native validation');if(!checked.success){assert.ok(checked.error.issues.some(issue=>issue.path.join('.')==='artifacts.0.facts.'+item.field));for(const issue of checked.error.issues)for(const secret of [knowledgeSecret,currentId,foreignId,scene.id])assert.ok(!issue.message.includes(secret))}await assert.rejects(call(raw,input),/结构|类别/);assert.deepEqual(input,snapshot);assert.equal(factory({...input,semanticVersion:undefined,selectedTargets:undefined}).safeParse(raw).success,true,'legacy facts schema remains unchanged')}
+[7m  [0m [91m                                                                                                                                                          ~~~~~~~~[0m
+
+Owned knowledge-schema files diagnostics: 3

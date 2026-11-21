@@ -1,0 +1,190 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (62.822209ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (17.63125ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.1055ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.949334ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (8.902083ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.355459ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (12.925292ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (8.430917ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (23.884333ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (2.921792ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.302167ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.07125ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.130875ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (37.63825ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.258042ms)
+  ✔ ordinary narrative fixtures now reject early after native format validation (1.172125ms)
+  ✔ actual reconcile field edits reach both distinct character-reference late failures (1.55075ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (2.232166ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (6.568209ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (12.9615ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (5.407584ms)
+  ✔ empty results retain the late gate while narrative references reject early and reconcile still rejects late (2.032875ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (20.842ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✔ original native constraints enter the real bridge correction without transforming values (31.512917ms)
+  ✔ strict catalog and global chapter constraints enter the same bounded correction (15.352875ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (7.232292ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (1.074041ms)
+✔ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (55.955875ms)
+▶ NI-J08: final character schema errors expose only bounded static business labels
+  ✔ actual bridge generateJSON Zod runImportAi and main safeError preserve final bounded diagnostics (1.891042ms)
+  ✔ first bad then good and first good remain exact successes with two or one calls (1.197791ms)
+  ✔ actual Zod unknown and truncated paths cannot echo or falsely identify known fields (5.161333ms)
+  ✔ synthetic typed metadata covers full-path allowlist and first-six bounds only (2.296417ms)
+  ✔ all unrelated phases kinds legacy and original error identities pass through (2.122042ms)
+✔ NI-J08: final character schema errors expose only bounded static business labels (13.281583ms)
+▶ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance
+  ✖ array aliases uses the actual bounded correction (4.580917ms)
+  ✖ object relationships uses the actual bounded correction (0.609667ms)
+  ✖ numeric age uses the actual bounded correction (0.365958ms)
+  ✖ boolean occupation uses the actual bounded correction (0.32475ms)
+  ✖ null clothing uses the actual bounded correction (0.335375ms)
+  ✔ literal old acceptance cases for strings nonstrings optional shape and prototype keys remain unchanged (10.855291ms)
+  ✔ other kind phase reconcile and legacy string validation retains the original error (2.029125ms)
+  ✔ string encoding does not bypass original knowledge source native and link gates (3.917375ms)
+✖ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance (71.542958ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 37
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1193.961125
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:103257
+✖ array aliases uses the actual bounded correction (4.580917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'Invalid input: expected string, received array'
+  -   '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:433:333)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:432:37)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Invalid input: expected string, received array' ],
+    expected: [ '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:103257
+✖ object relationships uses the actual bounded correction (0.609667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'Invalid input: expected string, received object'
+  -   '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:433:333)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:432:37)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Invalid input: expected string, received object' ],
+    expected: [ '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:103257
+✖ numeric age uses the actual bounded correction (0.365958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'Invalid input: expected string, received number'
+  -   '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:433:333)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:432:37)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Invalid input: expected string, received number' ],
+    expected: [ '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:103257
+✖ boolean occupation uses the actual bounded correction (0.32475ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'Invalid input: expected string, received boolean'
+  -   '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:433:333)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:432:37)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Invalid input: expected string, received boolean' ],
+    expected: [ '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:103257
+✖ null clothing uses the actual bounded correction (0.335375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'Invalid input: expected string, received null'
+  -   '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:433:333)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:432:37)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'Invalid input: expected string, received null' ],
+    expected: [ '角色facts每个值必须是字符串；数组/对象先编码为JSON字符串并转义引号，不能直接返回数组、对象、数字、布尔或null；保留有据内容，不以删除人物或清空资料通过' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

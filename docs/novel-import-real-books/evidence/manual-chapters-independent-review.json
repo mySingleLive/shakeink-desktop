@@ -1,0 +1,51 @@
+{
+  "status": "PASS",
+  "scope": "66 only approved one-line helper reuse plus CH04/S12 and the two exact commands",
+  "baselineSha256": {
+    "desktop/core/novel-import.ts": "854c734df935bb7631e71bf3c7e9d9a1f70a1c582a6d50ba102d5ba491793dbc",
+    "tests/unit/novel-import-chapters.test.ts": "3ae06c71f22bb78cf27b61a287842f5e3c4ca44d4bf8aece6cfcf8e2cc08dbfc",
+    "tests/unit/novel-import-session.test.ts": "617127bff8096f82b8d5300f72b092f8b2a7f76c9ef2db1d8fa4897a645c07c4"
+  },
+  "frozenSha256": {
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "tests/unit/novel-import-chapters.test.ts": "006fcd00a9be86ea4e5dae864192317720229eea916b9cdc8777bf137732298a",
+    "tests/unit/novel-import-session.test.ts": "68c79febb1c96ba8cf9593ac6070c5927dfa753e75eb6c365f84b2751017c814"
+  },
+  "independentlyRegeneratedFullDiffMatchesAuthorBytes": true,
+  "fullDiffSha256": "a0d32fc978906105caf5fd32febaa67b62ad7581e813af70d21a015c45bf12fb",
+  "coreRestoresByteExactBaselineByRemovingOnlyNewGuard": true,
+  "allOldChapterTestsByteIdentical": true,
+  "sessionTestOnlyInsertions": true,
+  "logsSha256": {
+    "manual-chapters-independent-ch03-ch04.txt": "63912c558b3f4cfbed071eddd009d906d3824e370081d276f54f9249b77350a0",
+    "manual-chapters-independent-s12.txt": "2d3c91114d27ff5df6e4ac3fd024eff14dfc8b169e958148d78b8409db5d51ab",
+    "manual-chapters-ch03-ch04-red.txt": "c5f1536ad3f3c055b4e00a4170f18d1891308065525ae8b27c777189d3f194ab",
+    "manual-chapters-s12-red.txt": "8a3f2a6ffa0ea90ab6c186676d212417d07782b13b47edf6e43bb81027d2157d"
+  },
+  "results": [
+    {
+      "scope": "NI-CH03/04",
+      "exitCode": 0,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 157.348834
+    },
+    {
+      "scope": "NI-S12",
+      "exitCode": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 332.046917
+    }
+  ],
+  "controlsSha256": {
+    "desktop/main/novel-import.ts": "a0acd1a282eea4dc874ff45fa4b4b143cc2c2fe688880a235399bcff1d49bcd7",
+    "desktop/service/novel-import-ai.ts": "312fe64bf374168f6ec33267006a5c64d7e8b934093a33f4ef57398cf9271cd6",
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92"
+  },
+  "boundary": "No source/test edits, real S02/corpus/journal/application/model/database, extra suite, independent typecheck or build"
+}

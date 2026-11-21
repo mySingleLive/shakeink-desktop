@@ -1,0 +1,17 @@
+✔ NI-PDF14: actual missing-dimension and decode warnings block otherwise visible PDF pages (1998.32ms)
+✔ NI-PDF02: scan and partial PDF failures keep explicit blocked page ledgers instead of truncated success (2868.48725ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (2.358625ms)
+▶ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation
+  ✔ cancel (34.144542ms)
+  ✔ timeout (134.797167ms)
+✔ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation (169.527166ms)
+✔ NI-PDF02: budget failure keeps already extracted text and marks every remaining physical page unscanned (16.0535ms)
+✔ NI-PDF14: actual page and operator caps keep bounded ledgers instead of continued success (1705.968834ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7600.60275

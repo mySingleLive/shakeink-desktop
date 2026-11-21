@@ -1,0 +1,24 @@
+{
+  "run": "r14",
+  "phase": "running",
+  "chapters": 1402,
+  "units": 5589,
+  "scenes": 1038,
+  "artifacts": 315,
+  "taskStates": {
+    "done": 315,
+    "failed": 1,
+    "running": 30,
+    "waiting": 692
+  },
+  "failure": "scene-field-format",
+  "allScenesImported": false,
+  "published": false,
+  "reopened": false,
+  "sourceUnchanged": true,
+  "driverExit": 2,
+  "electronExit": {
+    "code": 0,
+    "signal": null
+  }
+}

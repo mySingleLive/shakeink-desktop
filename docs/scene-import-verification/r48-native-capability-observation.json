@@ -1,0 +1,232 @@
+{
+  "run": "R48",
+  "kind": "static-once-only-current-interface-schema-observation",
+  "receipt": {
+    "summary": {
+      "ok": true,
+      "results": [
+        {
+          "id": "enum-positive",
+          "promptSha256": "5f2fdae1c5ce678ba759aaaacea268aea282c07cbfde52478b273682e8686a87",
+          "schemaSha256": "7a66c20642614ea320856cf27d959482077169fc65d0cf9bb497cc4a31e5fcbc",
+          "schemaBytes": 850,
+          "category": "completed",
+          "generationCalls": 1,
+          "fetchAttempts": 1,
+          "networkStarts": 1,
+          "finishReason": "stop",
+          "validation": {
+            "directJSON": true,
+            "parserCandidate": true,
+            "schema": "pass",
+            "parserSchema": "pass",
+            "keywordCounts": {
+              "enum": 0,
+              "minItems": 0,
+              "maxItems": 0,
+              "uniqueItems": 0,
+              "required": 0,
+              "additionalProperties": 0,
+              "type": 0,
+              "pattern": 0,
+              "anyOf": 0,
+              "minLength": 0,
+              "maxLength": 0,
+              "minimum": 0,
+              "maximum": 0,
+              "other": 0
+            },
+            "patchMinItems": "not-tested",
+            "distinctness": "not-tested"
+          },
+          "wire": {
+            "type": "json_schema",
+            "strict": true,
+            "schemaSha256": "7a66c20642614ea320856cf27d959482077169fc65d0cf9bb497cc4a31e5fcbc",
+            "schemaBytes": 850,
+            "inputTextSha256": "5f2fdae1c5ce678ba759aaaacea268aea282c07cbfde52478b273682e8686a87",
+            "matchesExpected": true
+          },
+          "textCharacters": 185,
+          "streamCaptured": true,
+          "deltaEqualsSDKText": true,
+          "elapsedMs": 2339
+        },
+        {
+          "id": "enum-contradiction",
+          "promptSha256": "2ce7894acb70d9e08ac79ae2f8cef03acaac56f4d9cfaf5e63e93c054a64c32d",
+          "schemaSha256": "7a66c20642614ea320856cf27d959482077169fc65d0cf9bb497cc4a31e5fcbc",
+          "schemaBytes": 850,
+          "category": "completed",
+          "generationCalls": 1,
+          "fetchAttempts": 1,
+          "networkStarts": 1,
+          "finishReason": "stop",
+          "validation": {
+            "directJSON": true,
+            "parserCandidate": true,
+            "schema": "fail",
+            "parserSchema": "fail",
+            "keywordCounts": {
+              "enum": 3,
+              "minItems": 0,
+              "maxItems": 0,
+              "uniqueItems": 0,
+              "required": 0,
+              "additionalProperties": 0,
+              "type": 0,
+              "pattern": 0,
+              "anyOf": 0,
+              "minLength": 0,
+              "maxLength": 0,
+              "minimum": 0,
+              "maximum": 0,
+              "other": 0
+            },
+            "patchMinItems": "not-tested",
+            "distinctness": "not-tested"
+          },
+          "wire": {
+            "type": "json_schema",
+            "strict": true,
+            "schemaSha256": "7a66c20642614ea320856cf27d959482077169fc65d0cf9bb497cc4a31e5fcbc",
+            "schemaBytes": 850,
+            "inputTextSha256": "2ce7894acb70d9e08ac79ae2f8cef03acaac56f4d9cfaf5e63e93c054a64c32d",
+            "matchesExpected": true
+          },
+          "textCharacters": 185,
+          "streamCaptured": true,
+          "deltaEqualsSDKText": true,
+          "elapsedMs": 967
+        },
+        {
+          "id": "generic-min-items",
+          "promptSha256": "74a65ab836aa0f574f417194244abac69ace334bf254dcc68abb14da7e2dc93c",
+          "schemaSha256": "24bab9493e4fbf3707b5a2bfe20312a92c4f5c4885cd5cd048ca38f2abd83cfc",
+          "schemaBytes": 3015,
+          "category": "completed",
+          "generationCalls": 1,
+          "fetchAttempts": 1,
+          "networkStarts": 1,
+          "finishReason": "stop",
+          "validation": {
+            "directJSON": true,
+            "parserCandidate": true,
+            "schema": "fail",
+            "parserSchema": "fail",
+            "keywordCounts": {
+              "enum": 2,
+              "minItems": 1,
+              "maxItems": 0,
+              "uniqueItems": 0,
+              "required": 1,
+              "additionalProperties": 2,
+              "type": 0,
+              "pattern": 0,
+              "anyOf": 1,
+              "minLength": 0,
+              "maxLength": 0,
+              "minimum": 0,
+              "maximum": 0,
+              "other": 0
+            },
+            "patchMinItems": "fail",
+            "distinctness": "not-tested"
+          },
+          "wire": {
+            "type": "json_schema",
+            "strict": true,
+            "schemaSha256": "24bab9493e4fbf3707b5a2bfe20312a92c4f5c4885cd5cd048ca38f2abd83cfc",
+            "schemaBytes": 3015,
+            "inputTextSha256": "74a65ab836aa0f574f417194244abac69ace334bf254dcc68abb14da7e2dc93c",
+            "matchesExpected": true
+          },
+          "textCharacters": 92,
+          "streamCaptured": true,
+          "deltaEqualsSDKText": true,
+          "elapsedMs": 971
+        },
+        {
+          "id": "distinct-claims",
+          "promptSha256": "c180d81782242eab95ef2ebc6adb86831f5604d04f8aecf7a41077562ebe2463",
+          "schemaSha256": "619c554c238ea0500c291f09c9f18bee60b4b5f7ae0568b414413b89173fc112",
+          "schemaBytes": 1216,
+          "category": "completed",
+          "generationCalls": 1,
+          "fetchAttempts": 1,
+          "networkStarts": 1,
+          "finishReason": "stop",
+          "validation": {
+            "directJSON": true,
+            "parserCandidate": true,
+            "schema": "fail",
+            "parserSchema": "fail",
+            "keywordCounts": {
+              "enum": 0,
+              "minItems": 0,
+              "maxItems": 0,
+              "uniqueItems": 1,
+              "required": 0,
+              "additionalProperties": 0,
+              "type": 0,
+              "pattern": 0,
+              "anyOf": 0,
+              "minLength": 0,
+              "maxLength": 0,
+              "minimum": 0,
+              "maximum": 0,
+              "other": 0
+            },
+            "patchMinItems": "not-tested",
+            "distinctness": "fail"
+          },
+          "wire": {
+            "type": "json_schema",
+            "strict": true,
+            "schemaSha256": "619c554c238ea0500c291f09c9f18bee60b4b5f7ae0568b414413b89173fc112",
+            "schemaBytes": 1216,
+            "inputTextSha256": "c180d81782242eab95ef2ebc6adb86831f5604d04f8aecf7a41077562ebe2463",
+            "matchesExpected": true
+          },
+          "textCharacters": 279,
+          "streamCaptured": true,
+          "deltaEqualsSDKText": true,
+          "elapsedMs": 864
+        }
+      ],
+      "writeFailures": 0,
+      "closeFailed": false,
+      "networkStarts": 4,
+      "readonlyUsage": true,
+      "maxNetworkRetries": 0,
+      "metadataWriteAttempts": 0,
+      "diagnosticSecretsInspected": false,
+      "diagnosticHeadersInspected": false,
+      "novelInputSent": false
+    },
+    "elapsedMs": 8257,
+    "helperUnchanged": true,
+    "inputHashesUnchanged": true,
+    "stateUnchanged": true,
+    "protectedArtifactsUnchanged": true,
+    "protectedFiles": 367,
+    "pageErrors": 0,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "initialQuitExit": {
+      "code": 0,
+      "signal": null
+    },
+    "quitTimedOut": false,
+    "readonlyUsage": true,
+    "maxNetworkRetries": 0,
+    "novelInputSent": false,
+    "newSupplierObservationOnly": true,
+    "fullBookVerified": false
+  },
+  "singleObservationOnly": true,
+  "generalSchemaSupportClaimed": false,
+  "fullBookVerified": false
+}

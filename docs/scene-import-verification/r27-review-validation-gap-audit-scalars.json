@@ -1,0 +1,174 @@
+{
+  "boundedCases": 12,
+  "requestUnits": 77,
+  "requestArtifacts": 108,
+  "requestProjectionOwnerHashMismatches": 0,
+  "networkCalls": 0,
+  "usageWrites": 0,
+  "ownerWrites": 0,
+  "postModelCalls": 0,
+  "requestAndSnapshotUnchanged": true,
+  "notHistoricalFailedReply": true,
+  "results": [
+    {
+      "case": "empty-baseline",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": true,
+      "mainAccepted": true,
+      "syntheticGenerations": 1
+    },
+    {
+      "case": "valid-new-scene-missing",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": true,
+      "mainAccepted": true,
+      "syntheticGenerations": 1
+    },
+    {
+      "case": "valid-existing-triple",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": true,
+      "mainAccepted": true,
+      "syntheticGenerations": 1
+    },
+    {
+      "case": "unselected-kind",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "遗漏目标或来源范围无效"
+      }
+    },
+    {
+      "case": "duplicate-unit-ids",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": false,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 2,
+      "bridgeError": {
+        "name": "StructuredGenerationError",
+        "kind": "invalid_schema",
+        "fixedError": "other"
+      },
+      "serviceError": {
+        "name": "StructuredGenerationError",
+        "kind": "invalid_schema",
+        "fixedError": "other"
+      }
+    },
+    {
+      "case": "unknown-unit-id",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "遗漏目标或来源范围无效"
+      }
+    },
+    {
+      "case": "wrong-existing-base-hash",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "已有实体遗漏目标、版本、字段或锁定范围无效"
+      }
+    },
+    {
+      "case": "unknown-artifact-id",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "已有实体遗漏目标、版本、字段或锁定范围无效"
+      }
+    },
+    {
+      "case": "invalid-existing-field",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "已有实体遗漏目标、版本、字段或锁定范围无效"
+      }
+    },
+    {
+      "case": "evidence-misses-declared-unit",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "遗漏目标证据未完整覆盖来源范围"
+      }
+    },
+    {
+      "case": "evidence-has-extra-unit",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "遗漏目标证据未完整覆盖来源范围"
+      }
+    },
+    {
+      "case": "existing-text-not-fully-provided",
+      "syntheticJson": true,
+      "notHistoricalFailedReply": true,
+      "bridgeAccepted": true,
+      "serviceAccepted": false,
+      "mainAccepted": null,
+      "syntheticGenerations": 1,
+      "serviceError": {
+        "name": "Error",
+        "kind": null,
+        "fixedError": "已有实体遗漏文字未完整提供，片外内容不能判缺"
+      }
+    }
+  ],
+  "scope": "bounded synthetic reply audit on R27 request; not the historical failed reply",
+  "fullSceneImportVerified": false
+}

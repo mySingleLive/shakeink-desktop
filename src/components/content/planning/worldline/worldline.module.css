@@ -1,0 +1,426 @@
+/* docs/580 §7.1: worldline redesign styles. Only theme variables from globals.css (玄墨 .ink / 宣纸 .paper) and the
+ * --event-* type colours; sizes from the approved design v9. No colour literals here (WU-79b). */
+.panel { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--tree-w, 260px) minmax(0, 1fr); border-top: 1px solid var(--border); }
+/* The splitter straddles the tree's right border; it stays out of the grid flow. */
+.treeResizer { position: absolute; z-index: 16; top: 0; bottom: 0; left: calc(var(--tree-w, 260px) - 4px); width: 8px; cursor: col-resize; touch-action: none; }
+.treeResizer::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background 0.15s; }
+.treeResizer:hover::after, .treeResizer:focus-visible::after, .treeResizer[data-dragging]::after { background: var(--primary); }
+.treeResizer:focus-visible { outline: none; }
+.workspace.treeOff .treeResizer { display: none; }
+.workspace.treeOff { grid-template-columns: 0 minmax(0, 1fr); }
+.workspace.treeOff .tree { visibility: hidden; padding: 0; border: 0; }
+
+/* ---------- toolbar ---------- */
+.bar { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 0; padding-bottom: 12px; }
+.bar > * { flex: none; }
+.spacer { flex: 1 1 0; min-width: 8px; }
+.sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border); }
+.group { display: inline-flex; align-items: center; gap: 6px; }
+/* Toolbar controls. planning.module.css styles every `.workspace button/select` (0,1,1: border, 5px 9px padding, card
+ * background), which beat the Tailwind utilities and left inner borders and off-centre labels. Every rule below is
+ * scoped `.bar .x` (≥ 0,2,0) so the toolbar owns its own look in both themes. */
+.bar .tb, .bar .select select, .bar .chip, .bar .primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 28px; margin: 0; padding: 0 10px;
+  border: 1px solid var(--input); border-radius: calc(var(--radius) * 1.33); background: transparent; color: var(--foreground);
+  font-size: 12.8px; font-weight: 500; line-height: 1; white-space: nowrap; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.bar .tb:hover, .bar .select select:hover, .bar .chip:hover { background: var(--muted); }
+.bar .tb svg, .bar .primary svg { width: 14px; height: 14px; flex: none; }
+.bar .tb.icon { width: 28px; padding: 0; border-color: transparent; color: var(--muted-foreground); }
+.bar .tb.icon:hover { color: var(--foreground); }
+.bar .tb.icon[aria-pressed="true"] { color: var(--foreground); background: var(--muted); }
+.bar .select { position: relative; display: inline-flex; align-items: center; }
+.bar .select select { appearance: none; -webkit-appearance: none; justify-content: flex-start; padding: 0 26px 0 10px; cursor: pointer; }
+.bar .select > svg { position: absolute; right: 8px; width: 13px; height: 13px; pointer-events: none; color: var(--muted-foreground); }
+.bar .select.period select { width: 96px; }
+.bar .seg { display: inline-flex; align-items: center; gap: 2px; height: 28px; padding: 3px; border-radius: calc(var(--radius) * 1.66); background: var(--muted); }
+.bar .seg button { height: 22px; margin: 0; padding: 0 12px; border: 0; border-radius: calc(var(--radius) * 1.33); background: transparent; color: var(--muted-foreground); font-size: 12.8px; font-weight: 500; line-height: 22px; transition: background-color 0.15s, color 0.15s; }
+.bar .seg button:hover { color: var(--foreground); }
+.bar .seg button[aria-selected="true"] { background: var(--background); color: var(--foreground); box-shadow: 0 0 0 1px var(--input); }
+.bar .zoom { display: inline-flex; align-items: center; gap: 0; height: 28px; padding: 0 2px; border: 1px solid var(--input); border-radius: calc(var(--radius) * 1.33); }
+.bar .zoom button { display: inline-grid; place-items: center; width: 24px; height: 22px; margin: 0; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--muted-foreground); line-height: 1; }
+.bar .zoom button:hover { background: var(--muted); color: var(--foreground); }
+.bar .zoom button svg { width: 13px; height: 13px; }
+.bar .zoom .reset { width: auto; padding: 0 7px; font-size: 12px; }
+.bar .zoom .value { min-width: 54px; padding: 0 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--foreground); white-space: nowrap; }
+.bar .zoom .div { width: 1px; height: 14px; margin: 0 2px; background: var(--border); }
+.bar .primary { border-color: transparent; background: var(--primary); color: var(--primary-foreground); }
+.bar .primary:hover { background: color-mix(in srgb, var(--primary) 85%, transparent); }
+.bar .primary:disabled { opacity: 0.5; }
+.chip { color: var(--muted-foreground); }
+.bar .chip { color: var(--muted-foreground); }
+.chip b { color: var(--foreground); font-weight: 600; }
+.chip.zero { opacity: 0.5; }
+.search { display: flex; align-items: center; gap: 2px; flex: 0 1 240px; min-width: 120px; height: 28px; padding: 0 6px 0 9px; border-radius: var(--radius); border: 1px solid var(--input); transition: flex-basis 0.2s; }
+.search:focus-within, .search.active { flex-basis: 360px; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent); }
+.search.none { border-color: var(--event-conflict); }
+.search input { flex: 1; min-width: 0; height: 100%; padding: 0 6px; border: 0; outline: none; background: none; color: inherit; font-size: 13px; }
+.search .count { color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums; padding: 0 4px; white-space: nowrap; }
+.search.none .count { color: var(--event-conflict); }
+.search > svg { width: 14px; height: 14px; flex: none; color: var(--muted-foreground); }
+.bar .search button { display: inline-grid; place-items: center; width: 22px; height: 22px; margin: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted-foreground); line-height: 1; }
+.bar .search button:hover:not(:disabled) { background: var(--muted); color: var(--foreground); }
+.search kbd { padding: 0 5px; border-radius: 4px; border: 1px solid var(--border); color: var(--muted-foreground); font-size: 10px; }
+.search.active kbd, .search:focus-within kbd { display: none; }
+@media (max-width: 1280px) { .hideNarrow1, .bar .zoom .hideNarrow1, .search kbd, .chip.zero, .bar .chip.zero { display: none; } }
+@media (max-width: 1160px) { .iconNarrow .lbl { display: none; } .bar .tb.iconNarrow { width: 28px; padding: 0; } }
+
+/* ---------- status line and legend ---------- */
+.status { display: flex; align-items: center; gap: 14px; margin: 0 0 8px; color: var(--muted-foreground); font-size: 12px; flex-wrap: wrap; }
+.legend { margin-left: auto; display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.types { display: contents; }
+.legend button { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 11px; color: var(--muted-foreground); border: 1px solid transparent; }
+.legend button i { width: 7px; height: 7px; border-radius: 50%; background: var(--ec); }
+.legend button[aria-pressed="false"] { opacity: 0.45; text-decoration: line-through; }
+.legend button[aria-pressed="false"] i { background: transparent; outline: 1px solid var(--ec); }
+.sizes { display: inline-flex; align-items: center; gap: 2px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--border); }
+.sizes > span { margin-right: 4px; }
+.sizes i { display: inline-block; border-radius: 50%; background: var(--muted-foreground); }
+/* docs/591: an importance switched off looks like a type switched off. */
+.legend .sizes button i { background: var(--muted-foreground); }
+.legend .sizes button[aria-pressed="false"] i { background: transparent; outline: 1px solid var(--muted-foreground); }
+
+/* ---------- tree ---------- */
+.tree { overflow: auto; padding: 0 10px 40px 0; border-right: 1px solid var(--border); }
+.treeHead { position: sticky; top: 0; z-index: 2; box-sizing: border-box; height: 36px; display: flex; align-items: baseline; justify-content: space-between; padding: 12px 4px 8px 6px; background: var(--background); font-size: 12px; color: var(--muted-foreground); }
+.treeRow { position: relative; scroll-margin-top: 64px; display: flex; align-items: center; gap: 6px; height: 28px; padding-right: 8px; border-radius: 7px; cursor: pointer; color: var(--muted-foreground); font-size: 13px; }
+.treeRow:hover { background: var(--hover-wash); color: var(--foreground); }
+.treeRow.current { background: var(--active-wash); color: var(--foreground); }
+.treeRow.selectedRow { color: var(--foreground); font-weight: 600; }
+.treeRow.inView .treeDot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ec) 25%, transparent); }
+.treeRow.dim { opacity: 0.35; }
+.treeTwist { flex: none; width: 16px; text-align: center; font-size: 10px; color: var(--muted-foreground); transition: transform 0.15s; }
+.treeTwist.closed { transform: rotate(-90deg); }
+.treeDot { flex: none; border-radius: 50%; background: var(--ec); }
+.treeTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.treeTitle[data-fade] { mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+.treeTime { flex: none; font-size: 11px; font-variant-numeric: tabular-nums; }
+/* Year headers stick under the directory head; the next header pushes over the previous one. */
+.treeGroup { position: sticky; top: 36px; z-index: 1; display: flex; align-items: center; gap: 6px; margin: 10px 0 4px; padding: 4px 0 4px 6px; background: var(--background); font-size: 11px; letter-spacing: 0.1em; color: var(--muted-foreground); }
+.treeGroup::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+/* ---------- card ---------- */
+.card { --ec: var(--event-other); position: relative; border-radius: 9px; border: 1px solid var(--border);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 13%, var(--card)), var(--card) 46%); transition: border-color 0.15s, opacity 0.15s; }
+.card::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--ec); }
+.card:hover { border-color: color-mix(in srgb, var(--ec) 40%, var(--border)); }
+/* Hovering an event rail dot: its card takes a stronger border and glow so it is easy to find. */
+.card.hot:not(.selected) { border-color: color-mix(in srgb, var(--ec) 70%, var(--border)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ec) 22%, transparent); }
+.card.selected { border-color: color-mix(in srgb, var(--ec) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 14%, transparent); }
+.card.hit { box-shadow: 0 0 0 2px var(--event-scheme); }
+.card.dim { opacity: 0.3; }
+.card.open { background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 11%, var(--card)), var(--card) 70px); box-shadow: var(--shadow-2); }
+.card:has(details[open]) { z-index: 9; }
+.head { display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 6px 0 14px; cursor: pointer; min-width: 0; }
+.open .head { height: 42px; }
+/* docs/592 R1: a collapsed head grows with its title (1 + 7 + 18 / 36 + 7 + 1 = 34 / 52); every other part sits in an
+ * 18px line box on the first title line, so the dot and lead offsets (cardHeadOffset) do not change. */
+.card:not(.open) > .head { align-items: flex-start; height: auto; padding-top: 7px; padding-bottom: 7px; }
+.ln { flex: none; display: flex; align-items: center; height: 18px; }
+.card:not(.open) > .head .ln > .fold, .card:not(.open) > .head .ln > .expand { margin-block: -3px; }
+.card:not(.open) > .head .ln > .menuHost > summary { margin-block: -3px; }
+.dot { flex: none; border-radius: 50%; background: var(--ec); }
+.dot.i1 { width: 6px; height: 6px; }
+.dot.i2 { width: 9px; height: 9px; }
+.dot.i3 { width: 12px; height: 12px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 22%, transparent); }
+.dot.dotWindow { background: transparent; border: 1.5px solid var(--ec); }
+.title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; margin: 0; font: inherit; }
+.title[data-fade] { mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+/* docs/592 §1.1: the layout's line count fixes the title height; no -webkit-line-clamp (it draws an ellipsis). */
+.card:not(.open) .title { height: 18px; line-height: 18px; }
+.card:not(.open) .title[data-lines="2"] { height: 36px; white-space: normal; word-break: break-all; }
+/* A 2-line title still too long: the first line shows in full, the second fades over its last 36px. */
+.card:not(.open) .title[data-lines="2"][data-fade] {
+  mask-image: linear-gradient(#000 0 18px, transparent 18px), linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+  -webkit-mask-image: linear-gradient(#000 0 18px, transparent 18px), linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+  mask-composite: add; -webkit-mask-composite: source-over;
+}
+.open .title { white-space: normal; font-weight: 600; font-size: 14px; }
+.avatars { flex: none; display: inline-flex; align-items: center; padding-left: 4px; }
+.avatars i { display: grid; place-items: center; width: 18px; height: 18px; margin-left: -5px; overflow: hidden; border-radius: 50%; font-style: normal; font-size: 10px; font-weight: 600;
+  color: var(--primary-foreground); background: color-mix(in srgb, var(--ec) 70%, var(--foreground)); border: 1.5px solid var(--card); }
+.avatars i:first-child { margin-left: 0; }
+.avatars i img { width: 100%; height: 100%; object-fit: cover; }
+.avatars i.more { width: auto; min-width: 18px; padding: 0 4px; border-radius: 9px; background: var(--muted); color: var(--muted-foreground); }
+.timeline .avatars i { width: 16px; height: 16px; font-size: 9px; }
+.kids { flex: none; padding: 0 7px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted-foreground); font-size: 11px; }
+/* Child-event fold toggle: a borderless chevron in a soft round chip tinted with the event colour, matching the
+ * 「展开」 chevron and 「…」 summary. `.head .fold` (0,2,0) beats `.workspace button` (0,1,1), which would otherwise
+ * draw a bordered card-coloured box with 5px 9px padding. Points down when open, right when folded. */
+.head .fold { flex: none; display: grid; place-items: center; width: 20px; height: 20px; margin-left: -6px; padding: 0; border: 0;
+  border-radius: 50%; background: color-mix(in srgb, var(--ec) 12%, transparent); color: color-mix(in srgb, var(--ec) 75%, var(--foreground));
+  outline: none; transition: background-color 0.15s, color 0.15s; }
+.head .fold:hover { background: color-mix(in srgb, var(--ec) 26%, transparent); color: var(--foreground); }
+.head .fold:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.fold svg { display: block; transition: transform 0.15s; }
+.fold.foldClosed svg { transform: rotate(-90deg); }
+/* Timeline expand/collapse: a bare chevron arrow, no box. `.head .expand` (0,2,0) beats PlanningWorkspace's
+ * `.workspace button` (0,1,1), which would otherwise give it a bordered card-coloured box and 5px 9px padding.
+ * 24px hit area and 16px icon like the 「…」 summary; the arrow points up while the card is open. */
+.head .expand { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent;
+  color: var(--muted-foreground); outline: none; }
+.head .expand:hover { color: var(--foreground); }
+.head .expand:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.expand svg { display: block; transition: transform 0.15s; }
+.expand svg.expandUp { transform: rotate(180deg); }
+.menuHost { position: relative; flex: none; }
+.menuHost summary { list-style: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; color: var(--muted-foreground); cursor: pointer; }
+.menuHost summary::-webkit-details-marker { display: none; }
+.menu { position: absolute; right: 0; top: 28px; z-index: 20; min-width: 140px; padding: 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--popover); box-shadow: var(--shadow-2); }
+.menu button { display: block; width: 100%; padding: 6px 10px; border-radius: 6px; text-align: left; font-size: 13px; }
+.menu button:hover:not(:disabled) { background: var(--muted); }
+.menu button:disabled { opacity: 0.45; }
+.body { padding: 0 16px 14px 30px; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--muted-foreground); font-size: 12px; }
+.tag { padding: 0 8px; border-radius: 9px; color: var(--ec); background: color-mix(in srgb, var(--ec) 15%, transparent); font-weight: 600; }
+.when { color: var(--foreground); font-variant-numeric: tabular-nums; }
+.fact { line-height: 1.75; }
+/* MarkdownPreview is a document page (centred 720px column, px-11 pb-24 pt-8, 14–15px / 1.9–2.05). Inside a card the
+ * body follows the time row flush and spans the card, at the design's 13px / 1.75 with 8px between paragraphs. */
+.fact > :global(.markdown-body) { height: auto; overflow: visible; font-size: 13px; line-height: 1.75; color: color-mix(in srgb, var(--foreground) 88%, var(--muted-foreground)); }
+.fact > :global(.markdown-body) > div { max-width: none; margin: 0; padding: 0; }
+.fact :global(.markdown-body) p { margin: 0 0 8px; }
+.fact :global(.markdown-body) > div > :first-child { margin-top: 0; }
+.fact :global(.markdown-body) > div > :last-child { margin-bottom: 0; }
+.fact :global(.markdown-body) :is(pre, table) { max-width: 100%; overflow-x: auto; }
+/* overflow has no effect on display: table, so a wide table becomes a scrolling block inside the card. */
+.fact :global(.markdown-body) table { display: block; }
+.people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.who { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 3px; border-radius: 12px; border: 1px solid var(--border); font-size: 12px; }
+.who i { display: grid; place-items: center; width: 18px; height: 18px; overflow: hidden; border-radius: 50%; font-style: normal; font-size: 10px; color: var(--primary-foreground); background: color-mix(in srgb, var(--ec) 65%, var(--foreground)); }
+.who i img { width: 100%; height: 100%; object-fit: cover; }
+.change { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 10px; border-radius: 8px; background: var(--muted); color: var(--muted-foreground); font-size: 12px; }
+.change b { color: var(--foreground); }
+
+/* ---------- event table ---------- */
+.scroller { position: relative; min-height: 0; overflow: auto; }
+.rail { position: absolute; left: 0; top: 0; width: 210px; pointer-events: none; }
+.railLine { position: absolute; left: 158px; width: 2px; margin-left: -1px; border-radius: 1px; background: linear-gradient(transparent, var(--input) 18px, var(--input) calc(100% - 18px), transparent); }
+.railDot { --ec: var(--event-other); position: absolute; left: 158px; border-radius: 50%; background: var(--ec); border: 2px solid var(--background); box-shadow: 0 0 0 1.5px var(--ec); pointer-events: auto; cursor: pointer; transform: translate(-50%, -50%); transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s; }
+.railDot.d1 { width: 9px; height: 9px; }
+.railDot.d2 { width: 13px; height: 13px; }
+.railDot.d3 { width: 17px; height: 17px; border-width: 3px; box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 5px color-mix(in srgb, var(--ec) 16%, transparent); }
+.railDot.hot { box-shadow: 0 0 0 1.5px var(--ec), 0 0 0 6px color-mix(in srgb, var(--ec) 18%, transparent), 0 0 18px var(--ec); }
+.railDot.cluster { width: 18px; height: 18px; border-width: 0; color: var(--background); font-size: 10px; font-weight: 800; line-height: 18px; text-align: center; background: var(--ec); }
+.railDot.dim, .railLabel.dim { opacity: 0.2; }
+.railLabel { --ec: var(--event-other); position: absolute; right: 66px; pointer-events: auto; transform: translateY(-50%); white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); padding: 1px 7px; border-radius: 5px; transition: color 0.15s, background 0.15s; }
+/* Design views.css .dlabel.hot: white text on the event type color. */
+.railLabel.hot { color: #fff; background: var(--ec); }
+.railBadge { position: absolute; left: 158px; transform: translate(-50%, -50%); padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; color: var(--primary); background: var(--background); border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--input)); }
+.railTick { position: absolute; left: 150px; width: 8px; height: 1px; background: var(--input); }
+.railTickLabel { position: absolute; right: 66px; transform: translateY(-50%); font-size: 10px; color: var(--muted-foreground); }
+.railBreak { position: absolute; left: 0; width: 210px; display: flex; align-items: center; justify-content: flex-end; padding-right: 66px; font-size: 11px; font-style: italic; color: var(--muted-foreground); }
+.railPeriod { position: absolute; left: 172px; width: 3px; border-radius: 2px; background: var(--chart-2); opacity: 0.7; }
+.lead { fill: none; stroke: color-mix(in srgb, var(--ec) 35%, var(--border)); stroke-width: 1; transition: stroke 0.15s; }
+.lead.hot { stroke: var(--ec); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--ec)); }
+.lead.child { stroke-dasharray: 3 3; }
+.cards { position: relative; margin-left: 210px; padding: 0 24px 80px 12px; }
+.slot { position: absolute; left: 12px; right: 24px; max-width: 880px; }
+/* docs/583 R1: a collapsed table card is as wide as its head needs, 220px to the slot width. */
+.slot:not(.slotOpen) > .card { width: fit-content; min-width: 220px; max-width: 100%; }
+.slot.slotOpen { max-width: 920px; }
+/* docs/588 §1: the box border is an inset shadow, so children keep layout coordinates at every nesting depth. */
+.groupBox { position: absolute; left: 12px; right: 24px; max-width: 940px; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ec) 22%, var(--border)), inset 3px 0 0 var(--ec);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 7%, transparent), transparent 80%); }
+/* docs/588 §1: the parent card is the box header: full width, flush with the box top, 36px when collapsed. */
+.slot.slotHead, .slot.slotHead.slotOpen { left: 0; right: 0; max-width: none; }
+/* The header is opaque, so it draws the box's 3px type edge itself (no gap in the left bar). */
+.slot.slotHead > .card.groupHead { width: 100%; min-width: 0; border: 0; border-radius: 12px 12px 0 0;
+  box-shadow: inset 3px 0 0 var(--ec), inset 0 -1px 0 var(--border); background: color-mix(in srgb, var(--ec) 12%, var(--card)); }
+.slot.slotHead > .card.groupHead::before { display: none; }
+.slot.slotHead > .card.groupHead.open { border-radius: 12px; }
+.groupHead .head { height: 36px; }
+.groupHead.open .head { height: 42px; }
+/* docs/592 §1.3: a group header is 0 + 9 + 18 / 36 + 9 = 36 / 54 (no border); its first line stays 18 down. */
+.card.groupHead:not(.open) > .head { padding-top: 9px; padding-bottom: 9px; }
+.groupHead .title { font-weight: 600; }
+.slot.slotHead > .card.groupHead.hot:not(.selected) { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, var(--border)), 0 0 0 2px color-mix(in srgb, var(--ec) 22%, transparent); }
+.slot.slotHead > .card.groupHead.selected { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, transparent), 0 0 0 3px color-mix(in srgb, var(--ec) 14%, transparent); }
+.slot.slotHead > .card.groupHead.hit { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 2px var(--event-scheme); }
+/* docs/588 §2: aligned / equidistant rail toggle, top right of the table, not scrolling. */
+.railModeDock { position: sticky; top: 0; z-index: 7; height: 0; }
+.railMode { position: absolute; top: 8px; right: 24px; display: inline-flex; align-items: center; gap: 2px; height: 28px; padding: 3px;
+  border-radius: calc(var(--radius) * 1.66); background: var(--muted); border: 1px solid var(--border); box-shadow: var(--shadow-2); font-size: 12.8px; }
+.railMode > span { padding: 0 4px 0 8px; color: var(--muted-foreground); font-size: 12px; }
+/* (0,2,1): beats planning.module.css `.workspace button` (0,1,1) regardless of stylesheet order. */
+.railMode button.railModeBtn { height: 22px; margin: 0; padding: 0 12px; border: 0; border-radius: calc(var(--radius) * 1.33); background: transparent; color: var(--muted-foreground);
+  font-size: 12.8px; font-weight: 500; line-height: 22px; }
+.railMode button.railModeBtn:hover { color: var(--foreground); }
+.railMode button.railModeBtn[aria-pressed="true"] { background: var(--background); color: var(--foreground); box-shadow: 0 0 0 1px var(--input); }
+.railMode button.railModeBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+/* docs/588 §3: a step back in time on the aligned rail. */
+.railDot.back:not(.hot) { background: var(--background); }
+.railLabel.back { color: color-mix(in srgb, var(--muted-foreground) 70%, transparent); font-style: italic; }
+/* Hovered, a step back reads like any hot label (white on the type color). */
+.railLabel.back.hot { color: #fff; font-style: normal; }
+.railBack { position: absolute; left: 158px; width: 2px; margin-left: -1px; background: var(--background);
+  background-image: repeating-linear-gradient(180deg, var(--muted-foreground) 0 4px, transparent 4px 8px); opacity: 0.8; }
+.railGuide { position: absolute; left: 0; height: 0; border-top: 1px dashed color-mix(in srgb, var(--ec) 60%, transparent); pointer-events: none; }
+.stickyYear { position: sticky; top: 0; z-index: 6; height: 0; }
+.stickyYear span { position: absolute; left: 14px; top: 8px; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: color-mix(in srgb, var(--background) 82%, transparent); border: 1px solid var(--border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .treeTwist, .fold, .fold svg, .expand svg, .search { transition: none; }
+}
+
+/* ---------- timeline (577 §4, §10–§11, §15) ---------- */
+.timeline { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; outline: none; }
+.ruler { position: relative; flex: none; height: 26px; border-bottom: 1px solid var(--border); }
+.ruler span { position: absolute; top: 6px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); }
+.ruler span::after { content: ""; position: absolute; left: 50%; top: 16px; width: 1px; height: 4px; background: var(--input); }
+.periodsRow { position: relative; flex: none; height: 20px; }
+.periodBand { position: absolute; top: 3px; height: 14px; overflow: hidden; white-space: nowrap; padding: 0 8px; border-radius: 7px; font-size: 10px; line-height: 14px;
+  color: var(--foreground); background: color-mix(in srgb, var(--pc) 22%, transparent); border-left: 2px solid var(--pc); }
+/* docs/584 R1: an infinite canvas. The lane never scrolls (clip, not hidden: hidden still scrolls on focus); the
+ * store's y moves the plane. Middle button or Space + left pans; a left drag draws a selection box. */
+.lane { position: relative; flex: 1; min-height: 0; overflow: clip; cursor: default; touch-action: none; }
+.timeline[data-space] .lane { cursor: grab; }
+.timeline[data-panning] .lane, .lane[data-panning] { user-select: none; -webkit-user-select: none; }
+.timeline[data-panning] .lane { cursor: grabbing; }
+.selectRect { position: absolute; z-index: 11; pointer-events: none; border: 1px solid var(--primary); border-radius: 3px; background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.emptyView { position: absolute; left: 50%; top: 45%; z-index: 11; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--popover); color: var(--muted-foreground); font-size: 13px; box-shadow: var(--shadow-2); }
+.emptyView button { height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--input); color: var(--foreground); }
+.plane { position: absolute; left: 0; top: 0; width: 1px; will-change: transform; }
+.familyFrame { position: absolute; z-index: 0; border-radius: 12px; pointer-events: none; border: 1px solid color-mix(in srgb, var(--ec) 22%, var(--border));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ec) 7%, transparent), transparent 85%); }
+.track { position: absolute; z-index: 1; height: 3px; border-radius: 2px; pointer-events: none; background: color-mix(in srgb, var(--ec) 45%, transparent); }
+.durBar { position: absolute; z-index: 1; height: 4px; margin-top: 3px; border-radius: 2px; pointer-events: none; background: linear-gradient(90deg, var(--ec), color-mix(in srgb, var(--ec) 25%, transparent)); }
+.tcard { position: absolute; z-index: 2; }
+.tcard:has([aria-expanded="true"]) { z-index: 5; }
+.tcard:has(details[open]) { z-index: 9; }
+.tcard .card { width: 100%; }
+/* docs/592: the card sits in a .cardZoom box (code review P1-4). */
+.header > .cardZoom > .card { background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 20%, var(--card)), color-mix(in srgb, var(--ec) 6%, var(--card))); }
+/* docs/585 §4: the stamp stays inside its card's width (ellipsis) and takes the pointer so the title shows the full
+ * text; it sits outside the card, so a press on it follows the empty-canvas path (box select / pan). */
+.stamp { position: absolute; left: 4px; bottom: 100%; max-width: calc(100% - 4px); overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+  white-space: nowrap; font-size: 10.5px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); }
+.stamp::before { content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 5px; vertical-align: 1px; border-radius: 50%; background: var(--ec); }
+.clipNote { position: absolute; top: 100%; left: 4px; margin-top: 2px; font-size: 10px; color: var(--muted-foreground); white-space: nowrap; pointer-events: none; }
+.clipNote.clipEnd { left: auto; right: 4px; }
+.minimap { position: absolute; right: 18px; bottom: 14px; z-index: 12; height: 120px; border-radius: 10px; cursor: pointer; touch-action: none;
+  border: 1px solid var(--border); background: color-mix(in srgb, var(--popover) 92%, transparent); box-shadow: var(--shadow-2); }
+.minimap:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.minimap u { position: absolute; top: 6px; bottom: 6px; border-radius: 4px; background: var(--muted); }
+/* docs/596: marks sit at their family's height (top / height inline); roots outside the build range in the bottom row. */
+.minimap i { position: absolute; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ec); pointer-events: none; }
+.minimap s { position: absolute; left: 4px; right: 4px; border-radius: 2px; background: color-mix(in srgb, var(--muted-foreground) 22%, transparent); pointer-events: none; }
+.minimap b { position: absolute; box-sizing: border-box; min-height: 8px; border-radius: 5px; pointer-events: none; border: 1.5px solid var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.laneItem { position: absolute; z-index: 2; }
+.laneHead { position: absolute; left: 0; z-index: 3; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-foreground); pointer-events: none; }
+.laneItem > button { width: 100%; min-height: 80px; }
+.periodBand { display: flex; align-items: center; padding: 0; border-right: 1px solid var(--pc); cursor: pointer; }
+.periodOpen { border-right-color: transparent; }
+.periodTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; padding: 0 8px; text-align: left; font: inherit; color: inherit; }
+.periodEdge { flex: none; width: 8px; height: 100%; cursor: ew-resize; color: transparent; }
+.periodEdge:hover { background: color-mix(in srgb, var(--pc) 45%, transparent); }
+
+.emptyNote { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); color: var(--muted-foreground); font-size: 13px; pointer-events: none; }
+.workspace.treeOff .tree { width: 0; min-width: 0; overflow: hidden; }
+@keyframes locateFlash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ec) 45%, transparent); } }
+.card[data-flash] { animation: locateFlash 0.6s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { .card[data-flash] { animation: none; } .railDot.d3, .railDot.hot { box-shadow: 0 0 0 1.5px var(--ec); } }
+/* docs/581 WU-44: hovering or selecting a card enlarges its rail dot (design views.css .dot.hot scale 1.45). */
+.railDot.hot:not(.cluster) { transform: translate(-50%, -50%) scale(1.45); }
+@media (prefers-reduced-motion: reduce) { .railDot.hot:not(.cluster) { transform: translate(-50%, -50%); } }
+/* Narrow panels (the content area beside chat is often ~470px). A container cannot query itself, so the panel's
+ * root (data-worldline-root, display: contents → given a box here) is the container and the workspace adapts inside:
+ * the tree narrows first, then overlays the cards; the table rail narrows so cards keep a usable width. */
+.root { container-type: inline-size; container-name: worldline; display: block; }
+.workspace { position: relative; }
+@container worldline (max-width: 900px) {
+  .workspace:not(.treeOff) { grid-template-columns: var(--tree-w, 200px) minmax(0, 1fr); }
+  .treeResizer { left: calc(var(--tree-w, 200px) - 4px); }
+}
+@container worldline (max-width: 640px) {
+  .workspace:not(.treeOff) { grid-template-columns: 0 minmax(0, 1fr); }
+  .treeResizer { display: none; }
+  .workspace:not(.treeOff) .tree { position: absolute; z-index: 15; left: 0; top: 0; bottom: 0; width: 240px; background: var(--background); box-shadow: var(--shadow-2); }
+  .rail { width: 120px; }
+  .railLine, .railDot, .railBadge { left: 92px; }
+  .railTick { left: 84px; }
+  .railLabel, .railTickLabel { right: 38px; }
+  .railLabel { padding: 1px 4px; }
+  .railBreak { width: 120px; padding-right: 38px; }
+  .railPeriod { left: 104px; }
+  .railBack { left: 92px; }
+  .railMode { right: 10px; }
+  .railMode > span { display: none; }
+  .cards { margin-left: 120px; padding-right: 10px; }
+  .slot, .groupBox { right: 10px; }
+}
+/* The view always sits in the second column, also when the tree leaves the grid flow as an overlay. */
+.scroller, .timeline { grid-column: 2; grid-row: 1; }
+.tree { grid-column: 1; grid-row: 1; }
+/* The toolbar's narrow steps follow the panel width (the content area), not the window (577 §14). ≤ 640px it wraps
+ * onto a second row: one row cannot hold its controls at the ~470px width beside chat. */
+@container worldline (max-width: 1280px) { .hideNarrow1, .bar .zoom .hideNarrow1, .search kbd, .chip.zero, .bar .chip.zero { display: none; } }
+@container worldline (max-width: 1160px) { .iconNarrow .lbl { display: none; } .bar .tb.iconNarrow { width: 28px; padding: 0; } }
+@container worldline (max-width: 640px) {
+  .bar { flex-wrap: wrap; row-gap: 6px; }
+  .bar .spacer { display: none; }
+  .bar .search { flex: 1 1 160px; }
+  .sep { display: none; }
+  .minimap { left: 12px; right: 12px; }
+}
+/* docs/591: the 显示全部 button next to the filter count. */
+.showAll { height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--input); color: var(--foreground); font-size: 12px; }
+
+/* ---------- docs/592 R5: stacked parent (children folded) ---------- */
+/* Each layer is a copy of the card shifted down 4px and narrowed 8px per side, so exactly 4px of it shows below the
+ * layer above; both stay inside the 8px bottom padding the layout reserves (STACK_PEEK). The lower layer paints behind
+ * the upper one (z-index −2 < −1), so their edges never cross; opaque fills, so no line shows through. */
+.stackWrap { --ec: var(--event-other); position: relative; isolation: isolate; padding-bottom: 8px; }
+.stackWrap::before, .stackWrap::after { content: ""; position: absolute; pointer-events: none; border: 1px solid color-mix(in srgb, var(--ec) 26%, var(--border)); }
+.stackWrap::before { z-index: -1; left: 8px; right: 8px; top: 4px; bottom: 4px; border-radius: 11px; background: color-mix(in srgb, var(--ec) 13%, var(--card)); }
+.stackWrap::after { z-index: -2; left: 16px; right: 16px; top: 8px; bottom: 0; border-radius: 10px; background: color-mix(in srgb, var(--ec) 7%, var(--card)); border-color: color-mix(in srgb, var(--ec) 16%, var(--border)); }
+.card.stack { border-radius: 12px; border-color: color-mix(in srgb, var(--ec) 38%, var(--border));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 22%, var(--card)), color-mix(in srgb, var(--ec) 7%, var(--card))); }
+.card.stack::before { top: 9px; bottom: 9px; }
+/* 1 + 10 + 18 + 10 + 1 = 40: the first line's middle is 20 down (cardHeadOffset). */
+.card.stack:not(.open) > .head { padding-top: 10px; padding-bottom: 10px; }
+.card.stack .title { font-weight: 600; }
+.card.stack:hover { border-color: color-mix(in srgb, var(--ec) 55%, var(--border)); }
+/* Event table: a stacked card is as wide as the group box it replaces. */
+.slot.slotStack { max-width: 940px; }
+.slot.slotStack > .stackWrap > .card { width: 100%; }
+.tcard .stackWrap { width: 100%; }
+
+/* ---------- docs/592 timeline: zoom, time points, hover ---------- */
+/* The card's zoom sits on an inner box; the outer .tcard keeps the layout's left / top / width (zoom would scale them). */
+.cardZoom { position: relative; }
+/* R3 / R7 time point: importance dot in a 12px box centred on the time, muted date and title, the title fading out. */
+.tpoint { position: absolute; z-index: 2; display: flex; align-items: center; gap: 5px; height: 18px; white-space: nowrap; font-size: 11px; line-height: 18px;
+  color: var(--muted-foreground); cursor: pointer; transition: opacity 0.15s; }
+.tpoint .pdot { flex: none; display: grid; place-items: center; width: 12px; height: 12px; }
+.tpoint .dot { opacity: 0.85; }
+.tpoint > time { flex: none; padding: 0 5px; border-radius: 5px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); transition: color 0.15s, background 0.15s; }
+.tpoint > span[data-point-title] { max-width: 94px; overflow: hidden; color: var(--muted-foreground); }
+.tpoint > span[data-point-title][data-fade] { mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+.tpoint > b { font-weight: 400; font-size: 10px; color: var(--muted-foreground); opacity: 0.8; }
+.tpoint.dim { opacity: 0.3; }
+/* R6 hover: the date reads like a hot rail label (white on the type colour, docs/588). */
+.tpoint.hot .dot { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 30%, transparent), 0 0 8px var(--ec); }
+.tpoint.hot > time { color: #fff; background: var(--ec); }
+.tpoint.hot > span[data-point-title] { color: var(--foreground); }
+/* docs/594: the hovered point shows its whole title on an opaque backing above the other cards. Only the title's right
+ * end grows (no padding), so the dot, the date and the title's left edge stay put. z 8 is inside the plane's stacking
+ * context (will-change): over cards (2) and opened cards (5), under an open card menu (9). */
+.tcard:has(> [data-event-point][data-hot]) { z-index: 8; }
+.tpoint.hot { background: var(--background); border-radius: 4px; box-shadow: 0 0 0 3px var(--background); }
+.tpoint.hot.dim { opacity: 1; }
+.tpoint.hot > span[data-point-title] { max-width: none; overflow: visible; mask-image: none; -webkit-mask-image: none; }
+.stamp { border-radius: 5px; transition: color 0.15s, background 0.15s; }
+.tcard[data-hot] .stamp { color: #fff; background: var(--ec); padding: 0 6px 0 2px; }
+.tcard[data-hot] .stamp::before { background: #fff; }
+.ruler .rulerHot { position: absolute; top: 3px; z-index: 2; transform: translateX(-50%); padding: 1px 8px; border-radius: 9px; font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: #fff; background: var(--ec); pointer-events: none; }
+.ruler .rulerHot::after { display: none; }
+.hoverGuide { position: absolute; top: 0; bottom: 0; z-index: 1; width: 0; border-left: 1px dashed color-mix(in srgb, var(--ec) 60%, transparent); pointer-events: none; }
+/* Status-line note of the zoom levels (docs/592 §2.4, approved design .status .zh). */
+.zoomNote { display: inline-flex; align-items: center; gap: 6px; padding: 1px 4px 1px 9px; border-radius: 11px; border: 1px dashed var(--input); }
+.zoomNote button { height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--input); color: var(--foreground); font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .tpoint, .tpoint > time, .stamp { transition: none; } }

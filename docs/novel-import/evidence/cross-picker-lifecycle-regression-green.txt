@@ -1,0 +1,9 @@
+✔ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (23.134125ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 547.333042

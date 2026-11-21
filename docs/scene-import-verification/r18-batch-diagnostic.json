@@ -1,0 +1,28 @@
+{
+  "diagnosticOnly": true,
+  "acceptance": false,
+  "run": "R18",
+  "scenes": 951,
+  "states": {
+    "done": 210,
+    "running": 31,
+    "failed": 1,
+    "waiting": 709
+  },
+  "errorCounts": {
+    "StructuredGenerationError": 2,
+    "P2028": 5,
+    "Error": 23
+  },
+  "shutdown": {
+    "at": "2026-10-31T00:24:41.690Z",
+    "event": "shutdown",
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "exitCode": 2
+  },
+  "published": false,
+  "reopened": false
+}

@@ -1,0 +1,6 @@
+[96mtests/unit/novel-import-semantic-session.test.ts[0m:[93m52[0m:[93m88[0m - [91merror[0m[90m TS7022: [0m'p' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+
+[7m52[0m    for(const [i,a]of r.artifacts.entries()){const full=originals.find(o=>o.id===a.id)!,p=projection[i];assert.equal(p.artifactId,a.id);assert.equal(p.semanticHash,importArtifactSemanticHash(full));assert.equal(p.fullTextLength,full.text.length);assert.deepEqual(p.fullFactKeys,Object.keys(full.facts));assert.deepEqual(p.fields,Object.keys(a.facts));if(p.textRange){assert.equal(a.text,full.text.slice(p.textRange.start,p.textRange.end));assert.equal(p.textRange.end-p.textRange.start,a.text.length)}else assert.equal(a.text,'')}
+[7m  [0m [91m                                                                                       ~[0m
+
+Owned review-scope files diagnostics: 1

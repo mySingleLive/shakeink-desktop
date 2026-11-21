@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
+import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
 import { useNovelList } from "@/lib/novel-list"
 import { ChevronDown, Maximize2, Minimize2, PanelLeft, PanelRight, X } from "lucide-react"
 
@@ -10,11 +10,24 @@ import { StorySources, StoryActivityBanner, StoryLivePreview } from "@/component
 import { cn } from "@/lib/utils"
 import { isTentativeNovelTitle } from "@/lib/novel-title"
 import { TentativeBadge } from "@/components/ui/tentative-badge"
-import { getTabIcon, useTabsStore } from "@/stores/tabs"
+import { getTabIcon, useTabsStore, type Tab } from "@/stores/tabs"
 import { useDesktopStore } from "@/stores/desktop"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useContentTabStrip } from "./useContentTabStrip"
 import { useContentDrawerInteraction } from "@/lib/desktop/content-drawer-context"
+
+/**
+ * One retained panel. Memoized on the stored tab record, so opening, switching,
+ * reordering or closing other tabs re-renders only the two panels whose
+ * visibility changed, never every open panel (docs/542: 60+ tabs).
+ */
+const TabPanelHost = memo(function TabPanelHost({ tab, prefix, active }: { tab: Tab; prefix: string; active: boolean }) {
+  return (
+    <div id={`${prefix}-panel-${tab.id}`} role="tabpanel" aria-labelledby={`${prefix}-tab-${tab.id}`} hidden={!active} className="h-full">
+      <StagedSaveSurface tab={tab}>{renderTabContent(tab)}</StagedSaveSurface>
+    </div>
+  )
+})
 
 /** 右栏：可排序的内容标签 + 保留实例的真实业务面板 */
 export function ContentTabs({
@@ -217,11 +230,7 @@ export function ContentTabs({
       <div className="min-h-0 flex-1">
         {activeTab ? (
           // Monaco 的实例不能在 Activity 清理 effect 后复用；只隐藏可保留编辑实例与草稿。
-          tabs.map(tab => (
-            <div key={tab.id} id={`${prefix}-panel-${tab.id}`} role="tabpanel" aria-labelledby={`${prefix}-tab-${tab.id}`} hidden={tab.id !== activeTabId} className="h-full">
-              <StagedSaveSurface tab={tab}>{renderTabContent(tab)}</StagedSaveSurface>
-            </div>
-          ))
+          tabs.map(tab => <TabPanelHost key={tab.id} tab={tab} prefix={prefix} active={tab.id === activeTabId} />)
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
             <p className="text-sm text-muted-foreground">

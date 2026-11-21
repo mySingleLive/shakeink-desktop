@@ -1,0 +1,27 @@
+✖ SO-02: complete immutable typed catalogs restore index zero, aliases, context artifacts and all business fields (14.500792ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 718.208708
+
+✖ failing tests:
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:6364
+✖ SO-02: complete immutable typed catalogs restore index zero, aliases, context artifacts and all business fields (14.500792ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:49:59)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }

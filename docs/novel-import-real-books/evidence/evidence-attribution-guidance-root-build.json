@@ -1,0 +1,39 @@
+{
+  "recordedAt": "2026-10-26T12:39:35.315241+00:00",
+  "scope": "73 generic evidence and attribution guidance; actual S02 retest pending",
+  "commands": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "execSession": 92890
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false -p /tmp/shakeink-real-audit-tsconfig.json",
+      "exitCode": 0,
+      "execSession": 89975
+    },
+    {
+      "command": "node scripts/build-desktop.mjs",
+      "exitCode": 0,
+      "execSession": 98784
+    }
+  ],
+  "files": {
+    "desktop/core/novel-import-ai-payload.ts": "49482e28232c89c8eb1276ed7c2b755e496d9b26607329cac9d5f34a07a5bb21",
+    "tests/unit/novel-import-ai.test.ts": "9dd2d4c3f4304f64bbf275304cf7704915e575826053d3009e87a25a7a3e2ec0",
+    "desktop/service/novel-import-ai.ts": "c88cf7f8941edcb4ab97449d244687f254db22aad5d1348404ef25a6d16d29c6",
+    "desktop/main/novel-import.ts": "e5e6b028ccdad762366aa70cab06b3ee6d56836a1e23b1b0461dda2660145bf8",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "dist/main/index.cjs": "d63c95ab1b78643bf292c45c5e225eb54af8e4deee00f8d0b72127fb807ebed4",
+    "dist/service/index.cjs": "bd76aa3fd1a583c005c307127e782b5649ea214e3b205a3d23eb55ab277bdce8",
+    "dist/main/novel-import-pdf-worker.cjs": "52645a7d85a982d1b4135fb09109061162d596f450c37abbc07be2e32e6e810a",
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92"
+  },
+  "monacoWorkers": [
+    "out/_next/static/media/css.worker.2r476vc_4i3t-.js",
+    "out/_next/static/media/editor.worker.1duyl2hr9iop5.js",
+    "out/_next/static/media/html.worker.37dgn6mporn0e.js",
+    "out/_next/static/media/json.worker.14wrjaz43tsbz.js",
+    "out/_next/static/media/ts.worker.30escle32bmbw.js"
+  ]
+}

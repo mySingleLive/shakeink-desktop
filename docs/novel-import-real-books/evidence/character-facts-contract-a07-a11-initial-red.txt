@@ -1,0 +1,50 @@
+▶ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority
+  ✔ actual analyze, reconcile and review prompts keep guidance outside untrusted data (11.201125ms)
+  ✔ true preimplementation prompt and serialization goldens protect unchanged branches (1.602042ms)
+  ✔ projection and locked targeted-reconcile gates still reject unauthorized results (2.159125ms)
+✔ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority (28.7385ms)
+▶ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract
+  ✔ all twelve actual generation paths retain exact data, notFound, role and signal (10.539166ms)
+  ✔ invalid and missing targets keep the original helper contract and zero-resolution guard (0.515583ms)
+  ✔ independent preimplementation hashes retain every unaffected phase (0.831541ms)
+✔ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract (13.392375ms)
+▶ NI-A09: emotional-impact business guidance follows selected and explicit trope targets only
+  ✔ real ordinary, explicit reconcile and selected review prompts preserve authority and data (3.920458ms)
+  ✔ true baseline hashes protect irrelevant targets and all unrelated phases (1.586458ms)
+  ✔ guidance does not authorize cross-phase notFound, unverified omissions or locked edits (1.25475ms)
+✔ NI-A09: emotional-impact business guidance follows selected and explicit trope targets only (7.546334ms)
+▶ NI-A10: world grouping guidance follows actual world targets without merging supported worlds
+  ✔ real ordinary, targeted reconcile and selected review paths retain native structures and data (6.205291ms)
+  ✔ independent true-baseline hashes protect unrelated targets, phases and legacy (1.3285ms)
+  ✔ world guidance preserves projection, target, lock and native graph rejection gates (1.9975ms)
+✔ NI-A10: world grouping guidance follows actual world targets without merging supported worlds (10.25025ms)
+▶ NI-A11: ordinary character facts use explicit string encoding without changing other prompts
+  ✖ the real ordinary generation path sends the local encoding contract within existing reserves (6.982917ms)
+  ✔ true baseline hashes protect unrelated stages and character context cannot activate the contract (0.708875ms)
+✖ NI-A11: ordinary character facts use explicit string encoding without changing other prompts (8.162416ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 17
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 520.714292
+
+✖ failing tests:
+
+test at tests/unit/novel-import-ai.test.ts:4:60017
+✖ the real ordinary generation path sends the local encoding contract within existing reserves (6.982917ms)
+  AssertionError [ERR_ASSERTION]: ordinary character must receive explicit local string encoding guidance
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:410:11)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-ai.test.ts:403:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

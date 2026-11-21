@@ -1,0 +1,132 @@
+{
+  "run": "R58",
+  "providerCalls": 2,
+  "novelInputSent": false,
+  "currentWIPBaseline": "authorized-f2e1-function-build-budgetfailed-notnormal",
+  "casePurposes": [
+    {
+      "id": "tuple-array",
+      "purpose": "r56-flat-control",
+      "expectedPromptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "expectedSchemaSha256": "c4ec88220c597280f5f01a86996c14acc6adfa74eee28c89df808c166dd48392"
+    },
+    {
+      "id": "homogeneous-items",
+      "purpose": "native-record-hint",
+      "expectedPromptSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+      "expectedSchemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646"
+    }
+  ],
+  "results": [
+    {
+      "id": "tuple-array",
+      "schemaSha256": "c4ec88220c597280f5f01a86996c14acc6adfa74eee28c89df808c166dd48392",
+      "schemaBytes": 4854,
+      "promptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "category": "completed",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "stop",
+      "validation": {
+        "directJSON": true,
+        "schema": "pass",
+        "keywordCounts": {},
+        "originalTuple": "pass",
+        "commonWitness": true
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "c4ec88220c597280f5f01a86996c14acc6adfa74eee28c89df808c166dd48392",
+        "schemaBytes": 4854,
+        "inputTextSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 200,
+        "body": "not-needed",
+        "complete": true,
+        "bytes": 0,
+        "reasonTokens": [],
+        "reasonTokensTruncated": false,
+        "knownCode": "none",
+        "knownParam": "none",
+        "keywords": {
+          "schema": false,
+          "items": false,
+          "array": false,
+          "object": false,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    },
+    {
+      "id": "homogeneous-items",
+      "schemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646",
+      "schemaBytes": 1953,
+      "promptSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+      "category": "HTTP_400",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "unknown",
+      "validation": {
+        "directJSON": false,
+        "schema": "not-run",
+        "keywordCounts": {}
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646",
+        "schemaBytes": 1953,
+        "inputTextSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 400,
+        "body": "parsed",
+        "complete": true,
+        "bytes": 209,
+        "reasonTokens": [
+          "required",
+          "properties",
+          "must",
+          "other",
+          "all",
+          "properties",
+          "in",
+          "the",
+          "object",
+          "other"
+        ],
+        "reasonTokensTruncated": false,
+        "knownCode": "invalid_request_error",
+        "knownParam": "none",
+        "keywords": {
+          "schema": false,
+          "items": false,
+          "array": false,
+          "object": true,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    }
+  ],
+  "all107InputsAndCurrentWIP368Unchanged": true,
+  "stateUnchanged": true,
+  "normalAppExit": 0,
+  "quitTimedOut": false,
+  "pageErrors": 0,
+  "RH04ProductConditionSatisfied": false,
+  "fullBookVerified": false
+}

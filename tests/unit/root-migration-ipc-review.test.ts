@@ -17,6 +17,10 @@ import {RootMigrationHandoff} from '../../desktop/main/root-migration-handoff'
 import {CloseCoordinator} from '../../desktop/main/close-coordinator'
 import {BusinessGate} from '../../desktop/main/business-gate'
 import {ApplicationMetadataGate} from '../../desktop/main/application-metadata-gate'
+const nativeOrder:Record<string,string[]>={'仍有创作任务运行':['cancel','stop'],'作品锁修复交接尚未完成':['retry','cancel'],'尚不能关闭':['retry','export','cancel'],'修复异常退出锁':['cancel','repair'],'作品锁恢复结果':['ok'],'迁移应用数据':['cancel','migrate'],'修复导入保存目录的异常退出锁':['cancel','repair']}
+// Prompts now render in the workbench; route them through each test's former native stub (same response indexes).
+const promptsVia=(dialog:{showMessageBox:(...args:any[])=>any})=>({ask:async(options:any,extra:{signal?:AbortSignal}={})=>{const order=nativeOrder[options.title]??options.buttons.map((b:any)=>b.value),result=await dialog.showMessageBox({},{type:options.tone,title:options.title,message:options.message,detail:options.detail,buttons:order,signal:extra.signal});return order[result?.response]??options.cancelValue}})
+
 
 const syntax=ts.createSourceFile('main.ts',readFileSync('desktop/main/index.ts','utf8'),ts.ScriptTarget.Latest,true)
 function declaration(name:string){const node=syntax.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text===name);assert.ok(node);return node.getText(syntax)}
@@ -47,7 +51,7 @@ async function fixture(){
  ${['trusted','chooseDirectory','restoreBusiness','retryMigrationCancellation','beginClose'].map(declaration).join('\n')}
  const closeCoordinator=new CloseCoordinator(${services});const callback=${callback};
  return{call(input,event){return callback(event,input)},replaceSession(){draftSession={...draftSession,id:${'randomUUID'}()}},state(){return{businessClosed,closed:businessGate.closed,closeCommitted}}}`
- const all={...dependencies,randomUUID};const api=new Function(...Object.keys(all),transformSync(code,{loader:'ts'}).code)(...Object.values(all)) as {call(input:unknown,event:unknown):Promise<unknown>;replaceSession():void;state():{businessClosed:boolean;closed:boolean;closeCommitted:boolean}}
+ const all={novelImport:null,novelImportRepairing:false,novelImportServiceLost:false,novelImportOwner:null,novelImportCloseIntent:null,novelImportSourcePicker:{cancel(){}},...dependencies,appPrompts:promptsVia((dependencies as any).dialog),randomUUID};const api=new Function(...Object.keys(all),transformSync(code,{loader:'ts'}).code)(...Object.values(all)) as {call(input:unknown,event:unknown):Promise<unknown>;replaceSession():void;state():{businessClosed:boolean;closed:boolean;closeCommitted:boolean}}
  return{...api,base,bootstrap,source,target,event,trace,pickerEntered,confirmEntered,flushEntered,
   picker(cancel=false,hold=false){cancelledPicker=cancel;holdPicker=hold},confirm(decline=false,hold=false){declined=decline;holdConfirm=hold},flush(hold=true){holdFlush=hold},releasePicker:()=>pickerGate.resolve(),releaseConfirm:()=>confirmGate.resolve(),releaseFlush:()=>flushGate.resolve(),
   async cleanup(){pickerGate.resolve();confirmGate.resolve();flushGate.resolve();await rm(base,{recursive:true,force:true})},

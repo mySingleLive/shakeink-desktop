@@ -1,0 +1,13 @@
+✔ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (1890.318708ms)
+✔ NI-PDF06: OCR-only image decisions persist without admitting the source (1183.299875ms)
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (0.916375ms)
+✔ NI-PDF07: controller sending, retry, conflict and patch actions cannot bypass pending pages (622.726833ms)
+✔ NI-PDF07: source replacement after an AI send discards the late response before coverage adoption (610.86625ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5155.087709

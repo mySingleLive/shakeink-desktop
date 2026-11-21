@@ -5,11 +5,11 @@
     "src/lib/desktop/monaco-commands.ts": "2aa4709210c1c5c420aa1ce635c72084373d3517d7808f26b3eb9cc5291a9d42",
     "src/lib/desktop/markdown-actions.ts": "3684edbc677f7566efe527ec0ae22f1ccbd2e4ebbf8cd37f45d4b0fa46d39912",
     "src/lib/desktop/command-runtime.ts": "21e3f8a0fd46e3a132dbfbbe0ef53f446b17c262268afd9b21501110324add88",
-    "src/lib/desktop/command-scope.ts": "aa1ba903a704b8d35ba7d0d34c0c773ce2c644bb36e0b56a9828c8e7ad433b14",
-    "desktop/shared/command-registry.ts": "20560a2353153df3f87fa1c6d7b24ed57a1bc3365561b070e59f17615f20d34c",
-    "desktop/shared/commands.json": "d9784c5fad0d4734706d73080a95bd8b595002eea082067399d221366fe793da",
+    "src/lib/desktop/command-scope.ts": "2436c3352532393863cba91dd73e38e99c7d6700354273f5a236838f1746a17b",
+    "desktop/shared/command-registry.ts": "7dcce2d0deb46e4798e3945a34dd5a9ca968e44aada0b4ef75b5d3255db27edc",
+    "desktop/shared/commands.json": "ac5d4c76f93b0a08aa97ca25aee31507fe36da8c91c97e0f5c3bbe43b0d27d35",
     "src/components/editor/monaco-setup.ts": "8361a4c9c2d9e705715782dd7019b5731912f0605c3a49db3b3d438ca0ad4191",
-    "desktop/core/shortcuts.ts": "4e07b022756fe9904568dd6f2d55cf8d1351a514f721acd3efbda7914a082f6c",
+    "desktop/core/shortcuts.ts": "d21f1f9df42112169f5ed50ba9e31991482d4bc3b33585adea8c0337999d9d45",
     "desktop/core/shortcut-context.ts": "61b18c806ddceaffdbd4f1f270a67862ea873eda529e4430e55b4d43d17f0be2",
     "node_modules/monaco-editor/package.json": "3555e3e0bc0d5f8c22be8f26164c11778dff0feabf564c67185726636f4b15c7"
   },
@@ -54,6 +54,22 @@
           "defaults": [
             "Cmd+O"
           ]
+        },
+        {
+          "id": "file.import",
+          "label": "导入作品",
+          "group": "应用菜单",
+          "scope": "global",
+          "locked": false,
+          "defaults": []
+        },
+        {
+          "id": "file.import-folder",
+          "label": "导入作品",
+          "group": "应用菜单",
+          "scope": "global",
+          "locked": false,
+          "defaults": []
         },
         {
           "id": "file.templates",
@@ -566,6 +582,16 @@
               "weight": 100,
               "secondaryWeight": 0
             }
+          ]
+        },
+        {
+          "id": "worldline.search",
+          "label": "搜索世界线事件",
+          "group": "世界线",
+          "scope": "worldline",
+          "locked": false,
+          "defaults": [
+            "Cmd+F"
           ]
         },
         {
@@ -7371,7 +7397,7 @@
           ]
         }
       ],
-      "sha256": "91bbe983ac58f47e8a916297b6991ed55a2a165844778c6c4c6059d34a90b8d3"
+      "sha256": "5e0e273017a92c59abff6d3e25c41f7b280727bd72929608179604e7f4bd4e15"
     },
     "win32": {
       "resolved": true,
@@ -7413,6 +7439,22 @@
           "defaults": [
             "Ctrl+O"
           ]
+        },
+        {
+          "id": "file.import",
+          "label": "导入作品",
+          "group": "应用菜单",
+          "scope": "global",
+          "locked": false,
+          "defaults": []
+        },
+        {
+          "id": "file.import-folder",
+          "label": "导入作品",
+          "group": "应用菜单",
+          "scope": "global",
+          "locked": false,
+          "defaults": []
         },
         {
           "id": "file.templates",
@@ -7892,6 +7934,16 @@
               "weight": 100,
               "secondaryWeight": 0
             }
+          ]
+        },
+        {
+          "id": "worldline.search",
+          "label": "搜索世界线事件",
+          "group": "世界线",
+          "scope": "worldline",
+          "locked": false,
+          "defaults": [
+            "Ctrl+F"
           ]
         },
         {
@@ -14082,7 +14134,7 @@
           ]
         }
       ],
-      "sha256": "77d1a83163e65bdb88565f3439229fe940be97a9341067f1a4b725106848d3f2"
+      "sha256": "2fbe15e25af49773f81483cc1858348f85746c2cdea68a38313fc423944d59d5"
     }
   }
 }

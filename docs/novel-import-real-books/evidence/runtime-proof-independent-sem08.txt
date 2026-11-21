@@ -1,0 +1,15 @@
+▶ NI-SEM08: bounded semantic repair checkpoints atomically and resumes without stale credit
+  ✔ repair-cartesian-product-is-bounded-before-task-allocation (2.418959ms)
+  ✔ fragment-success-pending-pause-reopen (770.279917ms)
+  ✔ same-hash-persistent-conflict-survives-reopen-and-retry (290.582458ms)
+  ✔ invalid-second-fragment-retries-without-credit (509.734834ms)
+  ✔ two-round-limit-is-durable (395.36475ms)
+✔ NI-SEM08: bounded semantic repair checkpoints atomically and resumes without stale credit (1969.40325ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2409.047458

@@ -1,0 +1,29 @@
+✔ NI-A01: context-aware batching preserves every unit and rejects unsafe unit sizes (1.052084ms)
+✔ NI-A02: role and immutable model authorization are checked before and after generation (2.457875ms)
+✔ NI-A03: missing ids, unknown categories and fabricated evidence are rejected (1.896667ms)
+✔ NI-A04: operation cancellation aborts only its worker-local signal and drains registry (0.25475ms)
+✔ NI-D01: every source character and chapter boundary survives safe splitting (5.185875ms)
+✔ NI-D02: classification coverage rejects gaps, overlaps and unclassified ranges (0.434375ms)
+✔ NI-D03: source selection and allowed inference are independent (0.720583ms)
+✔ NI-D04: source setting artifacts retain exact text and real category distinctions (1.664541ms)
+✔ NI-D05: contradictory source/body facts create evidence-bound conflicts (1.417166ms)
+✔ NI-D06: fabricated evidence, foreign ids and incomplete batches fail closed (0.238709ms)
+✔ NI-D07: conflict options match the actual presence of prose and source settings (0.078791ms)
+✔ NI-D08: patches protect immutable original prose, bind revisions and invalidate later grants (0.382833ms)
+✔ NI-S01: classification consent is separate from unknown readiness and stale revisions fail (223.18175ms)
+✔ NI-S02: full-book batches checkpoint successful work and retry the failed batch (221.000583ms)
+✔ NI-S03: requested stages run in reverse-creation order and disabled stages skip (284.383791ms)
+✔ NI-S04: no prose and inference-disabled pure-copy have zero AI calls including review (77.344709ms)
+✔ NI-S05: source/body contradictions block publication and retaining a setting needs reviewed explanation (162.451833ms)
+✔ NI-S06: prose patches preserve original and invalidate analysis authorization (90.178209ms)
+✔ NI-S07: pause drains an operation and a late success never advances stale epoch (28.082958ms)
+✔ NI-S08: journal restores checkpoints but target authorization must be renewed (39.0285ms)
+✔ NI-S09: discard preserves unknown draft files and complete does not block new import (58.796833ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1431.006334

@@ -5,6 +5,8 @@ import {z} from 'zod'
 import {BRAND_NAMES} from '../shared/brand-names'
 export const closedRootCatalogSchema=z.object({schemaVersion:z.literal(1),revision:z.number().int().nonnegative(),value:z.array(z.object({path:z.string().refine(isAbsolute)}).passthrough())}).strict()
 const uuid="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+export function novelImportOwnedDirectory(path:string){if(path==='novel-imports')return true;const match=/^novel-imports\/([^/]+)$/.exec(path);return !!match&&z.uuid().safeParse(match[1]).success}
+export function novelImportOwnedFile(path:string){const match=/^novel-imports\/([^/]+)\/(?:\.owner|session\.json)$/.exec(path);return !!match&&z.uuid().safeParse(match[1]).success}
 const fixedRoot=new Set([...BRAND_NAMES.map(names=>names.appMarker),"catalog.json","state.json","model-catalogs.json","drafts.json","backup-plan.json","restore-draft-barrier.json","application-restore-drafts.json"])
 const recovery=new RegExp(`^\\.(?:xuanxiang|shakeink)-root-recovery-${uuid}\\.json$`,"i")
 const avatar=new RegExp(`^assets/global/${uuid}\\.png$`,"i")
@@ -26,8 +28,9 @@ function sessionFile(p:string){
  if(p.endsWith("/index-dir/the-real-index"))return cacheDirs.has(p.slice(0,-"/index-dir/the-real-index".length))
  return /^Code Cache\/electron-preload\/[0-9A-F]{64}-[0-9A-F]{64}\.cache$/.test(p)||/^GPUPersistentCache\/GPUCache\/[A-Z0-9]{32}\/(?:cache\.db(?:-wal|-shm|-journal)?|cache\.journal)$/.test(p)
 }
-export function ownedRootFile(path:string){return fixedRoot.has(path)||recovery.test(path)||avatar.test(path)||upgradeSnapshot.test(path)||path.startsWith("inbox/database/")&&postgresFile(path.slice(15))||path.startsWith("session/")&&sessionFile(path.slice(8))}
+export function ownedRootFile(path:string){return novelImportOwnedFile(path)||fixedRoot.has(path)||recovery.test(path)||avatar.test(path)||upgradeSnapshot.test(path)||path.startsWith("inbox/database/")&&postgresFile(path.slice(15))||path.startsWith("session/")&&sessionFile(path.slice(8))}
 export function ownedRootDirectory(path:string){
+ if(novelImportOwnedDirectory(path))return true
  if(["assets","assets/global","inbox","inbox/database","inbox/snapshots","session"].includes(path))return true
  if(path.startsWith("inbox/database/")){const p=path.slice(15);return pgDirs.has(p)||/^base\/\d+$/.test(p)}
  if(!path.startsWith("session/"))return false

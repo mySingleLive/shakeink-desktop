@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-26T16:43:26.799415+00:00",
+  "method": "cua.getState emit:false, filtered app inventory",
+  "apps": [
+    {
+      "id": "ink.shakeink.desktop",
+      "isRunning": false
+    },
+    {
+      "id": "com.github.Electron",
+      "isRunning": false
+    }
+  ],
+  "scope": "before authorized single-work legacy world-setting repair dry-run; no UI or database actions"
+}

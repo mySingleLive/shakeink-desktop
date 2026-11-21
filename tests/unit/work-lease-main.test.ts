@@ -16,6 +16,10 @@ import {workNames} from '../../desktop/core/brand-names'
 import {BusinessGate} from '../../desktop/main/business-gate'
 import {ApplicationMetadataGate} from '../../desktop/main/application-metadata-gate'
 import {CloseCoordinator} from '../../desktop/main/close-coordinator'
+const nativeOrder:Record<string,string[]>={'仍有创作任务运行':['cancel','stop'],'作品锁修复交接尚未完成':['retry','cancel'],'尚不能关闭':['retry','export','cancel'],'修复异常退出锁':['cancel','repair'],'作品锁恢复结果':['ok'],'迁移应用数据':['cancel','migrate'],'修复导入保存目录的异常退出锁':['cancel','repair']}
+// Prompts now render in the workbench; route them through each test's former native stub (same response indexes).
+const promptsVia=(dialog:{showMessageBox:(...args:any[])=>any})=>({ask:async(options:any,extra:{signal?:AbortSignal}={})=>{const order=nativeOrder[options.title]??options.buttons.map((b:any)=>b.value),result=await dialog.showMessageBox({},{type:options.tone,title:options.title,message:options.message,detail:options.detail,buttons:order,signal:extra.signal});return order[result?.response]??options.cancelValue}})
+
 const source=ts.createSourceFile('main.ts',readFileSync('desktop/main/index.ts','utf8'),ts.ScriptTarget.Latest,true)
 function declaration(name:string){const node=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name);assert.ok(node);return node.getText(source)}
 let callback='',services='';const scan=(n:ts.Node)=>{if(ts.isCallExpression(n)&&n.expression.getText(source)==='ipcMain.handle'&&n.arguments[0]?.getText(source)==='"desktop:work-lease"')callback=n.arguments[1].getText(source);if(ts.isNewExpression(n)&&n.expression.getText(source)==='CloseCoordinator')services=n.arguments![0].getText(source);ts.forEachChild(n,scan)};scan(source)
@@ -35,7 +39,7 @@ async function fixture(){
    return{response:0}
  }},app:{hasSingleInstanceLock:()=>true,relaunch:()=>events.push('relaunch'),quit:()=>events.push('quit')},worker:{terminate:async()=>{}},send:(e:{type:string})=>events.push('event:'+e.type)}
  const code=`let workLease=null,businessClosed=false,closingFlow=null,closeCommitted=false,quitting=false;const closePermits=new WeakSet();${declaration('restoreBusiness')}\n${declaration('beginClose')}\nconst closeCoordinator=new CloseCoordinator(${services});const run=${callback};return{run:(input,origin=event)=>run(origin,input),replace:()=>{draftSession={...draftSession,id:randomUUID()}},state:()=>({closed:businessClosed,pending:workLease?.requiresRestart??false})}`
- const all={...deps,event,randomUUID,workNames},api=new Function(...Object.keys(all),transformSync(code,{loader:'ts'}).code)(...Object.values(all)) as {run(input:unknown,origin?:unknown):Promise<string>;replace():void;state():{closed:boolean;pending:boolean}};replace=api.replace
+ const all={ordinaryWorkerExited:false,novelImport:null,novelImportRepairing:false,novelImportServiceLost:false,novelImportOwner:null,novelImportCloseIntent:null,novelImportSourcePicker:{cancel(){}},...deps,appPrompts:promptsVia((deps as any).dialog),event,randomUUID,workNames},api=new Function(...Object.keys(all),transformSync(code,{loader:'ts'}).code)(...Object.values(all)) as {run(input:unknown,origin?:unknown):Promise<string>;replace():void;state():{closed:boolean;pending:boolean}};replace=api.replace
  return{...api,root,gate,events,ownerBytes,action:{type:'start',workId},decline:()=>declined=true,failConfirmation:(value:boolean)=>confirmationFails=value,failFlush:()=>flushFails=true,replaceOnConfirm:()=>replaceDuringConfirm=true,cleanup:()=>rm(root,{recursive:true,force:true})}
 }
 test('actual main closes once before native lease confirmation, recovers real dead-child lock, then cold restarts',{timeout:5000},async()=>{const r=await fixture();try{

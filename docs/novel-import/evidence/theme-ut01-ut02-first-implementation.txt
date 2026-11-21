@@ -1,0 +1,29 @@
+✔ NI-UT01: real shared Button variants retain theme paint geometry hover focus and disabled states (9004.563583ms)
+✖ NI-UT02: real themed surfaces stay bounded keyboard trapped and selection state survives (1299.560583ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10872.724083
+
+✖ failing tests:
+
+test at tests/browser/novel-import-theme.test.ts:2:9342
+✖ NI-UT02: real themed surfaces stay bounded keyboard trapped and selection state survives (1299.560583ms)
+  AssertionError [ERR_ASSERTION]: real Dialog keeps Tab inside
+  
+  false !== true
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import-theme.test.ts:66:68)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

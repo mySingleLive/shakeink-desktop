@@ -4,12 +4,15 @@ import {localBodyLimit,MAX_LOCAL_BODY_BYTES} from "./request-limits"
 import type {ConfigurationPreview,ConfigurationFileAction} from "./configuration"
 import type {DraftSnapshot,DraftReceipt} from "./drafts"
 import type {CloseReply,PrepareClose} from "./close"
+import type {AppPrompt,PromptBridge} from "./prompt"
 import type { PublicModel, Settings } from "../core/settings"
 import type { ModelDraft } from "../main/model-repository"
 import type { DirectoryPurpose } from "../main/directory-authority"
 import type { ConfigurationDraft, CatalogResult, ConnectionTestResult, ConfigurationFailure } from "./model-catalog"
 import type {WorkLeaseRequest,WorkLeaseResult} from "./work-lease"
 import type { ModelTask } from './model-task'
+import type {ImportBridge,ImportView} from './novel-import'
+import type {SourcePickerBridge,SourcePickerView} from './novel-import-source-picker'
 
 export const requestSchema = z.object({
   version: z.literal(1), id: z.uuid(), path: z.string().min(5).max(4096),
@@ -36,8 +39,8 @@ export type DesktopBootstrap=Bootstrap
 export interface AvatarDraft { draftId: string; previewDataUrl: string; width: number; height: number; bytes: number }
 export interface ModelRequiredNotice { type: "model-required"; role: "text" | "review" | "image"; code: "MODEL_NOT_CONFIGURED" | "MODEL_NOT_SELECTED" | "MODEL_NOT_FOUND" | "MODEL_DISABLED" | "MODEL_KEY_MISSING" | "MODEL_KIND_MISMATCH" | "MODEL_UNAVAILABLE" | "AUTHORIZATION_REVOKED"; task?: ModelTask }
 export type SettingsAction = { type: "update"; revision: number; settings: Settings } | { type: "save-profile"; revision: number; sessionId: string; user: Settings["user"]; avatarDraftId?: string } | { type: "save-model"; revision: number; model: ModelDraft } | { type: "remove-model"; revision: number; id: string }
-export type DesktopEvent = ModelRequiredNotice | { type: "service-disconnected" } | { type: "state"; state: StateSnapshot } | { type: "command"; id: string } | { type: "theme"; dark: boolean } | PrepareClose | {type:"close-cancelled"} | {type:"migration-cancel-pending"} | {type:"work-lease-pending"}
-export interface DesktopBridge extends FileExportBridge {
+export type DesktopEvent = ModelRequiredNotice | {type:'novel-import';view:ImportView|null} | {type:'novel-import-reading';active:boolean} | {type:'novel-import-picker';view:SourcePickerView|null} | { type: "service-disconnected" } | { type: "state"; state: StateSnapshot } | { type: "command"; id: string } | { type: "theme"; dark: boolean } | PrepareClose | {type:"close-cancelled"} | {type:"migration-cancel-pending"} | {type:"work-lease-pending"} | {type:"prompts";prompts:AppPrompt[]} | {type:"notice";tone:"error";message:string}
+export interface DesktopBridge extends FileExportBridge,ImportBridge,SourcePickerBridge,PromptBridge {
   bootstrap(): Promise<DesktopBootstrap>
   persistDraft(sessionId:string,snapshot:DraftSnapshot):Promise<DraftReceipt>
   readDraft(sessionId:string):Promise<DraftSnapshot|null>

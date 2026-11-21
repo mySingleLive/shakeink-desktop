@@ -1,0 +1,77 @@
+{
+  "at": "2026-10-31T01:23:54.249Z",
+  "runtimeBundleId": "ink.shakeink.lotm-verification",
+  "runtimeBinarySha256": "c9da78c3c79b9e6d6714fbf2a1136c4eb4a93cc5edad0f8ccfb058d681325e7e",
+  "identities": [
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "sha256": "e19a831379e3814120461df5a139a76ed53a11a53b26adaf71a98201bb5c3779",
+      "bytes": 42175
+    },
+    {
+      "path": "desktop/core/novel-import-semantics.ts",
+      "sha256": "b49a89ee01286899b39e63e117d8a3bfca529a149549dbdae3fe74506cab5a2c",
+      "bytes": 43866
+    },
+    {
+      "path": "desktop/core/novel-import-wizard-roster.ts",
+      "sha256": "ed54ec67f310eac9bba49eac23d0172bfdb9ae3fd4feb18971223573d242859a",
+      "bytes": 7938
+    },
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "sha256": "ea88179bc98bc7ad0b43e3ca723782d24e91d81d55d30e1fde4de1ae35e2dbcf",
+      "bytes": 71334
+    },
+    {
+      "path": "desktop/service/novel-import-structured-scene.ts",
+      "sha256": "6023ab023f519df2d12790259295ffdbb9e8ab61adee97d2aefb5e446b33f277",
+      "bytes": 14317
+    },
+    {
+      "path": "desktop/main/novel-import.ts",
+      "sha256": "166d82de293ec5668041ae592f16d62c34cd4ffe155af1a83665785ea00bb843",
+      "bytes": 212231
+    },
+    {
+      "path": "desktop/shared/novel-import-scene-links.ts",
+      "sha256": "338223a3517f45b2d47155debcf28c27c6ad5a7fba8fd01c201da15fef8dd10d",
+      "bytes": 1577
+    },
+    {
+      "path": "src/lib/ai/generate.ts",
+      "sha256": "daddd1aff439dfb574813db5197a0980990e99443e9c4aed27ecae1ba840a87f",
+      "bytes": 12159
+    },
+    {
+      "path": "scripts/run-lotm-wizard-import.mjs",
+      "sha256": "f012f1b77efadbc538f1c1ea41d209bc4125db719f0f8dcaf91287284a9233c6",
+      "bytes": 29031
+    },
+    {
+      "path": "scripts/verify-lotm-scenes-persistence.mjs",
+      "sha256": "127a2b70a0e9330e90d1e2097dbef7847a7921088fbfde92846b38c142757dce",
+      "bytes": 7450
+    },
+    {
+      "path": "dist/main/index.cjs",
+      "sha256": "36db3bb4c544fa4454ae216073e7b54a0c17fe15f5c128b1af880450445c2326",
+      "bytes": 3180400
+    },
+    {
+      "path": "dist/service/index.cjs",
+      "sha256": "a0f4eb14ef8f518f3a085b72ff1c575cb64a15e4390e7099bb69802232c9bb3e",
+      "bytes": 3979163
+    },
+    {
+      "path": ".next/BUILD_ID",
+      "sha256": "0f012e0874786f95a5779bfbe7a6f961ca51d3c41d6463f0673a451d43cd5dbd",
+      "bytes": 21
+    },
+    {
+      "path": "src/lib/quota.ts",
+      "sha256": "c1861e9937e729857bdf41e4fec98dd36bc5c4670bff8cf95117db9f3e38e409",
+      "bytes": 4249
+    }
+  ]
+}

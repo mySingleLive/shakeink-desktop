@@ -1,0 +1,54 @@
+{
+  "cases": [
+    {
+      "name": "ordinary-other-kind",
+      "prompt": "99a57bbeeff9f3020b6fa5a737a2cda8edc8c63036a39325cf19985bfee7b1e4",
+      "payload": "54ccf8de706dcf088fddb419132d85c340e4c8b9b2480aca4ae7213552700c9a"
+    },
+    {
+      "name": "reconcile-other-target",
+      "prompt": "f1eed7e6be2b603a0d325f376ff985c0323d062ece3b6b0819837c1b2f6eaa87",
+      "payload": "e29579c045fecb9cf3353ea45bb25478e17afa2871131fcd073bb8ca1edf226f"
+    },
+    {
+      "name": "review-other-target",
+      "prompt": "61928c3847d2532304243214abcd1b979f370f3623459b16f65970f297ea678f",
+      "payload": "fb388b56c0f552c27a3bb91915175353c690984346bcc866e6503627be0673fa"
+    },
+    {
+      "name": "review-empty-targets",
+      "prompt": "83180d6a81f99da5a210034026a04f8c3728baf20c40619a2ea0334522b020b3",
+      "payload": "8964522a59df9b7c19e074e74af444bf42771baba84a0bb01355b129b28829d9"
+    },
+    {
+      "name": "review-no-targets",
+      "prompt": "50fa51c881ca6df6e09f876909dd7156e8667a913010795be3c7912872800fe5",
+      "payload": "273fd4c2a279123268922156666678cc2d086dcbf8a7fb96b739590e66df84f8"
+    },
+    {
+      "name": "classify",
+      "prompt": "3a94234c2399239edd8cca5ee2a4ff8fe9e5e8b888fc1a1e5838ade0b0856611",
+      "payload": "4c660ceb065fb1fe9d4633a96d8461c250e2c103596ee9e5105413aebd94c5d9"
+    },
+    {
+      "name": "patch",
+      "prompt": "93faac7356d20b0357117a2e6bbdfe503f527cbd525d5e54097e58b2a4c4781d",
+      "payload": "8ee2a48e9b14b9e7dfb74ec02d2e9499fa4356142635a4397c0c0b51b9477e0a"
+    },
+    {
+      "name": "legacy-world",
+      "prompt": "18f45922716c3a1f3cea88e5cce8de6853da3b93c42a1775f06394889f3cc874",
+      "payload": "e7771c769b20873af1a8a69c8864f2ad282996823e5ae3bcfeda78da0124f213"
+    },
+    {
+      "name": "legacy-review",
+      "prompt": "bd5d9eef85eeb5066630997b9d170e10f1e7f153c3abbd1817df2e06401b1f09",
+      "payload": "41f935baaeeb7fd9bf797d00cdd3a7bd71a64e8bb523ca3644bb0a7cbeb92b91"
+    }
+  ],
+  "segments": {
+    "evidence-attribution-guidance": "758b417005d08edae0c4f601705026cea79a417a2e68e6f393395ba925a415ad",
+    "emotional-impact-contract": "2dfd1ecf44691911b4093eea3f64ea0450f35c61721d339f147aa97432f5d376",
+    "semantic-native-contract": "e0b1bca33e77f3cea9494a43c358d857a8898015abe14e101d1d9553d7d2b9ad"
+  }
+}

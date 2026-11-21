@@ -1,0 +1,9 @@
+✔ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (2661.685083ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3213.159041

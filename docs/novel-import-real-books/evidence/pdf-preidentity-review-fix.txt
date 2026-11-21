@@ -1,0 +1,79 @@
+PDF-BR02 / TR02 implementation fix, 2026-10-26
+
+Scope: only desktop/main/novel-import-files.ts,
+desktop/main/novel-import-pdf-client.ts and the new PDF unit test file.
+No controller/shared/core/publish/renderer/packaging/GBK extraction production
+changes in this fix. PDF-BR01 controller changes are owned separately by root
+and the budget owner; the final run includes root's OCR-only NI-PDF06 case.
+
+Failure proved first
+pdf-preidentity-admission-red.txt: native and granted direct PDF imports start
+their real first source lstat while registry.active is 0 (two failing subcases).
+The test wraps node:fs/promises.lstat and syncs the builtin ESM export, starts
+the real operation, and holds its returned promise. It observes the actual
+pre-snapshot identity FS call rather than only the later FileHandle.read seam.
+The builtin is restored and every outstanding promise drained in finally.
+
+Implementation
+- scanNovelSources branches on a known .pdf before its import-stage grant
+  revalidation, lstat, canonicalSelection, pathIdentity or visit identity calls.
+- NovelImportPdfClient.inspectSelected first acquires its existing registry
+  slot, then calls prepareNovelPdfSource for original grant/root-chain checks,
+  native canonicalization, complete identity chain, protected root and size
+  validation. All those operations share the same job as source allocation,
+  worker, source postverify and final root/grant check.
+- inspectWithin reuses the existing admitted context. It never calls run again,
+  never nests registry admission and never makes a second source snapshot.
+- identityIo checks cancellation before and after each awaited metadata call.
+  A canceled pending metadata call keeps the running job alive until it settles;
+  after settlement it cannot start the next ancestor check or source allocation.
+- A real directory whose name ends with .pdf is identified inside the slot,
+  then returned as bounded directory metadata. The slot ends before common
+  directory enumeration. Each discovered PDF child later acquires its own slot.
+  Source-picker grant issuance and ordinary directory discovery remain outside
+  the PDF processing budget, as authorized. Import-stage known-PDF checks do not.
+- Existing proof/ancestor/grant comparisons, O_NOFOLLOW, source hash and before/
+  after checks remain intact. No fresh grant replaces the selected identity.
+
+Targeted results (all explicit source .ts worker, Node 24.18.0)
+1. --test-name-pattern='^NI-PDF(?:01|02|03|04|05|06|07|08|09|14):'
+   tests/unit/novel-import-pdf.test.ts
+   46/46 pass; 0 fail/cancel/skip; exit 0.
+   pdf-preidentity-final-green.txt
+2. --test-name-pattern='^NI-(?:F(?:04|07)|D(?:01|02)|S(?:02|07|08|10|11)|L(?:02|04)):'
+   tests/unit/novel-import-files.test.ts
+   tests/unit/novel-import-domain.test.ts
+   tests/unit/novel-import-session.test.ts
+   tests/unit/novel-import-integration.test.ts
+   29/29 pass; 0 fail/cancel/skip; exit 0.
+   pdf-preidentity-regressions-green.txt
+3. tsc --noEmit --pretty false: exit 0, empty diagnostics.
+   pdf-preidentity-typecheck.txt
+
+New controlled windows
+- Native path, direct grant and directory-discovered PDF: first actual PDF
+  lstat already has registry.active=1; one metadata-only queue cannot begin
+  another chain; a third request returns a bounded error. No snapshot allocation
+  or transfer occurs before metadata settles. Public cancellation leaves active=1
+  and drain pending until the held promise settles; then no further source FS
+  starts, no token/PNG/session is adopted and active returns to 0.
+- Directory named materials.pdf containing actual PDF and MD: both imports
+  succeed, directory preparation plus child PDF cause exactly two registry jobs,
+  one source allocation and one transfer. No nested-job deadlock.
+- Actual main stopTasks closure, real controller and first pending metadata:
+  equivalent 15ms close deadline returns failure without data-close/commit and
+  without a created import journal. The job stays active. After the metadata
+  settles, no next identity call starts and a close retry succeeds.
+- Root's OCR-only decisions persist contains-content/uncertain/pending while
+  sourceReady/pdfReady remain false, token is absent, exclude fails atomically,
+  and actual classify/start/resume/retry/resolve/patch paths still reject.
+
+Updated frozen hash list: pdf-backend-final-source-sha.txt.
+Only client/files hashes differ from the prior reviewed nine-file list:
+client ef8f2c7c5164ff18e305e35a9643b1a4ee10b2e2e5bf5a29adb679df7f0b3f2a
+files  76d3ae60ef2308a53cb27553be0ce305a1f88517f1fc316ff776c3177412965c
+
+The worker bundle needs rebuilding because its client/files dependency graph
+changed even though worker/engine/resources source files are unchanged. Parent
+owns packaging and independent re-review. No real app, model, user journal or
+original corpus file was touched. No Windows/RB-L01 acceptance is claimed.

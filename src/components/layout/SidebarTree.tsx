@@ -4,7 +4,11 @@ import { worldDisplayName } from "@/lib/world-schema"
 import { worldForest } from "@/lib/world-tree"
 import { useDesktopCommands } from "@/lib/desktop/use-command-target"
 import { useNovelList } from "@/lib/novel-list"
-import { UnavailableWorks } from "@/components/desktop/UnavailableWorks"
+import { FaultedWorkMenuItems, faultInfo, repairStatus, useWorkLeaseRepair, type WorkLeaseRepair } from "@/components/desktop/UnavailableWorks"
+import { FaultedWorkIcon, type FaultTone } from "@/components/desktop/FaultedWorkIcon"
+import { ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu"
+import type { UnavailableWork } from "@desktop/shared/work-list"
+import {requestNovelImport} from '@/lib/desktop/novel-import'
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -34,12 +38,14 @@ import {
   MessageCirclePlus,
   MessageSquareWarning,
   MoreHorizontal,
+  TriangleAlert,
   Package,
   Palette,
   Pencil,
   Plus,
   Pointer,
   NotebookPen,
+  FileInput,
   RefreshCw,
   Settings,
   Settings2,
@@ -123,7 +129,7 @@ import {
 import { Seal } from "../marketing/seal"
 import { NavigationLabel } from "./NavigationLabel"
 import { ScenarioLibraryDialog, type ScenarioLibrarySession } from "./ScenarioLibraryDialog"
-import { NAVIGATION_LABELS, NAVIGATION_VIEWS, ROLE_TAGS, ROLE_TONES, NavigationMenu, NavigationMenuContent, NavigationTransientBoundary, settingTone, useNavigationScroll, useNavigationTransient, type NavigationTone, type NavigationView } from "./sidebar-navigation-state"
+import { NAVIGATION_LABELS, NAVIGATION_VIEWS, ROLE_TAGS, ROLE_TONES, NavigationContextMenu, NavigationMenu, NavigationMenuContent, NavigationTransientBoundary, settingTone, useNavigationScroll, useNavigationTransient, type NavigationTone, type NavigationView } from "./sidebar-navigation-state"
 import {
   normalizeCrop,
   type CharacterRecord,
@@ -168,6 +174,9 @@ interface TreeNodeProps {
   hoverCard?: () => React.ReactNode
   /** 提供即整行可拖拽：拖入对话输入框插入对应引用芯片 */
   dragChip?: ChipData
+  /** Faulted work row: tints the title and announces the row's menu. */
+  fault?: FaultTone
+  menuOpen?: boolean
 }
 
 function TreeNode({
@@ -189,6 +198,8 @@ function TreeNode({
   action,
   hoverCard,
   dragChip,
+  fault,
+  menuOpen,
 }: TreeNodeProps) {
   const hover = useSidebarHover()
   const { paused, epoch } = useNavigationTransient()
@@ -240,7 +251,9 @@ function TreeNode({
       ref={rowRef}
       role="button"
       aria-label={accessibleLabel ?? label}
-      aria-expanded={expandable ? expanded : undefined}
+      aria-expanded={expandable ? expanded : fault ? !!menuOpen : undefined}
+      aria-haspopup={fault ? "menu" : undefined}
+      data-fault={fault}
       data-icon-tone={iconTone}
       data-role={roleType}
       tabIndex={0}
@@ -323,7 +336,8 @@ interface ForeshadowCharacterRecord {
 }
 
 /** A filter heading controls navigation visibility, never a content Tab. */
-function NavigationWorkGroup({ id, title, view, collapsed, onToggle, action, children }: { id: string; title: string; view: NavigationView; collapsed: boolean; onToggle(): void; action?: React.ReactNode; children: React.ReactNode }) {
+function NavigationWorkGroup({ id, title, view, collapsed, onToggle, action, children, fault, contextMenu }: { id: string; title: string; view: NavigationView; collapsed: boolean; onToggle(): void; action?: React.ReactNode; children: React.ReactNode; fault?: FaultTone; contextMenu?: React.ReactNode }) {
+  const hover = useSidebarHover(), hoverHideAll = () => hover?.hideAll()
   const bodyId = useId()
   const button = useRef<HTMLButtonElement>(null)
   const body = useRef<HTMLDivElement>(null)
@@ -332,18 +346,67 @@ function NavigationWorkGroup({ id, title, view, collapsed, onToggle, action, chi
     onToggle()
   }
   return <div className="nav-work-group" data-work-id={id} data-view={view} data-icon-tone="work" style={{ "--node-icon-color": "var(--icon-work)" } as CSSProperties}>
-    <div className="nav-group-heading group flex min-w-0 items-center">
-      <button ref={button} type="button" className="nav-group-toggle flex h-7 min-w-0 flex-1 items-center gap-[5px] rounded-[5px] px-1.5 text-left text-[13px] hover:bg-hover-wash" aria-label={title} aria-expanded={!collapsed} aria-controls={bodyId} onClick={toggleGroup}>
-        <ChevronRight aria-hidden="true" className={cn("nav-group-chevron size-3 shrink-0 text-muted-foreground", !collapsed && "rotate-90")} />
-        {collapsed ? <FolderClosed aria-hidden="true" className="nav-node-icon size-3.5 shrink-0" /> : <FolderOpen aria-hidden="true" className="nav-node-icon size-3.5 shrink-0" />}
-        <NavigationLabel className="flex-1">{title}</NavigationLabel>
-      </button>
-      {action}
-    </div>
+    {(() => {
+      const heading = <div className="nav-group-heading group flex min-w-0 items-center">
+        <button ref={button} type="button" data-fault={fault} className="nav-group-toggle flex h-7 min-w-0 flex-1 items-center gap-[5px] rounded-[5px] px-1.5 text-left text-[13px] hover:bg-hover-wash" aria-label={title} aria-expanded={!collapsed} aria-controls={bodyId} onClick={toggleGroup}>
+          <ChevronRight aria-hidden="true" className={cn("nav-group-chevron size-3 shrink-0 text-muted-foreground", !collapsed && "rotate-90")} />
+          {fault ? <FaultedWorkIcon tone={fault} open={!collapsed} /> : collapsed ? <FolderClosed aria-hidden="true" className="nav-node-icon size-3.5 shrink-0" /> : <FolderOpen aria-hidden="true" className="nav-node-icon size-3.5 shrink-0" />}
+          <NavigationLabel className="flex-1">{title}</NavigationLabel>
+        </button>
+        {action}
+      </div>
+      return contextMenu ? <NavigationContextMenu onShow={hoverHideAll}><ContextMenuTrigger render={heading} /><ContextMenuContent>{contextMenu}</ContextMenuContent></NavigationContextMenu> : heading
+    })()}
     <NavigationTransientBoundary paused={collapsed}>
       <div ref={body} id={bodyId} className="nav-group-body" hidden={collapsed} inert={collapsed}>{children}</div>
     </NavigationTransientBoundary>
   </div>
+}
+
+interface FaultedWorkActions { repair: WorkLeaseRepair; reloading: boolean; removing: boolean; reload(): void; remove(work: UnavailableWork): void }
+function faultedHoverCard(work: UnavailableWork) {
+  const info = faultInfo(work.reason)
+  return () => <SidebarHoverCard data={{ title: work.title, subtitle: info.title, blurb: info.text, meta: [info.hint], icon: info.tone === "error" ? AlertCircle : TriangleAlert, tone: info.tone }} />
+}
+function FaultedWorkMenu({ work, actions, onOpenChange, returnFocus }: { work: UnavailableWork; actions: FaultedWorkActions; onOpenChange?(open: boolean): void; returnFocus?: React.RefObject<HTMLElement | null> }) {
+  return <NavigationMenu onOpenChange={open => onOpenChange?.(open)}>
+    <DropdownMenuTrigger render={<button type="button" aria-label="作品操作" onClick={event => event.stopPropagation()} className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/15 focus-visible:opacity-100 data-popup-open:opacity-100" />}>
+      <MoreHorizontal className="size-4" />
+    </DropdownMenuTrigger>
+    <NavigationMenuContent align="start" className="w-auto min-w-36" finalFocus={returnFocus ? () => returnFocus.current?.querySelector<HTMLElement>(".tree-row") ?? true : undefined}><FaultedWorkMenuItems work={work} repair={actions.repair} reloading={actions.reloading} removing={actions.removing} onReload={actions.reload} onRemove={() => actions.remove(work)} /></NavigationMenuContent>
+  </NavigationMenu>
+}
+/** Right-click entry for a healthy work row; items are the unchanged … menu items. */
+function RowContextMenu({ items, children }: { items: React.ReactNode; children: React.ReactNode }) {
+  const hover = useSidebarHover()
+  return <NavigationContextMenu onShow={() => hover?.hideAll()}><ContextMenuTrigger render={<div />}>{children}</ContextMenuTrigger><ContextMenuContent className="w-auto min-w-28">{items}</ContextMenuContent></NavigationContextMenu>
+}
+function FaultedWorkContext({ work, actions, children }: { work: UnavailableWork; actions: FaultedWorkActions; children: React.ReactElement }) {
+  const hover = useSidebarHover(), hoverHideAll = () => hover?.hideAll()
+  return <NavigationContextMenu onShow={hoverHideAll}><ContextMenuTrigger render={children} /><ContextMenuContent className="w-auto min-w-36"><FaultedWorkMenuItems work={work} repair={actions.repair} reloading={actions.reloading} removing={actions.removing} onReload={actions.reload} onRemove={() => actions.remove(work)} /></ContextMenuContent></NavigationContextMenu>
+}
+/** A faulted work is an ordinary depth-0 navigation row whose activation opens its menu. */
+function FaultedWorkRow({ work, actions }: { work: UnavailableWork; actions: FaultedWorkActions }) {
+  const [open, setOpen] = useState(false), info = faultInfo(work.reason)
+  const row = useRef<HTMLDivElement>(null)
+  const status = actions.repair.workId === work.workId ? repairStatus(actions.repair.busy) : null
+  // Activating the row presses the real … trigger, so Base UI owns open, focus and dismissal.
+  const openMenu = () => row.current?.querySelector<HTMLButtonElement>('button[aria-label="作品操作"]')?.click()
+  return <FaultedWorkContext work={work} actions={actions}><div ref={row}>
+    <TreeNode icon={FolderClosed} avatar={<FaultedWorkIcon tone={info.tone} />} label={work.title} depth={0} fault={info.tone} menuOpen={open}
+      tag={status ? <span className="fault-status">{status}</span> : undefined}
+      hoverCard={faultedHoverCard(work)} onClick={openMenu}
+      action={<FaultedWorkMenu work={work} actions={actions} onOpenChange={setOpen} returnFocus={row} />} />
+  </div></FaultedWorkContext>
+}
+function FaultedWorkGroup({ work, view, collapsed, onToggle, actions }: { work: UnavailableWork; view: NavigationView; collapsed: boolean; onToggle(): void; actions: FaultedWorkActions }) {
+  const info = faultInfo(work.reason)
+  const status = actions.repair.workId === work.workId ? repairStatus(actions.repair.busy) : null
+  const items = <FaultedWorkMenuItems work={work} repair={actions.repair} reloading={actions.reloading} removing={actions.removing} onReload={actions.reload} onRemove={() => actions.remove(work)} />
+  return <NavigationWorkGroup id={work.workId} title={work.title} view={view} collapsed={collapsed} onToggle={onToggle} fault={info.tone} contextMenu={items}
+    action={<FaultedWorkMenu work={work} actions={actions} />}>
+    <p className="px-1.5 pb-1.5 pl-[31px] text-xs text-muted-foreground">{status ? `${info.title}，${status === "修复中" ? "正在准备修复作品锁。" : "修复交接待完成，应用将重新启动。"}` : `${info.title}，${info.hint}`}</p>
+  </NavigationWorkGroup>
 }
 
 type DialogState =
@@ -352,6 +415,7 @@ type DialogState =
   | { type: "world-create"; novel: NovelSummary; parentWorld?: WorldRecord }
   | { type: "world-rename"; novel: NovelSummary; world: WorldRecord }
   | { type: "world-delete"; novel: NovelSummary; world: WorldRecord }
+  | { type: "remove-faulted"; work: UnavailableWork }
   | null
 
 const CHARACTER_ROLE_ORDER: CharacterRoleType[] = [
@@ -1197,7 +1261,8 @@ interface ConversationSummary {
 }
 
 async function fetchConversationSummaries(): Promise<ConversationSummary[]> {
-  const res = await fetch("/api/chat/conversations")
+  // A rejected local request carries native paths and raw causes; never display it.
+  const res = await fetch("/api/chat/conversations").catch(() => { throw new Error("加载会话列表失败") })
   if (!res.ok) throw new Error("加载会话列表失败")
   const json = (await res.json()) as { conversations: ConversationSummary[] }
   return json.conversations
@@ -1404,7 +1469,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
   const [titleInput, setTitleInput] = useState("")
   /** 创建作品两步向导（书名 + 创作切入方式） */
   const [createOpen, setCreateOpen] = useState(false)
-  useDesktopCommands({"file.new":()=>setCreateOpen(true)})
+  useDesktopCommands({"file.new":()=>setCreateOpen(true),'file.import':()=>requestNovelImport().then(()=>{}),'file.import-folder':()=>requestNovelImport().then(()=>{})})
 
   const { data: novelList, isPending, isError, isFetching, refetch } = useNovelList()
   const novels = novelList?.novels
@@ -1432,6 +1497,42 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
 
   const invalidateNovels = () =>
     queryClient.invalidateQueries({ queryKey: ["novels"] })
+  const leaseRepair = useWorkLeaseRepair(scope)
+  const [removeError, setRemoveError] = useState<string | null>(null)
+  // isPending updates after render; a ref keeps two synchronous confirms single-flight.
+  const removeFlight = useRef(false)
+  const removeFaultedMutation = useMutation({
+    mutationFn: async (work: UnavailableWork) => {
+      const generic = "暂时无法删除作品，原数据已保留，请重试。"
+      let res: Response
+      try { res = await fetch(`/api/works/${work.workId}`, { method: "DELETE" }) } catch { throw new Error(generic) }
+      if (res.ok) return
+      const data = await res.json().catch(() => null) as { error?: string; code?: string } | null
+      if (res.status === 404 && data?.code === "WORK_NOT_FOUND") return
+      throw new Error(res.status >= 500 || !data?.error ? `${generic}关联对话可能已删除，请重试完成移除。` : data.error)
+    },
+    onMutate: () => setRemoveError(null),
+    onSuccess: (_data, work) => {
+      toast.success("作品已从列表中删除")
+      closeAllTabsOfNovel(work.novelId)
+      const chat = useChatStore.getState()
+      if (chat.draftNovelId === work.novelId) chat.requestNewConversation()
+      invalidateNovels()
+      void queryClient.invalidateQueries({ queryKey: ["chat-conversations"] })
+      setDialog(null)
+    },
+    onError: (err) => setRemoveError(err.message),
+    onSettled: () => { removeFlight.current = false },
+  })
+  const confirmRemove = (work: UnavailableWork) => {
+    if (removeFlight.current) return
+    removeFlight.current = true
+    removeFaultedMutation.mutate(work)
+  }
+  const faultedActions: FaultedWorkActions = {
+    repair: leaseRepair, reloading: isFetching, removing: removeFaultedMutation.isPending,
+    reload: () => void refetch(), remove: work => { setRemoveError(null); setDialog({ type: "remove-faulted", work }) },
+  }
 
   const renameMutation = useMutation({
     mutationFn: async ({ id, title }: { id: string; title: string }) => {
@@ -1754,6 +1855,23 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
 
   </>
 
+  /** The exact original healthy-work menu, shared by … and right-click. */
+  const novelMenuItems = (novel: NovelSummary) => <>
+    <DropdownMenuItem
+      onClick={() => openTitleDialog({ type: "rename", novel })}
+    >
+      <Pencil />
+      重命名
+    </DropdownMenuItem>
+    <DropdownMenuItem
+      variant="destructive"
+      onClick={() => setDialog({ type: "delete", novel })}
+    >
+      <Trash2 />
+      删除
+    </DropdownMenuItem>
+  </>
+
   const submitting =
     renameMutation.isPending ||
     createWorldMutation.isPending ||
@@ -1766,6 +1884,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       <div className="sidebar-brand"><span aria-hidden="true"><Seal variant="mark" className="brand-logo size-[30px]" /></span><span className="brand-title">玄印写作</span></div>
       <div className="create-actions">
         <button type="button" className="create-action" onClick={() => setCreateOpen(true)}><NotebookPen aria-hidden="true" size={18} strokeWidth={1.7} /><NavigationLabel>创建作品</NavigationLabel></button>
+        <button type="button" className="create-action" onClick={()=>void requestNovelImport()}><FileInput aria-hidden="true" size={18} strokeWidth={1.7}/><NavigationLabel>导入作品</NavigationLabel></button>
         <button type="button" className="create-action" onClick={() => useChatStore.getState().requestNewConversation()}><MessageCirclePlus aria-hidden="true" size={18} strokeWidth={1.7} /><NavigationLabel>新对话</NavigationLabel></button>
       </div>
       <div role="tablist" aria-label="导航分类" className="nav-tabs">
@@ -1775,7 +1894,9 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       <div ref={scrollRef} id={navigationId + "-panel"} role="tabpanel" aria-labelledby={navigationId + "-" + view} className="tree-scroll min-h-0 flex-1 overflow-y-auto px-1.5 pt-0.5 pb-3">
         <div className="nav-panel-content">
         {(view === "works" || view === "conversations") && <UnboundConversations expanded={expanded["@unbound"] ?? true} onToggle={() => toggle("@unbound")} />}
-        <UnavailableWorks works={isError ? [] : unavailableWorks} scope={scope} retrying={isFetching} retry={() => void refetch()} renderWork={view === "works" ? undefined : (work, details) => <NavigationWorkGroup id={work.workId} title={work.title} view={view} collapsed={!!collapsed[work.workId]} onToggle={() => toggleGroup(work.workId)}>{details}</NavigationWorkGroup>} />
+        {!isError && unavailableWorks.map(work => view === "works"
+          ? <FaultedWorkRow key={`${scope}:${work.workId}`} work={work} actions={faultedActions} />
+          : <FaultedWorkGroup key={`${scope}:${work.workId}`} work={work} view={view} collapsed={!!collapsed[work.workId]} onToggle={() => toggleGroup(work.workId)} actions={faultedActions} />)}
         {isError && (
           <div role="alert" className="flex flex-col items-center gap-2 px-4 py-6 text-center">
             <AlertCircle className="size-6 text-destructive" />
@@ -1819,6 +1940,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
             </NavigationWorkGroup>
             return (
               <div key={`${scope}:${novel.id}`}>
+                <RowContextMenu items={novelMenuItems(novel)}>
                 <TreeNode
                   icon={novelExpanded ? FolderOpen : FolderClosed}
                   iconTone="work"
@@ -1861,23 +1983,12 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
                         <MoreHorizontal className="size-4" />
                       </DropdownMenuTrigger>
                       <NavigationMenuContent align="start" className="w-auto min-w-28">
-                        <DropdownMenuItem
-                          onClick={() => openTitleDialog({ type: "rename", novel })}
-                        >
-                          <Pencil />
-                          重命名
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => setDialog({ type: "delete", novel })}
-                        >
-                          <Trash2 />
-                          删除
-                        </DropdownMenuItem>
+                        {novelMenuItems(novel)}
                       </NavigationMenuContent>
                     </NavigationMenu>
                   }
                 />
+                </RowContextMenu>
 
                 {novelExpanded && (
                   <>
@@ -2146,6 +2257,35 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
                 <Loader2 className="animate-spin" />
               )}
               确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={dialog?.type === "remove-faulted"}
+        onOpenChange={(open) => { if (!open && !removeFaultedMutation.isPending) setDialog(null) }}
+      >
+        <DialogContent showCloseButton={!removeFaultedMutation.isPending}>
+          <DialogHeader>
+            <DialogTitle>删除作品</DialogTitle>
+            <DialogDescription>
+              {dialog?.type === "remove-faulted" ? `确定要从作品列表中删除《${dialog.work.title}》吗？与该作品关联的对话将一并删除。` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {dialog?.type === "remove-faulted" && <div className="space-y-2 text-sm text-muted-foreground">
+            <p>作品目录中的文件不会被改动。{dialog.work.reason === "stale-lease" ? "" : "目录恢复后，可通过“打开作品目录”重新加入。"}</p>
+            {dialog.work.reason === "stale-lease" && <p className="flex gap-2 rounded-md bg-warning/10 px-2.5 py-2 text-foreground"><TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />该作品只是留有异常退出的写入锁，建议先使用“修复作品锁”。删除后如需重新加入，需要先手动移除作品目录中的锁文件夹。</p>}
+            {removeError && <p role="alert" className="text-xs text-destructive">{removeError}</p>}
+          </div>}
+          <DialogFooter>
+            <Button variant="outline" disabled={removeFaultedMutation.isPending} onClick={() => setDialog(null)}>取消</Button>
+            <Button
+              variant="destructive"
+              disabled={removeFaultedMutation.isPending}
+              onClick={() => { if (dialog?.type === "remove-faulted") confirmRemove(dialog.work) }}
+            >
+              {removeFaultedMutation.isPending && <Loader2 className="animate-spin" />}
+              {removeFaultedMutation.isPending ? "正在删除…" : "确认删除"}
             </Button>
           </DialogFooter>
         </DialogContent>

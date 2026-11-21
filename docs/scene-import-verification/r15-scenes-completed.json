@@ -1,0 +1,32 @@
+{
+  "sessionId": "8a7b423f-08c7-417a-98e1-aa2f652150e6",
+  "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+  "chapters": 1402,
+  "units": 5589,
+  "covered": 5589,
+  "scenes": 982,
+  "states": {
+    "done": 982
+  },
+  "artifacts": 982,
+  "parents": 285,
+  "dropped": 0,
+  "skipped": 0,
+  "mappingWarnings": 0,
+  "bodyUnchanged": true,
+  "pageErrors": [],
+  "selected": [
+    "body",
+    "outline"
+  ],
+  "targets": [
+    "scene"
+  ],
+  "sceneStartedAt": "2026-10-30T22:57:56.326Z",
+  "sceneEntityStartedAt": "2026-10-30T22:58:24.825Z",
+  "completedAt": "2026-10-30T23:02:02.058Z",
+  "durationMs": 245730.637833,
+  "entityDurationMs": 217232.12199999997,
+  "deadlineMs": 420000,
+  "performancePassed": true
+}

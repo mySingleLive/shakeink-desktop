@@ -8,6 +8,7 @@ import { buildMonacoCommandCatalog, createMonacoCommandTarget, type MonacoAction
 import { CommandTargets } from "../../src/lib/desktop/command-targets"
 import { commandScope } from "../../src/lib/desktop/command-scope"
 import { platformCommands } from "../../desktop/shared/command-registry"
+import * as textShortcutsModule from "../../src/lib/desktop/text-shortcuts"
 
 function fixture(overrides: Record<string, string[]> = {}, options: { now?: () => number; includeText?: boolean } = {}) {
   class Element extends EventTarget { isConnected = true; closest(selector: string) { return selector.includes(".monaco-editor") ? this : null }; matches() { return false } }
@@ -31,6 +32,7 @@ function fixture(overrides: Record<string, string[]> = {}, options: { now?: () =
     "@/lib/desktop/use-command-target": { useDesktopCommands() {} },
     "@/lib/desktop/input-commands": { installInputCommands: () => () => {}, installInputContextMenu: () => () => {}, isAPIKeyControl: () => false },
     "@/lib/desktop/text-context-menu": { installTextContextMenu: () => () => {} },
+    "@/lib/desktop/text-shortcuts":textShortcutsModule,"@/lib/desktop/text-shortcut-source":{captureTextShortcut:()=>null,copySpanningSelection:()=>false},
     "@/lib/desktop/native-text-edits": { nativeTextEdits: () => ({ run() {}, dispose() {} }) },
     "@/lib/desktop/composer-text-commands": { installComposerTextCommands: () => () => {} },
     "@/lib/desktop/command-scope": { commandScope },
@@ -110,20 +112,42 @@ test("MONACOCTRL48-06: preview default copy and selectAll reach the body owner i
     f.target.closest = selector => selector.includes('.desktop-markdown-editor') ? f.target : null
     assert.equal(f.key({ key: "c", code: "KeyC" }).defaultPrevented, true)
     assert.equal(f.key({ key: "a", code: "KeyA" }).defaultPrevented, true)
-    assert.equal(f.key({ key: "v", code: "KeyV" }).defaultPrevented, false, "read-only preview does not acquire mutation ownership")
+    // docs/598 R4: read-only text consumes paste without acting on it.
+    assert.equal(f.key({ key: "v", code: "KeyV" }).defaultPrevented, true, "read-only preview does not acquire mutation ownership")
     await f.settle(); assert.deepEqual(executed, ["filtered-copy", "body-selectAll"])
   } finally { remove(); f.dispose() }
 })
-test("MONACOCTRL48-07: explicit empty preview copy bindings remain empty while ordinary inputs retain native copying", async () => {
+test("MONACOCTRL48-07: explicit empty preview copy bindings remain empty while ordinary inputs keep their own copy owner", async () => {
   const f = fixture({ "text.copy": [] }, { includeText: true }), executed: string[] = []
-  const remove = f.bus.register({ owner: {}, accepts: target => target === (f.target as unknown as HTMLElement), commands: { "text.copy": () => { executed.push("copy") } } })
+  // Like installPreviewTextCommands: the preview owner accepts preview-scope targets only.
+  const remove = f.bus.register({ owner: {}, accepts: target => target === (f.target as unknown as HTMLElement) && commandScope(target) === "preview", commands: { "text.copy": () => { executed.push("copy") } } })
   try {
     f.target.closest = selector => selector.includes('.desktop-markdown-editor') ? f.target : null
     assert.equal(f.key({ key: "c", code: "KeyC" }).defaultPrevented, true, "removing the native default blocks the old key without executing")
     await f.settle(); assert.deepEqual(executed, [])
     f.setOverrides({})
     f.target.closest = selector => selector.includes('input,textarea,') || selector.includes('.desktop-markdown-editor') ? f.target : null
-    assert.equal(f.key({ key: "c", code: "KeyC" }).defaultPrevented, false, "a nested ordinary input is not a preview body command")
+    // docs/598: the input's own text path consumes the key; the preview owner never runs.
+    assert.equal(f.key({ key: "c", code: "KeyC" }).defaultPrevented, true, "a nested ordinary input is not a preview body command")
     await f.settle(); assert.deepEqual(executed, [])
+  } finally { remove(); f.dispose() }
+})
+test("WU-66g: a native menu md.find is re-routed to worldline.search inside the worldline panel; md.* stays dropped there", async () => {
+  const f = fixture(), ran: string[] = []
+  const remove = f.bus.register({ owner: {}, accepts: () => true, commands: { "worldline.search": () => { ran.push("worldline.search") } } })
+  try {
+    // Canvas, tree or card inside the worldline panel.
+    f.target.closest = selector => selector.includes('[data-command-scope="worldline"]') ? f.target : null
+    f.menu("md.find"); await f.settle()
+    f.menu("md.bold"); await f.settle()
+    // The worldline search box.
+    f.target.closest = selector => selector.includes('[data-command-scope="worldline"]') || selector.includes("[data-worldline-search]") ? f.target : null
+    f.menu("md.find"); await f.settle()
+    // The event editor's Monaco keeps md.find.
+    f.target.closest = selector => selector.includes(".monaco-editor") || selector.includes('[data-command-scope="worldline"]') ? f.target : null
+    f.menu("md.find"); await f.settle()
+    // md.find in Monaco runs the editor's own find action (fixture records it as actions.find).
+    assert.deepEqual(ran, ["worldline.search", "worldline.search"])
+    assert.deepEqual(f.calls, ["actions.find"], "only the Monaco md.find ran; md.bold in the panel was dropped")
   } finally { remove(); f.dispose() }
 })

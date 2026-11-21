@@ -1,0 +1,10 @@
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (4.321833ms)
+✔ NI-PDF03: page preview actions reject unsafe schemas, foreign files and stale revisions before IO (3.739708ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 254.054209

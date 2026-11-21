@@ -1,0 +1,9 @@
+{
+  "sourceRules": 3,
+  "builtRules": 3,
+  "productionAssets": [
+    "out/_next/static/chunks/07htfn2yqpmyr.css"
+  ],
+  "ownTranslation": false,
+  "sharedTranslation": true
+}

@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN" class="paper">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>玄印写作 · PDF图像页核对审核稿</title>
+<link rel="stylesheet" href="../assets/web-tokens.css">
+<style>
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--background);color:var(--foreground);font:14px/1.65 var(--font-ui)}
+button,input,select{font:inherit}button,select{padding:8px 12px;min-height:38px;border:1px solid var(--input);border-radius:var(--r-inner);background:var(--secondary);color:var(--foreground)}
+button{cursor:pointer}button:hover:not(:disabled){background:var(--accent)}button:disabled{opacity:.43;cursor:not-allowed}input{accent-color:var(--primary)}
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+h1,h2,h3,p,figure{margin:0}h1{font-size:24px}h2{font-size:20px}h3{font-size:16px}.subtle,.note{color:var(--muted-foreground)}
+.review{max-width:1020px;margin:22px auto;padding:0 20px}.review>p{font-size:13px;margin-top:6px}
+.review-tools{display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:16px;padding:13px 16px;border:1px dashed var(--input);border-radius:var(--r-inner);background:var(--muted)}
+.review-tools label{display:flex;align-items:center;gap:8px}.review-tools p{flex-basis:100%;font-size:12px;color:var(--muted-foreground)}
+.panel{max-width:960px;margin:24px auto;background:var(--card);border:1px solid var(--border);border-radius:var(--r-card);overflow:hidden}
+.header,.content,.source-footer{padding:20px 26px}.header{border-bottom:1px solid var(--border)}.eyebrow{font-size:12px;color:var(--muted-foreground);margin-bottom:4px}
+.steps{display:flex;gap:28px;margin-top:16px;color:var(--muted-foreground);font-size:13px}.steps .active{color:var(--foreground)}
+.file{display:flex;align-items:center;gap:12px;border:1px solid var(--input);border-radius:var(--r-inner);padding:15px;margin:16px 0}.file img{width:32px;height:38px}
+.meta{flex:1;min-width:0}.meta strong{overflow-wrap:anywhere}.meta p{font-size:13px}
+.notice{padding:14px 16px;border:1px solid var(--warning);border-radius:var(--r-inner);background:var(--selected-surface);margin:16px 0}.notice p{font-size:13px;margin-top:4px}.notice button{margin-top:10px}.notice.good{border-color:var(--success)}
+.primary{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}.primary:hover:not(:disabled){background:var(--primary-hover)}
+.source-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;border-top:1px solid var(--border)}.status-line{min-height:24px;margin-bottom:8px;font-size:13px}#toast{min-height:30px;font-size:13px}
+.backdrop{position:fixed;inset:0;background:#0009;padding:16px;display:grid;place-items:center;z-index:5}
+/* Fixed header/footer grid rows; the middle row alone scrolls, including at 390 x 600. */
+.page-review{width:min(920px,100%);height:min(820px,calc(100vh - 32px));height:min(820px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;background:var(--popover);border:1px solid var(--input);border-radius:var(--r-card);box-shadow:var(--shadow-2)}
+.dialog-header{padding:15px 20px;border-bottom:1px solid var(--border);background:var(--popover)}.heading-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.close-button{padding:4px 11px;font-size:22px;line-height:1;flex:none}
+.page-nav{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}.page-nav label{flex:1;min-width:160px;display:flex;align-items:center;gap:8px}.page-nav select{flex:1;min-width:0;max-width:350px}.page-nav button{padding:5px 10px;min-height:34px}
+.page-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:18px 20px;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);align-content:start;gap:22px;scroll-padding:14px}
+.preview-column,.page-info{min-width:0}.zoom-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}.zoom-tools button{font-size:13px;min-height:34px;padding:5px 8px}.zoom-tools output{min-width:44px;text-align:center;color:var(--muted-foreground);font-size:12px}
+.preview-viewport{height:360px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--input);border-radius:var(--r-inner);background:var(--muted);scrollbar-gutter:stable;touch-action:pan-x pan-y}
+.preview-surface{width:max-content;min-width:100%;padding:16px}.sheet-frame{position:relative;margin:0 auto;width:520px;height:736px}
+.sheet{position:absolute;inset:0 auto auto 0;width:520px;height:736px;transform-origin:top left;background:var(--editor-bg);color:var(--foreground);border:1px solid var(--input);padding:42px 38px;font-family:var(--font-serif);overflow:hidden}
+.page-label{font:12px/1.5 var(--font-ui);color:var(--muted-foreground);border-bottom:1px solid var(--border);padding-bottom:10px}.sheet.cover{display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center}.book-title{font-size:44px;writing-mode:vertical-rl;letter-spacing:12px;margin:50px 0 30px}
+.small-print{font-size:13px;line-height:1.9;text-align:left}.sample-title{font-size:24px;margin:26px 0 20px;text-align:center}.sample-lines{font-size:15px;line-height:2.1;margin:18px 0}.illustration{height:210px;border:1px dashed var(--muted-foreground);display:grid;place-items:center;background:var(--muted);margin:24px 0}
+.note{font-size:12px;margin-top:8px}.preview-error{padding:26px 20px;min-height:220px;border:1px solid var(--warning);border-radius:var(--r-inner);background:var(--selected-surface)}.preview-error p{margin:8px 0 14px;font-size:13px}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;background:var(--muted);font-size:12px}.page-info>p{margin:11px 0;font-size:13px}
+.check{display:flex;align-items:flex-start;gap:10px;padding:14px;border:1px solid var(--input);border-radius:var(--r-inner);margin:16px 0 10px;cursor:pointer}.check input{margin:5px 0 0;flex:none}.check.disabled{opacity:.6;cursor:not-allowed}
+.other-decisions{display:flex;flex-wrap:wrap;gap:8px}.other-decisions button{padding:7px 10px;font-size:13px}.other-decisions button[aria-pressed="true"]{border-color:var(--primary);background:var(--selected-surface)}#draft-status{min-height:48px;color:var(--muted-foreground)}
+.dialog-footer{padding:13px 20px;border-top:1px solid var(--border);background:var(--popover);display:grid;gap:9px}.dialog-footer p{font-size:12px;color:var(--muted-foreground)}.dialog-actions{display:flex;justify-content:flex-end;gap:10px}
+@media(max-width:640px){
+.review{padding:0 14px;margin-top:16px}h1{font-size:21px}.review-tools{display:grid;gap:10px}.review-tools label{display:grid;grid-template-columns:38px minmax(0,1fr)}
+.panel{margin:16px 10px}.header,.content,.source-footer{padding:17px}.file{flex-wrap:wrap}.file .meta{min-width:190px}.file button{width:100%}.steps{gap:15px}.source-footer{flex-wrap:wrap}
+.backdrop{padding:16px}.page-review{height:calc(100vh - 32px);height:calc(100dvh - 32px);max-height:calc(100dvh - 32px)}.dialog-header{padding:12px 14px}.dialog-header h2{font-size:18px}.dialog-header .subtle{font-size:12px}
+.page-nav{gap:6px;margin-top:9px}.page-nav label{min-width:150px;font-size:12px}.page-nav select{padding:6px}
+.page-body{grid-template-columns:minmax(0,1fr);padding:14px;gap:18px}.preview-viewport{height:260px}.dialog-footer{padding:11px 14px}.dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dialog-actions button{padding:8px;font-size:13px}
+}
+</style>
+</head>
+<body>
+<div id="demo-root">
+<header class="review"><h1>PDF 图像页核对 · 待审核补充稿</h1><p class="subtle">静态交互占位稿。文件、页数与状态均为演示；不读取本机文件，不调用 AI，也不发送任何内容。</p>
+<aside class="review-tools" aria-label="产品外审核工具">
+<label for="scenario">场景<select id="scenario">
+<option value="cover">正常封面 · 1 页待核对</option><option value="multiple">多个图像页 · 逐页核对</option><option value="failure">预览失败 · 重试后仍需确认</option><option value="changed">文件变化 · 旧确认失效</option><option value="scan">全扫描 · 没有可提取正文</option><option value="content">含正文／无法确定 · 仍阻断</option>
+</select></label>
+<label for="theme">主题<select id="theme"><option value="paper">宣纸</option><option value="ink">玄墨</option></select></label>
+<p>仅供设计审核，不属于产品。切换场景重置演示草稿；“重新选择”和“重试”只切换占位状态，不访问文件或网络。</p>
+</aside></header>
+<main class="panel">
+<header class="header"><div class="eyebrow">导入作品</div><h2>核对来源</h2><p class="subtle">核对来源、选择内容，再确认导入。</p><nav class="steps" aria-label="导入步骤"><span class="active">1 核对来源</span><span>2 选择内容</span><span>3 导入</span></nav></header>
+<div class="content"><h3>选中的文件</h3>
+<div class="file"><input id="include" type="checkbox" checked aria-label="纳入当前 PDF 文件"><img src="assets/file-icons/pdf.svg" alt="PDF 文件"><div class="meta"><strong id="filename"></strong><p class="subtle" id="file-meta"></p></div><button id="open">核对图像页</button></div>
+<section class="notice" id="warning" aria-labelledby="warning-title"><strong id="warning-title"></strong><p id="warning-detail"></p><button id="reselect" hidden>重新选择文件</button><button id="ocr" hidden>保留草稿，先完成 OCR</button></section>
+<p class="status-line" id="result" role="status" aria-live="polite"></p><p class="subtle">图像内容不会作为文字导入；该页已提取的文字仍保留。图像中含正文、设定或无法判断时，请先完成 OCR，再重新选择来源文件。</p>
+</div>
+<footer class="source-footer"><span class="subtle" id="source-count"></span><button id="recognize" class="primary" disabled>识别内容</button></footer>
+</main><div class="review" id="toast" role="status" aria-live="polite"></div>
+</div>
+<div class="backdrop" id="modal" hidden>
+<section class="page-review" id="dialog" role="dialog" aria-modal="true" aria-labelledby="page-title" aria-describedby="page-help" tabindex="-1">
+<header class="dialog-header"><div class="heading-row"><div><div class="eyebrow" id="page-file"></div><h2 id="page-title"></h2><p class="subtle" id="page-help">逐页核对图像是否含需要导入的小说内容。</p></div><button class="close-button" id="close" aria-label="取消本次更改并关闭">×</button></div>
+<nav class="page-nav" aria-label="图像页导航"><button id="previous" aria-label="上一张图像页">上一页</button><label for="page-select">图像页<select id="page-select"></select></label><button id="next" aria-label="下一张图像页">下一页</button></nav></header>
+<div class="page-body" id="page-body">
+<section class="preview-column" aria-label="原页预览">
+<div class="zoom-tools" id="zoom-tools" role="group" aria-label="预览缩放"><button id="zoom-out" aria-label="缩小预览">−</button><output id="zoom-value" aria-live="polite">100%</output><button id="zoom-in" aria-label="放大预览">＋</button><button id="actual-size">原尺寸 100%</button><button id="fit">适合页面</button></div>
+<div class="preview-viewport" id="viewport" role="region" tabindex="0" aria-label="原页预览区域，放大后可滚动或使用方向键平移"><div class="preview-surface"><div class="sheet-frame" id="sheet-frame"><div class="sheet" id="sheet" role="img" aria-label="设计占位页，非真实 PDF 预览"></div></div></div></div>
+<div class="preview-error" id="preview-error" hidden role="status"><strong id="preview-error-title"></strong><p id="preview-error-detail"></p><button id="retry">重试预览</button><button id="modal-reselect" hidden>重新选择文件</button></div>
+<p class="note">仅为排版占位。原尺寸为本占位页的 100%；正式产品显示当前授权 PDF 原页。放大后横向、纵向滚动，或聚焦预览区按方向键查看小字；核对后再主动确认。</p>
+</section>
+<section class="page-info" aria-label="本页决定"><span class="badge" id="page-badge"></span><p id="saved-state"></p><p>选择只作用于当前页。切换页码保留本次更改；只有保存才应用，未操作页保持原决定。</p>
+<label class="check" id="ack-label"><input id="ack" type="checkbox"><span>已核对，确认本页图像不含需要导入的正文或设定</span></label>
+<div class="other-decisions" role="group" aria-label="不能排除图像时的决定"><button id="contains" aria-pressed="false">图像含正文或设定</button><button id="uncertain" aria-pressed="false">无法确定</button><button id="revoke" hidden>撤销本页确认</button></div>
+<p id="draft-status" role="status" aria-live="polite"></p><p class="subtle">确认仅对当前来源有效。文件变化或重新选择后原确认失效；预览失败、未确认页及无可提取正文都会阻止继续。</p>
+</section></div>
+<footer class="dialog-footer"><p id="save-summary" role="status" aria-live="polite"></p><p id="cancel-help"></p><div class="dialog-actions"><button id="cancel" aria-describedby="cancel-help">返回，暂不确认</button><button id="save" class="primary" disabled>保存本次更改</button></div></footer>
+</section></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const scenarios={
+ cover:{name:'老残游记.pdf',total:178,textPages:177,textCharacters:92000,pages:[{number:1,characters:0,kind:'cover',preview:'ready'}]},
+ multiple:{name:'带图版小说.pdf',total:12,textPages:11,textCharacters:8900,pages:[{number:1,characters:0,kind:'cover',preview:'ready'},{number:6,characters:320,kind:'body',preview:'ready'},{number:12,characters:80,kind:'illustration',preview:'ready'}]},
+ failure:{name:'预览待重试.pdf',total:8,textPages:7,textCharacters:4600,pages:[{number:1,characters:0,kind:'cover',preview:'failed'},{number:5,characters:180,kind:'illustration',preview:'ready'}]},
+ changed:{name:'来源已变化.pdf',total:8,textPages:7,textCharacters:4600,changed:true,invalidatedCount:1,pages:[{number:1,characters:0,kind:'cover',preview:'ready'}]},
+ scan:{name:'扫描版小说.pdf',total:3,textPages:0,textCharacters:0,pages:[{number:1,characters:0,kind:'cover',preview:'ready'},{number:2,characters:0,kind:'body',preview:'ready'},{number:3,characters:0,kind:'body',preview:'ready'}]},
+ content:{name:'含正文图像.pdf',total:7,textPages:5,textCharacters:3100,pages:[{number:3,characters:120,kind:'body',preview:'ready'},{number:7,characters:0,kind:'body',preview:'ready'}],seedDecisions:{3:'contains',7:'uncertain'}}
+};
+const labels={exclude:'已确认排除图像',contains:'含正文或设定，需 OCR',uncertain:'无法确定，待核对',pending:'已撤销确认，待核对'};
+let state,sourceVersion=0,currentIndex=0,draft=new Map(),views=new Map(),returnFocus=null;
+const page=()=>state.pages[currentIndex];
+const saved=p=>{const d=state.decisions.get(p.number);return d&&d.version===state.version?d.value:null;};
+const effective=p=>draft.has(p.number)?draft.get(p.number).value:saved(p);
+const confirmedCount=()=>state.changed?0:state.pages.filter(p=>saved(p)==='exclude').length;
+const canExclude=p=>!state.changed&&state.textCharacters>0&&p.preview==='ready';
+const canContinue=()=>state.included&&!state.changed&&state.textCharacters>0&&state.pages.every(p=>p.preview==='ready'&&saved(p)==='exclude');
+function toast(text){$('toast').textContent=text;}
+function resetScenario(key){
+ const spec=structuredClone(scenarios[key]);state={...spec,included:true,version:++sourceVersion,decisions:new Map()};
+ // Product-external review presets are blocking decisions, never exclusion confirmations.
+ for(const [number,value] of Object.entries(spec.seedDecisions||{}))state.decisions.set(Number(number),{value,version:state.version});
+ currentIndex=0;draft.clear();views.clear();$('include').checked=true;renderSource();
+ toast('演示场景已切换，未访问本机文件；所有图像页都没有默认确认。');
+}
+function renderSource(){
+ const count=confirmedCount(),remaining=state.pages.length-count;
+ $('filename').textContent=state.name;$('file-meta').textContent=state.total+' 页 · '+state.pages.length+' 页含图像 · '+state.textPages+' 页有可提取文字';
+ $('include').setAttribute('aria-label','纳入 '+state.name);$('source-count').textContent=(state.included?1:0)+' 个文件纳入导入';
+ $('recognize').disabled=!canContinue();$('warning').classList.toggle('good',canContinue());$('reselect').hidden=!state.changed;
+ $('ocr').hidden=state.textCharacters>0&&!state.pages.some(p=>['contains','uncertain'].includes(saved(p)));
+ let title,detail;
+ if(state.changed){title='文件已变化，原确认已失效';detail='此前 '+(state.invalidatedCount||0)+' 页确认不再适用。请重新选择文件，再逐页核对；现有导入草稿保留。';}
+ else if(state.textCharacters===0){title='没有可提取的正文，暂时不能继续';detail='这是全扫描来源。即使图像是封面，也不能靠排除图像完成导入；请先完成 OCR，再重新选择文件。';}
+ else if(state.pages.some(p=>['contains','uncertain'].includes(saved(p)))){title='图像内容尚不能排除';detail='已记录“含正文或设定”或“无法确定”的页。草稿保留，请完成 OCR 或继续核对；其他页的确认不能替代这些页。';}
+ else if(remaining){title='还有 '+remaining+' 页图像未确认';detail=state.pages.some(p=>p.preview==='failed')?'存在预览失败页。可重试预览，成功后仍须主动确认；未确认不能继续。':'请查看每张原页，确认图像不含需要导入的正文或设定。只确认部分页时仍不能继续。';}
+ else{title='图像页已逐页核对';detail='仅排除明确确认的图像内容，各页已提取文字仍保留。后续识别前还会核对来源是否变化。';}
+ $('warning-title').textContent=title;$('warning-detail').textContent=detail;
+ $('result').textContent=!state.included?'当前来源未纳入导入；已保存的页决定保留在草稿中。':canContinue()?'已确认 '+count+' / '+state.pages.length+' 页，可进入识别范围确认。':'已确认 '+count+' / '+state.pages.length+' 页；'+remaining+' 页仍阻断继续。';
+}
+function renderNavigation(){
+ $('page-select').replaceChildren(...state.pages.map((p,index)=>{const o=document.createElement('option');o.value=String(index);o.textContent='第 '+p.number+' 页 · '+(labels[effective(p)]||'待核对')+(draft.has(p.number)?' · 本次更改':'');o.selected=index===currentIndex;return o;}));
+ $('previous').disabled=currentIndex===0;$('next').disabled=currentIndex===state.pages.length-1;
+}
+function renderSheet(p){
+ $('sheet').className='sheet'+(p.kind==='cover'?' cover':'');
+ // Authored design placeholders only: no PDF bytes, file URL, image fetch, or model output.
+ if(p.kind==='cover')$('sheet').innerHTML='<div class="page-label">封面排版占位 · 非真实 PDF</div><strong class="book-title">书名占位</strong><p>作者署名占位</p><p class="small-print">小字核对区：这里仅示意封面上的出版说明。请使用原尺寸或放大查看；预览本身不会自动产生确认。</p>';
+ else if(p.kind==='body')$('sheet').innerHTML='<div class="page-label">正文图像排版占位 · 非真实 PDF</div><h3 class="sample-title">图像中的文字</h3><p class="sample-lines">此处示意正文被包含在图像内。若真实原页含正文或设定，应选择“图像含正文或设定”，保留草稿并先完成 OCR。</p><p class="sample-lines">这些文字只用于检查放大和滚动入口，不是小说内容或自动识别结果。</p><p class="small-print">小字占位：不确定时请选择“无法确定”。其他页面确认后，这一页仍会阻断继续。</p>';
+ else $('sheet').innerHTML='<div class="page-label">插图排版占位 · 非真实 PDF</div><div class="illustration">插图占位区域</div><h3 class="sample-title">图注小字占位</h3><p class="small-print">真实原页的图注也可能包含正文或设定。是否排除由逐页核对决定，不因“插图”标签自动排除。本页已提取文字仍保留。</p>';
+}
+function setZoom(scale,mode='manual'){
+ const p=page(),v=$('viewport'),old=views.get(p.number)?.scale||1;
+ const cx=(v.scrollLeft+v.clientWidth/2)/old,cy=(v.scrollTop+v.clientHeight/2)/old,next=Math.max(.2,Math.min(2.5,scale));
+ views.set(p.number,{scale:next,mode});$('sheet-frame').style.width=520*next+'px';$('sheet-frame').style.height=736*next+'px';$('sheet').style.transform='scale('+next+')';
+ $('zoom-value').textContent=Math.round(next*100)+'%';$('zoom-out').disabled=next<=.2;$('zoom-in').disabled=next>=2.5;
+ if(mode==='fit'){v.scrollLeft=0;v.scrollTop=0;}else{v.scrollLeft=Math.max(0,cx*next-v.clientWidth/2);v.scrollTop=Math.max(0,cy*next-v.clientHeight/2);}
+}
+function fitPage(){setZoom(Math.min(($('viewport').clientWidth-32)/520,($('viewport').clientHeight-32)/736,1),'fit');}
+function renderPage(){
+ const p=page(),ready=!state.changed&&p.preview==='ready';
+ $('page-file').textContent=state.name+' · 图像页 '+(currentIndex+1)+' / '+state.pages.length;$('page-title').textContent='第 '+p.number+' 页';$('page-badge').textContent='含图像 · 本页可提取文字 '+p.characters+' 字符';
+ $('viewport').hidden=!ready;$('zoom-tools').hidden=!ready;$('preview-error').hidden=ready;$('retry').hidden=state.changed;$('modal-reselect').hidden=!state.changed;
+ $('preview-error-title').textContent=state.changed?'文件已变化，预览与旧确认已失效':'原页预览未能加载';
+ $('preview-error-detail').textContent=state.changed?'请重新选择当前来源；旧确认不会继承到新来源。导入草稿仍保留。':'当前不能确认排除本页图像。可重试；重试成功也不会自动确认。';
+ renderNavigation();renderDecisions();
+ if(ready){renderSheet(p);const number=p.number;requestAnimationFrame(()=>{if($('modal').hidden||page().number!==number)return;const view=views.get(number);if(view?.mode==='manual')setZoom(view.scale);else fitPage();});}
+}
+function renderDecisions(){
+ const p=page(),value=effective(p),previous=saved(p),available=canExclude(p);
+ $('ack').checked=value==='exclude';$('ack').disabled=!available;$('ack-label').classList.toggle('disabled',!available);
+ $('contains').disabled=state.changed;$('uncertain').disabled=state.changed;$('contains').setAttribute('aria-pressed',String(value==='contains'));$('uncertain').setAttribute('aria-pressed',String(value==='uncertain'));
+ $('revoke').hidden=previous!=='exclude'&&value!=='exclude';$('revoke').disabled=state.changed;
+ $('saved-state').textContent=state.changed?'旧确认已失效，本页恢复待核对。':'已保存：'+(labels[previous]||'尚未作出决定')+'。';
+ let text=draft.has(p.number)?'本次选择：'+(labels[value]||'待核对')+'，尚未保存。':'本页没有本次更改。';
+ if(value==='pending'&&previous==='exclude')text+='保存撤销后，本页重新阻断继续。';
+ if(['contains','uncertain'].includes(value))text+='这不是排除确认，保存后仍阻断并保留草稿。';
+ if(state.textCharacters===0)text+='文件没有可提取正文，不能勾选通关，须先完成 OCR。';else if(!available)text+='当前预览不可用，不能确认排除图像。';
+ $('draft-status').textContent=text;
+ const invalid=[...draft].some(([number,d])=>d.version!==state.version||(d.value==='exclude'&&!canExclude(state.pages.find(x=>x.number===number))));
+ $('save').disabled=draft.size===0||state.changed||invalid;
+ const onlyRevocation=draft.size===1&&[...draft].every(([number,d])=>saved(state.pages.find(x=>x.number===number))==='exclude'&&d.value==='pending');
+ $('save').textContent=onlyRevocation?'撤销确认并返回':'保存本次更改'+(draft.size?'（'+draft.size+' 页）':'');
+ const projected=state.pages.filter(p=>effective(p)==='exclude'&&canExclude(p)).length;
+ $('save-summary').textContent='本次明确更改 '+draft.size+' 页；保存后预计确认 '+projected+' / '+state.pages.length+' 页。'+(state.textCharacters===0?'没有可提取正文，仍不能继续。':projected<state.pages.length?'其余未确认页仍阻断继续。':'仍须核对来源有效，才可进入识别范围确认。');
+ $('cancel').textContent=state.decisions.size||draft.size?'取消本次更改':'返回，暂不确认';
+ $('cancel-help').textContent='取消或按 Escape 不保存本次更改，保留已保存的决定（当前 '+confirmedCount()+' 页已确认）。';
+}
+function choose(value){
+ if(state.changed||(value==='exclude'&&!canExclude(page())))return;
+ const active=document.activeElement;draft.set(page().number,{value,version:state.version});renderNavigation();renderDecisions();
+ if(active?.closest('[hidden]'))($('ack').disabled?$('page-select'):$('ack')).focus();
+}
+function openReview(){
+ returnFocus=document.activeElement;draft=new Map();currentIndex=0;$('modal').hidden=false;$('demo-root').inert=true;document.body.style.overflow='hidden';renderPage();$('page-select').focus();
+}
+function closeReview(message){
+ draft.clear();$('modal').hidden=true;$('demo-root').inert=false;document.body.style.overflow='';renderSource();
+ (returnFocus?.isConnected&&!returnFocus.disabled?returnFocus:$('open')).focus();if(message)toast(message);
+}
+function cancelReview(){closeReview('已取消本次更改，保留原已保存决定；'+confirmedCount()+' / '+state.pages.length+' 页已确认。');}
+function saveReview(){
+ if($('save').disabled)return;
+ for(const [number,decision] of draft)state.decisions.set(number,{...decision});
+ const count=draft.size;closeReview('已保存明确更改的 '+count+' 页，未操作页保留原决定。'+(canContinue()?'可以核对识别范围。':'尚未满足继续条件，导入仍阻断。'));
+}
+function switchPage(index){currentIndex=Math.max(0,Math.min(state.pages.length-1,index));$('page-body').scrollTop=0;renderPage();$('page-select').focus();}
+function reselectSource(){
+ if(!$('modal').hidden)closeReview();
+ state.version=++sourceVersion;state.changed=false;state.decisions.clear();draft.clear();views.clear();renderSource();$('open').focus();
+ toast('仅演示重新选择，未打开文件选择框。新来源不继承旧确认，须逐页重新核对。');
+}
+$('open').addEventListener('click',openReview);
+$('ack').addEventListener('change',()=>choose($('ack').checked?'exclude':'pending'));
+$('contains').addEventListener('click',()=>choose('contains'));$('uncertain').addEventListener('click',()=>choose('uncertain'));$('revoke').addEventListener('click',()=>choose('pending'));
+$('cancel').addEventListener('click',cancelReview);$('close').addEventListener('click',cancelReview);$('save').addEventListener('click',saveReview);
+$('previous').addEventListener('click',()=>switchPage(currentIndex-1));$('next').addEventListener('click',()=>switchPage(currentIndex+1));$('page-select').addEventListener('change',e=>switchPage(Number(e.target.value)));
+$('zoom-out').addEventListener('click',()=>setZoom((views.get(page().number)?.scale||1)-.25));$('zoom-in').addEventListener('click',()=>setZoom((views.get(page().number)?.scale||1)+.25));$('actual-size').addEventListener('click',()=>setZoom(1));$('fit').addEventListener('click',fitPage);
+$('retry').addEventListener('click',()=>{if(state.changed)return;page().preview='ready';renderPage();$('viewport').focus();$('draft-status').textContent='仅演示重试成功，尚未自动确认；请核对后明确选择并保存。';});
+$('reselect').addEventListener('click',reselectSource);$('modal-reselect').addEventListener('click',reselectSource);
+$('include').addEventListener('change',e=>{state.included=e.target.checked;renderSource();});
+$('ocr').addEventListener('click',()=>toast('演示：保留导入草稿。请自行完成 OCR，再重新选择来源；没有启动 OCR 或读取文件。'));
+$('recognize').addEventListener('click',()=>{if(canContinue())toast('演示：进入既有“确认识别范围”。尚未发送任何内容，未调用 AI。');});
+$('scenario').addEventListener('change',e=>resetScenario(e.target.value));$('theme').addEventListener('change',e=>{document.documentElement.className=e.target.value;});
+window.addEventListener('resize',()=>{if(!$('modal').hidden&&!$('viewport').hidden&&views.get(page().number)?.mode!=='manual')fitPage();});
+document.addEventListener('keydown',event=>{
+ if($('modal').hidden)return;
+ if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancelReview();return;}
+ if(event.key!=='Tab')return;
+ const controls=[...$('dialog').querySelectorAll('button,input,select,[tabindex="0"]')].filter(el=>!el.disabled&&!el.closest('[hidden]')&&el.getClientRects().length>0);
+ if(!controls.length){event.preventDefault();$('dialog').focus();return;}
+ const first=controls[0],last=controls.at(-1),active=document.activeElement;
+ if(event.shiftKey&&(active===first||!$('dialog').contains(active))){event.preventDefault();last.focus();}
+ else if(!event.shiftKey&&(active===last||!$('dialog').contains(active))){event.preventDefault();first.focus();}
+});
+resetScenario('cover');
+</script>
+</body>
+</html>

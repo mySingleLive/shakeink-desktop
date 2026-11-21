@@ -1,0 +1,37 @@
+✔ NI-L01: unified source selection uses macOS native panel or Windows picker service without mode choice (74.934625ms)
+✔ CP-L01: main lifecycle cancels source choice before pause, gate drain and owner revocation (7.055625ms)
+✔ CP-L01: actual pending picker choice releases controller and BusinessGate before owner teardown (8.622333ms)
+✔ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (16.783292ms)
+✔ UP-01: unified choose has no mode, supports append and preserves strict legacy compatibility (1.81675ms)
+▶ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state
+  ✔ multiple files (84.385583ms)
+  ✔ folder only (23.558792ms)
+  ✔ mixed overlapping paths (29.138917ms)
+✔ UP-03: actual filesystem types drive selection; cancellation, append and task recovery preserve state (145.8845ms)
+✔ UP-05: one full sidebar button and default native command; mac menu deduplicates with legacy command retained (32.757583ms)
+✔ CP-F02: confirming an empty folder reports no importable text without creating a task (3.698541ms)
+✔ CP-P01: source picker protocol only accepts opaque commands and cancellation has no revision (4.141291ms)
+✔ CP-F01: actual metadata list combines naturally ordered directories and seven file formats, disabling unsafe entries (14.924334ms)
+✔ CP-F01: directory list limit is explicit and never presented as complete truncated content (5.891625ms)
+✔ CP-F02: cross-directory selections, current folder and opaque confirmation produce trusted grants for the actual scanner (23.502875ms)
+✔ CP-F02: removing/clearing selections and canceling do not read bodies or mutate sources (10.949875ms)
+✔ CP-F03: identity changes after selection are rejected by confirmation and can be reselected explicitly (11.302625ms)
+✔ CP-F03: scan boundary rejects swapped file, directory and ancestor after the trusted grant was issued (5.453542ms)
+✔ CP-F03: grant capture fixes the original path chain before realpath and refuses late links or directory replacement (5.211125ms)
+✔ CP-F03: custom picker grants reject an existing ancestor link instead of canonicalizing its target (1.157208ms)
+✔ CP-L01: cancel bypasses pending navigation/revision and late directory handles close without reopening (12.999125ms)
+✔ CP-L01: cancel releases a confirmation waiting for identity checks and revoked owner cannot act (13.198125ms)
+✔ CP-L02: actual unsettled IO retains the cross-session budget after timeout/cancel; late handles close (27.553042ms)
+✔ CP-L02: production default reserves thread-pool capacity across repeatedly canceled stuck sessions (47.707ms)
+✔ CP-L02: Windows root candidates are probed serially within the same budget and stop at first timeout (29.377666ms)
+✔ CP-F01/CP-L02: one stalled common place preserves other usable places and a directory can recover after IO failure (31.7525ms)
+✔ CP-F01/CP-L01: failed navigation revokes unselected entries from the old directory (12.517459ms)
+✔ CP-F02/CP-L01: controller receives grants at scan boundary and pure cancel after owner revocation is harmless (26.004708ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 607.419208

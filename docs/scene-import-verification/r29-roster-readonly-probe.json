@@ -1,0 +1,53 @@
+{
+  "kind": "same-reconstructed-packet-new-prompt-readonly-diagnostic",
+  "freshFullBookRun": false,
+  "historicalExactFailureReplay": false,
+  "fullBookAccepted": false,
+  "elapsedMs": 32865,
+  "stateUnchanged": true,
+  "normalAppExit": {
+    "code": 0,
+    "signal": null
+  },
+  "generations": [
+    {
+      "generation": 1,
+      "finishReason": "stop",
+      "promptTokens": 60615,
+      "completionTokens": 5512,
+      "textCharacters": 12492,
+      "sha256": "4cb88ac0da6b5c715718ea802230c2617b4348ab7f9122f340506b22dee657f8",
+      "wireShape": "valid",
+      "records": 55,
+      "validation": "invalid",
+      "reason": "anchor",
+      "failures": {
+        "unmatchedQuote": 18,
+        "literalNotUniqueInQuote": 2,
+        "unknownLiteral": 10,
+        "unanchoredNameOrAlias": 10
+      },
+      "badRecords": 21,
+      "firstBadRecordIndex": 3
+    },
+    {
+      "generation": 2,
+      "finishReason": "stop",
+      "promptTokens": 61039,
+      "completionTokens": 4010,
+      "textCharacters": 8934,
+      "sha256": "5450f898314a72cf4bc9506732f6c954cf539900e41a59f4f18825596a6b4992",
+      "wireShape": "valid",
+      "records": 30,
+      "validation": "invalid",
+      "reason": "anchor",
+      "failures": {
+        "unmatchedQuote": 20,
+        "unknownLiteral": 1,
+        "unanchoredNameOrAlias": 1
+      },
+      "badRecords": 10,
+      "firstBadRecordIndex": 6
+    }
+  ]
+}

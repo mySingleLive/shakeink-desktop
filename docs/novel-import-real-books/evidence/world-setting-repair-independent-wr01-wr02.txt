@@ -1,0 +1,32 @@
+✔ NI-WR01: explicit legacy repair is read-only by default, atomic and idempotent (1809.744125ms)
+▶ NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative
+  ✔ cross-novel Review incoming edge (29.230833ms)
+  ✔ TextComment unknown target type (18.059583ms)
+  ✔ PreparedTextChange (19.887458ms)
+  ✔ SubAgentRun (18.378458ms)
+  ✔ SopNodeRun (17.184792ms)
+  ✔ ForeshadowReference (26.552458ms)
+  ✔ ChatWriteEffect metadata-only target (17.646916ms)
+  ✔ ContentCandidate historical chapterId (18.8635ms)
+  ✔ ContentImprovementRun historical chapterId (31.910958ms)
+  ✔ ContentVersion target history (17.394625ms)
+  ✔ ContentMutation target history (26.645333ms)
+  ✔ TargetTextRevision global bounded target (17.607167ms)
+  ✔ SopPlan conservative own-novel block (16.637041ms)
+  ✔ CascadeJob conservative own-novel block (16.960833ms)
+  ✔ world children and attached settings block without cascade deletion (18.273208ms)
+  ✔ planning parse, world pointer and opaque artifact link are closed guards (68.10675ms)
+  ✔ actual transaction failures after writes and before commit restore all business and audit rows (112.931042ms)
+  ✔ ack export failures and lost commit acknowledgements confirm without duplicate writes (316.294667ms)
+  ✔ startup readiness rejection keeps the actual lease until closure is confirmed (170.350208ms)
+  ✔ sync-constructor-throw (250.789417ms)
+  ✔ readiness-reject-close-fails (247.016875ms)
+✔ NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative (15546.893167ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17776.219

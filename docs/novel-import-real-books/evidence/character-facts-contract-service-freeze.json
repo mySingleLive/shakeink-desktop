@@ -1,0 +1,94 @@
+{
+  "recordedAt": "2026-10-26T19:36:24.540Z",
+  "status": "service-and-J09-frozen-awaiting-108-independent-review",
+  "scope": [
+    "desktop/service/novel-import-ai.ts",
+    "tests/unit/novel-import-request-schema.test.ts"
+  ],
+  "files": [
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "baselineSha256": "3dba02c56f7572c49366bc7a6be9fd09a07bdf6fdc60235cdd997da76cdf7a94",
+      "sha256": "c1bc6dc62d7b40180287c98f5ebb940e7499d1812cc59277b286a59a6f109c4d"
+    },
+    {
+      "path": "tests/unit/novel-import-request-schema.test.ts",
+      "baselineSha256": "e0ce2d2f3a6eb2bcfaea17b5c369a3c39aa5df68ffdb8b7b88bb5190b6c39404",
+      "sha256": "2dc40c44b7b539286f8a4cff348aba653928b2f6a39abab94a2382bacfaa32fa"
+    }
+  ],
+  "plan": {
+    "path": "docs/novel-import-real-books/106-character-facts-contract-plan.md",
+    "sha256": "dfd6184a20f0f1abe6a2057f2bed4132d07caaf152200e3f41959aaf790aa158"
+  },
+  "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-J0[1-9]:' tests/unit/novel-import-request-schema.test.ts",
+  "results": {
+    "bridgeBaselineRed": {
+      "tests": 43,
+      "pass": 37,
+      "fail": 6,
+      "skipped": 0,
+      "exitCode": 1
+    },
+    "finalGreen": {
+      "tests": 43,
+      "pass": 43,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationMs": 1213.724083
+    }
+  },
+  "logs": [
+    {
+      "path": "docs/novel-import-real-books/evidence/character-facts-contract-j01-j09-red.txt",
+      "sha256": "92afad31e00b03fb903a8fea0c44131129f517c7ae4c296bcf64741bd95b6139"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/character-facts-contract-j01-j09-bridge-baseline-red.txt",
+      "sha256": "c5d5052596548a6ca2fdf6ebcbf51a029f841d6c402dd0dfece4377fdd50ef53"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/character-facts-contract-j01-j09-green.txt",
+      "sha256": "6a9011ff35df7aeea8f7038f6a67d453001e26de879ef29b0a95878b0b100f22"
+    }
+  ],
+  "delta": {
+    "path": "docs/novel-import-real-books/evidence/character-facts-contract-service-delta.diff",
+    "sha256": "80c9df42c9acd3a8c073dd509f23d9d06e2b2c6b2af6c69aea24fd90c45c3abe"
+  },
+  "proof": {
+    "singleValueExpressionReversedRestoresWholeService": true,
+    "mapper105EntireFunctionUnchanged": true,
+    "mapperSha256": "0e06a7d57a7405275a31ad082d4c3b28e09768254a0abd1c7aca8db8e0fb1405",
+    "oldJ01toJ08BytePrefixUnchanged": true,
+    "controls": [
+      {
+        "path": "desktop/main/novel-import.ts",
+        "sha256": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c"
+      },
+      {
+        "path": "src/lib/ai/generate.ts",
+        "sha256": "51612305662fdbc383f01516c2fa5baf83c37e97123391752bdbdf3c9631fe22"
+      },
+      {
+        "path": "desktop/core/novel-import-semantics.ts",
+        "sha256": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874"
+      },
+      {
+        "path": "desktop/core/novel-import.ts",
+        "sha256": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef"
+      }
+    ]
+  },
+  "history": "Initial RED stopped at the schema message assertion. New J09 assertion order was refined while production stayed 3dba02 so all five real two-call bridge paths ran before the clean RED. Both immutable logs retained.",
+  "typecheck": "Not run by this author pending root coordination; root owns combined global/audit checks.",
+  "limitations": {
+    "actualM01OrPrivateJournal": false,
+    "model": false,
+    "app": false,
+    "userDatabase": false,
+    "actualFailureCauseKnown": false,
+    "payloadOrAiTestEditedByThisAuthor": false
+  }
+}

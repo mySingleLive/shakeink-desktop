@@ -1,0 +1,11 @@
+Owned TypeScript diagnostics: 1
+[96mtests/unit/novel-import-request-schema.test.ts[0m:[93m201[0m:[93m180[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ facts: { people: string; parentId?: undefined; } | { parentId: string; people?: undefined; }; id: string; kind: ImportTarget; name: string; text: string; evidence: ImportEvidence[]; sourceUnitIds: string[]; origin: "source" | "inferred" | "confirmed"; }' is not assignable to parameter of type 'ImportArtifact'.
+  Types of property 'facts' are incompatible.
+    Type '{ people: string; parentId?: undefined; } | { parentId: string; people?: undefined; }' is not assignable to type 'Record<string, string>'.
+      Type '{ people: string; parentId?: undefined; }' is not assignable to type 'Record<string, string>'.
+        Property 'parentId' is incompatible with index signature.
+          Type 'undefined' is not assignable to type 'string'.
+
+[7m201[0m   for(const patch of [{people:'["unknown-character"]'},{parentId:'unknown-parent'}]){const raw={artifacts:[{...event,facts:{...facts,...patch}}]};h.validateImportSemanticArtifact(raw.artifacts[0]);assert.equal(factory(r).safeParse(raw).success,true);await assert.rejects(call(raw),/引用|角色/)}
+[7m   [0m [91m                                                                                                                                                                                   ~~~~~~~~~~~~~~~~[0m
+

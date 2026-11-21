@@ -20,6 +20,12 @@ import {parseConversationWorkerRequest} from './conversation-request'
 import {configureConversationTransfers,recoverConversationTransfers} from './conversation-runtime'
 import {getDatabaseContext,runInDatabaseContext} from './context'
 import {loadDatabaseSeed} from './database/seed'
+import {ImportAiJobs,runImportAi} from './novel-import-ai'
+import {publishNovelImport,importLeaseTarget} from './novel-import-publish'
+import {discardNovelImport} from './novel-import-discard'
+import {bufferResponse} from './local-response'
+import type {ImportAiRequest,ImportPublishInput,ImportReceipt} from '../shared/novel-import'
+import {z} from 'zod'
 
 if (!parentPort) throw new Error("Desktop service requires an isolated worker")
 // Any retained Web path attempting a direct network call fails closed. SDKs use
@@ -31,8 +37,12 @@ interface ActiveResponse { reader: ReadableStreamDefaultReader<Uint8Array>; abor
 const responses = new Map<string, ActiveResponse>()
 const starting = new Map<string, AbortController>()
 const pendingStarts = new Set<Promise<void>>()
+const importJobs=new ImportAiJobs()
+/** Saves and discards (key `discard:<id>`) in flight: counted by task-status, awaited by stop-tasks and close. */
+const importPublications=new Map<string,Promise<unknown>>()
 let closing = false
 let closedForMaintenance = false
+let stoppingImports=false
 const ready = (async () => {
   let openedWorks: Workspaces | undefined
   try {
@@ -82,13 +92,17 @@ async function start(value: unknown): Promise<LocalResponse> {
     await works.runWithGlobal(workspace, () => runInDatabaseContext({...getDatabaseContext(),requestOrigin:origin},()=>runWithNewTaskDefaults(async () => {
       if (abort.signal.aborted) throw new Error("请求已取消")
       const response = await dispatcher.handle(input, abort.signal)
-      const reader = (response.body ?? new ReadableStream<Uint8Array>({ start(controller) { controller.close() } })).getReader()
+      // docs/567 3R: plain bodies are read here, so the work's database is released once headers are sent
+      // even if the window never reads the body; streams keep the scope until they are read or cancelled.
+      const {reader,buffered} = await bufferResponse(response)
       if (abort.signal.aborted) { try { await reader.cancel() } finally { reader.releaseLock() }; throw new Error("请求已取消") }
       responses.set(input.id, { reader, abort, done: () => complete.resolve(), reading: false })
       if (starting.get(input.id) === abort) starting.delete(input.id)
       headers.resolve({ id: input.id, status: response.status, headers: Object.fromEntries(response.headers) })
-      await complete.promise
+      if (!buffered) await complete.promise
     })))
+    // The request still counts as in flight (pendingStarts) until its buffered body is read or cancelled.
+    await complete.promise
   })().catch(error => { headers.reject(error) }).finally(() => { if (starting.get(input.id) === abort) starting.delete(input.id); pendingStarts.delete(task) })
   pendingStarts.add(task)
   return headers.promise
@@ -105,11 +119,34 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
   await ready
   if (method === "ready") return true
   if(method === "closed-work-lease-target")return closedWorkLeaseTarget(works,data,()=>{
-    if(!closedForMaintenance||closing||responses.size||starting.size||pendingStarts.size||localAttemptCount())throw Error("本地数据尚未关闭")
+    if(!closedForMaintenance||closing||responses.size||starting.size||pendingStarts.size||localAttemptCount()||importJobs.active||importPublications.size)throw Error("本地数据尚未关闭")
   })
-  if(["start","image-asset","create-work","open-work"].includes(method)){
+  if(method==='novel-import-lease-target')return importLeaseTarget(works,data as ImportPublishInput,()=>{
+    if(!closedForMaintenance||closing||responses.size||starting.size||pendingStarts.size||localAttemptCount()||importJobs.active||importPublications.size)throw Error('本地数据尚未关闭')
+  })
+  if(["start","image-asset","create-work","open-work","novel-import-ai","novel-import-publish","novel-import-discard"].includes(method)){
     if(closing)throw Error("本地服务正在关闭")
+    if(stoppingImports&&method.startsWith('novel-import-'))throw Error('导入任务正在停止')
     closedForMaintenance=false
+  }
+  if(method==='novel-import-ai'){
+    const request=data as ImportAiRequest;z.uuid().parse(request?.operationId)
+    return importJobs.run(request,(input,signal)=>works.runWithGlobal('inbox',()=>runImportAi(input,signal)))
+  }
+  if(method==='novel-import-cancel'){importJobs.cancel(z.uuid().parse(data));return true}
+  if(method==='novel-import-publish'){
+    const input=data as ImportPublishInput,id=z.uuid().parse(input?.session?.id)
+    if(importPublications.has(id))throw Error('导入正在保存，请等待原请求完成')
+    if(importPublications.has('discard:'+id))throw Error('正在删除这次导入')
+    const done=Promise.resolve().then(()=>publishNovelImport(works,input,()=>{if(closedForMaintenance)throw Error('本地数据已关闭')})).finally(()=>{importPublications.delete(id)})
+    importPublications.set(id,done);return done
+  }
+  if(method==='novel-import-discard'){
+    const id=z.uuid().parse((data as {requestId?:unknown})?.requestId),key='discard:'+id
+    if(importPublications.has(id))throw Error('导入正在保存，请等待原请求完成')
+    if(importPublications.has(key))throw Error('正在删除这次导入')
+    const done=Promise.resolve().then(()=>discardNovelImport(works,data,()=>{if(closedForMaintenance)throw Error('本地数据已关闭')})).finally(()=>{importPublications.delete(key)})
+    importPublications.set(key,done);return done
   }
   if(method==="protected-directories")return works.protectedDirectories()
   if(method==="image-asset"){
@@ -126,21 +163,24 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
       return{bytes,mime:response.headers.get("content-type")}
     })
   }
-  if (method === "task-status") return {active:localAttemptCount()}
+  if (method === "task-status") return {active:localAttemptCount()+importJobs.active+importPublications.size}
   if (method === "stop-tasks") {
+    stoppingImports=true
     let active=true
     const timeout=Promise.withResolvers<never>()
     const timer=setTimeout(()=>{active=false;timeout.reject(new Error("创作任务仍在保存停止状态，请稍后重试"))},8000)
     const pending=[...pendingStarts]
     const stopping=(async()=>{
       abortAllLocalAttempts()
+      const imports=importJobs.stop()
       await Promise.all([...responses.keys(),...starting.keys()].map(cancel))
       if(!active)return
       await Promise.all(pending)
+      await imports;await Promise.allSettled([...importPublications.values()])
       while(active&&localAttemptCount())await delay(25)
     })()
     try{await Promise.race([stopping,timeout.promise]);return true}
-    finally{active=false;clearTimeout(timer)}
+    finally{active=false;clearTimeout(timer);stoppingImports=false}
   }
   if (method === "start") return start(data)
   if (method === "read") {
@@ -162,7 +202,7 @@ const main = new RpcPeer(parentPort, async (method, data: unknown) => {
     return works.run(record.id, async () => ({ novel: await prisma.novel.findUniqueOrThrow({ where: { id: record.novelId } }) }))
   }
   if (method === "open-work") return works.open(data as DirectoryProof)
-  if (method === "close") { closedForMaintenance=false;closing = true; try { await Promise.all([...responses.keys(), ...starting.keys()].map(cancel)); await Promise.all(pendingStarts); await works.close();closedForMaintenance=true; return true } finally { closing = false } }
+  if (method === "close") { closedForMaintenance=false;closing = true; try { await importJobs.stop();await Promise.allSettled([...importPublications.values()]);await Promise.all([...responses.keys(), ...starting.keys()].map(cancel)); await Promise.all(pendingStarts); await works.close();closedForMaintenance=true; return true } finally { closing = false } }
   throw new Error("未知本地服务命令")
 })
 

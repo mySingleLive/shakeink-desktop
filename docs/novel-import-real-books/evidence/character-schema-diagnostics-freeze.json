@@ -1,0 +1,79 @@
+{
+  "recordedAt": "2026-10-26T19:12:37.319Z",
+  "status": "author-frozen-awaiting-independent-105-code-review",
+  "plan": {
+    "path": "docs/novel-import-real-books/103-character-schema-diagnostics-plan.md",
+    "sha256": "70278a6311365464cc25bcd45e9f2a5bc67af37f453f03c7c5d2c03ed81a0278"
+  },
+  "baselineDirectory": "/private/tmp/character-schema-diagnostics-103-baseline/",
+  "files": [
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "sha256": "3dba02c56f7572c49366bc7a6be9fd09a07bdf6fdc60235cdd997da76cdf7a94"
+    },
+    {
+      "path": "tests/unit/novel-import-request-schema.test.ts",
+      "sha256": "e0ce2d2f3a6eb2bcfaea17b5c369a3c39aa5df68ffdb8b7b88bb5190b6c39404"
+    }
+  ],
+  "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-J0[1-8]:' tests/unit/novel-import-request-schema.test.ts",
+  "results": {
+    "cleanPreImplementationRed": {
+      "tests": 34,
+      "pass": 30,
+      "fail": 4,
+      "skip": 0,
+      "exitCode": 1
+    },
+    "finalGreen": {
+      "tests": 34,
+      "pass": 34,
+      "fail": 0,
+      "skip": 0,
+      "exitCode": 0,
+      "durationMs": 1363.293125
+    },
+    "ownedTypeDiagnostics": 0
+  },
+  "logs": [
+    {
+      "path": "docs/novel-import-real-books/evidence/character-schema-diagnostics-j01-j08-red.txt",
+      "sha256": "da7f135007ca047fad06dbcf65e28866f566c4e64644489279bd6db1ed290166"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/character-schema-diagnostics-j01-j08-baseline-red.txt",
+      "sha256": "79013233d6436fa92647dd72cef58fa49e142d4e715d7c4eb013abd1a3aece25"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/character-schema-diagnostics-j01-j08-green.txt",
+      "sha256": "3ef8ae646e58450b3c5c1672499e3c8546f66727d774bc2a310823899b8ddaa4"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/character-schema-diagnostics-j01-j08-final-green.txt",
+      "sha256": "bdbf0454022230b04e28fa6a0b06e08f71a86789191bd2fd9cfec26de98d33af"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/character-schema-diagnostics-owned-types.txt",
+      "sha256": "b59b969f477084d1857c52e8b258cf747f82b9fea4eeb25c7fee7dde47136db0"
+    }
+  ],
+  "history": {
+    "firstRed": "Includes a new-fixture generate dependency signature error (model parameter omitted); retained. Production was unchanged for corrected clean baseline RED.",
+    "firstImplementation": "32/34; raw __proto__ key was not a natural Zod failure because the existing record parser ignores it. This key remains covered as separately labeled synthetic typed metadata, and production schema behavior was not modified.",
+    "genuineTdd": "Clean baseline RED precedes the only production bridge change; no post-implementation mutation was presented as initial RED."
+  },
+  "delta": {
+    "path": "docs/novel-import-real-books/evidence/character-schema-diagnostics-delta.diff",
+    "sha256": "733b500281ad69a4c567e0da4c9fb3699d1551dd91dd5ac3b3986ddd49189c8d",
+    "validation": "docs/novel-import-real-books/evidence/character-schema-diagnostics-delta-validation.json",
+    "validationSha256": "c6e24719fcafea47de5e185bdddcce9ba96525e72f255f6583409f0d88a7332b"
+  },
+  "limits": {
+    "actualModel": false,
+    "actualApplication": false,
+    "userDatabase": false,
+    "actualM01OrPrivateJournal": false,
+    "actualFailureCauseKnown": false,
+    "otherTestsRun": false
+  }
+}

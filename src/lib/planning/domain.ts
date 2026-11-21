@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { erasOrdered } from "./era-calendar";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS } from "../material-reference";
 
 const id = z.string().min(1).max(160);
@@ -11,7 +12,7 @@ const timeSchema = z.object({
   end: z.number().finite().nullable().default(null).describe("仅window使用：不确定起点的最晚小时数。持续事件请用exact+duration"),
   anchor: id.nullable().default(null),
   boundary: z.enum(["start", "end"]).default("start"),
-  precision: z.enum(["hour", "day", "month", "year"]).default("hour"),
+  precision: z.enum(["hour", "day", "month", "year", "era"]).default("hour").describe("显示精度；era=只知道所在纪元"),
   label: z.string().max(500).default(""),
 });
 const calendarSchema = z.object({
@@ -20,10 +21,22 @@ const calendarSchema = z.object({
   hoursPerDay: z.number().positive().max(10000).nullable().default(24),
   daysPerMonth: z.number().int().positive().max(1000).nullable().default(30),
   monthsPerYear: z.number().int().positive().max(1000).nullable().default(12),
+  // docs/572: novel eras on a gregorian calendar; start is the hour of the era's year 1-01-01. Order is checked in validatePlanning.
+  eras: z
+    .array(z.object({ name: z.string().max(40), start: z.number().finite() }))
+    .max(20)
+    .default([])
+    .describe("小说纪年；按起点先后排列。修改世界线时须原样带上"),
 });
+/** docs/580 §2: event type (drives the color) and importance (drives the dot size). Both have defaults, so older works
+ * parse unchanged. */
+export const EVENT_CATEGORIES = ["冲突", "谋划", "揭示", "关系", "成长", "变故", "其他"] as const;
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
 export const eventSchema = z.object({
   id,
   line: id.describe("所属世界线ID，必须引用worlds[].id，不能引用叙事线lines[].id"),
+  category: z.enum(EVENT_CATEGORIES).default("其他").describe("事件类型，决定颜色：冲突/谋划/揭示/关系/成长/变故/其他"),
+  importance: z.number().int().min(1).max(3).default(1).describe("重要程度：1 一般 / 2 重要 / 3 关键，决定圆点大小"),
   parent: id.nullable().default(null),
   title: name,
   fact: text.default(""),
@@ -284,6 +297,23 @@ export function worldEvents(data: PlanningData, line: string): PlanningEvent[] {
     ...data.events.filter((e) => e.line === line),
   ];
 }
+/** Frozen prehistory events of a fork whose source fact, title, time, duration or changes moved since the fork.
+ * Category and importance are presentation only and never make a frozen fact "changed" (docs/580 §2, WU-03). */
+export function forkChangedCount(data: PlanningData, worldId: string): number {
+  const fork = data.worlds.find((w) => w.id === worldId)?.fork;
+  if (!fork) return 0;
+  return fork.events.filter((e) => {
+    const source = findEvent(data, fork.source, e.id);
+    return (
+      !source ||
+      source.fact !== e.fact ||
+      source.title !== e.title ||
+      JSON.stringify(resolveTime(data, source)) !== JSON.stringify(resolveTime(data, e)) ||
+      source.duration !== e.duration ||
+      JSON.stringify(source.changes) !== JSON.stringify(e.changes)
+    );
+  }).length;
+}
 export function findEvent(data: PlanningData, line: string, event: string) {
   return worldEvents(data, line).find((e) => e.id === event);
 }
@@ -407,6 +437,12 @@ export function validatePlanning(input: unknown): PlanningData {
       ids.add(entity.id);
     }
   check(data.lines.filter((l) => l.primary).length <= 1, "只能有一条主叙事线");
+  for (const world of data.worlds)
+    check(
+      erasOrdered(world.calendar.eras) &&
+        world.timeBases.every((b) => erasOrdered(b.calendar.eras)),
+      `世界线“${world.name}”的纪元起点必须严格递增`,
+    );
   for (const world of data.worlds)
     if (world.fork) {
       check(
@@ -540,6 +576,20 @@ export function validatePlanning(input: unknown): PlanningData {
       data.lines.some((l) => l.id === v.line),
       "卷所属叙事线不存在",
     );
+  const childCounts = new Map<string, number>();
+  for (const card of data.cards)
+    if (card.parent)
+      childCounts.set(card.parent, (childCounts.get(card.parent) ?? 0) + 1);
+  const chapterCards = new Map<string, NarrativeCard[]>();
+  for (const card of data.cards) {
+    if (!card.narrateSummary && (childCounts.get(card.id) ?? 0) > 0)
+      continue;
+    const chapter = cardChapter(data, card);
+    if (!chapter) continue;
+    const cards = chapterCards.get(chapter);
+    if (cards) cards.push(card);
+    else chapterCards.set(chapter, [card]);
+  }
   for (const ch of data.chapters) {
     check(
       ch.wordMin <= ch.wordBudget,
@@ -555,9 +605,7 @@ export function validatePlanning(input: unknown): PlanningData {
         data.volumes.some((v) => v.id === ch.volume && v.line === ch.line),
         "章所属卷不存在或跨叙事线",
       );
-    const cards = readingCards(data, ch.line).filter(
-        (c) => cardChapter(data, c) === ch.id,
-      ),
+    const cards = chapterCards.get(ch.id) ?? [],
       sum = cards.reduce((n, c) => n + (c.wordBudget ?? 0), 0);
     check(
       sum <= ch.wordBudget,
@@ -640,9 +688,15 @@ export function applyPlanningOperations(
         chapters: chapterSchema,
         connections: connectionSchema,
       };
-      const parsed = schemas[op.collection].parse(
-        at < 0 ? entity : { ...list[at], ...entity },
-      );
+      const merged: Record<string, unknown> =
+        at < 0 ? entity : { ...list[at], ...entity };
+      // docs/572 R6: a partial calendar keeps the fields it does not name (an AI put of {kind} keeps the eras).
+      if (op.collection === "worlds" && at >= 0 && entity.calendar && typeof entity.calendar === "object")
+        merged.calendar = {
+          ...(list[at] as PlanningData["worlds"][number]).calendar,
+          ...(entity.calendar as object),
+        };
+      const parsed = schemas[op.collection].parse(merged);
       if (at < 0) list.push(parsed);
       else list[at] = parsed;
     } else if (op.kind === "delete") {

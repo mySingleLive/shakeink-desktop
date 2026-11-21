@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-26T11:50:30.273973+00:00",
+  "scope": "67 preanalysis resume with64 manual chapter retention; actual UI retest pending",
+  "commands": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "execSession": 25307
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false -p /tmp/shakeink-real-audit-tsconfig.json",
+      "exitCode": 0,
+      "execSession": 93637
+    },
+    {
+      "command": "node scripts/build-desktop.mjs",
+      "exitCode": 0,
+      "execSession": 36361
+    }
+  ],
+  "files": {
+    "desktop/main/novel-import.ts": "e5e6b028ccdad762366aa70cab06b3ee6d56836a1e23b1b0461dda2660145bf8",
+    "tests/unit/novel-import-session.test.ts": "7ef8449b639f2102515aead9d08a06f994215cd938670a93498e0babe479a4c0",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "dist/main/index.cjs": "d3a31aae3637ec9976ed68c34d7b8804857864d331adc013df39676c5a574c01",
+    "dist/service/index.cjs": "12e81f2c1a3c76d6dc2d3fe166b894f83fc97d7eeec20996d4a62a1913cabf6b",
+    "dist/main/novel-import-pdf-worker.cjs": "52645a7d85a982d1b4135fb09109061162d596f450c37abbc07be2e32e6e810a",
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92"
+  },
+  "monacoWorkers": [
+    "out/_next/static/media/css.worker.2r476vc_4i3t-.js",
+    "out/_next/static/media/editor.worker.1duyl2hr9iop5.js",
+    "out/_next/static/media/html.worker.37dgn6mporn0e.js",
+    "out/_next/static/media/json.worker.14wrjaz43tsbz.js",
+    "out/_next/static/media/ts.worker.30escle32bmbw.js"
+  ]
+}

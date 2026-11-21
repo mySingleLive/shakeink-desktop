@@ -1,0 +1,39 @@
+{
+  "reviewDate": "2026-10-28",
+  "runtime": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+  "nodeVersion": "v24.18.0",
+  "sourceBeforeSha256": "7229da8f8841317ba46d393914943aacbf1f99ad93449cf84501ecd8f3bd169e",
+  "sourceAfterSha256": "ab7956120d2269a3db3d280d6beb66703aec438e36143a3351caf16e9dd61e0d",
+  "newTestSha256": "2d8f81c064523f0f6d967bc234340b8189063fbec1f8a9d8cb8f9ecbae7766fe",
+  "runs": [
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-concurrency=1 tests/unit/novel-import-anchor-diagnostics.test.ts",
+      "log": "diag.log",
+      "exitCode": 0,
+      "tests": 59,
+      "pass": 59,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-concurrency=1 --test-name-pattern='LOTM-E0[14]:' tests/unit/novel-import-evidence-batches.test.ts",
+      "log": "e01-e04.log",
+      "exitCode": 0,
+      "tests": 22,
+      "pass": 22,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "unmatchedTopLevelCases": ["LOTM-E02", "LOTM-E03", "LOTM-E05", "LOTM-E06"],
+      "note": "This Node 24 runner omits unmatched tests from counts rather than reporting them as skipped."
+    }
+  ],
+  "productionOrTestSourceEdited": false,
+  "independentTypecheckRun": false,
+  "realModelCalls": 0,
+  "realAppOrRunningProcessOperated": false,
+  "buildRun": false,
+  "realImportAcceptanceClaimed": false,
+  "conclusion": "Approved within reviewed diagnostic scope; no blocking findings."
+}

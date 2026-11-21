@@ -1,0 +1,62 @@
+{
+  "recordedAt": "2026-10-26T18:26:49.596081+00:00",
+  "scope": "99 same-source metadata reselection, original M01 draft preserved",
+  "commands": [
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false",
+      "execSession": 99467,
+      "exitCode": 0
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc --noEmit --incremental false -p /tmp/shakeink-real-audit-tsconfig.json",
+      "execSession": 89391,
+      "exitCode": 0
+    },
+    {
+      "command": "NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next build",
+      "builder": "Turbopack",
+      "execSession": 30595,
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/build-desktop.mjs",
+      "execSession": 63424,
+      "exitCode": 0,
+      "warning": "existing MODULE_TYPELESS_PACKAGE_JSON performance warning"
+    }
+  ],
+  "files": {
+    "desktop/main/novel-import-files.ts": "76d3ae60ef2308a53cb27553be0ce305a1f88517f1fc316ff776c3177412965c",
+    "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef",
+    "desktop/shared/novel-import.ts": "4b13236a2e14a0c55454fce4115784f8cb3145e6acd7a8b8fc193515b7754ef1",
+    "desktop/service/novel-import-ai.ts": "20b80cc24c14bde0d50e93d2521c129524aa82730805c665695aed10e7edc1ea",
+    "desktop/core/novel-import-ai-payload.ts": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+    "src/lib/desktop/novel-import.ts": "b54b6e295a860136b3824ac120cc867a0d9370cb4111b594acb72df7e1ac5ef9",
+    "desktop/main/novel-import.ts": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c",
+    "src/components/desktop/NovelImportDialog.tsx": "f3459f47b2b59ccd3ba10d2e703e888700e2175d89e80737b6ccb6066a6ea046",
+    "tests/unit/novel-import-source-reselection.test.ts": "2cbb122b5732e7b06b189b3150cbe62ddceeb5653bd69ca012e549b426ede009",
+    "tests/browser/novel-import.test.ts": "c1a664b9555721cf88f049db1100fd05e9bc1e578e0a7d17a966b2f235f5325c",
+    "tests/helpers/novel-import-ui-fixture.tsx": "2143e959cdf4f73f699568a945678440d6a4f38c65896410b736deeb90b2e72d",
+    "dist/main/index.cjs": "b0b0bd52776cc7ddcc09d67c9ed767b68ed0c117578050de022cc4e12701d5f8",
+    "dist/service/index.cjs": "437b9df7098c6fd4bc8227a54eea8d204ff5c18ac0c5ef017ec4dd001c8b8316",
+    "dist/main/novel-import-pdf-worker.cjs": "52645a7d85a982d1b4135fb09109061162d596f450c37abbc07be2e32e6e810a",
+    "src/components/desktop/novel-import.css": "a3a5a67b554148469fb2788380124c031b221a43a35d40d55bcf40e9eecf6f92"
+  },
+  "unchangedControls": [
+    "desktop/main/novel-import-files.ts",
+    "desktop/core/novel-import.ts",
+    "desktop/shared/novel-import.ts",
+    "desktop/service/novel-import-ai.ts",
+    "desktop/core/novel-import-ai-payload.ts",
+    "src/lib/desktop/novel-import.ts"
+  ],
+  "monacoWorkers": {
+    "out/_next/static/media/css.worker.2r476vc_4i3t-.js": "10b5bc24aca1ea80bcc42fc27d8ef0515a527e1f0a53a0c1b0dd24f3ccf9ef15",
+    "out/_next/static/media/editor.worker.1duyl2hr9iop5.js": "6fbf56462b7fce38d9fb42ae660679d29b686d0b5b096622c5fdbf8eb5ab02bc",
+    "out/_next/static/media/html.worker.37dgn6mporn0e.js": "5908b63207902f7dcac93a7ffe04ad472e0399ecdf90776ad9a99dd113213fba",
+    "out/_next/static/media/json.worker.14wrjaz43tsbz.js": "99701906248637e92da3cf3c5ebec2f9e7bb4d0e7f7c19dfd995e07e81bf447b",
+    "out/_next/static/media/ts.worker.30escle32bmbw.js": "18bdd5fd4a362f071a27f56ffe6d3ece52786cbc61b676d49b7d128d4258cfe4"
+  },
+  "fullSuiteExecuted": false,
+  "actualM01ReselectionVerified": false
+}

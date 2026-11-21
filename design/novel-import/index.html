@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>玄印写作 · 导入作品交互审核稿</title>
+  <style>
+    @font-face{font-family:ReviewSans;src:url('../assets/NotoSansSC-Regular.ttf')}*{box-sizing:border-box}body{margin:0;background:#eeefeb;color:#343832;font:13px/1.6 ReviewSans,-apple-system,sans-serif}.review{max-width:1480px;margin:auto;padding:24px 28px}.head{display:flex;align-items:start;justify-content:space-between;gap:20px;margin-bottom:20px}.eyebrow{font-size:10px;letter-spacing:2px;color:#797e72}h1{margin:3px 0 5px;font-weight:500;font-size:24px;letter-spacing:1px}p{margin:0;color:#73796c;font-size:12px}.pill{border:1px solid #cdd3c6;border-radius:30px;padding:6px 13px;font-size:11px;white-space:nowrap;background:#f7f8f4}.tools{display:flex;flex-wrap:wrap;gap:12px 20px;padding:15px 0 20px;align-items:center}label{display:flex;gap:8px;align-items:center;font-size:11px;color:#73796c}select,button{font:inherit;color:#3b4435;border:1px solid #cdd2c6;border-radius:6px;background:#fafbf7;padding:6px 10px;min-height:33px}button{cursor:pointer}select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #657453;outline-offset:3px}.frame-top{display:flex;justify-content:space-between;margin-bottom:8px;color:#73796c;font-size:10px;letter-spacing:1px}iframe{display:block;border:1px solid #cbd0c4;border-radius:12px;width:100%;height:800px;background:#100d0c;box-shadow:0 16px 48px #3d473014}.frame-wrap{margin:auto;max-width:100%}.foot{display:flex;justify-content:space-between;gap:16px;margin-top:14px;color:#7d8374;font-size:11px}.foot a{color:#59674e;text-underline-offset:3px}@media(max-width:600px){.review{padding:16px 10px}.head{display:block}.pill{display:inline-block;margin-top:12px}.tools{gap:8px}.foot{display:block}h1{font-size:21px}}
+  </style>
+</head>
+<body>
+<main class="review">
+  <header class="head"><div><div class="eyebrow">玄印写作 / PRODUCT DESIGN</div><h1>让已有的故事，接着生长。</h1><p>导入作品 · 交互审核稿。文件、作品与进度为合成示例；不读取本机资料，不调用模型。</p></div><span class="pill">待你审核 UI / UX</span></header>
+  <div class="tools" aria-label="设计审核工具">
+    <label>主题<select id="theme"><option value="ink">玄墨</option><option value="paper">宣纸</option></select></label>
+    <label>示例资料<select id="fixture"><option value="mixed">正文 + 已有设定</option><option value="body">只有正文</option><option value="settings">只有设定</option><option value="nomodel">未配置模型</option><option value="error">读取异常</option></select></label>
+    <label>查看步骤<select id="step"><option value="entry">入口与文件选择</option><option value="source">核对来源</option><option value="consent">首次识别授权</option><option value="recognizing">内容识别中</option><option value="select" selected>选择导入内容</option><option value="confirm">确认导入</option><option value="running">导入进度</option><option value="conflict">解决冲突</option><option value="diff">批准正文修改</option><option value="done">导入结果</option></select></label>
+    <label>窗口<select id="size"><option value="1280,800">1280 × 800</option><option value="900,640">900 × 640</option><option value="560,640">560 × 640</option><option value="390,600">390 × 600</option></select></label>
+    <button id="reset" type="button">重置本次预览</button>
+    <button id="advance" type="button">推进合成任务</button>
+  </div>
+  <div class="frame-wrap"><div class="frame-top"><span>产品窗口 · 合成资料预览</span><span id="dimensions">1280 × 800</span></div><iframe title="导入作品交互预览" src="flow.html"></iframe></div>
+  <footer class="foot"><span>识别等待页可用“完成合成识别”结束示例。可操作多选、补全、暂停与冲突确认；切换资料场景重置会话。</span><span><a href="../../docs/novel-import/02-product.md">产品文档</a> · <a href="../../docs/novel-import/04-ui-design.md">设计说明</a></span></footer>
+</main>
+<script>
+const frame=document.querySelector('iframe'),els=Object.fromEntries(['theme','fixture','step','size'].map(id=>[id,document.getElementById(id)]));
+function send(reset=false){const [w,h]=els.size.value.split(',').map(Number);document.querySelector('.frame-wrap').style.width=w+'px';frame.style.height=h+'px';document.getElementById('dimensions').textContent=w+' × '+h;frame.contentWindow.postMessage({type:'novel-import-review',theme:els.theme.value,fixture:els.fixture.value,step:els.step.value,reset},'*')}
+for(const [id,el] of Object.entries(els))el.addEventListener('change',()=>send(id==='fixture'));
+document.getElementById('reset').onclick=()=>send(true);frame.addEventListener('load',()=>send(true));
+document.getElementById('advance').onclick=()=>frame.contentWindow.postMessage({type:'novel-import-advance'},'*');
+window.addEventListener('message',e=>{if(e.source===frame.contentWindow&&e.data?.type==='novel-import-step'&&[...els.step.options].some(o=>o.value===e.data.step)){els.step.value=e.data.step;document.getElementById('advance').textContent=e.data.step==='recognizing'?'完成合成识别':'推进合成任务'}});
+</script>
+</body></html>

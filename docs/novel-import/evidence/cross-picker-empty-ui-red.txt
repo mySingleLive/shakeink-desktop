@@ -1,0 +1,24 @@
+✖ NI-U08: unified source entry and append omit mode; Windows uses the same source entry (7194.399334ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7842.000958
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:22622
+✖ NI-U08: unified source entry and append omit mode; Windows uses the same source entry (7194.399334ms)
+  locator.waitFor: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByText('所选来源中没有可导入的文本文件，请重新选择', { exact: true }) to be visible[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:101:107)
+      at fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:431)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:101:2) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByText('所选来源中没有可导入的文本文件，请重新选择', { exact: true }) to be visible" ]
+  }

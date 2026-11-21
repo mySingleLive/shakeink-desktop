@@ -1,0 +1,176 @@
+{
+  "scope": "RB-P01 pure semantic row assertion helper only",
+  "helperSha256": "a93cd0208653a0feb4818c14b2aa26dbfb9988715946095948c24a299126c682",
+  "executedAt": "2026-10-26T00:44:26.073Z",
+  "selfcheckCommand": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx /tmp/real-novel-semantic-assertions-check.mts",
+  "selfcheckDriverSha256": "ab64e89468da4bbc7435ef7c56b77234adc3c6f28512e77cb46d7cc0b748561f",
+  "checks": [
+    {
+      "name": "exact-native-positive",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "explicit-source-copy-role-compatibility-is-marked-not-inferred",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "wrong-role",
+      "passed": true,
+      "rejectedBy": "semantic-character-all-supported-profile-fields-exact"
+    },
+    {
+      "name": "empty-world-setting",
+      "passed": true,
+      "rejectedBy": "semantic-nine-world-setting-content-world-and-map-parent-exact"
+    },
+    {
+      "name": "wrong-place-parent",
+      "passed": true,
+      "rejectedBy": "semantic-scenes-only-place-exact-parent-tree-coordinates-text"
+    },
+    {
+      "name": "lost-event-knowledge-qualifier",
+      "passed": true,
+      "rejectedBy": "semantic-world-event-facts-retain-full-knowledge-qualified-text"
+    },
+    {
+      "name": "lost-profile-knowledge-qualifier",
+      "passed": true,
+      "rejectedBy": "semantic-character-all-supported-profile-fields-exact"
+    },
+    {
+      "name": "fake-world-for-unmapped-source",
+      "passed": true,
+      "rejectedBy": "semantic-unmapped-source-materials-create-no-fake-native-entities"
+    },
+    {
+      "name": "wrong-relationship-actual-id",
+      "passed": true,
+      "rejectedBy": "semantic-character-two-pass-relationships-own-actual-ids"
+    },
+    {
+      "name": "wrong-map-parent",
+      "passed": true,
+      "rejectedBy": "semantic-nine-world-setting-content-world-and-map-parent-exact"
+    },
+    {
+      "name": "lost-reference-reliability",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-ref-event-character-reliability-kind-qualified-source"
+    },
+    {
+      "name": "lost-reference-kind",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-ref-event-character-reliability-kind-qualified-source"
+    },
+    {
+      "name": "foreign-novel-row",
+      "passed": true,
+      "rejectedBy": "semantic-native-rows-only-own-novel"
+    },
+    {
+      "name": "inferred-source-copy-bypass",
+      "passed": true,
+      "rejectedBy": "semantic-artifact-and-source-copy-identities-unique"
+    },
+    {
+      "name": "projectable-cannot-exempt-inferred-role",
+      "passed": true,
+      "rejectedBy": "semantic-projectable-selection-cannot-exempt-derived-artifacts"
+    },
+    {
+      "name": "required-source-role-missing-from-projection",
+      "passed": true,
+      "rejectedBy": "semantic-characters-exact-population-and-artifact-ids"
+    },
+    {
+      "name": "lost-source-material-warning",
+      "passed": true,
+      "rejectedBy": "semantic-source-copy-decoder-mapping-warnings-preserved"
+    },
+    {
+      "name": "lost-narrative-knowledge-qualifier",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-intents-retain-full-knowledge-qualified-text"
+    },
+    {
+      "name": "qualified-native-event-fragments-fit-100000-and-retain-every-character",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "unmapped-source-timeline-material-warning-without-native-row",
+      "passed": true,
+      "assertions": 32
+    },
+    {
+      "name": "full-target-only-unmapped-source-cannot-pass",
+      "passed": true,
+      "rejectedBy": "semantic-full-selected-targets-not-satisfied-by-unmapped-source-materials"
+    },
+    {
+      "name": "objective-semantic-telling-has-explicit-persisted-reliability",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "objective-telling-missing-persisted-reliability-rejected",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-persisted-reliability-explicit-and-matched"
+    },
+    {
+      "name": "objective-telling-explicit-empty-refs-is-valid",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "semantic-persisted-refs-array-missing-rejected-before-default",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-persisted-reliability-explicit-and-matched"
+    },
+    {
+      "name": "objective-semantic-ref-has-explicit-reliability",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "objective-ref-missing-persisted-reliability-rejected",
+      "passed": true,
+      "rejectedBy": "semantic-narrative-persisted-reliability-explicit-and-matched"
+    },
+    {
+      "name": "unrelated-outline-default-fields-remain-outside-semantic-telling-check",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "source-level-description-fallback-is-explicitly-warned",
+      "passed": true,
+      "assertions": 31
+    },
+    {
+      "name": "source-role-mapping-warning-must-persist",
+      "passed": true,
+      "rejectedBy": "semantic-source-copy-decoder-mapping-warnings-preserved"
+    },
+    {
+      "name": "source-level-structure-warning-must-persist",
+      "passed": true,
+      "rejectedBy": "semantic-source-copy-decoder-mapping-warnings-preserved"
+    }
+  ],
+  "passed": true,
+  "limitations": [
+    "sourceCopyIds and projectableIds are explicit actual runtime sets; no derived artifact may be exempted",
+    "unmapped source IDs and mapping warnings report an unconfirmed mapping, not a correct literary exclusion",
+    "raw-source/snapshot retention and semanticAudit persistence are checked separately by the caller",
+    "mechanical native matching is not independent whole-book oracle acceptance"
+  ],
+  "productionPublisherCalled": false,
+  "databaseOpened": false,
+  "realDataRead": false,
+  "sourceBookOrModelUsed": false,
+  "independentCodeReview": "pending"
+}

@@ -1,0 +1,45 @@
+Date: 2026-10-26 Asia/Shanghai
+Scope: NI-D01..08, NI-S01..09, NI-A01..04 only. No full test suite was run.
+
+Environment: /Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node
+
+Initial red:
+node --import tsx --test tests/unit/novel-import-domain.test.ts tests/unit/novel-import-ai.test.ts
+Missing production modules, exit 1: engine-domain-ai-red.txt
+node --import tsx --test tests/unit/novel-import-session.test.ts
+Missing Controller module, exit 1: engine-session-red.txt
+
+Focused red/green changes:
+engine-alias-red.txt: explicit aliases and global entity identity collision.
+engine-refs-red.txt: worldline/narrative foreign references and chapter indexes.
+engine-manual-red.txt: manual classification retains labels and defaults new types.
+engine-boundary-red.txt: surrogate pagination and conflict reauthorization preserves state.
+engine-checkpoint-red.txt: chapter changes invalidate downstream checkpoints; same-name source texts preserved.
+engine-source-limits-red.txt: cumulative append limits and character field labels.
+engine-catalogue-red.txt: 1000 unrelated entities must not exhaust the model prompt.
+engine-publication-restore-red.txt: restart of pure-copy publication requires reachable native target authorization.
+engine-publication-model-red.txt: a frozen publication can be retried after model removal without fresh AI calls.
+
+Green before the final publication-recovery change:
+node --import tsx --test tests/unit/novel-import-domain.test.ts tests/unit/novel-import-session.test.ts tests/unit/novel-import-ai.test.ts
+21 tests / 21 passed / 0 failed: engine-green.txt
+
+Final focused check after the publication-recovery change:
+node --import tsx --test tests/unit/novel-import-session.test.ts
+9 tests / 9 passed / 0 failed: engine-session-final-green.txt
+
+Project compilation (not a test suite):
+node node_modules/typescript/bin/tsc --noEmit --incremental false
+exit 0, no diagnostics, after bounded catalogue and journal capacity changes.
+
+Capacity design verification is scaled, not a claim of writing a 1 GiB file:
+NI-S08 asserts the unified 1 GiB read/write constant, injects a smaller encoder limit,
+checks the exact UTF-8 byte boundary and verifies overflow refusal. NI-D06 checks
+the 50M-character derived-result limit through a scaled limit. Failed journal
+encoding retains/restores the previous checkpoint. No real user data was used.
+
+AI tests use controlled results and dependency injection. They establish role,
+authorization, JSON/evidence/reference validation, batch coverage and cancellation;
+they do not establish a successful call to a real model provider.
+Native picker and actual database publishing are owned by the parent integration
+and publisher test groups. This file does not claim those as engine test passes.

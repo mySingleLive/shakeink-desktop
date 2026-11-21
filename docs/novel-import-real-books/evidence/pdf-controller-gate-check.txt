@@ -1,0 +1,11 @@
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (7.878041ms)
+✔ NI-PDF07: controller sending, retry, conflict and patch actions cannot bypass pending pages (817.060667ms)
+✔ NI-PDF07: source replacement after an AI send discards the late response before coverage adoption (604.6085ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2202.528667

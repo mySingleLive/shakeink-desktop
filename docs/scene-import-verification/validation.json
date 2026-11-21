@@ -1,0 +1,15 @@
+{
+  "scopedTests": 293,
+  "passed": 293,
+  "failed": 0,
+  "typecheck": true,
+  "desktopBuild": true,
+  "scriptSyntax": true,
+  "diffCheck": true,
+  "buildFilesUnchanged": true,
+  "buildFiles": 8,
+  "realSevenMinutesVerified": false,
+  "realFullSceneImportVerified": false,
+  "realPublicationVerified": false,
+  "realReopenVerified": false
+}

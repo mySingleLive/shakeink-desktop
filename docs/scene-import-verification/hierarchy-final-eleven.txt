@@ -1,0 +1,19 @@
+✔ SH-01: cycle nodes are exact, repairs are atomic and acyclic branches and metadata remain intact (10.419334ms)
+✔ SH-02/03: dedicated parent proposals validate the new full graph and use only two bounded generations (275.6915ms)
+✔ SH-02/04: target catalog is independently checked before generation and payload forces every repair target (0.867875ms)
+✔ SH-02b: parent repair retains the final service authorization and cancellation checks (1.117167ms)
+✔ SH-05: a cross-batch scene cycle is repaired before the checklist and every scene imports with its confirmed hierarchy (2700.579583ms)
+✔ SH-06: failure never publishes half a repaired checklist or starts entities (254.788083ms)
+✔ SH-06: cancel never publishes half a repaired checklist or starts entities (219.598417ms)
+✔ SH-04: acyclic scenes make no repair request and a cycle beyond capacity starts neither repair nor entity work (177.378417ms)
+✔ SH-06b: a rejected final roster save restores both in-memory and persisted candidates and retains completed coverage (263.851334ms)
+✔ SH-04b: a small valid model budget cannot silently omit repair targets or start a partial repair (122.595792ms)
+✔ SH-06c: pausing during a parent repair discards an otherwise valid late result (260.438916ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4825.470333

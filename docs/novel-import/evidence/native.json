@@ -1,0 +1,22 @@
+{
+  "id": "NI-N01",
+  "passed": true,
+  "platform": "darwin",
+  "arch": "arm64",
+  "completedAt": "2026-10-25T16:45:28.938Z",
+  "root": "/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/shakeink-import-native-WADyJ8",
+  "driver": "Playwright actual Electron + operator native OS picker control; no picker stubs and no provider",
+  "checks": [
+    "real macOS native menu entries",
+    "files native selection and exact full-source extraction",
+    "files real tables, exact prose, record and original overview mounted",
+    "folder native selection and exact full-source extraction",
+    "folder real tables, exact prose, record and original overview mounted",
+    "normal close/reopen preserves both catalog works without unfinished import"
+  ],
+  "remoteRequests": 0,
+  "errors": [],
+  "errorScope": "errors lists renderer pageerror events; normal-close IPC cancellation messages remain in native-log.txt",
+  "observedShutdownCancellationMessages": 9,
+  "installedPackageVerified": false
+}

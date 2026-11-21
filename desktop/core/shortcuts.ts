@@ -1,6 +1,6 @@
 import {commandContextsOverlap} from "./shortcut-context"
 import type { Settings } from "./settings"
-export type ShortcutScope = "global" | "text" | "markdown" | "composer" | "input"
+export type ShortcutScope = "global" | "text" | "markdown" | "composer" | "input" | "worldline"
 export interface ShortcutCommand { id: string; label: string; scope: ShortcutScope; locked: boolean; defaults: string[]; contexts?: Record<string, boolean> }
 export interface BindingConflict { command: ShortcutCommand; index: number; binding: string }
 export function canonicalKey(key: string): string {
@@ -36,7 +36,12 @@ export function shortcutConflicts(a: string, b: string) {
   const x = canonicalKey(a), y = canonicalKey(b)
   return !!x && !!y && (x === y || x.startsWith(y + " ") || y.startsWith(x + " "))
 }
-function overlapping(a: ShortcutScope, b: ShortcutScope) { return a === b || a === "global" || b === "global" || a === "text" || b === "text" }
+/** docs/580 §7.5 (N2, P1): `worldline` commands also run in the worldline search box, where input/text commands are
+ * active, so they overlap input as well as global/text; they never overlap markdown or composer. */
+function overlapping(a: ShortcutScope, b: ShortcutScope) {
+  if (a === "worldline" || b === "worldline") { const other = a === "worldline" ? b : a; return other === "worldline" || other === "global" || other === "text" || other === "input" }
+  return a === b || a === "global" || b === "global" || a === "text" || b === "text"
+}
 function compatibleContexts(a: ShortcutCommand, b: ShortcutCommand) {
   return commandContextsOverlap(a,b)
 }
@@ -73,4 +78,15 @@ export function editBinding(commands: ShortcutCommand[], overrides: Record<strin
  * the raw "linux" key would leave the custom bindings in effect. */
 export function restoreDefaultShortcuts(before: Settings, namespace: "darwin" | "win32"): Settings {
   return { ...before, shortcuts: { ...before.shortcuts, [namespace]: {} } }
+}
+
+/** Which command scopes are active in a focus scope. The one rule shared by the dispatcher and the desktop controller.
+ * docs/580 §7.5 (P1): the worldline canvas/tree/cards run only worldline and global commands, so an input.* or text.*
+ * rebinding can never block its old default key there (arrow-key panning keeps working); the search box adds input/text. */
+export type ShortcutFocusScope="none"|"markdown"|"composer"|"input"|"preview"|"worldline"|"worldline-search"
+export function shortcutScopeEnables(scope:ShortcutFocusScope,command:ShortcutScope,modal=false){
+ if(command==="global")return !modal
+ if(scope==="worldline")return command==="worldline"
+ if(scope==="worldline-search")return command==="worldline"||command==="input"||command==="text"
+ return command===scope||command==="markdown"&&scope==="preview"||command==="text"&&scope!=="none"
 }

@@ -1,0 +1,90 @@
+--- a/desktop/service/novel-import-ai.ts
++++ b/desktop/service/novel-import-ai.ts
+@@ -61,8 +61,28 @@
+ /** Internal service generation bridge. Production resolves its own model/user;
+  * tests may inject only generateJSON's existing generateText dependency. */
+ export async function generateImportAiJson(request:ImportSemanticAiRequest,context:{userId:string;resolvedModel:ResolvedModel},signal:AbortSignal,prompt:string,deps?:Parameters<typeof GenerateImportJSON>[1]):Promise<ImportSemanticAiResult>{
+- const {generateJSON}=await import('../../src/lib/ai/generate')
+- return (await generateJSON({userId:context.userId,role:request.phase==='review'?'review':'text',action:'novel.import.'+request.phase,prompt,schema:importAiResponseSchema(request),resolvedModel:context.resolvedModel,abortSignal:signal},deps)).data
++ const {generateJSON,StructuredGenerationError}=await import('../../src/lib/ai/generate')
++ try{return (await generateJSON({userId:context.userId,role:request.phase==='review'?'review':'text',action:'novel.import.'+request.phase,prompt,schema:importAiResponseSchema(request),resolvedModel:context.resolvedModel,abortSignal:signal},deps)).data}catch(error){
++  if(signal.aborted||request.semanticVersion!==1||request.phase!=='analyze'||request.kind!=='character'||request.intent==='reconcile'||!(error instanceof StructuredGenerationError)||error.kind!=='invalid_schema')throw error
++  const fields:Record<string,string>={id:'角色标识',kind:'资料类别',name:'角色名称',text:'角色正文',facts:'角色资料',evidence:'来源证据',sourceUnitIds:'来源单元',origin:'来源类型'},facts:Record<string,string>={roleType:'角色类型',aliases:'别名',age:'年龄',gender:'性别',occupation:'职业',personality:'性格',appearance:'外貌',clothing:'服饰',catchphrase:'口头禅',growthArc:'成长轨迹',relationships:'人物关系',reliability:'可靠性',attribution:'信息归属',temporalScope:'适用时段',characterId:'关联角色',sceneId:'关联地点',itemId:'关联物品'},labels=new Set<string>()
++  const index=(value:string|undefined)=>typeof value==='string'&&/^(?:0|[1-9]\d{0,15})$/u.test(value)&&Number.isSafeInteger(Number(value))&&String(Number(value))===value
++  // Only complete known paths from the bounded typed diagnostics are used.
++  // No original message, feedback, value, index or unknown key is displayed.
++  for(const path of Array.isArray(error.invalidFields)?error.invalidFields.slice(0,6):[]){
++   if(typeof path!=='string'||path.length>100)continue
++   const parts=path.split('.');let label:string|undefined
++   if(path==='artifacts')label='角色资料'
++   else if(parts[0]==='artifacts'&&index(parts[1])){
++    if(parts.length===2)label='角色资料'
++    else if(parts.length===3&&Object.hasOwn(fields,parts[2]))label=fields[parts[2]]
++    else if(parts.length===4&&parts[2]==='facts'&&IMPORT_SEMANTIC_FACT_FIELDS.character.includes(parts[3]))label=Object.hasOwn(facts,parts[3])?facts[parts[3]]:'角色资料'
++    else if(parts.length===4&&parts[2]==='sourceUnitIds'&&index(parts[3]))label='来源单元'
++    else if(parts.length===5&&parts[2]==='evidence'&&index(parts[3])&&(parts[4]==='unitId'||parts[4]==='quote'))label=parts[4]==='unitId'?'来源单元':'原文引文'
++   }
++   if(label)labels.add(label)
++  }
++  throw Error(labels.size?'模型返回的角色字段结构无效（'+[...labels].join('、')+'），请核对后重试':'模型返回的角色结构无效，请核对后重试')
++ }
+ }
+ const lockSchema=z.object({artifactId:nonempty,field:nonempty,value:z.string()}).strict()
+ const reconcileSchema=z.object({targetIds:uniqueIds.refine(ids=>ids.length>0),locks:z.array(lockSchema),decisionHash:nonempty,workingRevision:z.number().int().nonnegative(),decisions:z.array(z.object({conflictId:nonempty,choice:nonempty,explanation:z.string().optional(),hash:nonempty}).strict()).optional(),fragments:z.array(z.object({artifactId:nonempty,baseHash:nonempty,start:z.number().int().nonnegative(),end:z.number().int().nonnegative(),fields:uniqueIds}).strict()).optional()}).strict()
+--- a/tests/unit/novel-import-request-schema.test.ts
++++ b/tests/unit/novel-import-request-schema.test.ts
+@@ -370,3 +370,54 @@
+   for(const item of cases){const raw={artifactEdits:[{artifactId:target.id,baseHash:h.importArtifactSemanticHash(target),...item.edit,reason:'合成真实晚门回归',evidence:target.evidence}],conflicts:[]};assert.deepEqual(factory(input).parse(raw),raw);let calls=0,error:unknown,output:unknown;try{output=await ai.runImportAi(input,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>{calls++;return structuredClone(raw)}})}catch(caught){error=caught}assert.ok(error instanceof Error);assert.equal(error.message,item.message);assert.equal(calls,1);assert.equal(output,undefined);assert.deepEqual(input,snapshot)}
+  })
+ })
++
++test('NI-J08: final character schema errors expose only bounded static business labels',async t=>{
++ const bridge=api.generateImportAiJson!;assert.ok(bridge)
++ const r:ImportAiRequest={...knowledgeRequest('character'),kind:'character',selectedTargets:['character']},before=structuredClone(r),context={userId:'j08-synthetic-user',resolvedModel:{} as ResolvedModel},controller=new AbortController(),prompt=importAiPrompt(r),secret='J08-SYNTHETIC-SECRET',isolated=Object.create(NovelImportController.prototype) as {safeError(error:unknown):string}
++ const person:ImportArtifact={...existing,id:'j08-person-'+secret,name:'人物名-'+secret,text:'完整合成人物资料，首中尾均保留😀',facts:{roleType:'SUPPORTING',aliases:'["合成别称"]',relationships:'[]',occupation:' 原职业 ',clothing:' 原服饰 ',catchphrase:' 原口头禅 ',growthArc:' 原成长轨迹 ',reliability:'角色有限事实',attribution:' 合成转述来源 ',temporalScope:' 仅合成时段 '}}
++ const good={artifacts:[person]},emit=(raw:unknown,finishReason='stop')=>({text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason}),capture=async(run:()=>Promise<unknown>)=>{try{await run()}catch(error){return error}assert.fail('expected generation rejection')},safe=(error:unknown)=>isolated.safeError(error)
++ const fallback='模型返回的角色结构无效，请核对后重试',labeled=(labels:string[])=>'模型返回的角色字段结构无效（'+labels.join('、')+'），请核对后重试'
++ const execute=async(input:ImportAiRequest,sequence:unknown[])=>{const prompts:string[]=[],signals:AbortSignal[]=[],assertions:{count:number}={count:0};let calls=0;const output=await ai.runImportAi(input,controller.signal,{resolve:async()=>model,assert:async()=>{assertions.count++},generate:async(request,_model,signal,actualPrompt)=>bridge(request,context,signal,actualPrompt,{generateText:async opts=>{assert.equal(Object.hasOwn(opts,'schema'),false);assert.equal(Object.hasOwn(opts,'response_format'),false);assert.equal(opts.userId,context.userId);assert.equal(opts.resolvedModel,context.resolvedModel);assert.equal(opts.role,'text');assert.equal(opts.action,'novel.import.analyze');assert.equal(opts.abortSignal,controller.signal);prompts.push('prompt'in opts?opts.prompt:'');signals.push(opts.abortSignal!);return emit(sequence[Math.min(calls++,sequence.length-1)])}})});return {output,prompts,signals,calls,assertions}}
++ await t.test('actual bridge generateJSON Zod runImportAi and main safeError preserve final bounded diagnostics',async()=>{
++  const raw={artifacts:Array.from({length:3},(_,i)=>({...person,id:person.id+'-'+i,facts:{...person.facts,aliases:['别名值-'+secret],relationships:[{target:'关系值-'+secret,description:secret}]}}))},snapshot=structuredClone(raw);let calls=0;const prompts:string[]=[]
++  const error=await capture(()=>ai.runImportAi(r,controller.signal,{resolve:async()=>model,assert:async()=>{},generate:async(request,_model,signal,actualPrompt)=>bridge(request,context,signal,actualPrompt,{generateText:async opts=>{calls++;assert.equal(opts.abortSignal,controller.signal);assert.equal(opts.role,'text');assert.equal(opts.action,'novel.import.analyze');assert.equal(opts.userId,context.userId);assert.equal(opts.resolvedModel,context.resolvedModel);assert.equal(Object.hasOwn(opts,'schema'),false);assert.equal(Object.hasOwn(opts,'response_format'),false);prompts.push('prompt'in opts?opts.prompt:'');return emit(raw)}})}))
++  assert.equal(calls,2);assert.ok(error instanceof Error);assert.equal(error.message,labeled(['别名','人物关系']));assert.equal(safe(error),labeled(['别名','人物关系']));assert.ok(error.message.length<180);assert.equal(Object.hasOwn(error,'cause'),false);assert.equal(error instanceof StructuredGenerationError,false)
++  const direct=await capture(()=>generateJSON({userId:context.userId,role:'text',action:'novel.import.analyze',prompt,schema:ai.importAiResponseSchema(r),resolvedModel:context.resolvedModel,abortSignal:controller.signal},{generateText:async()=>emit(raw)}));assert.ok(direct instanceof StructuredGenerationError);assert.equal(direct.kind,'invalid_schema');assert.deepEqual(direct.invalidFields,['artifacts.0.facts.aliases','artifacts.0.facts.relationships','artifacts.1.facts.aliases','artifacts.1.facts.relationships','artifacts.2.facts.aliases','artifacts.2.facts.relationships']);assert.equal(prompts.length,2);assert.ok(prompts[1].startsWith(prompts[0]));for(const path of direct.invalidFields)assert.ok(prompts[1].includes(path),'existing correction keeps its original typed feedback');assert.ok(Buffer.byteLength(prompts[1])-Buffer.byteLength(prompt)<=IMPORT_JSON_WRAPPER_RESERVE_BYTES)
++  for(const value of [secret,currentId,foreignId,person.id,person.name,sourceText,model.endpoint,'artifacts.','facts.'])assert.ok(!safe(error).includes(value));assert.deepEqual(raw,snapshot);assert.deepEqual(r,before)
++ })
++ await t.test('first bad then good and first good remain exact successes with two or one calls',async()=>{
++  const bad={artifacts:[{...person,facts:{...person.facts,aliases:[secret]}}]},badBefore=structuredClone(bad),goodBefore=structuredClone(good)
++  const corrected=await execute(r,[bad,good]);assert.equal(corrected.calls,2);assert.deepEqual(corrected.output,good);assert.ok(corrected.signals.every(signal=>signal===controller.signal));assert.equal(corrected.assertions.count,2)
++  const first=await execute(r,[good]);assert.equal(first.calls,1);assert.deepEqual(first.output,good);assert.equal(first.assertions.count,2);assert.deepEqual(good,goodBefore);assert.deepEqual(bad,badBefore);assert.deepEqual(r,before)
++ })
++ await t.test('actual Zod unknown and truncated paths cannot echo or falsely identify known fields',async()=>{
++  const keys=['unknown-'+secret,'aliases.'+secret,'aliases\n','aliasesPrefix'+secret,'relationships\n'+secret,'角色资料-'+secret,'constructor','clothing'+'x'.repeat(120)+secret]
++  for(const key of keys){const raw={artifacts:[{...person,facts:{...person.facts,[key]:[secret]}}]},snapshot=structuredClone(raw);assert.equal(ai.importAiResponseSchema(r).safeParse(raw).success,false,key+' must reach a real Zod failure');let calls=0;const error=await capture(()=>bridge(r,context,controller.signal,prompt,{generateText:async()=>{calls++;return emit(raw)}}));assert.equal(calls,2);assert.ok(error instanceof Error);assert.equal(error.message,fallback,key);assert.equal(safe(error),fallback);assert.ok(error.message.length<180);for(const value of [secret,key,currentId,person.name,sourceText,model.endpoint])assert.ok(!error.message.includes(value));assert.deepEqual(raw,snapshot)}
++  const raw={artifacts:[{...person,unexpectedKey:secret}]};let count=0;const error=await capture(()=>bridge(r,context,controller.signal,prompt,{generateText:async()=>{count++;return emit(raw)}}));assert.equal(count,2);assert.equal(safe(error),labeled(['角色资料']));assert.deepEqual(r,before)
++ })
++ await t.test('synthetic typed metadata covers full-path allowlist and first-six bounds only',async()=>{
++  const cases:[unknown[],string[]][]=[
++   [['artifacts','artifacts.0','artifacts.0.facts'],['角色资料']],
++   [['artifacts.0.id','artifacts.0.kind','artifacts.0.name','artifacts.0.text','artifacts.0.origin','artifacts.0.evidence'],['角色标识','资料类别','角色名称','角色正文','来源类型','来源证据']],
++   [['artifacts.0.facts.roleType','artifacts.0.facts.occupation','artifacts.0.facts.clothing','artifacts.0.facts.catchphrase','artifacts.0.facts.growthArc','artifacts.0.facts.relationships'],['角色类型','职业','服饰','口头禅','成长轨迹','人物关系']],
++   [['artifacts.0.sourceUnitIds','artifacts.0.sourceUnitIds.1','artifacts.0.evidence.0.unitId','artifacts.0.evidence.0.quote'],['来源单元','原文引文']],
++   [['artifacts.9007199254740991.facts.aliases'],['别名']],
++   [[...Array(6).fill('artifacts.0.facts.aliases'),'artifacts.0.facts.relationships'],['别名']],
++   [['artifacts.0.facts.age','artifacts.0.facts.gender','artifacts.0.facts.personality','artifacts.0.facts.appearance','artifacts.0.facts.reliability','artifacts.0.facts.attribution'],['年龄','性别','性格','外貌','可靠性','信息归属']],
++   [['artifacts.0.facts.temporalScope','artifacts.0.facts.characterId','artifacts.0.facts.sceneId','artifacts.0.facts.itemId'],['适用时段','关联角色','关联地点','关联物品']],
++   [['artifacts.9007199254740992.facts.aliases','artifacts.-1.facts.aliases','artifacts.00.facts.aliases','artifacts.1e2.facts.aliases','artifacts.0.facts.aliases.0','artifacts.0.facts.aliases\n'],[]],
++   [[...Array(6).fill('unknown-'+secret),'artifacts.0.facts.aliases'],[]],
++   [['artifacts.0.evidence.0','artifacts.0.facts.__proto__','artifacts.0.toString','artifacts.0.facts.aliases'+'x'.repeat(101),null,{}],[]],
++  ]
++  for(const [paths,labels]of cases){const original=new StructuredGenerationError('invalid_schema',paths as string[],['feedback-'+secret]);let calls=0;const error=await capture(()=>bridge(r,context,controller.signal,prompt,{generateText:async()=>{calls++;throw original}}));assert.equal(calls,1,'synthetic typed metadata is not a parse correction run');assert.ok(error instanceof Error);assert.equal(error.message,labels.length?labeled(labels):fallback);assert.equal(safe(error),error.message);assert.ok(error.message.length<180);assert.equal(Object.hasOwn(error,'cause'),false);assert.ok(!error.message.includes(secret));assert.ok(!error.message.includes('artifacts'));assert.ok(!error.message.includes('facts.'))}
++  for(const invalid of [null,secret,{value:secret}]){const original=new StructuredGenerationError('invalid_schema');Object.assign(original,{invalidFields:invalid});const error=await capture(()=>bridge(r,context,controller.signal,prompt,{generateText:async()=>{throw original}}));assert.equal(safe(error),fallback)}assert.deepEqual(r,before)
++ })
++ await t.test('all unrelated phases kinds legacy and original error identities pass through',async()=>{
++  const reconcile:ImportAiRequest={...r,intent:'reconcile',artifacts:[...r.artifacts,person],reconcile:{targetIds:[person.id],locks:[],decisionHash:'d'.repeat(64),workingRevision:0}},otherRequests:ImportAiRequest[]=[{...r,semanticVersion:undefined,selectedTargets:undefined},...(['world','scene','worldline','narrative'] as const).map(kind=>({...knowledgeRequest(kind),kind})),...(['review','classify','patch'] as const).map(phase=>({...r,phase,kind:undefined})),reconcile]
++  for(const input of otherRequests){const snapshot=structuredClone(input),error=new StructuredGenerationError('invalid_schema',['artifacts.0.facts.aliases'],[secret]);const observed=await capture(()=>bridge(input,context,controller.signal,importAiPrompt(input),{generateText:async()=>{throw error}}));assert.equal(observed,error);assert.ok(observed instanceof StructuredGenerationError);assert.equal(observed.message,error.message);assert.deepEqual(input,snapshot)}
++  const errors=[new DOMException('controlled abort','AbortError'),new Error('controlled provider '+secret),Object.freeze({name:'StructuredGenerationError',kind:'invalid_schema',invalidFields:['artifacts.0.facts.aliases'],message:secret})]
++  for(const original of errors){let count=0;const observed=await capture(()=>bridge(r,context,controller.signal,prompt,{generateText:async()=>{count++;throw original}}));assert.equal(count,1);assert.equal(observed,original)}
++  for(const type of ['invalid_json','incomplete'] as const){let count=0;const error=await capture(()=>bridge(r,context,controller.signal,prompt,{generateText:async()=>{count++;return type==='invalid_json'?{...emit(null),text:'not JSON '+secret}:emit(good,'length')}}));assert.equal(count,2);assert.ok(error instanceof StructuredGenerationError);assert.equal(error.kind,type);assert.equal(error.message,type==='invalid_json'?'模型未返回可解析的 JSON':'模型输出未完整结束')}
++  const stopped=new AbortController(),reason=new Error('abort reason remains private'),original=new StructuredGenerationError('invalid_schema',['artifacts.0.facts.aliases']);let calls=0;const error=await capture(()=>bridge(r,context,stopped.signal,prompt,{generateText:async()=>{calls++;stopped.abort(reason);throw original}}));assert.equal(calls,1);assert.equal(error,original);assert.equal(stopped.signal.reason,reason);assert.deepEqual(r,before);assert.deepEqual(Object.getOwnPropertyNames(isolated),[])
++ })
++})

@@ -1,0 +1,29 @@
+✖ NI-PDF16: parsing admission counts permissive raw obj entries before calling the locked parser (20.896459ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 601.776
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf-source-text.test.ts:2:7667
+✖ NI-PDF16: parsing admission counts permissive raw obj entries before calling the locked parser (20.896459ms)
+  AssertionError [ERR_ASSERTION]: 1 0obj
+  
+  
+  'closed' !== 'budget'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf-source-text.test.ts:50:96)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'closed',
+    expected: 'budget',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

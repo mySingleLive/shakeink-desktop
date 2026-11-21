@@ -1,0 +1,69 @@
+{
+  "scope": "75 independent bounded review; no actual app/model/data access",
+  "sources": [
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "baselineHash": "8edd5629d1f5153d00a5b4c0bfd90dd0bddcad29b7409f5b9546869ed6cb2d98",
+      "finalHash": "49482e28232c89c8eb1276ed7c2b755e496d9b26607329cac9d5f34a07a5bb21"
+    },
+    {
+      "path": "tests/unit/novel-import-ai.test.ts",
+      "baselineHash": "12e208f117202d6cfade828e5cabb65f2f65fe8df256491c15564eea89cf34e6",
+      "finalHash": "9dd2d4c3f4304f64bbf275304cf7704915e575826053d3009e87a25a7a3e2ec0"
+    }
+  ],
+  "serviceHashUnchangedFrom72": "c88cf7f8941edcb4ab97449d244687f254db22aad5d1348404ef25a6d16d29c6",
+  "diffHash": "cb704651d54322ce955718a4acad8dbb06b08938f6aed3b6beb0302e97b8a10c",
+  "diffMatchesAuthor": true,
+  "payloadOnlyNewFixedGuidanceAndConcatenation": true,
+  "oldAiTestsByteExactBeforeA07": true,
+  "eightIndependentGoldenLiteralsMatchBaselineMetadata": true,
+  "baselineGoldenMetadataHash": "82e2008db5ffcdcaf33c52ee9d89be36cfd666aeff304b314b4e5c9d338d9353",
+  "commands": [
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-A0[3567]:",
+        "tests/unit/novel-import-ai.test.ts"
+      ],
+      "pass": 7,
+      "skip": 0,
+      "exit": 0,
+      "log": "evidence-attribution-independent-a03-a07.txt",
+      "logHash": "c2645944e6c4271796a9c035d1c5cf82cefc5d76d9ba5c3d237746ce849836a0"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-J03:",
+        "tests/unit/novel-import-request-schema.test.ts"
+      ],
+      "pass": 5,
+      "skip": 0,
+      "exit": 0,
+      "log": "evidence-attribution-independent-j03.txt",
+      "logHash": "a1f3fb3ba00366487e20518b8ad14f0579963bae2d1dc437201a06227afd87b4"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-SEM04:",
+        "tests/unit/novel-import-semantic.test.ts"
+      ],
+      "pass": 1,
+      "skip": 0,
+      "exit": 0,
+      "log": "evidence-attribution-independent-sem04.txt",
+      "logHash": "ea8a738ff5dcba5e0db7f22280cf6e2e5584730a72f83e1671b2f0dcf8b3ccfb"
+    }
+  ]
+}

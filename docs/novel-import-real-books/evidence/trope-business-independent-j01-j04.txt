@@ -1,0 +1,24 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (54.727875ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (21.8415ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.1535ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.910875ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (8.907875ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.461458ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (13.050833ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (7.693708ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (33.360791ms)
+  ✔ formatted unknown references stay schema-valid and fail only at the existing graph gate (2.93375ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.669625ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.295125ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.18175ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (47.379458ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 871.886625

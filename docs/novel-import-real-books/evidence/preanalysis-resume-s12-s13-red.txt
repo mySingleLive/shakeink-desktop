@@ -1,0 +1,45 @@
+✔ NI-S12: local and synthetic AI source confirmation retain manual chapters across reopen (92.046708ms)
+▶ NI-S13: preanalysis drafts resume their exact review stage without consent or AI
+  ✖ source (17.784041ms)
+  ✖ select (30.535916ms)
+  ✖ confirm (27.972875ms)
+  ✖ existing-target-still-requires-explicit-reauthorization-first (46.419708ms)
+✖ NI-S13: preanalysis drafts resume their exact review stage without consent or AI (123.455792ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 1
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 659.333875
+
+✖ failing tests:
+
+test at tests/unit/novel-import-session.test.ts:5:4416
+✖ source (17.784041ms)
+  Error: 请重新选择并授权保存目录
+      at NovelImportController.start (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:372:165)
+      at NovelImportController.resume (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:394:151)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:164:46)
+
+test at tests/unit/novel-import-session.test.ts:5:4416
+✖ select (30.535916ms)
+  Error: 请重新选择并授权保存目录
+      at NovelImportController.start (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:372:165)
+      at NovelImportController.resume (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:394:151)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:164:46)
+
+test at tests/unit/novel-import-session.test.ts:5:4416
+✖ confirm (27.972875ms)
+  Error: 请重新选择并授权保存目录
+      at NovelImportController.start (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:372:165)
+      at NovelImportController.resume (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:394:151)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:164:46)
+
+test at tests/unit/novel-import-session.test.ts:5:6457
+✖ existing-target-still-requires-explicit-reauthorization-first (46.419708ms)
+  Error: 请明确允许按新审核策略重建本草稿，原分析信用将重新核对
+      at NovelImportController.prepareReviewPolicy (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:355:21)
+      at NovelImportController.start (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:374:17)
+      at async <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:164:35)

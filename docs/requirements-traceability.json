@@ -4007,7 +4007,1603 @@
       "verificationKind": "UI",
       "status": "planned",
       "evidence": []
-    }
+    },
+    {
+      "id": "NI-01",
+      "requirement": "已有小说七类扩展名/目录导入，来源与正文保真",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/main/novel-import-files.ts",
+        "desktop/shared/novel-import.ts"
+      ],
+      "testIds": [
+        "NI-F01",
+        "NI-F02",
+        "NI-F03",
+        "NI-F04",
+        "NI-F05",
+        "NI-F06",
+        "NI-F07",
+        "NI-F08",
+        "NI-D01"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/native.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-02",
+      "requirement": "13类来源识别、默认/禁用、完整覆盖",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/core/novel-import.ts",
+        "desktop/main/novel-import.ts"
+      ],
+      "testIds": [
+        "NI-D02",
+        "NI-D04",
+        "NI-S01",
+        "NI-S02"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-03",
+      "requirement": "普通来源复选框与始终展开补全卡片独立",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "src/components/desktop/NovelImportDialog.tsx",
+        "src/components/desktop/novel-import.css",
+        "src/lib/desktop/novel-import.ts"
+      ],
+      "testIds": [
+        "NI-D03",
+        "NI-U01",
+        "NI-U02"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-04",
+      "requirement": "独立目标、模型真实授权、两次发送范围确认",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/shared/ipc.ts",
+        "desktop/preload/index.ts",
+        "desktop/main/index.ts",
+        "desktop/service/novel-import-ai.ts"
+      ],
+      "testIds": [
+        "NI-P01",
+        "NI-P02",
+        "NI-A01",
+        "NI-A02",
+        "NI-A03",
+        "NI-A04",
+        "NI-U03",
+        "NI-U04"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-05",
+      "requirement": "正文起点逆向导入与两条线，原大纲/资料可追溯",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/service/novel-import-publish.ts",
+        "desktop/service/workspaces.ts",
+        "desktop/handlers/novels/[id]/import-record/route.ts",
+        "docs/migration-map.json"
+      ],
+      "testIds": [
+        "NI-S03",
+        "NI-S04",
+        "NI-W01",
+        "NI-W02"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/record-route-green.txt"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-06",
+      "requirement": "冲突询问、正文逐处修改批准与依赖重检",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "desktop/core/novel-import.ts",
+        "desktop/main/novel-import.ts",
+        "src/components/desktop/NovelImportDialog.tsx"
+      ],
+      "testIds": [
+        "NI-D05",
+        "NI-D06",
+        "NI-D07",
+        "NI-D08",
+        "NI-S05",
+        "NI-S06",
+        "NI-U06"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-07",
+      "requirement": "中断/停止/取消即删除未保存草稿，下次导入为全新；正在导入或已有部分导入内容时，关闭窗口需先警告并确认，取消关闭则保留当前进度；仅已开始保存的导入保留恢复；暂停可继续；导入指纹幂等发布",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json",
+        "docs/235-import-abandon-plan.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/main/index.ts",
+        "desktop/service/index.ts",
+        "desktop/service/work-creation-reservations.ts",
+        "desktop/core/root-inventory-paths.ts",
+        "desktop/core/root-ownership.ts",
+        "src/lib/desktop/novel-import.ts",
+        "src/components/desktop/NovelImportDialog.tsx",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "NI-S07",
+        "NI-S08",
+        "NI-W03",
+        "NI-W04",
+        "NI-W05",
+        "NI-W06",
+        "NI-L01",
+        "NI-L02",
+        "NI-L03",
+        "NI-L04",
+        "NI-U05",
+        "IA-01",
+        "IA-02",
+        "IA-03",
+        "IA-04",
+        "IA-05",
+        "IA-07",
+        "IA-08",
+        "IA-10",
+        "IA-12",
+        "IA-14",
+        "IA-15",
+        "IA-20",
+        "IA-23",
+        "IA-24",
+        "IA-27",
+        "IA-29",
+        "IA-30",
+        "IA-B01",
+        "IA-B04",
+        "IA-B05",
+        "IA-B09",
+        "IA-R01",
+        "IA-R02",
+        "IA-R03",
+        "NICC-01",
+        "NICC-02",
+        "NICC-03",
+        "NICC-04",
+        "NICC-05",
+        "NICC-06",
+        "NICC-07",
+        "NICC-08",
+        "NICC-B01",
+        "NICC-B02",
+        "NICC-B03",
+        "NICC-B04",
+        "NICC-B05",
+        "NICC-B10",
+        "NICC-B11",
+        "NICC-B12",
+        "NICC-B13",
+        "NICC-B14",
+        "NICC-B15",
+        "NICC-B16",
+        "NICC-R01"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/native.json",
+        "docs/novel-import/evidence/import-journal-migration-green.txt",
+        "docs/236-import-abandon-cases.md",
+        "docs/237-import-abandon-verification.md",
+        "docs/evidence/237-import-abandon-real.txt",
+        "scripts/verify-novel-import-close-confirmation.mjs"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本",
+        "IA-R 真实Electron使用隔离数据根与替换的原生打开对话框；Windows 未执行"
+      ]
+    },
+    {
+      "id": "NI-08",
+      "requirement": "真实摘要、原业务组件、双主题/键盘/实际目标",
+      "source": [
+        "docs/novel-import/02-product.md",
+        "docs/novel-import/04-ui-design.md",
+        "design/novel-import/approval-v4.json"
+      ],
+      "implementation": [
+        "src/components/layout/SidebarTree.tsx",
+        "src/components/desktop/DesktopApp.tsx",
+        "src/components/desktop/NovelImportRecord.tsx",
+        "src/components/content/NovelOverview.tsx",
+        "src/components/content/planning/PlanningWorkspace.tsx",
+        "desktop/shared/commands.json",
+        "scripts/runtime-dependencies.mjs"
+      ],
+      "testIds": [
+        "NI-U07",
+        "NI-B01",
+        "NI-N01",
+        "NI-N02",
+        "NI-N03"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-macos-verified-external-targets-pending",
+      "evidence": [
+        "docs/novel-import/evidence/targeted-final.txt",
+        "docs/novel-import/evidence/ui-final.txt",
+        "docs/novel-import/11-review-engine.md",
+        "docs/novel-import/11-review-ui.md",
+        "docs/novel-import/11-review-runtime.md",
+        "docs/novel-import/11-review-publish.md",
+        "docs/novel-import/12-verification.md",
+        "docs/novel-import/evidence/verification.json",
+        "docs/novel-import/evidence/native.json"
+      ],
+      "verificationLimits": [
+        "Windows、真实模型供应商及新安装包未执行",
+        "含栅格图像PDF需外部OCR/转纯文本"
+      ]
+    },
+    {
+      "id": "NI-09",
+      "requirement": "导入场景不因归属待确认项卡住：待确认场景不导入并在校验页列出；识别后由模型整理场景清单（合并同地异写、排除非具体地点、选定原文名称，均附原文依据且可人工修改）；场景名称只用原文地名，限定语作为提示显示",
+      "source": [
+        "docs/486-scene-import-stall-and-roster-cleanup-plan.md",
+        "docs/486-scene-import-stall-and-roster-cleanup-plan-review.md",
+        "docs/487-scene-import-stall-and-roster-cleanup-cases.md",
+        "docs/487-scene-import-stall-and-roster-cleanup-cases-review.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/core/novel-import-scene-identity.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "desktop/core/novel-import.ts",
+        "desktop/core/novel-import-semantics.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/shared/novel-import-scene-identity.ts",
+        "desktop/shared/novel-import.ts",
+        "desktop/shared/novel-import-wizard.ts",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "487-A1",
+        "487-A2",
+        "487-A3",
+        "487-A3b",
+        "487-A3c",
+        "487-A3d",
+        "487-A3e",
+        "487-A3f",
+        "487-A4",
+        "487-A5",
+        "487-A6",
+        "487-A7",
+        "487-B1",
+        "487-B2",
+        "487-B3",
+        "487-B4",
+        "487-B5",
+        "487-B6",
+        "487-B7",
+        "487-C1",
+        "487-C1b",
+        "487-C2",
+        "487-C3",
+        "487-C4",
+        "487-C5",
+        "487-C5b",
+        "487-C7",
+        "487-C7b",
+        "487-C8",
+        "487-C9",
+        "487-C10",
+        "487-C11",
+        "487-C12",
+        "487-C12b",
+        "487-C13",
+        "487-C14",
+        "487-D1",
+        "487-D2",
+        "487-D3",
+        "CIUI01",
+        "CIUI14",
+        "CIUI15",
+        "CIUI16",
+        "489-H1"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-pending",
+      "evidence": [
+        "docs/488-scene-import-stall-and-roster-cleanup-tdd.md",
+        "tests/unit/novel-import-scene-deferred.test.ts",
+        "tests/unit/novel-import-scene-cleanup.test.ts",
+        "tests/unit/novel-import-scene-cleanup-core.test.ts",
+        "tests/unit/novel-import-scene-identity-ui.test.ts",
+        "docs/489-scene-import-stall-and-roster-cleanup-code-review.md"
+      ],
+      "verificationLimits": [
+        "487-A3d 只完成部分断言（tests/unit/novel-import-scene-deferred.test.ts:84）：已证不再停在“请返回识别场景”、新增待确认场景未选、无任务、列入待确认，流程进入遗漏修订；未证“到达 verify 且 checks 全部 ok”",
+        "阻塞 A3d 的既有缺陷（HEAD b7f090a 已存在，另立任务，本次不修）：desktop/main/novel-import.ts:1721 以 importFactFields(kind,schema) 构造 reconcile fragments.fields（含 schema 2 场景字段），desktop/service/novel-import-ai.ts:830 只接受 IMPORT_SEMANTIC_FACT_FIELDS（v1），请求被拒为“设定修订分片范围或字段无效”；因此 3R2-9 的遗漏补充场景在真实使用中仍会在校验步骤失败",
+        "487 E4 真实验证（LotmVerification.app、隔离目录、第一部全部章节）未执行",
+        "单元用例的模型回复均为合成数据，经真实服务校验桥，不代表真实模型通过"
+      ]
+    },
+    {
+      "id": "NI-11",
+      "requirement": "导入《诡秘之主》第一卷全部物品的时长不超过 30 秒；物品资料完整导入（面板字段、已核验引文），零失败",
+      "source": [
+        "docs/493-item-import-performance-plan.md",
+        "docs/493-item-import-performance-plan-review.md",
+        "docs/494-item-import-performance-cases.md",
+        "docs/494-item-import-performance-cases-review.md",
+        "docs/497-item-entity-profile-contract-plan.md",
+        "docs/497-item-entity-profile-contract-review.md",
+        "docs/498-item-entity-profile-contract-cases.md",
+        "docs/500-item-evidence-options-plan.md",
+        "docs/500-item-evidence-options-plan-review.md",
+        "docs/501-item-evidence-options-cases.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts"
+      ],
+      "testIds": [
+        "493-IP-01",
+        "493-IP-02",
+        "493-IP-03",
+        "493-IP-04",
+        "493-IP-05",
+        "493-IP-06",
+        "493-IP-08",
+        "493-IC-01",
+        "493-IC-02",
+        "493-IC-03",
+        "493-IC-04",
+        "493-IC-05",
+        "493-IC-07",
+        "493-IE-01",
+        "493-IE-02",
+        "493-IE-03",
+        "493-IE-04",
+        "493-IE-05",
+        "493-IE-08",
+        "493-IP-REAL"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-verified",
+      "evidence": [
+        "docs/495-item-import-performance-code-review.md",
+        "docs/499-item-entity-profile-contract-code-review.md",
+        "docs/502-item-evidence-options-code-review.md",
+        "docs/496-item-import-performance-verification.md",
+        "tests/unit/novel-import-item-performance.test.ts",
+        "tests/unit/novel-import-item-profile.test.ts",
+        "tests/unit/novel-import-character-commit.test.ts",
+        "tests/unit/novel-import-character-source-index.test.ts"
+      ],
+      "verificationLimits": [
+        "真实计时为单轮（item-perf-r3，20002 ms，128 项）；r1、r2 因代码缺陷中途失败并据此修复，记录保留于 docs/496",
+        "文件/目录选择器由驱动控制，未验收原生文件对话框；未开启物品图标",
+        "runtime.json 只保留最近 64 次调用，请求耗时分布为采样口径；生成期纠错次数不可见",
+        "CP-13a/CP-01 在干净 HEAD b26975f 上同样失败，为既有问题，未在本任务修复"
+      ]
+    },
+    {
+      "id": "NI-12",
+      "requirement": "导入《诡秘之主》第一卷全部其他设定（主题、文风、金手指、爽点/泪点）不超过 1 分钟，全程零失败、零报错",
+      "source": [
+        "docs/514-settings-import-performance-plan.md",
+        "docs/514-settings-import-performance-plan-review.md",
+        "docs/515-settings-import-performance-cases.md",
+        "docs/515-settings-import-performance-cases-review.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/shared/novel-import.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "515-SP-01",
+        "515-SP-02",
+        "515-SP-03",
+        "515-SP-04",
+        "515-SP-05",
+        "515-SP-06",
+        "515-SP-07",
+        "515-SP-08",
+        "515-SP-09",
+        "515-SP-10",
+        "515-SP-11",
+        "515-SP-12",
+        "515-SP-12b",
+        "515-SP-13",
+        "515-SP-14",
+        "515-SP-15",
+        "515-SP-15b",
+        "515-SP-16",
+        "515-SP-16b",
+        "515-SP-17",
+        "515-SP-18",
+        "515-SP-19",
+        "515-SU-01",
+        "507-WP-03",
+        "507-WP-11",
+        "515-SP-REAL"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-verified",
+      "evidence": [
+        "docs/516-settings-import-performance-code-review.md",
+        "/private/tmp/shakeink-settings-510/evidence/settings-r1/world-import-completed.json（基线 218016 ms）",
+        "/private/tmp/shakeink-settings-510/evidence/settings-r10/world-import-completed.json（17494 ms，4/4 done，零 failed/skipped，页面无错误）"
+      ],
+      "verificationLimits": [
+        "真实验证为只选四项其他设定的第一卷单独轮；世界观+四项组合轮 combo-r1 中四项设定完成 3 项时，一项世界条目因引文 too-short 失败（世界条目证据规则未改，不在本需求范围），该轮未计为通过",
+        "单元用例的模型回复为合成数据，经真实服务生成桥校验，不代表真实模型通过",
+        "容错修正（丢弃不可定位引文、清除无效可靠性、丢弃不合规条目）记入导入记录并在第21步显示"
+      ]
+    },
+    {
+      "id": "RP-01",
+      "requirement": "应用窗口之上的系统消息框全部改为与项目其他对话框风格一致的 React/HTML 对话框（关闭任务确认、尚不能关闭、作品锁/导入目录锁修复与结果、迁移确认、配置无法修复清空或退出、定位原数据目录确认与关于）；菜单命令失败改为提示条；无窗口时的冷启动锁修复与致命启动错误保留原生；用户 2026-11-05 选择全部 HTML、不保留原生回退",
+      "source": [
+        "docs/510-react-prompt-dialogs-plan.md",
+        "docs/510-react-prompt-dialogs-plan-review.md",
+        "docs/511-react-prompt-dialogs-cases.md",
+        "docs/511-react-prompt-dialogs-cases-review.md",
+        "docs/512-react-prompt-dialogs-code-review.md",
+        "docs/513-react-prompt-dialogs-review-fixes.md"
+      ],
+      "implementation": [
+        "desktop/shared/prompt.ts",
+        "desktop/main/renderer-prompts.ts",
+        "desktop/main/index.ts",
+        "desktop/main/root-relocation-window.ts",
+        "desktop/main/project-about.ts",
+        "desktop/preload/index.ts",
+        "desktop/preload/root-relocation.ts",
+        "src/components/desktop/DesktopPromptHost.tsx",
+        "src/components/desktop/DesktopApp.tsx",
+        "src/components/desktop/RootRelocationScreen.tsx",
+        "src/app/desktop.css",
+        "src/components/desktop/ShortcutSettings.tsx"
+      ],
+      "testIds": [
+        "RP-01",
+        "RP-02",
+        "RP-03",
+        "RP-04",
+        "RP-05",
+        "RP-06",
+        "RP-07",
+        "RP-08",
+        "RP-09",
+        "RP-10",
+        "RPM-12",
+        "RPB-01",
+        "RPB-02",
+        "RPB-03",
+        "RPB-04",
+        "RPB-05",
+        "RPB-06",
+        "RPB-07",
+        "RPB-08",
+        "RPB-09",
+        "RPB-10",
+        "RPB-11",
+        "RPB-12",
+        "RPE-01",
+        "RPE-02",
+        "RPE-03",
+        "RPE-04",
+        "RPE-05",
+        "RPE-06",
+        "D4",
+        "D5",
+        "RPM-01",
+        "RPM-07",
+        "RPM-08",
+        "RPM-09",
+        "RPM-10",
+        "RPB-13",
+        "RPB-14"
+      ],
+      "verificationKind": "REACT_PROMPT_TARGETED",
+      "status": "implemented-targeted-verified",
+      "evidence": [
+        "docs/evidence/rpe-real-desktop-prompts.txt",
+        "docs/evidence/prompt-e2e-close-failed.png",
+        "docs/evidence/prompt-e2e-busy.png",
+        "docs/evidence/prompt-host-paper.png",
+        "docs/evidence/prompt-host-ink.png",
+        "docs/evidence/config-deletion/report-macos-d4-d5-prompts.json",
+        "docs/evidence/config-deletion/d4-reset-offer.png",
+        "scripts/verify-about-link-error.mjs"
+      ],
+      "verificationLimits": [
+        "Windows 未执行；demo-config-deletion D1-D3 未在本次重跑",
+        "smoke-root-relocation、smoke-runtime-migration 在提示出现前的启动夹具阶段失败（与引导/夹具过期相关，HEAD 同样无法跑通），定位与迁移的 HTML 确认仅由单测/审阅测试覆盖",
+        "run-lotm-wizard-import、verify-works-loading 驱动已改为点击 HTML 提示，未执行；smoke-work-lease 依赖已退役的备份界面，仅替换桩，未执行",
+        "渲染器卡死时提示无法显示，只能强制结束（用户决定不保留原生回退）",
+        "确认改由渲染器应答：主框架脚本可直接回复破坏性确认（主框架本就受信，见 510 §3.2）",
+        "全量 npm test：4473 项中 43 项失败，均为改动前已存在（HEAD 为 118 项失败），无新增失败"
+      ]
+    },
+    {
+      "id": "NI-13",
+      "requirement": "导入作品第17/18步“导入世界线”“导入叙事线”合计不超过 2 分钟（《诡秘之主》第一卷），不以牺牲世界线与叙事线质量为代价；导入阶段面包屑“线索”改为“剧情”",
+      "source": [
+        "docs/517-lines-import-performance-plan-review-2.md",
+        "docs/517-lines-import-performance-plan-review-3.md",
+        "docs/517-lines-import-performance-plan-review.md",
+        "docs/517-lines-import-performance-plan.md",
+        "docs/518-lines-import-performance-cases-review.md",
+        "docs/518-lines-import-performance-cases.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/core/novel-import.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "desktop/shared/novel-import.ts",
+        "src/components/desktop/NovelImportWizard.tsx",
+        "design/novel-import-wizard/wizard.js"
+      ],
+      "testIds": [
+        "518-LP-01",
+        "518-LP-02",
+        "518-LP-03",
+        "518-LP-04",
+        "518-LP-05",
+        "518-LP-06",
+        "518-LP-07",
+        "518-LP-07b",
+        "518-LP-08",
+        "518-LP-08b",
+        "518-LP-08c",
+        "518-LP-09",
+        "518-LP-09b",
+        "518-LP-10",
+        "518-LP-12",
+        "518-LP-13",
+        "518-LP-13b",
+        "518-LP-15",
+        "518-LP-15b",
+        "518-LP-15c",
+        "518-LP-16",
+        "518-LP-16b",
+        "518-LP-16c",
+        "518-LP-16d",
+        "518-LP-17",
+        "518-LP-17b",
+        "518-LP-18",
+        "518-LP-19",
+        "518-LP-20",
+        "518-LP-22",
+        "518-LP-23",
+        "518-LP-23b",
+        "518-LP-23c",
+        "518-LP-24",
+        "518-LP-25",
+        "518-LP-26",
+        "518-LP-27",
+        "518-LP-28",
+        "518-LP-29",
+        "518-LP-30",
+        "518-LP-REAL"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-not-met",
+      "evidence": [
+        "/private/tmp/shakeink-lines-517/evidence/lines-r1/（基线：世界线 873 s 串行，叙事线 816 s 时失败）",
+        "/private/tmp/shakeink-lines-517/evidence/lines-r11/lines-import-completed.json（103047 ms，唯一 ≤120 s 的一轮）",
+        "/private/tmp/shakeink-lines-517/evidence/lines-r27…r29/lines-import-completed.json（161791 / 124732 / 146227 ms，最终构建）",
+        "docs/519-lines-import-performance-code-review.md",
+        "docs/520-lines-import-performance-verification.md",
+        "docs/521-lines-early-split-code-review.md",
+        "tests/browser/novel-import-wizard.test.ts",
+        "tests/unit/novel-import-lines-performance.test.ts"
+      ],
+      "verificationLimits": [
+        "2 分钟目标未稳定达到：29 轮中仅 r11 ≤120 s；最终构建三轮 125–162 s；两步均完成、悬空引用 0",
+        "剩余时长来自叙事线模型回复的引文/来源错误及其重做；进一步缩短需更换模型或放宽校验，待用户决定",
+        "故事线归并仍弱（事件数与故事线数接近）",
+        "剧情车道使用轻量策略（用户 2026-11-06 选择关闭思考）；非客观事实缺知识归属保持严格（用户同日选择）",
+        "LP-11（暂停后恢复）与 LP-21（来源复核次数）无独立用例",
+        "驱动基线目录被系统清空后由 r23 证据重建（diffCount 0）"
+      ]
+    },
+    {
+      "id": "NI-14",
+      "requirement": "降低导入流程 token 消耗；DeepSeek 输入缓存命中率原要求≥90%（2026-11-08 用户选择“质量优先”，接受新书约75–80%并以折算费用为主要验收）；识别/导入场景一定成功，失败自动重试三次（《诡秘之主》第一卷）",
+      "source": [
+        "docs/522-import-token-cache-plan.md",
+        "docs/522-import-token-cache-plan-review.md",
+        "docs/523-import-token-usage-cases.md",
+        "docs/523-import-token-usage-cases-review.md",
+        "docs/524-import-token-usage-code-review.md",
+        "docs/525-import-token-usage-baseline.md",
+        "docs/526-import-shared-source-prefix-plan.md",
+        "docs/526-import-shared-source-prefix-plan-review.md",
+        "docs/527-import-shared-source-prefix-cases.md",
+        "docs/527-import-shared-source-prefix-cases-review.md",
+        "docs/528-scene-roster-fragment-compaction-plan.md",
+        "docs/528-scene-roster-fragment-compaction-plan-review.md",
+        "docs/529-scene-roster-fragment-compaction-cases.md",
+        "docs/529-scene-roster-fragment-compaction-cases-review.md",
+        "docs/530-import-cache-steps-2-3-code-review.md"
+      ],
+      "implementation": [
+        "src/lib/ai/generate.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-shared-source.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/core/novel-import-scene-roster-fragments.ts",
+        "desktop/core/novel-import-scene-roster-native.ts",
+        "desktop/core/novel-import-budget-policy.ts",
+        "desktop/core/novel-import.ts",
+        "desktop/main/novel-import.ts",
+        "desktop/shared/novel-import.ts"
+      ],
+      "testIds": [
+        "523-TU-01..TU-14",
+        "527-SS-02..SS-22",
+        "529-SC-02..SC-16",
+        "tests/unit/novel-import-scene-roster-targeted-repair-compact.test.ts",
+        "scripts/capture-novel-import-prompt-golden.ts --check",
+        "scripts/capture-novel-import-request-trace.ts --check"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "step1-verified; step2-conservative-kept; step3-implemented-disabled; target-90pct-not-met",
+      "evidence": [
+        "~/shakeink-test-roots/evidence-522/ (base-r1, ss-r1, ss-r2, sc-r1, sc-r2 sessions, usage logs, SHA256SUMS; private, not in repo)",
+        "base-r1 logs reconciled with DeepSeek dashboard 2026-11-08 08:00–09:00: hit identical, miss within 35 tokens"
+      ],
+      "verificationLimits": "第一卷反复运行受 DeepSeek 旧缓存影响，单次运行无法分离布局效果；第二步 entity 共享窗口真实运行费用约2.1倍已回退；第三步两次真实运行折算费用未达标且 sc-r2 场景识别整步结构失败3次（第3次重试后成功），默认关闭。"
+    },
+    {
+      "id": "NI-15",
+      "requirement": "第19步“补充细纲”提速：导入《诡秘之主》第一卷时细纲时长 ≤2 分钟（用户 2026-11-08 确认细纲车道关闭思考）",
+      "source": [
+        "docs/531-outline-import-performance-plan.md",
+        "docs/531-outline-import-performance-plan-review.md",
+        "docs/532-outline-import-performance-cases.md",
+        "docs/532-outline-import-performance-cases-review.md",
+        "docs/533-outline-import-performance-code-review.md",
+        "docs/534-outline-import-performance-verification.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "desktop/shared/novel-import.ts"
+      ],
+      "testIds": [
+        "532-OP-01..OP-16",
+        "533 中1",
+        "tests/unit/novel-import-outline-performance.test.ts",
+        "tests/unit/novel-import-lines-performance.test.ts（LP-01/LP-02 更新，LP-22 由 OP-04/OP-14 取代）",
+        "scripts/capture-novel-import-prompt-golden.ts --check",
+        "scripts/capture-novel-import-request-trace.ts --check",
+        "532-OP-REAL"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-met",
+      "evidence": [
+        "/private/tmp/shakeink-outline-531/evidence/ol-r1/（基线：309.8 s 失败，0/213 章）",
+        "/private/tmp/shakeink-outline-531/evidence/ol-r2/outline-import-completed.json（55755 ms，首轮）",
+        "/private/tmp/shakeink-outline-531/evidence/ol-r3/outline-failed.json（未支持字段 order，已修复）",
+        "/private/tmp/shakeink-outline-531/evidence/ol-r4…r6/outline-import-completed.json（56011 / 60473 / 43966 ms，最终构建）",
+        "docs/534-outline-import-performance-verification.md"
+      ],
+      "verificationLimits": [
+        "细纲车道关闭思考（用户 2026-11-08 选择）；质量以 213 章全覆盖、字数分布与 10 章人工抽查衡量",
+        "r4–r6 受跨轮 DeepSeek 前缀缓存影响，首轮 ol-r2 为准",
+        "ol-r2 第21步一致性复核一次 no-match 失败，不在本次范围，未确认是否相关",
+        "进度显示可能把落在共享边界单元里的短章提前计为完成（533 低5，仅显示）"
+      ]
+    },
+    {
+      "id": "NI-16",
+      "requirement": "第20步“导入伏笔”提速：导入《诡秘之主》第一卷时伏笔时长 ≤2 分钟，导入界面显示“已处理 N 个伏笔”（用户 2026-11-08 确认伏笔请求关闭思考）",
+      "source": [
+        "docs/535-foreshadow-import-performance-plan.md",
+        "docs/535-foreshadow-import-performance-plan-review.md",
+        "docs/536-foreshadow-import-performance-cases.md",
+        "docs/536-foreshadow-import-performance-cases-review.md",
+        "docs/537-foreshadow-import-performance-code-review.md",
+        "docs/538-foreshadow-import-performance-verification.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "desktop/core/novel-import.ts",
+        "desktop/shared/novel-import.ts",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "536-FP-01..FP-17",
+        "tests/unit/novel-import-foreshadow-performance.test.ts",
+        "tests/browser/novel-import-wizard.test.ts（FP-15）",
+        "scripts/capture-novel-import-prompt-golden.ts --check",
+        "scripts/capture-novel-import-request-trace.ts --check",
+        "536-FP-REAL"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-met",
+      "evidence": [
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r1/（基线：1528108 ms，130 伏笔，RESOLVED 28）",
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r2/foreshadow-import-completed.json（41680 ms，初版构建，含界面文案采样与截图）",
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r4/foreshadow-import-completed.json（94501 ms，最终构建首次运行，判定依据）",
+        "/private/tmp/shakeink-foreshadow-535/evidence/fs-r5/foreshadow-import-completed.json（66462 ms，复跑参考）",
+        "docs/538-foreshadow-import-performance-verification.md"
+      ],
+      "verificationLimits": [
+        "伏笔请求关闭思考（用户 2026-11-08 选择）；质量以 RESOLVED、多触点、跨≥4章、伏笔数与丢弃率硬指标对比基线衡量，未逐条人工核对",
+        "伏笔数约为基线 3 倍，可能含跨批命名不同而拆开的同一伏笔；跨≥4章伏笔 12–17，低于基线 20",
+        "时长 42–95 s 波动，取决于模型尾部延迟与拆分重跑；fs-r5 受跨轮前缀缓存影响",
+        "全量 npm test 在 537 修订前运行：43 项失败中 42 项为改动前既有失败，NI-LB07 为负载下超时，单独运行通过；修订后未重跑全量"
+      ]
+    },
+    {
+      "id": "NI-17",
+      "requirement": "第21步“校验”：修复一致性复核失败（conflicts.0.kind），《诡秘之主》第一卷校验 ≤2 分钟；错误自动修复 3 次，仍失败的项显示[修复]可无限次手动修复；校验完成后无论有无错误[保存作品]均可点击，保存的作品与导入成功的内容一致（用户 2026-11-09 选择复核关闭思考、矛盾以正文为准）",
+      "source": [
+        "docs/539-import-verify-save-plan.md",
+        "docs/540-import-verify-save-cases.md",
+        "docs/541-import-verify-save-code-review.md"
+      ],
+      "implementation": [
+        "desktop/main/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/core/novel-import-wizard-state.ts",
+        "desktop/core/novel-import-wizard-checks.ts",
+        "desktop/core/novel-import-outline.ts",
+        "desktop/shared/novel-import.ts",
+        "src/components/desktop/NovelImportWizard.tsx"
+      ],
+      "testIds": [
+        "540-VS-01..VS-44",
+        "tests/unit/novel-import-verify-review.test.ts",
+        "tests/unit/novel-import-verify-session.test.ts",
+        "tests/unit/novel-import-wizard-session.test.ts（NIW-C55/C60/C19/C62b 按新规则修订）",
+        "tests/unit/novel-import-scene-identity-closure.test.ts（CI-C02/13 通道断言修订）",
+        "tests/browser/novel-import-wizard.test.ts（VS-44）",
+        "scripts/capture-novel-import-prompt-golden.ts --check",
+        "540-VS-50..VS-53"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-met",
+      "evidence": [
+        "/private/tmp/shakeink-verify-539/full-1.txt（全量 npm test：4606 通过、45 失败；与 535 基线相比新增 3 项，LP-29、OPT-M06 单独运行通过，CI-C02/13 已修订）",
+        "/private/tmp/shakeink-verify-539/build-1.txt（npm run build exit 0）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r1/verify-completed.json（真实 E2E：校验 17617 ms，41 次复核调用 p50 4.6 s；1 包因 DeepSeek HTTP 402 三次失败，显示[修复]）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r1/work-readback.json 与 work-readback-2.json（保存后读回：角色130、场景460、物品121、世界1/设定277、伏笔478、爽点泪点81、世界线事件112、讲述卡680、213章正文与细纲逐章一致）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r1/014-verify-completed.png、016-nav-work-expanded.png",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r3/verify-completed.json（541 修订后真实 E2E：校验 15338 ms，37 次复核调用 p50 4.3 s，8 项检查全部通过）",
+        "/private/tmp/shakeink-verify-539/evidence/vf-r3/work-readback.json 与 work-readback-2.json（保存后读回：角色149、场景315、物品144、世界2/设定265、伏笔416、爽点泪点46、世界线事件148、讲述卡551、213章正文与细纲逐章一致）"
+      ],
+      "verificationLimits": [
+        "向导会话不再执行全资料分片复核（reviewFactPackets），一致性由按章复核覆盖；复核请求关闭思考",
+        "保存时未自动修复的矛盾按导入结果保留并记入决定；缺细纲的章以空细纲保存",
+        "方案与用例的独立子代理审核因额度不足未完成（2026-11-09 API 403）",
+        "真实运行中复核未报告矛盾，自动修复与真实[修复]点击未在真实模型上触发，仅由单元测试覆盖",
+        "541 修订后 vf-r2 因 DeepSeek HTTP 402 在第9步终止；充值后 vf-r3 完成真实 E2E（见 evidence）。vf-r3 第18步叙事线一次 artifacts.N.kind 结构失败，经界面[重试]后完成，属既有叙事线问题，非本任务范围",
+        "541 修订后未重跑全量 npm test；受影响套件 96 项通过、2 项失败（NIW-S06 为 535 基线既有失败，VS-15 为用例消息问题已修订并单独通过）"
+      ]
+    },
+    {
+      "id": "NI-18",
+      "requirement": "导入成功后的作品质量（用户 2026-11-10）：去除导入推导文案中全部“（可靠性：…；信息来源：…；适用时间范围：…）”批注并防止复现；右侧内容面板打开大量（约 50 个以上）tab 时不再卡顿；主题的频道、题材、篇幅、核心卖点、目标受众等基本信息可被推导；用《诡秘之主》第一卷做真实导入测试",
+      "source": [
+        "docs/542-import-result-quality-plan.md",
+        "docs/542-import-result-quality-plan-review.md",
+        "docs/543-import-result-quality-cases.md",
+        "docs/543-import-result-quality-cases-review.md",
+        "docs/544-import-result-quality-code-review.md"
+      ],
+      "implementation": [
+        "desktop/core/novel-import-semantics.ts",
+        "desktop/core/novel-import-semantic-state.ts",
+        "desktop/core/novel-import-outline.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/service/novel-import-publish.ts",
+        "desktop/main/novel-import.ts",
+        "desktop/shared/novel-import.ts",
+        "src/components/layout/ContentTabs.tsx",
+        "scripts/audit-real-novel-import.ts",
+        "scripts/real-novel-semantic-assertions.ts",
+        "scripts/audit-lotm-local-import.ts",
+        "scripts/audit-lotm-import.ts",
+        "scripts/verify-lotm-scenes-persistence.mjs"
+      ],
+      "testIds": [
+        "543-IQ-01..IQ-51b",
+        "tests/unit/novel-import-result-quality.test.ts",
+        "tests/integration/novel-import-result-quality-publish.test.ts",
+        "tests/browser/content-tabs-render.test.ts",
+        "tests/unit/novel-import-semantic.test.ts（NI-SEM04 按新规则修订）",
+        "tests/integration/novel-import-semantic-publish.test.ts（NI-SEM-P02 按新规则修订）",
+        "tests/unit/lotm-local-import-audit.test.ts（主题篇幅与 ref.source 修订）",
+        "tests/unit/novel-import-settings-performance.test.ts（SP-12b/SP-14 计数排除定位请求）",
+        "543-IQ-25/IQ-51..IQ-53（真实目标）"
+      ],
+      "verificationKind": "NOVEL_IMPORT_TARGETED",
+      "status": "implemented-targeted-verified-real-target-met",
+      "evidence": [
+        "/private/tmp/shakeink-quality-542/evidence/q-r10/quality-readback.json（《诡秘之主》第一卷真实导入并保存后读回：全部作者可见文本批注命中 0；主题 男频/玄幻/长篇、8 个合法标签、卖点/受众/简介非空，authorPosition 为 null）",
+        "/private/tmp/shakeink-quality-542/evidence/q-r10/theme-panel.png、theme-panel-3.png（主题面板截图）",
+        "/private/tmp/shakeink-quality-542/evidence/q-r3/quality-readback.json、q-r8、q-r9（此前三次保存的作品，批注命中均为 0）",
+        "/private/tmp/shakeink-tabs-542/evidence/e2e-ch120/result.json（保存后的作品打开 120 个 tab：打开均值 79–86 ms、切换均值 88 ms，不随 tab 数增长；基线 baseline-ch60 为打开 150–267 ms、切换 200–252 ms）",
+        "/private/tmp/shakeink-tabs-542/full-3.txt（全量 npm test，与 539 基线按测试名比较）",
+        "/private/tmp/shakeink-tabs-542/browser-2.txt（ContentTabs 与导入向导浏览器用例）"
+      ],
+      "verificationLimits": [
+        "已保存的旧作品不做迁移，需重新导入或手动编辑（待用户确认是否需要修复工具）",
+        "ContentTabs 浏览器用例替换了 registry/StagedSaveSurface，只验证 TabPanelHost 层隔离；react-query 失效引起的面板内重渲染未单独优化",
+        "主题定位为导入推断，不写 authorPosition；篇幅按已导入章节计算，不推测全书"
+      ]
+    },
+    {
+      "id": "WN-01",
+      "requirement": "异常作品统一导航节点（用户 2026-11-10）：无法正常加载的作品以与正常作品相同的导航节点显示，图标为作品目录+感叹号合成图标，标题为柔和红（错误）/黄（警告）；右键与 … 菜单提供按异常类型的处理项（修复作品锁、重新加载作品）且始终有“删除”；任何作品都可删除（异常作品为仅从列表移除并删除关联对话，不改动目录文件）；正常作品菜单内容不变，增加右键入口",
+      "source": [
+        "docs/550-faulted-work-node-research.md",
+        "design/faulted-work-node/index.html",
+        "docs/551-faulted-work-node-plan.md",
+        "docs/551-faulted-work-node-plan-review.md",
+        "docs/552-faulted-work-node-cases.md",
+        "docs/552-faulted-work-node-cases-review.md",
+        "docs/553-faulted-work-node-code-review.md"
+      ],
+      "implementation": [
+        "desktop/shared/work-list.ts",
+        "desktop/service/work-unavailability.ts",
+        "desktop/service/workspaces.ts",
+        "desktop/service/dispatcher.ts",
+        "desktop/service/conversation-transfer.ts",
+        "src/lib/novel-list.ts",
+        "src/components/desktop/UnavailableWorks.tsx",
+        "src/components/desktop/FaultedWorkIcon.tsx",
+        "src/components/ui/context-menu.tsx",
+        "src/components/layout/sidebar-navigation-state.tsx",
+        "src/components/layout/SidebarHoverCard.tsx",
+        "src/components/layout/SidebarTree.tsx",
+        "src/app/desktop.css",
+        "src/components/desktop/DesktopCommandController.tsx"
+      ],
+      "testIds": [
+        "tests/unit/work-unavailability.test.ts WN-01'/02'",
+        "tests/integration/faulted-work-removal.test.ts WN-03..05,10..24,30..34,32a/b",
+        "tests/integration/works-loading.test.ts WL-01..04",
+        "tests/integration/desktop-worker.test.ts IPC-01 (WN-24)",
+        "tests/browser/works-loading.test.ts WN-40..60, WL-04..07",
+        "tests/browser/sidebar-navigation.test.ts SN-15 (WN-60), WN-41'",
+        "scripts/verify-faulted-work-nodes.mjs (真实目标系统)"
+      ],
+      "verificationKind": {
+        "单元": [
+          "WN-01'",
+          "WN-02'"
+        ],
+        "集成·真实库": [
+          "WN-03..23",
+          "WN-30..34"
+        ],
+        "集成·worker RPC": [
+          "WN-24"
+        ],
+        "界面·夹具": [
+          "WN-40..60"
+        ],
+        "真实目标系统（macOS）": [
+          "scripts/verify-faulted-work-nodes.mjs 19/19"
+        ],
+        "真实目标系统（Windows）": [
+          "待验收"
+        ]
+      },
+      "status": "implemented-verified-macos",
+      "evidence": [
+        "docs/faulted-work-node/evidence/real-target-report.json",
+        "docs/faulted-work-node/evidence/real-*.png",
+        "docs/faulted-work-node/evidence/browser-suite-comparison.txt",
+        "docs/faulted-work-node/evidence/unit-integration-comparison.txt"
+      ],
+      "verificationLimits": [
+        "界面用例使用 fetch 夹具，不代表 IPC/主进程/原生窗口已验证",
+        "WN-18′ ..%2F 由现有 requestSchema 提前拒绝，非 400（见 552 §G.4）",
+        "WN-15/34 的重新加入经服务层 works.open，未经原生“打开作品目录”选择器",
+        "Windows 原生验收未执行",
+        "真实目标系统为 macOS 开发构建（npm run build 后 electron .），非签名安装包；未断网运行，但应用默认无 HTTP 监听、无模型"
+      ]
+    },
+    {
+      "id": "NIC-01",
+      "requirement": "导入向导第21步核对冲突（用户 2026-11-12）：清楚展示冲突点（资料名、类别、中文字段名、矛盾说明、现在的设定与按正文应为的差异、卷章位置），给出以正文为准/保留现在的设定/自己填写这一项三种方案；可选的任一方案提交即解决该冲突、不调用模型、一致性复核通过，并能保存作品；不能保存的方案置灰并说明原因",
+      "source": [
+        "docs/557-import-conflict-choices-plan.md",
+        "docs/557-import-conflict-choices-plan-review.md",
+        "docs/558-import-conflict-choices-cases.md",
+        "docs/558-import-conflict-choices-cases-review.md",
+        "docs/559-import-conflict-choices-code-review.md"
+      ],
+      "implementation": [
+        "desktop/core/novel-import-conflict-choices.ts",
+        "desktop/shared/novel-import-field-labels.ts",
+        "desktop/shared/novel-import.ts",
+        "desktop/service/novel-import-ai.ts",
+        "desktop/core/novel-import-ai-payload.ts",
+        "desktop/main/novel-import.ts",
+        "src/components/desktop/NovelImportDialog.tsx",
+        "src/components/desktop/novel-import.css"
+      ],
+      "testIds": [
+        "tests/unit/novel-import-conflict-choices.test.ts CC-01..CC-33",
+        "tests/unit/novel-import-verify-review.test.ts CC-21..CC-24",
+        "tests/integration/novel-import-verify-publish.test.ts CC-06..08 real publish",
+        "tests/browser/novel-import.test.ts CC-30..CC-35, NI-U06 (CC-36)",
+        "tests/fixtures/novel-import-prompt-golden.json wizard-review-v1"
+      ],
+      "status": "implemented-verified-synthetic",
+      "verificationKind": {
+        "单元·控制器夹具": [
+          "CC-01..CC-33"
+        ],
+        "单元·适配层": [
+          "CC-21..CC-24"
+        ],
+        "集成·真实发布 PGlite": [
+          "CC-06..08 real publish ×3"
+        ],
+        "界面·夹具": [
+          "CC-30..CC-35",
+          "NI-U06"
+        ],
+        "真实目标系统（macOS）": [
+          "CC-40/41 未执行"
+        ]
+      },
+      "evidence": [
+        "node --test tests/unit/novel-import-conflict-choices.test.ts 25/25",
+        "tests/integration/novel-import-verify-publish.test.ts 9/9",
+        "tests/browser/novel-import.test.ts 16/16",
+        "tests/browser/novel-import-wizard.test.ts 45/45",
+        "相关导入套件 148/148",
+        "全量 npm test 4717/4761，44 项失败与既有基线一致（ROOT11-07 单独重跑通过）",
+        "CC-12 撤回 R2 修复时失败、恢复后通过"
+      ],
+      "verificationLimits": [
+        "控制器用例的模型为合成桩，复核结论不代表真实模型输出",
+        "CC-40/41（《诡秘之主》第一卷开发构建真实运行、截图与读回）未执行，需要可用模型账户"
+      ]
+    },
+  {
+    "id": "SD-01",
+    "requirement": "导入作品在任何条件和进度下都允许停止导入并删除这次导入（用户 2026-11-12，附截图：第 22 步已暂停，无法保存、停止或删除）；保存已开始时，作品已写入则只删导入草稿、保留作品，保存未完成则清理本次导入在目标目录写入的半成品；第 22 步继续保存不再索取发送正文授权；.DS_Store 不使目录视为非空",
+    "source": [
+     "docs/560-import-stop-after-save-plan.md",
+     "docs/560-import-stop-after-save-plan-review.md",
+     "docs/561-import-stop-after-save-cases.md",
+     "docs/562-import-stop-after-save-cases-review.md",
+     "docs/563-import-stop-after-save-code-review.md",
+     "docs/564-import-stop-after-save-summary.md"
+    ],
+    "implementation": [
+     "desktop/main/novel-import.ts",
+     "desktop/main/index.ts",
+     "desktop/shared/novel-import.ts",
+     "desktop/service/workspaces.ts",
+     "desktop/service/work-creation-reservations.ts",
+     "desktop/service/novel-import-discard.ts",
+     "desktop/service/index.ts",
+     "src/lib/desktop/novel-import.ts",
+     "src/components/desktop/NovelImportWizard.tsx",
+     "src/components/desktop/NovelImportDialog.tsx"
+    ],
+    "testIds": [
+     "tests/unit/novel-import-stop-after-save.test.ts SD-01..SD-19b, SD-50u, SD-50e",
+     "tests/integration/novel-import-discard.test.ts SD-20..SD-33b",
+     "tests/unit/novel-import-integration.test.ts SD-31, SD-35",
+     "tests/unit/novel-import-close-confirmation.test.ts SD-34, NICC-02",
+     "tests/unit/novel-import-abandon.test.ts IA-12a",
+     "tests/browser/novel-import-wizard.test.ts SD-40..SD-47c",
+     "tests/browser/novel-import-abandon.test.ts IA-B08b, NICC-B13",
+     "scripts/verify-import-stop-after-save.mjs SD-13r, SD-43r, SD-50..SD-52b"
+    ],
+    "status": "implemented-verified-real-target-macos",
+    "verificationKind": {
+     "单元·控制器夹具": [
+      "SD-01..SD-19b",
+      "SD-50u",
+      "SD-50e",
+      "SD-34"
+     ],
+     "集成·真实 Workspaces/PGlite": [
+      "SD-20..SD-33b"
+     ],
+     "单元·worker 真实回调与主进程接线": [
+      "SD-31",
+      "SD-35（接线以 AST 抽取验证，非端到端）"
+     ],
+     "界面·夹具": [
+      "SD-40..SD-47c",
+      "IA-B08b",
+      "NICC-B13"
+     ],
+     "真实目标系统（macOS 构建版，隔离数据根，仅拷贝、无模型）": [
+      "SD-13r",
+      "SD-50u",
+      "SD-50a",
+      "SD-50",
+      "SD-43r",
+      "SD-51",
+      "SD-52a",
+      "SD-52",
+      "SD-52b"
+     ],
+     "未执行": [
+      "Windows 原生验收",
+      "签名安装包",
+      "用户真实草稿（未改动，仅只读核对）"
+     ]
+    },
+    "evidence": [
+     "docs/560-import-stop-after-save-evidence/real-target-report.json",
+     "docs/560-import-stop-after-save-evidence/real-step22-paused.png",
+     "docs/560-import-stop-after-save-evidence/real-step22-stop-confirm.png",
+     "docs/560-import-stop-after-save-evidence/real-step22-completed.png"
+    ]
+  },
+  {
+    "id": "NI-20",
+    "requirement": "删除作品后重新导入同一小说，选择原来已清空的保存目录时不再报“保存目录不能与来源或应用目录重叠”（用户 2026-11-11）；导入或新建作品时，所选目录为空或不含本项目作品存储文件，即使以前用过/导入过，也允许继续使用",
+    "source": [
+      "docs/567-reused-empty-import-target-plan.md",
+      "docs/567-reused-empty-import-target-plan-review.md",
+      "docs/568-reused-empty-import-target-cases.md",
+      "docs/568-reused-empty-import-target-cases-review.md",
+      "docs/569-reused-empty-import-target-code-review.md"
+    ],
+    "implementation": [
+      "desktop/service/workspaces.ts",
+      "desktop/service/conversation-runtime.ts",
+      "desktop/service/local-response.ts",
+      "desktop/service/index.ts",
+      "scripts/verify-reused-import-target.mjs"
+    ],
+    "testIds": [
+      "568-RT-01..RT-23",
+      "tests/unit/reused-import-target.test.ts",
+      "567-3R LR-01..LR-08",
+      "tests/unit/service-local-response-release.test.ts",
+      "568-RT-R1/RT-R2（真实目标）"
+    ],
+    "verificationKind": "NOVEL_IMPORT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "tests/unit/reused-import-target.test.ts 22/22 通过（修复前 RT-11 复现原报错）",
+      "tests/unit/service-local-response-release.test.ts 8/8 通过（LR-07 对改前 start() 失败）",
+      "docs/567-reused-empty-import-target-evidence/real-target-report.json（构建版应用、隔离数据根、仅复制正文无模型：导入→侧边栏删除→未清空仍报重叠→清空后接受→再次导入保存成功、列表仅一部作品→重启后 1 部作品 0 异常；6/6 PASS）",
+      "docs/567-reused-empty-import-target-evidence/rt-r2-not-emptied-refused.png、rt-r1-emptied-accepted.png、rt-r1-after-reimport.png",
+      "/private/tmp/shakeink-reuse-567/full-4.txt（全量 npm test 4856 项，42 项失败均在修复前基线失败集合内，无新增）"
+    ],
+    "verificationLimits": [
+      "目录预留记录不删除；只调整受保护目录判定",
+      "普通删除后清空目录再新建作品时，旧作品记录从列表移除并删除其关联对话（用户 2026-11-11 选择）",
+      "用户手动清空仍在使用的作品目录后，该目录也可被新作品使用，旧记录随之移除",
+      "本地服务只对非流式响应提前读完正文；对话/生成等流式响应生命周期不变",
+      "失败的全量用例与修复前基线相同（docs/569 记录）；LP-29、NI-LB07 为负载敏感用例，单独运行通过",
+      "未读取正文的响应占用请求名额直到关闭服务（早于本项，docs/569 3R 中1，待用户决定）"
+    ]
+  },
+  {
+    "id": "WL-586",
+    "requirement": "世界线事件表视图中时间轴标签不应只显示到年，应根据时间轴缩放程度显示到年、月、日、上午/下午或时分（用户 2026-11-18）；缩放改为按时间拉伸（用户同日选择）",
+    "source": [
+      "docs/586-worldline-table-rail-precision-plan.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/WorldlineToolbar.tsx",
+      "src/components/content/planning/worldline/worldline.module.css",
+      "src/components/content/planning/PlanningWorkspace.tsx"
+    ],
+    "testIds": [
+      "586-RL-01..RL-07",
+      "tests/unit/worldline-layout.test.ts",
+      "586-RL-B1..RL-B5",
+      "tests/browser/planning-worldline-table-rail.test.ts",
+      "WU-19c/WU-19j/WU-45/WU-47b/CP-08（迁移）",
+      "586-E 层 rail-586（真实目标）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "tests/unit/worldline-layout.test.ts 52/52 通过",
+      "tests/browser/planning-worldline-table-rail.test.ts 5/5，planning-worldline-table-scale 与 canvas 合计 24/24 通过",
+      "世界线与卡片菜单浏览器用例 138 项中仅 CM-02/03/06/10 失败，改前 HEAD 同样失败",
+      "全量 npm test 4997 项、43 项失败；失败文件在改前 HEAD（链接生成的 Prisma 客户端后）同样失败，无新增",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/rail-586/<label>/result.json 与截图（构建版应用、隔离根、两份《诡秘之主》第 1 卷导入、无模型调用）：复位为上下午档，放大到时分、缩小到年，档位单调，主段相邻可见标签不重复，年档只剩年徽章，正常退出"
+    ],
+    "verificationLimits": [
+      "档位按整张表统一按 k 选；圆点仍按段内首尾线性插值，实际密度与 k 有偏差（docs/586 已知取舍）",
+      "单个时间间隔拉伸封顶 240px",
+      "一次渲染前多次 Ctrl + 滚轮越过边界可能留下滚动锚点（改前已存在，未处理）",
+      "窄栏 5 位以上年份的月档文字约超出 4px"
+    ]
+  },
+  {
+    "id": "WL-587",
+    "requirement": "导入作品的世界线需补齐事件层次（有关联的事件归到同一父事件下）、事件类型与重要度（用户 2026-11-18，以《诡秘之主》第 1 卷、只选世界线验证）",
+    "source": [
+      "docs/587-worldline-import-hierarchy-plan.md",
+      "docs/587-worldline-import-hierarchy-plan-review.md",
+      "docs/587-worldline-import-hierarchy-code-review.md"
+    ],
+    "implementation": [
+      "desktop/core/novel-import-wizard-grouping.ts",
+      "desktop/main/novel-import.ts",
+      "desktop/service/novel-import-ai.ts",
+      "desktop/core/novel-import-ai-payload.ts",
+      "desktop/service/novel-import-publish.ts",
+      "desktop/core/novel-import-semantics.ts",
+      "desktop/core/novel-import-wizard-state.ts",
+      "desktop/core/novel-import-wizard-checks.ts",
+      "desktop/core/novel-import-wizard-timeline.ts",
+      "desktop/core/novel-import-runtime-proof.ts"
+    ],
+    "testIds": [
+      "587-WG-01..WG-26",
+      "tests/unit/novel-import-worldline-grouping.test.ts",
+      "587-WG-11/WG-12/WG-14",
+      "tests/unit/novel-import-worldline-timeline.test.ts",
+      "587-WG-13/WG-16/WG-30..WG-38",
+      "tests/unit/novel-import-lines-performance.test.ts",
+      "587-WG-20",
+      "tests/integration/novel-import-wizard-publish.test.ts",
+      "587-WG-R1..WG-R4（真实目标）"
+    ],
+    "verificationKind": "IMPORT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-partially-met",
+    "evidence": [
+      "tests/unit/novel-import-worldline-grouping.test.ts 17/17 通过（含 fixed/gregorian 各 5000 组固定种子模糊测试，发布数据均通过 validatePlanning）",
+      "全量 npm test 5027 项、44 项失败，均为改前 HEAD 4d61712 基线失败；LP-30 为负载下的计时用例，14 路并行时 HEAD 与改后均 12/14 失败",
+      "prompt golden --check 通过：只新增 legacy-scene:analyze/grouping/worldline/// 一个键，其余 25 组逐字节不变",
+      "npm run typecheck 与 npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/import-runs/evidence/wg-r1（隔离根、构建版应用、第 1 卷、只选世界线，第一次运行）：保存 1061 个事件，61 个父事件，690 个事件（65%）有父事件，组大小 2–62（中位 9）；类型非“其他” 69%；重要度 1/2/3 为 394/483/184；归组 2 段并行 180 s，无丢弃；第 17 步 13 min（wu91-r2 为 12 min 23 s）",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/587/shots：时间线与事件表显示父事件框与子事件；事件编辑器类型下拉为“揭示”、重要程度“重要”",
+      "20 个组抽查（只看父名与成员名）未见明显错归"
+    ],
+    "verificationLimits": [
+      "“其他”仍占 31%，未达 <20% 目标；未按配额调提示词",
+      "最大两组 62 与 35 个成员，可能合并了多件事",
+      "window 祖先下跨度超过一天的 exact 家族可能差 1 ulp 无法发布（HEAD 同样不能发布，只在第 21 步手工改为 window 时出现）",
+      "worldGrouped.parents 与 precisions 上限 5000，全书导入未验证",
+      "已导入的作品不会自动更新，需重新导入"
+    ]
+  },
+  {
+    "id": "WL-588",
+    "requirement": "世界线事件表视图支持两种时间轴模式：对齐（事件日期与卡片头部同一水平线）与等距（现有），右上角切换按钮随时切换，默认对齐；父事件卡片占满分组框宽度与顶部；悬停时间轴日期时标签、圆点、引线与卡片一起高亮（用户 2026-11-18，设计稿三轮修改后审核通过）；对齐模式默认显示每张卡片的日期，不去重隐藏，日期文字与事件目录相同（用户验收 2026-11-19）",
+    "source": [
+      "docs/588-worldline-table-rail-modes-research.md",
+      "design/worldline-rail-modes/index.html",
+      "docs/588-worldline-table-rail-modes-plan.md",
+      "docs/588-worldline-table-rail-modes-plan-review.md",
+      "docs/588-worldline-table-rail-modes-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/EventCard.tsx",
+      "src/components/content/planning/worldline/worldline.module.css",
+      "src/components/content/planning/PlanningWorkspace.tsx"
+    ],
+    "testIds": [
+      "588-RM-01..RM-08（含 RM-01b、RM-05b）",
+      "tests/unit/worldline-layout.test.ts",
+      "588-RM-B1..RM-B8（含 RM-B2b、RM-B4b）",
+      "tests/browser/planning-worldline-table-rail-modes.test.ts",
+      "WU-19j/RL-02/CW-11/RL-B1..B5/WU-45/WU-44/WU-44b（迁移）",
+      "588-RM-09 / RM-E1..E4（真实目标 rail-588）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "tests/unit/worldline-layout.test.ts 63/63 通过",
+      "世界线浏览器用例 143/143 通过（新文件 10/10；RM-B4、RM-B6、RM-B8 经变异检查：去掉对应实现时失败）",
+      "全量 npm test 5036 项、43 项失败，失败名单均在 docs/587 基线中，无新增",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/588/e2/result.json 与截图（构建版应用、隔离根、LOTM-587-wg-r1、无模型调用）：默认对齐 100%；五个滚动位置圆点与卡片头偏差 0px（调研前中位 173px）；切换等距再切回卡片位置不变，等距复位为年档；悬停标签卡片高亮并出现参考线；标题栏与框对齐、高 36；回退圆点 61 个，与纯函数 backs-588.json 一致；正常退出"
+    ],
+    "verificationLimits": [
+      "对齐模式时间轴不单调，回退以 ↺、空心圆点与虚线表示",
+      "对齐模式缩放只改卡片间距，不改标签精度",
+      "滚动中顶到视口顶部的分组标题栏右端约 170px 会被切换按钮遮住，滚动可避开",
+      "等距模式圆点端点改读卡片头，展开卡片时移动 ≤ 5px"
+    ]
+  },
+  {
+    "id": "NI-590",
+    "requirement": "导入作品时，导入世界线与导入叙事线出错不再立即停下等待[重试]，而是自动重试：同一处最多 5 次，间隔 0/1/2/4/8 秒（用户 2026-11-19 选定第 5 次 8 秒）；该处通过后计数清零，下一处从第 1 次计；5 次仍失败则停下并显示[重试]，点[重试]后同样最多自动重试 5 次（用户 2026-11-19）",
+    "source": [
+      "docs/590-line-step-auto-retry-plan.md",
+      "docs/590-line-step-auto-retry-plan-review.md",
+      "docs/590-line-step-auto-retry-code-review.md"
+    ],
+    "implementation": [
+      "desktop/main/novel-import.ts"
+    ],
+    "testIds": [
+      "590-AR-00..AR-16（AR-09/AR-10、AR-08/AR-12 合并；AR-13 由既有 OP 用例覆盖）",
+      "LP-08b/LP-08c/LP-10/LP-15b/WT-32/WG-31/WG-32/WG-13（按新行为更新）",
+      "tests/unit/novel-import-lines-performance.test.ts"
+    ],
+    "verificationKind": "IMPORT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-not-run",
+    "evidence": [
+      "tests/unit/novel-import-lines-performance.test.ts 59/59 通过（连续两次）",
+      "全量 npm test 5071 项、44 项失败；失败文件逐个单独重跑，与改前干净 HEAD c0e98c9 worktree 相同或 HEAD 失败更多（novel-import-wizard-publish HEAD 5 项失败、改后 1 项卡在 detect-scene；root-startup 改后单独 8/8 通过），无本改动引入的失败",
+      "tsc --noEmit 通过"
+    ],
+    "verificationLimits": [
+      "真实目标未执行：步骤 17/18 的自然失败无法按需触发，正式代码不加故障注入；自动重试路径只有单元用例证据",
+      "多处轮流失败时总尝试次数上限为 5×出错位置数；每次尝试重算批内额外请求预算，最坏请求数约为原来的 6 倍",
+      "步骤收尾（记录修复项、进入下一步）的失败不自动重试，避免重跑时跳过下一步"
+    ]
+  },
+  {
+    "id": "WL-591",
+    "requirement": "世界线顶部图例：点击取消某个事件类型或重要度（一般/重要/关键）后，画布中不显示这一类事件并重新排版（原为置灰）；父事件被取消时整组不显示；左侧事件目录同步筛选（用户 2026-11-19）",
+    "source": [
+      "docs/591-worldline-legend-filter-plan.md",
+      "docs/591-worldline-legend-filter-plan-review.md",
+      "docs/591-worldline-legend-filter-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/components/content/planning/PlanningWorkspace.tsx",
+      "src/components/content/planning/worldline/WorldlineToolbar.tsx",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/EventTimeline.tsx",
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "591-LF-01..LF-06",
+      "tests/unit/worldline-layout.test.ts",
+      "591-LF-B1..LF-B4、LF-B9、WU-33/WU-34（改）",
+      "tests/browser/planning-worldline-table.test.ts",
+      "591-LF-B5..LF-B8、LF-B7b、WU-09e/WU-34b（改）",
+      "tests/browser/planning-worldline-workspace.test.ts",
+      "WU-21b（改）",
+      "591-LF-R1（真实目标 lf-r1）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "tests/browser/planning-worldline-*.test.ts 153/153 通过；tests/unit/worldline-layout.test.ts 69/69 通过；tsc 与 npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/591/lf-r1（隔离根、构建版应用、LOTM-587-wg-r1 1061 个事件、无模型调用）：取消“其他”显示 717/1061，事件表高度 51598→32640px，重排 84 ms；再取消“一般”561/1061、25135px、68 ms、无重要度 1 圆点；“显示全部”147 ms 恢复到初始高度；截图 0–4"
+    ],
+    "verificationLimits": [
+      "图例计数仍按全部事件计；状态栏显示“显示 X / 共 Y”",
+      "编辑、保存或定位到被筛掉的事件时，自动恢复该事件及祖先的类型与重要度并提示"
+    ]
+  },
+  {
+    "id": "WL-592",
+    "requirement": "世界线收起卡片标题最多两行；时间线滚轮缩小时卡片随之缩小（最小 0.75），一般事件改为时间点（重要度圆点 + 日期 + 渐隐短标题，灰色、无卡片），再缩小父事件自动折叠，缩到最小只留关键事件为卡片；事件表与时间线中子事件折叠的父事件画成四角圆角、下方两层的层叠卡；时间线悬停卡片或时间点时其日期与标尺同一时间高亮（用户 2026-11-20，设计稿审核三轮后批准）",
+    "source": [
+      "docs/592-worldline-card-zoom-stack-research.md",
+      "design/worldline-card-zoom/index.html",
+      "docs/592-worldline-card-zoom-stack-plan.md",
+      "docs/592-worldline-card-zoom-stack-plan-review.md",
+      "docs/592-worldline-card-zoom-stack-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts",
+      "src/lib/planning/worldline-viewport.ts",
+      "src/components/content/planning/PlanningWorkspace.tsx",
+      "src/components/content/planning/worldline/EventTimeline.tsx",
+      "src/components/content/planning/worldline/EventCard.tsx",
+      "src/components/content/planning/worldline/EventPoint.tsx",
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/components/content/planning/worldline/WorldlineToolbar.tsx",
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "592-ZP-01..ZP-16、ZP-01b（tests/unit/worldline-layout.test.ts）",
+      "592-ZB-01..ZB-27、ZB-05b（tests/browser/planning-worldline-card-zoom.test.ts，夹具 zoomView / F60 / F885）",
+      "WU-35、WU-41/42/48、RM-B5、WU-19j/RM-01/RM-01b（改，需求导致）",
+      "592-E8（真实目标 e8 + fade-592）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "浏览器夹具（内存 API，非真实目标）：tests/browser/planning-*.test.ts 191 项，187 通过，4 项失败为改动前基线已有的 CM-02/03/06/10；tests/unit/worldline-layout.test.ts 86/86；npm test 5093 项中 44 项失败与 docs/587 记录的基线逐条相同；tsc 与 npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/592/e8（隔离根、构建版应用、LOTM-587-wg-r1 1061 个事件、无模型调用、只滚轮/悬停/读 DOM）：复位视窗约 1178 年为第 5 级，21 张卡片 + 74 个时间点 + 21 张层叠卡，状态行“313 个一般和重要事件显示为时间点”；逐级放大 46 步无“视图内没有事件”；第 3 级起状态行“164 个一般事件…”，第 2 级“384 个…”，d > 46 后无时间点；卡片系数 0.75→1；悬停 19 个目标帧间隔 p50 16.7 / p95 18.3 / 最大 18.7 ms，标尺胶囊与竖线出现；窄面板事件表 25 张两行卡，折叠后出现层叠卡；作品版本前后均为 1",
+      "fade-592.json：真实字体下一行估算被渐隐的卡片 0 张（另 19 张为构建范围边缘被裁短的卡片，与估算无关）"
+    ],
+    "verificationLimits": [
+      "现有时间线浏览器用例在测试夹具中关闭缩放分级运行（TimelineZoomLevelsContext=false，docs/592 §7.1），不覆盖分级打开时的行为；分级打开时由 ZB-* 与真实目标 e8 覆盖",
+      "父事件不能被拖到其子事件之外（规划数据校验，非本次范围）；ZB-12 的保存检查在叶子事件上进行",
+      "数值阈值（d = 160 / 40 / 10 / 2.5 px、最小系数 0.75）按设计稿批准值，未做用户可调设置"
+    ]
+  },
+  {
+    "id": "WL-594",
+    "requirement": "世界线时间线：鼠标悬停在收起成时间点的事件上时显示完整标题，标题浮在其他事件卡片之上，位置不变（用户 2026-11-20）",
+    "source": [
+      "docs/594-worldline-point-hover-title-plan.md",
+      "docs/594-worldline-point-hover-title-plan-review.md",
+      "docs/594-worldline-point-hover-title-code-review.md"
+    ],
+    "implementation": [
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "594-ZB-34（r3 / r8）、ZB-35、ZB-36（tests/browser/planning-worldline-card-zoom.test.ts，夹具 zoomView，内存 API）",
+      "594-H1（真实目标 hover-594.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "浏览器夹具（内存 API，非真实目标）：去掉 docs/594 CSS 时 ZB-34/35/36 共 4 项全部失败，加上后全部通过；tests/browser/planning-*.test.ts 201 项，197 通过，4 项失败为 WL-592 记录的基线 CM-02/03/06/10；tsc 通过；npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/594/h1（隔离根、构建版应用、LOTM-587-wg-r1、无模型调用、只滚轮/悬停/读 DOM）：d ≈ 12.9（只有一般事件为时间点），4 个完整标题会压住卡片的长标题时间点：悬停后标题宽 94 → 168–281px、不再截断，圆点/日期/标题左边缘位移 0，外层 z-index 8，衬底为 --background；被压住的点悬停前命中卡片、悬停后命中时间点；移开后恢复渐隐；作品版本前后均为 1；截图 0–3-hover.png"
+    ],
+    "verificationLimits": [
+      "画布右边缘（.lane overflow: clip）仍会截断伸长的标题，靠原生 title 提示兜底",
+      "悬停时按在伸长的标题上选中该时间点，而不是下面的卡片（标题在最上层的结果）"
+    ]
+  },
+  {
+    "id": "WL-595",
+    "requirement": "世界线时间线右下角小地图大部分区域没有事件标记（缺陷，用户 2026-11-20）",
+    "source": [
+      "docs/595-worldline-minimap-segments-plan.md",
+      "docs/595-worldline-minimap-segments-plan-review.md",
+      "docs/595-worldline-minimap-segments-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts"
+    ],
+    "testIds": [
+      "595-MM-01..MM-03（tests/unit/worldline-layout.test.ts）",
+      "595-MM-B1（tests/browser/planning-worldline-minimap.test.ts，夹具 30 段，内存 API，1440 / 820px）",
+      "595-E1（真实目标 mini-595.mjs before / after）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified",
+    "evidence": [
+      "单元：MM-01..03 在 HEAD 的 minimapModel 下失败，修改后通过；tests/unit/worldline-layout.test.ts 94/94；tsc 通过；npm test 5102 项 45 项失败，全部在与世界线无关的文件（导入审计、打包、备份移除、关闭作品等），unit/integration 中只有 worldline-layout.test.ts 引用改动模块",
+      "浏览器夹具（非真实目标）：MM-B1 在 HEAD 的 minimapModel 下失败（标记画在别的段），修改后通过；planning-*.test.ts 203 项 198 通过，失败为基线 CM-02/03/06/10 与负载相关的 ZB-20（新旧代码各 6 次交替运行均为 3 过 3 败，p95 均约 33ms）",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/595/before 与 after（隔离根、构建版应用、LOTM-587-wg-r1 371 个根事件、30 段、只读 DOM 与点击小地图、无模型调用、作品版本不变）：修改前 262/371 个标记在自己的段框内、25/30 个段框有自己的标记、2px 槽位 30、段间距 406px；修改后 371/371、30/30、槽位 137、间距 84px、最窄段 4px；窄面板（265px）371/371、槽位 101"
+    ],
+    "verificationLimits": [
+      "点击窄段（多为 4px）时视窗常跳不到该段：框外点击用 left = px − 半框宽，属于原有交互；真实目标点击 3 个段中 1 个命中。由 WL-596（小地图上下左右移动）改为以点击处为视窗中心并补用例",
+      "视窗落在段内没有根事件开始的部分或段间空档时，视窗框夹在段边（最小 8px）"
+    ]
+  },
+  {
+    "id": "WL-596",
+    "requirement": "世界线时间线小地图允许上下左右移动视口，高度适当增加（用户 2026-11-20；选择“全时间轴 + 当前排版纵向”、高 120px）",
+    "source": [
+      "docs/596-worldline-minimap-2d-plan.md",
+      "docs/596-worldline-minimap-2d-plan-review.md",
+      "docs/596-worldline-minimap-2d-code-review.md"
+    ],
+    "implementation": [
+      "src/components/content/planning/worldline/EventTimeline.tsx",
+      "src/components/content/planning/worldline/worldline.module.css",
+      "tests/helpers/worldline-browser-fixture.ts"
+    ],
+    "testIds": [
+      "596-MM-B2..B9、MM-B4b、MM-B4c（tests/browser/planning-worldline-minimap.test.ts，夹具 F60 / withChanges / mm30，内存 API）",
+      "ZB-30、WU-66f、WU-56/56b（改，需求导致）",
+      "596-E1（真实目标 mini2d-596.mjs r1；mini-595.mjs after-596 回归）"
+    ],
+    "verificationKind": "WORLDLINE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met",
+    "evidence": [
+      "浏览器夹具（非真实目标）：新用例在改动前全部失败；MM-B9 关掉编辑器边距改动时失败；planning-*.test.ts 213 项，最后一轮 207 通过，失败为基线 CM-02/03/06/10 与负载相关的 WU-40b、ZB-20（单独运行各 3/3 通过）；CP-07 长任务由改动初版的 15–19 降到 1–5（与旧代码交替运行相同）；tsc、npm run build 通过",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/596/r1（隔离根、构建版应用、LOTM-587-wg-r1、无模型调用、作品版本不变）：小地图高 120；复位视图内容高 3747、可见 993，拖动视窗框 (+60, +25) 时 y 变化 −1040.8（期望 −1040.8）；放大后三次点击：均改了时间，构建范围内的点击改了 y，远处点击 y 不变；截图 0-initial、1-after-clicks、2-minimap",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/595/after-596：371/371 个标记在自己段框内、30/30 段框有标记、窄面板 371/371（docs/595 结果保持）"
+    ],
+    "verificationLimits": [
+      "纵向只描述当前构建范围（视窗左 3 屏、右 4 屏）的排版；隐藏和范围外的根事件画在底行；跳到构建范围外的点击只改时间",
+      "macOS 应用菜单把 Escape 绑定为“停止生成”，真实应用中拖动时 Esc 到不了页面（现有行为，画布平移同样）；Esc 恢复只由浏览器夹具 MM-B7 验证"
+    ]
+  },
+  {
+    "id": "TXT-598",
+    "requirement": "所有可框选文本（输入框、不可编辑但可框选的文本、AI 对话消息）可用 Cmd/Ctrl+C 复制；输入框还可 Cmd/Ctrl+V 粘贴、X 剪切、Shift+V 纯文本粘贴、A 全选、Z / Shift+Z（Ctrl+Y）撤销重做；不可编辑文本只复制（用户 2026-11-21；范围经用户选择“剪贴板 + 全选 + 撤销/重做”）",
+    "source": [
+      "docs/598-text-clipboard-shortcuts-plan.md",
+      "docs/598-text-clipboard-shortcuts-plan-review.md",
+      "docs/598-text-clipboard-shortcuts-code-review.md"
+    ],
+    "implementation": [
+      "src/components/desktop/DesktopCommandController.tsx",
+      "src/lib/desktop/text-shortcuts.ts",
+      "src/lib/desktop/text-shortcut-source.ts",
+      "src/lib/desktop/command-targets.ts",
+      "src/lib/desktop/monaco-text-context.ts"
+    ],
+    "testIds": [
+      "TS-01..05（tests/unit/text-shortcuts.test.ts）",
+      "CTRL598-01..08（tests/unit/desktop-command-controller.test.ts）",
+      "MONACOCTRL48-06/07（改，需求导致）",
+      "TSB-01..07、TSM-01..04（tests/browser/text-shortcuts.test.ts，CDP 按键不带编辑命令，安装版命令目录，内存剪贴板桥）",
+      "TSB-08（HEAD 控制器对照）",
+      "598-E1..E13（真实目标 e2e-598.mjs r6）"
+    ],
+    "verificationKind": "TEXT_SHORTCUT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "evidence": [
+      "根因（真实应用，sendInputEvent 按键）：setIgnoreMenuShortcuts(true) 且菜单 text.* 无 role，macOS 无原生编辑来源；控制器对未改动的文本键交给原生、none 作用域不启用 text 命令。改动前输入框、消息输入框、Monaco、对话消息 Cmd+C/V 均无效果",
+      "浏览器夹具（非真实目标）：tests/browser/text-shortcuts.test.ts 11/11 通过；对照 HEAD 控制器 TSB-01/02/03/05/07、TSM-01/02/03 失败，TSB-04/06（不复制守护）通过",
+      "既有浏览器回归 9 个文件 173/173 通过（api-key-clipboard、text-context-menu、text-selection、text-selection-cards、chat-empty-state、composer-clipboard、composer-clipboard-review、desktop-modal-commands-review、monaco-text-context）",
+      "单元：控制器相关 6 个文件 43/43 通过；npm test 全量失败项均为 HEAD 基线已失败的导入/启动用例（HEAD 工作树 /private/tmp/shakeink-598-base 对照，3 个仅本次失败的用例单独重跑在两边均通过，root-startup 在 HEAD 单跑 7 项失败）；tsc、npm run build 通过",
+      "真实目标 ~/shakeink-test-roots/copy-paste-598/evidence/r6（构建版、隔离根、复制的 WL-wl-base1、无模型调用）：E1 用户资料笔名 C/V/Z/A/X；E2 消息输入框 C/V/Z/Shift+Z/A/X/Shift+V；E3 Markdown 编辑器 C/V/Z/A/X；E4 正文预览拖选复制；E5 跨两条已存储对话消息复制；E6 单条 assistant 消息复制且 V/X/Z 不改变；E7 下拉菜单搜索框 C/V；E8 设置中删除 Cmd+C 后不复制、重新录制提示与 suggestWidgetCopy 冲突、恢复默认后复制；E9 由 TSB-04 覆盖；E10 外观数字输入框粘贴；E11 API Key 遮罩框不复制不剪切；E12 Monaco 查找框粘贴不改正文；E13 录制中 Cmd+C 被录制而不复制。全部 PASS；作品 Chapter 内容 md5 与源作品一致，证据无 Key"
+    ],
+    "verificationLimits": [
+      "真实目标的窗口聚焦为模拟：BrowserWindow.prototype.isFocused 打桩 + CDP Emulation.setFocusEmulationEnabled（会话无法让窗口成为前台）",
+      "Windows 未在真实目标验证：捕获阶段处理后取代 Blink 原生 Ctrl+C/V；无来源时 Ctrl+A 不再全选整页",
+      "AI 对话消息为写入隔离作品数据库的已存储消息，未经模型生成",
+      "改绑为多键组合的 text 命令在 none 作用域（静态文字、对话消息）不生效",
+      "禁用输入框内的选区不支持快捷键复制（右键菜单可以）",
+      "焦点在下拉选项上、背景有可选文字选区时 Cmd+C 复制该选区",
+      "只读 Monaco、世界线搜索框只在浏览器夹具验证；E9（对话框屏障）只在浏览器夹具验证",
+      "已知风险（未处理）：markdown 渲染不做 sanitize（src/lib/markdown.ts:22），CSP unsafe-inline；本次未新增 IPC"
+    ]
+  }
   ],
   "developmentRecordUpdated": "2026-10-09",
   "acceptanceNote": "正式桌面与业务531项仍not-run；development与正式验收status/evidence分开，不能由单元、浏览器、模拟OS、受控picker或部分native脚本推断整条通过。",
@@ -5203,5 +6799,1733 @@
       "fullSuite": "2251 tests / 2194 passed / 40 failed（P1 收紧前执行）；P1 收紧后受影响用例已复跑：unit 9/9、interaction-stale-terminal 2/2、story-navigation-refresh 7/7、browser 31/31。40 条失败均为基线既有平台/环境问题（macOS 签名、Windows 路径分隔符、重型桌面/OPT 用例超时），已用 git stash 基线复跑 3 条代表性失败确认与本次无关"
     },
     "limits": "未做真实 Electron 安装包验证；CES-12 仅覆盖本地 fixture，不覆盖真实 conversationId 下的查看最新选项按钮；!answer 与内容失效仍合并为同一终态（UI 不会产生非标准回答文本），未新增回答格式错误码"
+  },
+  "novelImportRevision": {
+    "date": "2026-10-25",
+    "uiRevision": "v4",
+    "userApproval": "UI 设计审核通过，可以继续",
+    "approval": "design/novel-import/approval-v4.json",
+    "stage": "implementation-and-scoped-verification-finished",
+    "fullSuiteProhibited": true,
+    "plan": "docs/novel-import/06-technical-plan.md",
+    "planReview": "docs/novel-import/07-technical-review.md",
+    "tests": "docs/novel-import/08-test-cases.md",
+    "status": "implemented-macos-verified-external-targets-pending",
+    "testReview": "docs/novel-import/09-test-review.md",
+    "implementation": "docs/novel-import/10-implementation.md",
+    "codeReviews": [
+      "docs/novel-import/11-review-engine.md",
+      "docs/novel-import/11-review-ui.md",
+      "docs/novel-import/11-review-runtime.md",
+      "docs/novel-import/11-review-publish.md"
+    ],
+    "verification": "docs/novel-import/12-verification.md",
+    "summary": "docs/novel-import/13-summary.md",
+    "automatedTests": {
+      "tests": 58,
+      "pass": 58,
+      "fail": 0,
+      "skipped": 0
+    },
+    "nativeMacOS": "passed",
+    "windows": "not-executed",
+    "realProvider": "not-executed",
+    "newInstaller": "not-built-or-executed",
+    "fullSuiteExecuted": false
+  },
+  "novelImportSourcePickerRevision": {
+    "date": "2026-10-26",
+    "requirement": "单一导入入口，由实际来源类型区分多文件/文件夹；macOS原生、Windows统一界面",
+    "status": "implemented-targeted-verified",
+    "uiApproval": "用户明确回复UI审核通过，继续技术方案与实现",
+    "documents": [
+      "docs/novel-import/17-cross-platform-picker-product.md",
+      "docs/novel-import/18-cross-platform-picker-ui.md",
+      "docs/novel-import/19-cross-platform-picker-ui-review.md",
+      "docs/novel-import/20-cross-platform-picker-technical.md",
+      "docs/novel-import/21-cross-platform-picker-technical-review.md",
+      "docs/novel-import/22-cross-platform-picker-tests.md",
+      "docs/novel-import/23-cross-platform-picker-test-review.md",
+      "docs/novel-import/24-cross-platform-picker-code-review.md",
+      "docs/novel-import/25-cross-platform-picker-verification.md",
+      "docs/novel-import/26-cross-platform-picker-summary.md"
+    ],
+    "tests": {
+      "unit": 28,
+      "browser": 6,
+      "failed": 0,
+      "fullSuiteRun": false
+    },
+    "evidence": "docs/novel-import/evidence/cross-picker-verification.json",
+    "limits": [
+      "Windows真实目标机未执行",
+      "新安装包未构建/运行",
+      "Linux不是当前完整发行目标",
+      "HTML file预览被策略拦截；用户已明确批准，未绕过"
+    ]
+  },
+  "novelImportThemeCorrection": {
+    "date": "2026-10-26",
+    "request": "restore approved novel import dialog styling and current application theme",
+    "status": "targeted-verified-current-macos-ink",
+    "implementation": [
+      "src/components/desktop/novel-import.css"
+    ],
+    "reusedComponents": [
+      "src/components/ui/button.tsx",
+      "src/components/ui/dialog.tsx"
+    ],
+    "globalComponentsModified": false,
+    "plan": "docs/novel-import/25-theme-style-fix-plan.md",
+    "planReview": "docs/novel-import/26-theme-style-plan-review.md",
+    "codeReview": "docs/novel-import/27-theme-style-code-review.md",
+    "verification": "docs/novel-import/28-theme-style-verification.md",
+    "tests": [
+      "NI-UT01",
+      "NI-UT02",
+      "NI-U02"
+    ],
+    "fullSuiteExecuted": false,
+    "nativeThemes": [
+      "ink"
+    ],
+    "isolatedThemes": [
+      "ink",
+      "paper"
+    ],
+    "realNovelImportAcceptance": "pending; tracked separately"
+  },
+  "novelImportRealBookRecoveries": {
+    "date": "2026-10-26",
+    "status": "AI retesting paused by explicit user request; DeepSeek retained; original M01 draft remains failed81 with all successful material preserved; aggregate acceptance not passed",
+    "executionLog": "docs/novel-import-real-books/05-execution-log.md",
+    "fullSuiteExecuted": false,
+    "realNovelImportAcceptance": "not passed: original M01 draft preserved and source-reselection passed; character failed29/41 retained, clarified generic format retest running; previous literary failures and remaining samples/directory/LIFE pending",
+    "fixes": [
+      {
+        "scope": "retain manually confirmed chapters when the selected body is unchanged",
+        "implementation": [
+          "desktop/core/novel-import.ts"
+        ],
+        "tests": [
+          "NI-CH03",
+          "NI-CH04",
+          "NI-S12"
+        ],
+        "plan": "docs/novel-import-real-books/64-manual-chapter-retention-plan.md",
+        "planReview": "docs/novel-import-real-books/65-manual-chapter-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/66-manual-chapter-code-review.md",
+        "actualVerification": "S02 rev19 after real UI re-entry and local classification retains all14 manual units and exact5310-character body; original reset failure retained",
+        "actualReview": "docs/novel-import-real-books/reviews/S02-C1-manual-retention.md"
+      },
+      {
+        "scope": "resume source/select/confirm drafts before invoking analysis migration checks",
+        "implementation": [
+          "desktop/main/novel-import.ts"
+        ],
+        "tests": [
+          "NI-S12",
+          "NI-S13",
+          "NI-R02"
+        ],
+        "plan": "docs/novel-import-real-books/67-preanalysis-resume-plan.md",
+        "planReview": "docs/novel-import-real-books/68-preanalysis-resume-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/69-preanalysis-resume-code-review.md",
+        "actualVerification": "same S02 draft resumes from paused to select with no AI or target selection; existing analysis target reauthorization preserved"
+      },
+      {
+        "scope": "precheck evidence with the unchanged anchor matcher in ordinary semantic analyze response schema",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-A03",
+          "NI-A05",
+          "NI-A06"
+        ],
+        "plan": "docs/novel-import-real-books/70-evidence-schema-plan.md",
+        "planReview": "docs/novel-import-real-books/71-evidence-schema-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/72-evidence-schema-code-review.md",
+        "actualVerification": "same S02 rev39 outline coverage6/6 after recorded rev26 no-match failure, exact body/manual14 preserved; literary outline gaps remain under review",
+        "retryPolicy": "unchanged existing generateJSON maximum one schema correction; no added retry layer"
+      },
+      {
+        "scope": "generic short exact evidence and narrative attribution guidance for semantic analyze/review",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts"
+        ],
+        "tests": [
+          "NI-A03",
+          "NI-A05",
+          "NI-A06",
+          "NI-A07",
+          "NI-J03",
+          "NI-SEM04"
+        ],
+        "plan": "docs/novel-import-real-books/73-evidence-attribution-guidance-plan.md",
+        "planReview": "docs/novel-import-real-books/74-evidence-attribution-guidance-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/75-evidence-attribution-guidance-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/evidence-attribution-guidance-root-build.json",
+        "status": "targeted contract and gate checks passed; actual S02 item retest in progress",
+        "actualVerification": "same S02 rev61/62 preserves all24 data/checkpoint fields,12 successful artifacts and exact5310-character body/manual14 before and after original target authorization; resumed item call observed at rev75",
+        "literaryAcceptance": "pending; existing outline/character omissions and attribution problems are not marked repaired",
+        "validatorsBudgetsAndRetries": "unchanged"
+      },
+      {
+        "scope": "bind the whitelisted requested kind and inferred origin in the ordinary semantic analyze output contract",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03"
+        ],
+        "plan": "docs/novel-import-real-books/76-requested-kind-prompt-plan.md",
+        "planReview": "docs/novel-import-real-books/77-requested-kind-prompt-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/78-requested-kind-prompt-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/requested-kind-root-build.json",
+        "status": "targeted contract/gate checks passed; same S02 item retest in progress",
+        "actualVerification": "same S02 rev79/80 preserves all24 data/checkpoint fields and12 prior artifacts, exact body/manual14 before and after original target authorization; incomplete item resumed",
+        "validatorsBudgetsAndRetries": "unchanged; no default or translation for invalid targets",
+        "literaryAcceptance": "pending; no six-book acceptance claim"
+      },
+      {
+        "scope": "ordinary semantic worldline native precheck and bounded safe failure messages",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts",
+          "desktop/main/novel-import.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-A07",
+          "NI-A08"
+        ],
+        "plan": "docs/novel-import-real-books/79-worldline-native-feedback-plan.md",
+        "planReview": "docs/novel-import-real-books/80-worldline-native-feedback-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/81-worldline-native-feedback-code-review.md",
+        "status": "targeted acceptance-parity and safety checks passed; actual S02 worldline retest in progress",
+        "actualCause": "earlier generic failures remain unlocated; no retrospective causal claim",
+        "validatorsBudgetsAndRetries": "same native helper and late graph gates; no new retries"
+      },
+      {
+        "scope": "trope business contract explains independent satisfaction and tear judgments",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-A09",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04"
+        ],
+        "plan": "docs/novel-import-real-books/82-trope-business-guidance-plan.md",
+        "planReview": "docs/novel-import-real-books/83-trope-business-guidance-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/84-trope-business-guidance-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/worldline-trope-root-build.json",
+        "status": "targeted contract/gate checks passed; actual full semantic review pending",
+        "actualVerification": "same S02 rev167/168 preserves all24 data/checkpoint fields and43 prior artifacts, exact body/manual14 before and after original target authorization; worldline resumed",
+        "literaryAcceptance": "prior trope notFound remains recorded semantic FAIL until actual correction and independent final review",
+        "validatorsBudgetsAndRetries": "unchanged; old notFound credit not manually cleared"
+      },
+      {
+        "scope": "exact fixed diagnostic messages for existing reference failures and canonical provider labels",
+        "implementation": [
+          "desktop/main/novel-import.ts"
+        ],
+        "tests": [
+          "NI-J05",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-A07",
+          "NI-A08",
+          "NI-A09"
+        ],
+        "plan": "docs/novel-import-real-books/85-hidden-error-diagnostics-plan.md",
+        "planReview": "docs/novel-import-real-books/86-hidden-error-diagnostics-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/87-hidden-error-diagnostics-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/hidden-errors-root-build.json",
+        "actualVerification": "S02 rev242 newly identifies an absent or ambiguous character reference; old generic failures remain unlocated; source/body/manual14/43 artifacts preserved",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary semantic worldline references prechecked against the original complete trusted catalog within the existing correction",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-A07",
+          "NI-A08",
+          "NI-A09"
+        ],
+        "plan": "docs/novel-import-real-books/88-worldline-reference-schema-plan.md",
+        "planReview": "docs/novel-import-real-books/89-worldline-reference-schema-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/90-worldline-reference-schema-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/worldline-references-root-build.json",
+        "actualVerification": "same S02 rev286 produces7 worldline artifacts with coverage6/6; original43 artifacts and body/manual14 preserved; narrative remains failed and all literary/final acceptance pending",
+        "retryPolicy": "unchanged existing maximum one schema correction; no added retry or reference fallback",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary semantic narrative native and full-catalog references prechecked within the existing bounded correction",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-A07",
+          "NI-A08",
+          "NI-A09"
+        ],
+        "plan": "docs/novel-import-real-books/91-narrative-validation-schema-plan.md",
+        "planReview": "docs/novel-import-real-books/92-narrative-validation-schema-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/93-narrative-validation-schema-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/narrative-schema-root-build.json",
+        "actualVerification": "same S02 rev289 confirm preserves all24 fields and50 artifacts before target reauthorization; analysis not started after user steered to legacy world-setting correction",
+        "retryPolicy": "unchanged existing maximum one schema correction; native/link helpers and all late gates unchanged",
+        "realNovelImportAcceptance": "pending; narrative recovery and final literary quality not yet verified",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "world-setting grouping guidance and explicit reversible repair of the identified legacy S01 work",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts",
+          "desktop/service/novel-import-world-repair.ts",
+          "scripts/repair-real-novel-world-structure.ts",
+          "desktop/service/workspaces.ts (lockDirectory export only)"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-A09",
+          "NI-A10",
+          "NI-WR01",
+          "NI-WR02",
+          "NI-SEM-P01",
+          "RB-WORLD-FIX01"
+        ],
+        "plan": "docs/novel-import-real-books/94-world-setting-grouping-plan.md",
+        "planReview": "docs/novel-import-real-books/95-world-setting-grouping-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/96-world-setting-grouping-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/world-setting-repair-wg-cr02-root-build.json",
+        "actualVerification": "RB-WORLD-FIX01 PASS: identified legacy S01 now has1 neutral World and7 world Settings (CULTURE2/SOCIETY5), all names/texts and13 protected groups unchanged; independent readback and real macOS UI confirmed",
+        "actualReport": "docs/novel-import-real-books/97-world-setting-grouping-verification.md",
+        "actualDataReview": "docs/novel-import-real-books/reviews/S01-legacy-world-setting-actual.md",
+        "realNovelImportAcceptance": "pending; legacy S01 whole-book literary FAIL retained, S02 narrative and remaining samples/LIFE unfinished",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "S02 D1 actual full import/publish/native open/normal shutdown/own-work audit/reopen",
+        "run": "S02-20261027-D1",
+        "sessionId": "3666f5dc-a7b8-4584-a633-cb9dbc0b9742",
+        "actualReport": "docs/novel-import-real-books/98-S02-D1-final-result.md",
+        "actualVerification": "Completed rev83; body5310 exact and14 chapters persisted;59 artifacts;12 analysis targets and6/6 review with363 fact tasks; own-work mechanical audit passed; actual native reopen confirmed",
+        "literaryAcceptance": "FAIL: subject reversal, source/order accuracy and missing world settings/meaningful timeline links remain in final objects; application completed does not certify quality",
+        "nextSample": "M01-20261027-D1 blocked before first AI by actual ctime mismatch with unchanged source bytes; waiting specific zero-artifact draft discard approval",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary same-source native reselection preserves the existing zero-analysis draft",
+        "implementation": [
+          "desktop/main/novel-import.ts",
+          "src/components/desktop/NovelImportDialog.tsx"
+        ],
+        "tests": [
+          "NI-SR01",
+          "NI-SR02",
+          "NI-SR03",
+          "NI-U12",
+          "NI-PDF04",
+          "NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits",
+          "NI-R02"
+        ],
+        "plan": "docs/novel-import-real-books/99-source-reselection-plan.md",
+        "planReview": "docs/novel-import-real-books/100-source-reselection-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/101-source-reselection-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/source-reselection-root-build.json",
+        "actualReport": "docs/novel-import-real-books/102-source-reselection-verification.md",
+        "actualDataReview": "docs/novel-import-real-books/reviews/M01-D1-source-reselection-actual.md",
+        "actualVerification": "PASS: independent70 narrow checks; native cancel rev5 retains all fields, same-file success rev7 only refreshes proof.ctime plus control fields; original M01 session/source/units/chapters/budget preserved; actual classification and full analysis resumed after new consent",
+        "realNovelImportAcceptance": "not passed: M01 classification precise boundary FAIL preserved, manually confirmed body23257 and9 chapters exact; all12-target actual analysis running; S02 literary FAIL and remaining samples/LIFE still pending",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "diagnostic-only static business labels for final ordinary character schema errors",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-J08"
+        ],
+        "plan": "docs/novel-import-real-books/103-character-schema-diagnostics-plan.md",
+        "planReview": "docs/novel-import-real-books/104-character-schema-diagnostics-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/105-character-schema-diagnostics-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/character-schema-diagnostics-root-build.json",
+        "status": "independent34/34 narrow checks passed; actual single diagnostic recovery in progress",
+        "actualVerification": "same M01 rev32/33 before/after target reauthorization preserves18/21 assertions, outline1 and25 coverage exact; rev40 pending character call has identical scope/payload hashes to failed rev29",
+        "actualCause": "rev29 exact bad fields remain unknown; no retrospective guess or generation/schema change",
+        "validatorsBudgetsAndRetries": "unchanged original schema/helpers/late gates and at most one existing JSON correction; mapper adds no generation",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "ordinary-character facts string encoding guidance without changing acceptance",
+        "implementation": [
+          "desktop/core/novel-import-ai-payload.ts",
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-A07",
+          "NI-A08",
+          "NI-A09",
+          "NI-A10",
+          "NI-A11",
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-J08",
+          "NI-J09"
+        ],
+        "plan": "docs/novel-import-real-books/106-character-facts-contract-plan.md",
+        "planReview": "docs/novel-import-real-books/107-character-facts-contract-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/108-character-facts-contract-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/character-facts-contract-root-build.json",
+        "status": "independent A19/19 and J43/43 passed; actual character18 and scene9 generated; partial literary completeness NOT PASS pending final QA",
+        "actualVerification": "same original M01 reached rev62 with outline1/character18/scene9 each25 coverage, body23257/manual9 exact; subsequent item rev63 failed independently",
+        "actualCause": "prior29/41 specific bad fields remain unknown; static ambiguous encoding contract clarified, no retrospective root-cause claim",
+        "validatorsBudgetsAndRetries": "same acceptance/schema shape, no transform/coerce, original105 mapper and all late gates retained; same existing one JSON correction",
+        "fullSuiteExecuted": false
+      },
+      {
+        "scope": "fixed evidence-anchor correction messages without changing acceptance",
+        "implementation": [
+          "desktop/service/novel-import-ai.ts"
+        ],
+        "tests": [
+          "NI-J01",
+          "NI-J02",
+          "NI-J03",
+          "NI-J04",
+          "NI-J05",
+          "NI-J06",
+          "NI-J07",
+          "NI-J08",
+          "NI-J09",
+          "NI-J10",
+          "NI-A03",
+          "NI-A06"
+        ],
+        "plan": "docs/novel-import-real-books/109-evidence-feedback-plan.md",
+        "planReview": "docs/novel-import-real-books/110-evidence-feedback-plan-review.md",
+        "codeReview": "docs/novel-import-real-books/111-evidence-feedback-code-review.md",
+        "buildVerification": "docs/novel-import-real-books/evidence/evidence-feedback-root-build.json",
+        "actualVerification": "docs/novel-import-real-books/112-evidence-feedback-verification.md",
+        "status": "independent51/51+2/2 narrow checks passed; actual single item retest failed at rev81, no further retry; original material retained",
+        "validatorsBudgetsAndRetries": "same matching algorithm and accepted set; no ID relocation or third generation; original late gates/budget remain",
+        "fullSuiteExecuted": false
+      }
+    ],
+    "currentActualState": {
+      "run": "M01-20261027-D1",
+      "sessionId": "439f1633-9d21-40f5-9d8b-7f165cc66265",
+      "revision": 81,
+      "phase": "failed",
+      "bodyExact": true,
+      "manualChapters": 9,
+      "adoptedArtifacts": {
+        "outline": 1,
+        "character": 18,
+        "scene": 9
+      },
+      "coveragePerCompletedKind": 25,
+      "failedKind": "item",
+      "actualError": "artifacts.8.evidence.0 invalid_schema; exact anchor reason unknown",
+      "pendingPlan": null,
+      "partialLiteraryReview": "docs/novel-import-real-books/reviews/M01-D1-partial-characters-scenes.md",
+      "partialLiteraryResult": "NOT PASS pending later QA; mechanical links/exact evidence valid",
+      "actualRunningOperation": null,
+      "actualStartedAt": "2026-10-26T20:09:55.640Z",
+      "verification": "docs/novel-import-real-books/112-evidence-feedback-verification.md",
+      "latestRejectedOperation": "4c7c35bc-bfaa-4bcc-9bb9-cdd8809ffe19",
+      "latestRejectedAt": "2026-10-26T20:12:07.445Z",
+      "pendingUserChoice": null,
+      "userDecision": {
+        "at": "2026-10-26T20:53:55.825762+00:00",
+        "choice": "保留 DeepSeek，先暂停 AI 重测",
+        "aiRetestPaused": true,
+        "modelChanged": false,
+        "draftRetained": true,
+        "additionalAiRequests": 0,
+        "applicationCheckpointPhase": "failed",
+        "formalLIFE": false
+      }
+    }
+  },
+  "lordOfMysteriesImport20261027": {
+    "date": "2026-10-27",
+    "scope": "Lord of Mysteries first novel full main narrative; prose plus outline, character, item, scene, world, foreshadow, worldline and narrative import",
+    "status": "explicit human authorization received 2026-10-28 for full novel/settings to https://api.deepseek.com/; real B2 accepted first outline leaf (23 units), then normally paused/exited for requested copy build; B3 resumed same session for whole-book outline analysis; B1 evidence failures retained; eight-category semantic/publication acceptance pending",
+    "documents": [
+      "docs/lotm-import/01-research.md",
+      "docs/lotm-import/04-test-cases.md",
+      "docs/lotm-import/09-test-execution.md",
+      "docs/lotm-import/14-prepared-input-review.md",
+      "docs/lotm-import/20-evidence-batch-implementation.md",
+      "docs/lotm-import/21-evidence-batch-code-review.md"
+    ],
+    "implementation": [
+      "desktop/core/novel-import-chapters.ts",
+      "desktop/core/novel-import.ts",
+      "desktop/shared/novel-import.ts",
+      "desktop/main/novel-import.ts",
+      "desktop/service/novel-import-publish.ts",
+      "src/components/desktop/NovelImportDialog.tsx"
+    ],
+    "testIds": [
+      "LOTM-IN01",
+      "LOTM-IN02",
+      "LOTM-PREP01",
+      "LOTM-PREP02",
+      "LOTM-PREP03",
+      "LOTM-V01",
+      "LOTM-V02",
+      "LOTM-V03",
+      "LOTM-V04",
+      "LOTM-V05",
+      "LOTM-FLOW01",
+      "LOTM-FLOW02",
+      "LOTM-BODY01",
+      "LOTM-BODY02",
+      "LOTM-OUT01",
+      "LOTM-CHAR01",
+      "LOTM-ITEM01",
+      "LOTM-SCENE01",
+      "LOTM-WORLD01",
+      "LOTM-FORESHADOW01",
+      "LOTM-WLINE01",
+      "LOTM-NARR01",
+      "LOTM-PERSIST01",
+      "LOTM-HEAL01"
+    ],
+    "limits": [
+      "No full-repository test run",
+      "Synthetic volume tests do not substitute real whole-book import",
+      "Downloaded originals and derived test input are distinct; narration unchanged",
+      "All later published bonus stories are outside the frozen main-narrative scope",
+      "Source B has no exhaustive authoritative word-for-word certification"
+    ],
+    "automaticReviewBlock": {
+      "action": "allow B2 analysis and import",
+      "destination": "https://api.deepseek.com/",
+      "data": "full main narrative and this import inferred settings",
+      "status": "resolved by explicit human authorization on 2026-10-28; authorized B2 analysis started 2026-10-27T18:50:24.219Z",
+      "bypassAttempted": false
+    }
+  },
+  "novelImportCharacterRepair": {
+    "date": "2026-10-30",
+    "requirement": "修复角色导入所有错误，并使用户指定诡秘之主原件全书所有角色导入总时长不超过5分钟",
+    "status": "verified-real-full-book-characters-under-five-minutes",
+    "implementation": [
+      "desktop/main/novel-import.ts",
+      "desktop/core/novel-import-semantics.ts",
+      "desktop/core/novel-import-ai-payload.ts",
+      "desktop/core/novel-import-runtime-proof.ts",
+      "desktop/service/novel-import-ai.ts"
+    ],
+    "plan": "docs/242-character-import-plan.md",
+    "planReview": "docs/242-character-import-plan-review.md",
+    "testCases": "docs/243-character-import-cases.md",
+    "testReview": "docs/243-character-import-cases-review.md",
+    "codeReview": "docs/244-character-import-code-review.md",
+    "verification": "docs/249-character-performance-verification.md",
+    "testIds": [
+      "CI-01",
+      "CI-02",
+      "CI-03",
+      "CI-05",
+      "CI-06",
+      "CI-07",
+      "CI-08",
+      "CI-09",
+      "CP-01",
+      "CP-02",
+      "CP-03",
+      "CP-04",
+      "CP-05",
+      "CP-06",
+      "CP-07",
+      "CP-08",
+      "CP-09",
+      "CP-10",
+      "CP-11",
+      "CP-12",
+      "CP-13",
+      "CP-14",
+      "CP-15",
+      "CP-16"
+    ],
+    "targeted": {
+      "tests": 229,
+      "pass": 229,
+      "fail": 0,
+      "groups": [
+        203,
+        26
+      ],
+      "typecheck": true,
+      "desktopBuild": true,
+      "buildIdentityVerified": true
+    },
+    "real": {
+      "source": "诡秘之主-原始文本.txt",
+      "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+      "chapters": 1402,
+      "coveredUnits": 5589,
+      "workingUnits": 5589,
+      "selectedCharacters": 557,
+      "completedCharacters": 557,
+      "nativeProjectableCharacters": 557,
+      "status": "passed",
+      "roleDurationMs": 207948,
+      "entityDurationMs": 174351,
+      "deadlineMs": 300000,
+      "performancePassed": true,
+      "failed": 0,
+      "skipped": 0,
+      "dropped": 0,
+      "mappingWarnings": 0,
+      "relationships": 2623,
+      "explicitRelationshipIdsValidated": 902,
+      "bodyUnchanged": true,
+      "pageErrors": [],
+      "picker": "controlled file and folder dialog; real Electron and model",
+      "scope": "character import only"
+    },
+    "limits": [
+      "No full-repository tests",
+      "No skipped characters",
+      "No real source text or keys in repository evidence",
+      "No claim of later categories or full-book publication"
+    ],
+    "performancePlan": "docs/246-character-performance-plan.md",
+    "maxRoleDurationMs": 300000,
+    "performancePlanReview": "docs/246-character-performance-plan-review.md",
+    "performanceTestCases": "docs/247-character-performance-cases.md",
+    "performanceTestReview": "docs/247-character-performance-cases-review.md",
+    "performanceCodeReview": "docs/248-character-performance-code-review.md",
+    "evidence": "docs/evidence/249-character-performance/real-acceptance.json"
+  },
+  "novelImportSceneRepairAndPerformance": {
+    "status": "actualFailed",
+    "requestedAt": "2026-10-31",
+    "scope": "Lord of Mysteries full scene recognition and import; maximum seven minutes",
+    "maxDurationMs": 420000,
+    "timing": "fresh session; scene recognition consent through all selected scene artifacts done and entering verification; includes recognition, confirmation, corrections and persistence",
+    "plan": "docs/250-scene-import-plan.md",
+    "cases": "docs/251-scene-import-cases.md",
+    "codeReview": "docs/252-scene-import-code-review.md",
+    "performancePlan": "docs/253-scene-performance-plan.md",
+    "performancePlanReview": "docs/253-scene-performance-plan-review.md",
+    "performanceCases": "docs/254-scene-performance-cases.md",
+    "performanceCasesReview": "docs/254-scene-performance-cases-review.md",
+    "performanceCodeReview": "docs/255-scene-performance-code-review.md",
+    "verification": "docs/256-scene-seven-minute-verification.md",
+    "verificationReview": "docs/256-scene-seven-minute-verification-review.md",
+    "revalidation": {
+      "record": "docs/257-scene-import-revalidation.md",
+      "runtime": "Node v24.18.0",
+      "independentSceneTestsPassed": 27,
+      "publicationIntegrationTestsPassed": 5,
+      "typecheck": true,
+      "diffCheck": true,
+      "frozenBuildFilesUnchanged": 8,
+      "realExecutionStatus": "human-approved-current-DeepSeek-transfer-real-acceptance-in-progress",
+      "newRealModelResult": true,
+      "fullRepositoryTestsRun": false
+    },
+    "implementation": [
+      "desktop/core/novel-import-ai-payload.ts",
+      "desktop/service/novel-import-ai.ts",
+      "desktop/main/novel-import.ts",
+      "desktop/core/novel-import-wizard-roster.ts",
+      "desktop/shared/novel-import-scene-links.ts",
+      "desktop/service/novel-import-structured-scene.ts",
+      "src/lib/ai/generate.ts",
+      "src/lib/quota.ts",
+      "desktop/shared/novel-import.ts",
+      "desktop/shared/novel-import-scene-review.ts",
+      "desktop/core/novel-import-review-bindings.ts",
+      "desktop/core/novel-import-review-tasks.ts",
+      "desktop/core/novel-import-semantics.ts"
+    ],
+    "tests": [
+      "tests/unit/novel-import-scene.test.ts",
+      "tests/unit/novel-import-scene-entity.test.ts",
+      "tests/unit/novel-import-scene-wire.test.ts",
+      "tests/unit/novel-import-scene-scheduling.test.ts",
+      "tests/unit/novel-import-scene-performance.test.ts",
+      "tests/unit/novel-import-character-scope-cache.test.ts",
+      "tests/integration/novel-import-wizard-publish.test.ts",
+      "tests/integration/novel-import-semantic-publish.test.ts",
+      "tests/unit/novel-import-scene-hierarchy.test.ts",
+      "tests/unit/novel-import-scene-facts.test.ts",
+      "tests/unit/novel-import-scene-links.test.ts",
+      "tests/unit/novel-import-structured-scene.test.ts",
+      "tests/unit/novel-import-request-schema.test.ts",
+      "tests/unit/novel-import-scene-review-anchors.test.ts",
+      "tests/integration/novel-import-usage-transaction.test.ts",
+      "tests/unit/novel-import-structured-buffering.test.ts",
+      "tests/unit/novel-import-scene-wire-guidance.test.ts",
+      "tests/unit/novel-import-scene-review-unit-reference.test.ts",
+      "tests/unit/novel-import-scene-review-waves.test.ts",
+      "tests/unit/novel-import-scene-review-source-reference.test.ts",
+      "tests/unit/novel-import-scene-long-fact-review.test.ts",
+      "tests/unit/novel-import-scene-planning-yield.test.ts"
+    ],
+    "local": {
+      "scopedTests": 292,
+      "passed": 292,
+      "failed": 0,
+      "typecheck": true,
+      "desktopBuild": true,
+      "scriptSyntax": true,
+      "diffCheck": true,
+      "frozenBuildFilesUnchanged": 18,
+      "fullRepositoryTestsRun": false,
+      "structuredTests": 10,
+      "record": "docs/317-scene-profile-guidance-verification.md",
+      "reviewAnchorTests": 38,
+      "structuredAndCapacityTests": 25,
+      "usageTransactionTests": 7,
+      "importRegressionTests": 290,
+      "structuredBufferingTests": 14,
+      "wireFactsGuidanceTests": 8,
+      "reviewUnitReferenceTests": 11,
+      "reviewWaveTests": 19,
+      "cancelled": 0,
+      "skipped": 0,
+      "reviewSourceReferenceTests": 12,
+      "longFactReviewTests": 13,
+      "planningYieldTests": 8,
+      "profileGuidanceTests": 8
+    },
+    "real": {
+      "status": "actualFailed",
+      "source": "诡秘之主-原始文本.txt",
+      "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+      "sourceUnchanged": true,
+      "chapters": 1402,
+      "workingUnits": 4912,
+      "latestRun": "R73",
+      "latestError": "26 scene roster RPC19fulfilled7rejected;59 complete/exactSHA;6final domain refusals1new-mention duplicate;allseven fourgenerations,no budget stop",
+      "fullSceneImportVerified": false,
+      "sevenMinuteTargetVerified": false,
+      "publicationVerified": false,
+      "reopenVerified": false,
+      "latestSceneCandidates": 0,
+      "latestCompleted": 0,
+      "latestFailed": 0,
+      "providerTransferAuthorized": true,
+      "fullWireActualProbePassed": true,
+      "readOnlyFailedTargetTrialsPassed": 3,
+      "sceneStageVerified": false,
+      "reviewAnchorActualTrialPassed": true,
+      "reviewAnchorActualTrialConflicts": 3,
+      "reviewAnchorActualTrialMissingTargets": 1,
+      "outputCapacityActualTrialPassed": true,
+      "latestDiagnosticOnly": false,
+      "historicalR15SceneStage": {
+        "run": "R15",
+        "scenes": 982,
+        "durationMs": 245730.637833,
+        "sevenMinuteTargetVerified": true,
+        "published": false,
+        "reopened": false
+      },
+      "partialMemoryFixActualEvidence": true,
+      "partialObservedWorkerHeapMaxBytes": 553144812,
+      "activeRun": null,
+      "wireFactsGuidanceActualTrialPassed": true,
+      "r23FrozenBuild": "docs/scene-import-verification/build-identity-r23.json",
+      "oldReviewRequestIndexedBudgetRejectedBeforeGeneration": true,
+      "historicalR22SceneStage": {
+        "run": "R22",
+        "scenes": 935,
+        "completed": 935,
+        "failed": 0,
+        "durationMs": 294014.56,
+        "sceneStageVerified": true,
+        "sevenMinuteTargetVerified": true,
+        "reviewFailed": true,
+        "published": false,
+        "reopened": false
+      },
+      "reviewUnitReferenceActualTrialPassed": true,
+      "reviewUnitReferenceActualTrialUnits": 90,
+      "sceneStageDurationMs": 297560.754958,
+      "sceneEntityDurationMs": 266093.450125,
+      "reviewBodyUnits": 4718,
+      "reviewBodyCoverageVerified": false,
+      "reviewFactsCovered": 0,
+      "knownUnresolvableSourceConflicts": 0,
+      "pendingConflictsAtStop": 59,
+      "r23ControlledStop": {
+        "allSceneMaterialsPreserved": true,
+        "normalQuitRequested": true,
+        "processExitHandlerCode": 0,
+        "osProcessesAbsent": true,
+        "driverExitCode": 1,
+        "driverErrorAfterControlledWindowClosure": true,
+        "newPauseProof": false
+      },
+      "r24FrozenBuild": "docs/scene-import-verification/build-identity-r24.json",
+      "longFactActualTrialPassed": true,
+      "longFactActualTrialMaximumFieldCharacters": 27529,
+      "longFactActualTrialGenerations": 1,
+      "lastStoppedRun": "R23",
+      "latestCountsScope": "R73 roster failed705/4912;249partial identities/0unresolved/0artifacts;entity/review/publish/reopen not reached",
+      "r24ProviderBlock": "docs/scene-import-verification/r24-provider-block.json",
+      "fullFactsOfflinePreflightPackets": 126,
+      "fullFactsOfflinePreflightKeys": 19163,
+      "fullFactsOfflinePreflightNativeFields": 3696,
+      "historicalR23SceneStage": {
+        "run": "R23",
+        "scenes": 924,
+        "completed": 924,
+        "failed": 0,
+        "durationMs": 400793.818084,
+        "sceneStageVerified": true,
+        "sevenMinuteTargetVerified": true,
+        "reviewBodyUnits": 5589,
+        "reviewFactsCovered": 0,
+        "reviewFailed": true,
+        "published": false,
+        "reopened": false
+      },
+      "r25FrozenBuild": "docs/scene-import-verification/build-identity-r25.json",
+      "providerRestoredByUser": "2026-11-01",
+      "r25SceneStageRecord": "docs/scene-import-verification/r25-scene-stage-timeout.json",
+      "r26FrozenBuild": "docs/scene-import-verification/build-identity-r26.json",
+      "r25UnfinishedTargetReadonlyReplayPassed": true,
+      "r26RawShapeActual": "docs/scene-import-verification/r26-raw-shape-readonly-actual.json",
+      "profileGuidanceActualPassed": true,
+      "profileGuidanceActualGenerations": 1,
+      "r27FrozenBuild": "docs/scene-import-verification/build-identity-r27.json",
+      "r27ReviewFailure": "docs/scene-import-verification/r27-review-failure.json",
+      "earlyMissingValidationActualReplay": "docs/scene-import-verification/r27-early-missing-real-replay.json",
+      "concreteSceneIdentityPreference": "separate physical locations with the same or generic name",
+      "concreteSceneIdentityImplemented": false,
+      "concreteSceneIdentityFullBookVerified": false,
+      "historicalR27SceneStage": {
+        "run": "R27",
+        "scenes": 1055,
+        "completed": 1055,
+        "failed": 0,
+        "sceneStageVerified": true,
+        "sevenMinuteTargetVerified": true,
+        "fullSceneImportVerified": false,
+        "published": false,
+        "reopened": false
+      },
+      "r39Diagnostic": {
+        "requested": 29,
+        "fulfilled": 26,
+        "rejected": 3,
+        "pending": 0,
+        "nativeInvalidJsonStopUnparsed": 1,
+        "sceneRosterSchemaErrors": 2,
+        "normalAppExit": 0,
+        "verification": "docs/367-scene-roster-failure-shape-real-verification.md"
+      },
+      "parallelReadonlyDiagnostic": {
+        "run": "R40",
+        "requested": 15,
+        "fulfilled": 12,
+        "rejected": 3,
+        "generations": 25,
+        "providerCalls": 25,
+        "normalAppExit": 0,
+        "quitTimedOut": false,
+        "stateUnchanged": true,
+        "inputUnchanged": true,
+        "productArtifactsUnchanged": true,
+        "verification": "docs/371-scene-roster-parallel-real-diagnostic.md"
+      },
+      "r41Verification": "docs/375-scene-bounded-recovery-real-verification.md",
+      "r42Verification": "docs/379-scene-error-labels-real-verification.md",
+      "r43Verification": "docs/383-scene-root-recovery-real-verification.md",
+      "r44Verification": "docs/387-scene-compact-repair-real-verification.md",
+      "historicalR27CountsScope": "R27 scene stage; full review and publication/reopen pending",
+      "sourcePreservingClaims": {
+        "status": "actualFailed",
+        "plan": "docs/470-scene-source-preserving-claim-decisions-brief.md",
+        "planReview": "docs/470-scene-source-preserving-claim-decisions-plan-review.md",
+        "cases": "docs/471-scene-source-preserving-claim-decisions-cases.md",
+        "casesReview": "docs/471-scene-source-preserving-claim-decisions-cases-review.md",
+        "privateCodeReview": "docs/472-scene-source-preserving-claim-decisions-private-code-review.md",
+        "staticVerification": "docs/473-scene-source-preserving-claim-decisions-static-verification.md",
+        "staticVerificationReview": "docs/473-scene-source-preserving-claim-decisions-static-verification-review.md",
+        "staticObservation": "docs/scene-import-verification/r70-claims-bound-native-static-observation.json",
+        "staticCasesPassed": 2,
+        "staticFetches": 2,
+        "staticOriginalOuterCondition": false,
+        "staticFailure": "stateUnchanged=false; per-file before hashes not captured; original receipt preserved",
+        "nativeCapabilityIndependentlyAccepted": true,
+        "qualification": "Normal close persists a draft recovery journal; source controls prove blanket draft byte equality is not a Native capability requirement. No old state difference was reconstructed.",
+        "appStateBackupVerified": true,
+        "appStateBackupFiles": 1403,
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "rootFiles": 47,
+        "rootTests": 838,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "buildIdentity": "docs/scene-import-verification/build-identity-r70.json",
+        "newNormalRun": "R70",
+        "normalRpc": {
+          "total": 35,
+          "fulfilled": 32,
+          "rejected": 3
+        },
+        "normalGenerations": 64,
+        "allInputTextHashesMatched": true,
+        "normalCoverageUnits": 1188,
+        "normalArtifacts": 0,
+        "normalAppExit": 0,
+        "normalDriverExit": 2
+      },
+      "unifiedPrimaryClaims": {
+        "status": "actualFailed",
+        "plan": "docs/476-scene-unified-primary-claims-brief.md",
+        "planReview": "docs/476-scene-unified-primary-claims-plan-review.md",
+        "cases": "docs/477-scene-unified-primary-claims-cases.md",
+        "casesReview": "docs/477-scene-unified-primary-claims-cases-review.md",
+        "codeReview": "docs/478-scene-unified-primary-claims-code-review.md",
+        "preflightRecoveryReview": "docs/478-scene-unified-primary-claims-preflight-recovery-review.md",
+        "normalVerification": "docs/479-scene-unified-primary-claims-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r72-primary-claims-normal-observation.json",
+        "buildReusedFrom": "docs/scene-import-verification/build-identity-r71.json",
+        "rootFiles": 49,
+        "rootTests": 868,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "budgetHistoricalRequests": 335,
+        "budgetOriginalCaptures": 660,
+        "budgetPreparedPrompts": 558,
+        "budgetUsedCaptures": 353,
+        "budgetUnusedCaptures": 307,
+        "budgetUnusedContractChanged": 25,
+        "budgetUnusedUnknown": 282,
+        "budgetFourGenerationPrompts": 12,
+        "R71Preflight": {
+          "App": 0,
+          "API": 0,
+          "consent": 0,
+          "status": "baseline-missing-before-app"
+        },
+        "actualRun": "R72",
+        "normalRpc": {
+          "total": 33,
+          "fulfilled": 31,
+          "rejected": 2
+        },
+        "normalGenerations": 59,
+        "allInputTextHashesMatched": true,
+        "normalCoverageUnits": 1156,
+        "normalSceneMembers": 774,
+        "normalSceneRecords": 551,
+        "normalSceneIdentities": 535,
+        "normalSceneRelations": 49,
+        "normalUnresolvedIdentities": 1,
+        "normalArtifacts": 0,
+        "normalAppExit": 0,
+        "normalDriverExit": 2,
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false
+      }
+    },
+    "evidence": "docs/scene-import-verification/validation.json",
+    "limits": [
+      "No full-repository tests",
+      "No skipped scenes to pass acceptance",
+      "No real novel text or keys in repository evidence",
+      "Partial counts and synthetic tests do not certify full-book or performance success"
+    ],
+    "currentContinuation": "User requested immediate closeout without further testing on2026-11-02. Allcurrent changes retained; no further tests/modelcalls/implementation. Last realfullbook R73failed26RPC19accepted7rejected. Later control-focus implementation remains partially validated: existing55file run909nodes906pass3fail; four-generation measurement tool incomplete. No486finalreview/livefocusedprobe/freshfullbook/publication/reopen. Do not claim task fullypassed.",
+    "structuredOutputPlan": "docs/268-scene-structured-output-plan.md",
+    "structuredOutputCases": "docs/269-scene-structured-output-cases.md",
+    "structuredOutputCodeReview": "docs/271-scene-structured-output-code-review.md",
+    "reviewAnchorPlan": "docs/272-scene-review-anchor-plan.md",
+    "reviewAnchorCases": "docs/273-scene-review-anchor-cases.md",
+    "reviewAnchorCodeReview": "docs/274-scene-review-anchor-code-review.md",
+    "outputCapacityPlan": "docs/276-scene-output-capacity-plan.md",
+    "outputCapacityCases": "docs/277-scene-output-capacity-cases.md",
+    "outputCapacityCodeReview": "docs/278-scene-output-capacity-code-review.md",
+    "usageTransactionPlan": "docs/281-scene-usage-transaction-plan.md",
+    "usageTransactionCases": "docs/282-scene-usage-transaction-cases.md",
+    "usageTransactionCodeReview": "docs/284-scene-usage-transaction-code-review.md",
+    "structuredBufferingPlan": "docs/287-scene-structured-buffering-plan.md",
+    "structuredBufferingCases": "docs/288-scene-structured-buffering-cases.md",
+    "structuredBufferingCodeReview": "docs/289-scene-structured-buffering-code-review.md",
+    "wireFactsGuidancePlan": "docs/292-scene-wire-facts-guidance-plan.md",
+    "wireFactsGuidanceCases": "docs/293-scene-wire-facts-guidance-cases.md",
+    "wireFactsGuidanceCodeReview": "docs/294-scene-wire-facts-guidance-code-review.md",
+    "reviewUnitReferencePlan": "docs/296-scene-review-unit-reference-plan.md",
+    "reviewUnitReferenceCases": "docs/297-scene-review-unit-reference-cases.md",
+    "reviewUnitReferenceCodeReview": "docs/300-scene-review-unit-reference-code-review.md",
+    "reviewWavesPlan": "docs/298-scene-review-waves-plan.md",
+    "reviewWavesCases": "docs/299-scene-review-waves-cases.md",
+    "reviewWavesCodeReview": "docs/301-scene-review-waves-code-review.md",
+    "earlyMissingValidationPlan": "docs/320-scene-review-proposal-plan.md",
+    "earlyMissingValidationCases": "docs/321-scene-review-early-missing-cases.md",
+    "earlyMissingValidationCodeReview": "docs/322-scene-review-early-missing-code-review.md",
+    "concreteSceneIdentityPlan": "docs/323-scene-concrete-identity-plan.md",
+    "concreteSceneIdentityPlanReview": "docs/323-scene-concrete-identity-plan-review.md",
+    "concreteSceneIdentity": {
+      "implemented": true,
+      "version": 1,
+      "fullBookVerified": false,
+      "publicationVerified": false,
+      "reopenVerified": false,
+      "sameNamePolicy": "separate physical locations with anchored member ownership",
+      "scopedFrozenTests": 158,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "typecheckExit": 0,
+      "uiBuildExit": 0,
+      "desktopBuildExit": 0,
+      "verification": "docs/329-scene-concrete-identity-verification.md",
+      "buildIdentity": "docs/scene-import-verification/build-identity-r28.json",
+      "coreReviewPending": false,
+      "latestRealRun": "R49",
+      "latestRealStage": "scene-recognition-failed-http400",
+      "lastDiagnostic": "docs/scene-import-verification/r35-roster-readonly-probe.json",
+      "latestFreshFullBookRun": "R49",
+      "retentionVerified": false,
+      "rosterRetention": {
+        "implemented": true,
+        "plan": "docs/344-scene-roster-repair-retention-plan.md",
+        "cases": "docs/345-scene-roster-repair-retention-cases.md",
+        "codeReview": "docs/346-scene-roster-repair-retention-code-review.md",
+        "verification": "docs/347-scene-roster-repair-retention-verification.md",
+        "scopedTests": 295,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "actualDiagnostic": "R33",
+        "actualDiagnosticPassed": false,
+        "freshFullBookPassed": false,
+        "buildIdentity": "docs/scene-import-verification/build-identity-r33.json",
+        "actualDiagnosticReceipt": "docs/scene-import-verification/r33-roster-readonly-probe.json"
+      },
+      "targetedRosterRepair": {
+        "status": "implemented-and-reviewed-actual-source-validation-failed",
+        "plan": "docs/348-scene-roster-targeted-repair-plan.md",
+        "planReview": "docs/348-scene-roster-targeted-repair-plan-review.md",
+        "cases": "docs/349-scene-roster-targeted-repair-cases.md",
+        "casesReview": "docs/349-scene-roster-targeted-repair-cases-review.md",
+        "actualPassed": false,
+        "freshFullBookPassed": false,
+        "codeReview": "docs/350-scene-roster-targeted-repair-code-review.md",
+        "verification": "docs/351-scene-roster-targeted-repair-verification.md",
+        "scopedTests": 373,
+        "actualDiagnostic": "R34"
+      },
+      "choiceOnlyRepair": {
+        "plan": "docs/352-scene-roster-choice-only-brief.md",
+        "cases": "docs/353-scene-roster-choice-only-cases-brief.md",
+        "codeReview": "docs/354-scene-roster-choice-only-code-review.md",
+        "scopedTests": 384,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "actualDiagnostic": "R35",
+        "actualDiagnosticPassed": true,
+        "all44ProvedMentionsPreserved": true,
+        "freshFullBookPassed": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "verification": "docs/355-scene-choice-only-full-book-verification.md"
+      },
+      "lastVerification": "docs/399-scene-eligible-choices-real-verification.md",
+      "rpcDiagnostic": {
+        "review": "docs/358-scene-rpc-failure-observer-review.md",
+        "verification": "docs/359-scene-rpc-full-book-diagnostic.md",
+        "requests": 18,
+        "fulfilled": 16,
+        "rejected": 2,
+        "classification": "unlocatable-json",
+        "writeFailures": 0,
+        "observationFailures": 0,
+        "productChanged": false
+      },
+      "nativeRoster": {
+        "plan": "docs/360-scene-roster-native-output-plan.md",
+        "codeReview": "docs/362-scene-roster-native-output-code-review.md",
+        "verification": "docs/363-scene-roster-native-real-verification.md",
+        "scopedTests": 411,
+        "firstSchemaBytes": 3272,
+        "repairSchemaBytes": 2085,
+        "actualReadonlyPassed": true,
+        "fullBookPassed": false
+      },
+      "boundedRosterRecovery": {
+        "implemented": true,
+        "sceneMaxGenerations": 4,
+        "genericDefaultGenerations": 2,
+        "nonStopImmediateFailure": true,
+        "frozenDraftReused": true,
+        "scopedRootTests": 491,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "plan": "docs/372-scene-roster-bounded-recovery-brief.md",
+        "cases": "docs/373-scene-roster-bounded-recovery-cases.md",
+        "codeReview": "docs/374-scene-roster-bounded-recovery-code-review.md",
+        "fullBookVerified": false
+      },
+      "repairErrorLabels": {
+        "implemented": true,
+        "scopedRootTests": 498,
+        "codeReview": "docs/378-scene-repair-error-labels-code-review.md",
+        "fullBookVerified": false
+      },
+      "rootEnvelopeRecovery": {
+        "implemented": true,
+        "scopedRootTests": 531,
+        "proofCapturedOnce": true,
+        "firstSchemaOnly": true,
+        "codeReview": "docs/382-scene-roster-root-recovery-code-review.md",
+        "fullBookVerified": false
+      },
+      "compactRepairChoices": {
+        "implemented": true,
+        "allChoicesPreserved": true,
+        "privateResolverUnchanged": true,
+        "scopedRootTests": 536,
+        "codeReview": "docs/386-scene-repair-compact-choices-code-review.md",
+        "fullBookVerified": false
+      },
+      "boundClaimRepair": {
+        "implemented": true,
+        "privateProofBasePreserved": true,
+        "strictClaimSlots": true,
+        "oldReplacePreserved": true,
+        "scopedRootTests": 584,
+        "codeReview": "docs/390-scene-roster-claim-patch-code-review.md",
+        "fullBookVerified": false,
+        "verification": "docs/391-scene-claim-patch-real-verification.md",
+        "actualRun": "R45",
+        "actualPassed": false
+      },
+      "normalTextCaptureDiagnostic": {
+        "review": "docs/394-scene-normal-text-observer-code-review.md",
+        "verification": "docs/395-scene-normal-text-real-diagnostic.md",
+        "receipt": "docs/scene-import-verification/r46-normal-captured-replay.json",
+        "captures": 77,
+        "allComplete": true,
+        "deltaEqualCompleted": 77,
+        "exactOfflineReplay": true,
+        "inputHashesAllEqual": true,
+        "offlineProviderCalls": 0,
+        "fullBookVerified": false
+      },
+      "eligibleClaimChoices": {
+        "implemented": true,
+        "plan": "docs/396-scene-repair-eligible-choices-brief.md",
+        "cases": "docs/397-scene-repair-eligible-choices-cases.md",
+        "codeReview": "docs/398-scene-repair-eligible-choices-code-review.md",
+        "scopedRootTests": 594,
+        "allSourceChoicesPreserved": true,
+        "acceptanceGatesUnchanged": true,
+        "offlineBudgetFirstPrompts": 130,
+        "offlineBudgetHistoricalGenerations": 77,
+        "offlineProviderCalls": 0,
+        "newSupplierBehaviorVerified": false,
+        "fullBookVerified": false,
+        "actualRun": "R47",
+        "actualPassed": false,
+        "verification": "docs/399-scene-eligible-choices-real-verification.md"
+      },
+      "nativeCapabilityDiagnostic": {
+        "plan": "docs/400-scene-native-capability-probe-brief.md",
+        "planReview": "docs/400-scene-native-capability-probe-plan-review.md",
+        "cases": "docs/401-scene-native-capability-probe-cases.md",
+        "casesReview": "docs/401-scene-native-capability-probe-cases-review.md",
+        "status": "R48-once-only-static-observation-complete",
+        "productChanged": false,
+        "liveProviderCalls": 4,
+        "novelInputSent": false,
+        "fullBookVerified": false,
+        "codeReview": "docs/402-scene-native-capability-probe-code-review.md",
+        "syntheticControls": 21,
+        "actualRun": "R48",
+        "verification": "docs/403-scene-native-capability-real-observation.md",
+        "receipt": "docs/scene-import-verification/r48-native-capability-observation.json",
+        "schemaPass": 1,
+        "schemaFail": 3,
+        "allWireHashesMatch": true,
+        "readonlyStateUnchanged": true,
+        "productFilesUnchanged": 367,
+        "generalSchemaSupportClaimed": false
+      },
+      "boundRepairDecisions": {
+        "status": "R49-real-failed-http400-native-encoding-diagnostic-pending",
+        "plan": "docs/404-scene-bound-repair-decisions-draft.md",
+        "planReview": "docs/404-scene-bound-repair-decisions-plan-review.md",
+        "cases": "docs/405-scene-bound-repair-decisions-cases.md",
+        "casesReview": "docs/405-scene-bound-repair-decisions-cases-review.md",
+        "providerChoiceView": "lossless-eight-column-tuples-independently-reviewed-implemented",
+        "historicalNewPromptBudgetV2": {
+          "providerCalls": 0,
+          "firstPrompts": 130,
+          "historicalGenerationsMeasured": 134,
+          "expectedHistoricalGenerations": 136,
+          "allFit": false,
+          "remainingOverBudgetRequests": 1,
+          "historicalAcceptanceUnchanged": true
+        },
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "historicalNewPromptBudgetV3": {
+          "providerCalls": 0,
+          "firstPrompts": 130,
+          "historicalGenerationsMeasured": 136,
+          "allFit": true,
+          "maxFixedRequiredBytes": 63751,
+          "fixedBudgetBytes": 65536,
+          "historicalAccepted": 50,
+          "historicalRejected": 13,
+          "historicalAcceptanceUnchanged": true,
+          "newSupplierBehaviorVerified": false
+        },
+        "rootCohortV1": {
+          "files": 30,
+          "nodes": 637,
+          "passed": 628,
+          "failed": 9,
+          "failureScope": "TR05 boundary fixtures still assumed selection could not fall back before activation",
+          "productBudgetViolationObserved": false,
+          "nextAction": "independently reviewed irreducible full-replacement boundary fixtures and same-cohort rerun"
+        },
+        "desktopBuildExit": 0,
+        "typecheckExit": 0,
+        "rendererBuildRun": false,
+        "rootCohortV2": {
+          "files": 30,
+          "nodes": 637,
+          "passed": 637,
+          "failed": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "productInputsHashed": 57,
+          "testHelperInputsHashed": 19,
+          "testInputsUnchanged": true
+        },
+        "codeReview": "docs/406-scene-bound-repair-decisions-code-review.md",
+        "buildIdentity": "docs/scene-import-verification/build-identity-r49.json",
+        "independentTestsPassed": 348,
+        "verification": "docs/407-scene-bound-decisions-real-verification.md"
+      },
+      "nativeTupleDiagnostic": {
+        "status": "R50-once-only-static-observation-complete-both-http400",
+        "plan": "docs/408-scene-native-tuple-probe-brief.md",
+        "planReview": "docs/408-scene-native-tuple-probe-plan-review.md",
+        "cases": "docs/409-scene-native-tuple-probe-cases.md",
+        "casesReview": "docs/409-scene-native-tuple-probe-cases-review.md",
+        "actualRun": "R50",
+        "novelInputSent": false,
+        "actualProviderCalls": 2,
+        "maxPlannedFinalFetches": 2,
+        "productR49Unchanged": true,
+        "fullBookVerified": false,
+        "codeReview": "docs/410-scene-native-tuple-probe-code-review.md",
+        "verification": "docs/411-scene-native-tuple-real-observation.md",
+        "productTDDCondition412Satisfied": false
+      },
+      "nativeReferenceDiagnostic": {
+        "actualRun": "R52",
+        "status": "once-only-static-complete-both-http400",
+        "providerCalls": 2,
+        "novelInputSent": false,
+        "plan": "docs/414-scene-native-reference-probe-brief.md",
+        "cases": "docs/415-scene-native-reference-probe-cases.md",
+        "codeReview": "docs/416-scene-native-reference-probe-code-review.md",
+        "verification": "docs/417-scene-native-reference-real-observation.md",
+        "productFixAdmitted": false,
+        "fullBookVerified": false
+      },
+      "nativeErrorReasonDiagnostic": {
+        "actualRun": "R54",
+        "status": "once-only-static-known-good200-bad400-closed-reason-observed",
+        "providerCalls": 2,
+        "novelInputSent": false,
+        "plan": "docs/418-scene-native-error-token-probe-brief.md",
+        "cases": "docs/419-scene-native-error-token-probe-cases.md",
+        "codeReview": "docs/420-scene-native-error-token-probe-code-review.md",
+        "verification": "docs/421-scene-native-error-token-real-observation.md",
+        "productFixAdmitted": false,
+        "fullBookVerified": false
+      },
+      "typedNativeRepair": {
+        "status": "conditional-product-TDD-in-progress",
+        "actualStaticRun": "R56",
+        "staticProviderCalls": 2,
+        "flatHTTPStatus": 200,
+        "directJSONAndOriginalTupleWitnessPassed": true,
+        "productTDDCondition422Satisfied": true,
+        "plan": "docs/422-scene-native-typed-union-brief.md",
+        "cases": "docs/423-scene-native-typed-union-cases.md",
+        "privateCodeReview": "docs/424-scene-native-typed-branch-probe-code-review.md",
+        "staticVerification": "docs/425-scene-native-typed-branch-real-observation.md",
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false
+      },
+      "nativeRecordHintDiagnostic": {
+        "actualRun": "R58",
+        "providerCalls": 2,
+        "status": "control200-hint400-required-all-restriction-observed",
+        "plan": "docs/427-scene-native-record-hint-brief.md",
+        "cases": "docs/428-scene-native-record-hint-cases.md",
+        "codeReview": "docs/429-scene-native-record-hint-probe-code-review.md",
+        "verification": "docs/430-scene-native-record-hint-real-observation.md",
+        "productConditionSatisfied": false,
+        "fullBookVerified": false
+      },
+      "nativeStrictRepair": {
+        "actualStaticRun": "R60",
+        "status": "R61-normal-failed-repair-transaction",
+        "providerCalls": 2,
+        "strictTrueStatus": 400,
+        "strictFalseStatus": 200,
+        "fiveTaskTupleAndWitnessIndependentlyPass": true,
+        "productCondition431Satisfied": true,
+        "plan": "docs/431-scene-native-strict-mode-brief.md",
+        "cases": "docs/432-scene-native-strict-mode-cases.md",
+        "codeReview": "docs/433-scene-native-strict-mode-probe-code-review.md",
+        "verification": "docs/434-scene-native-strict-mode-real-observation.md",
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "productCodeReview": "docs/435-scene-native-bound-strict-mode-code-review.md",
+        "rootTests": 655,
+        "independentTests": 168,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "all130FirstAnd136HistoricalNewBudgetFit": true,
+        "buildIdentity": "docs/scene-import-verification/build-identity-r61.json",
+        "normalVerification": "docs/436-scene-bound-repair-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r61-normal-repair-transaction-observation.json"
+      },
+      "boundAnswerGuidance": {
+        "status": "R62-normal-failed-scene-roster-repair",
+        "plan": "docs/437-scene-bound-answer-guidance-brief.md",
+        "planReview": "docs/437-scene-bound-answer-guidance-plan-review.md",
+        "cases": "docs/438-scene-bound-answer-guidance-cases.md",
+        "casesReview": "docs/438-scene-bound-answer-guidance-cases-review.md",
+        "diagnosedRun": "R61",
+        "newNormalRun": "R62",
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "rootScopedFiles": 33,
+        "rootTests": 667,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "all130FirstAnd196HistoricalNewPromptBudgetsFit": true,
+        "historicalAcceptanceUnchanged": {
+          "accepted": 70,
+          "rejected": 20
+        },
+        "newSupplierBehaviorVerified": false,
+        "fullRepositoryTestsRun": false,
+        "codeReview": "docs/439-scene-bound-answer-guidance-code-review.md",
+        "independentTests": 164,
+        "buildIdentity": "docs/scene-import-verification/build-identity-r62.json",
+        "normalVerification": "docs/440-scene-bound-guidance-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r62-normal-repair-observation.json"
+      },
+      "keyedBoundNative": {
+        "status": "R63-inline200-typed-reference400-product-condition-not-met",
+        "plan": "docs/441-scene-keyed-bound-output-brief.md",
+        "cases": "docs/442-scene-keyed-bound-output-cases.md",
+        "codeReview": "docs/443-scene-keyed-bound-native-probe-code-review.md",
+        "verification": "docs/444-scene-keyed-native-real-observation.md",
+        "providerCalls": 2,
+        "productConditionSatisfied": false,
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false
+      },
+      "officialKeyedRef": {
+        "status": "R64-inline200-official-pure-ref400-product-condition-not-met",
+        "plan": "docs/446-scene-keyed-official-ref-brief.md",
+        "cases": "docs/447-scene-keyed-official-ref-cases.md",
+        "baselineFailedStatic": "R63",
+        "plannedStatic": "R64",
+        "newNormalRun": null,
+        "productConditionSatisfied": false,
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "verification": "docs/449-scene-keyed-official-ref-real-observation.md",
+        "providerCalls": 2
+      },
+      "inlineKeyedSeparateBudget": {
+        "status": "R65-normal-failed-two-scene-roster-RPC",
+        "plan": "docs/450-scene-inline-keyed-budget-brief.md",
+        "cases": "docs/451-scene-inline-keyed-budget-cases.md",
+        "codeReview": "docs/452-scene-inline-keyed-budget-code-review.md",
+        "rootTests": 693,
+        "independentTests": 223,
+        "rootFiles": 35,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "budgetPlannerFirst": 130,
+        "budgetHistoricalGenerations": 256,
+        "historicalOutcomes": {
+          "accepted": 92,
+          "rejected": 25
+        },
+        "separateSchemaLimitBytes": 65536,
+        "combinedControlAllowanceIncreased": true,
+        "sourceAndPromptFixedCapsUnchanged": true,
+        "buildIdentity": "docs/scene-import-verification/build-identity-r65.json",
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "normalVerification": "docs/453-scene-inline-keyed-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r65-inline-keyed-normal-observation.json"
+      },
+      "boundaryFocus": {
+        "status": "actualFailed",
+        "plan": "docs/454-scene-source-boundary-focus-brief.md",
+        "cases": "docs/455-scene-source-boundary-focus-cases.md",
+        "codeReview": "docs/456-scene-source-boundary-focus-code-review.md",
+        "rootTests": 721,
+        "rootFiles": 38,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "budgetPlannerFirst": 129,
+        "freshWorkingUnits": 4912,
+        "freshGeometry": "sentence-1000-v3",
+        "legacyFirstPrompts": 130,
+        "budgetHistoricalGenerations": 357,
+        "historicalOutcomes": {
+          "accepted": 146,
+          "rejected": 27
+        },
+        "bodyAndChaptersUnchanged": true,
+        "providerCallsDuringLocalChecks": 0,
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "newNormalRun": "R66",
+        "buildIdentity": "docs/scene-import-verification/build-identity-r66.json",
+        "independentTests": 155,
+        "normalVerification": "docs/457-scene-source-boundary-focus-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r66-source-boundary-focus-normal-observation.json",
+        "normalRpc": {
+          "total": 31,
+          "fulfilled": 28,
+          "rejected": 3
+        },
+        "normalGenerations": 61,
+        "allInputTextHashesMatched": true,
+        "normalCoverageUnits": 1039,
+        "normalSceneMembers": 699,
+        "normalSceneRecords": 425,
+        "normalSceneIdentities": 422,
+        "normalArtifacts": 0,
+        "normalAppExit": 0,
+        "normalDriverExit": 2,
+        "sevenMinuteTargetVerified": false
+      },
+      "selectionRetentionFocus": {
+        "status": "actualFailed",
+        "plan": "docs/458-scene-selection-retention-focus-brief.md",
+        "planReview": "docs/458-scene-selection-retention-focus-plan-review.md",
+        "cases": "docs/459-scene-selection-retention-focus-cases.md",
+        "casesReview": "docs/459-scene-selection-retention-focus-cases-review.md",
+        "codeReview": "docs/460-scene-selection-retention-focus-code-review.md",
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "newNormalRun": "R67",
+        "rootTests": 760,
+        "rootFiles": 41,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "budgetFreshFirst": 129,
+        "budgetLegacyFirst": 130,
+        "historicalRequests": 204,
+        "historicalOriginalCaptures": 418,
+        "historicalActualNewPrompts": 417,
+        "earlierWrapperAcceptanceUnusedCaptures": 1,
+        "historicalNewLocalOutcomes": {
+          "accepted": 175,
+          "rejected": 29
+        },
+        "onlyHistoricalChange": "R66 task2 explicit selection wrapper accepted by original integer and all original gates",
+        "buildIdentity": "docs/scene-import-verification/build-identity-r67.json",
+        "independentTests": 152,
+        "normalVerification": "docs/461-scene-selection-retention-focus-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r67-selection-retention-focus-normal-observation.json",
+        "normalRpc": {
+          "total": 20,
+          "fulfilled": 18,
+          "rejected": 2
+        },
+        "normalGenerations": 34,
+        "allInputTextHashesMatched": true,
+        "normalCoverageUnits": 661,
+        "normalSceneMembers": 418,
+        "normalSceneRecords": 324,
+        "normalSceneIdentities": 324,
+        "normalSceneRelations": 7,
+        "normalArtifacts": 0,
+        "normalAppExit": 0,
+        "normalDriverExit": 2,
+        "sevenMinuteTargetVerified": false
+      },
+      "claimViewOwnerless": {
+        "status": "actualFailed",
+        "plan": "docs/462-scene-claim-view-ownerless-brief.md",
+        "planReview": "docs/462-scene-claim-view-ownerless-plan-review.md",
+        "cases": "docs/463-scene-claim-view-ownerless-cases.md",
+        "casesReview": "docs/463-scene-claim-view-ownerless-cases-review.md",
+        "codeReview": "docs/464-scene-claim-view-ownerless-code-review.md",
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "newNormalRun": "R68",
+        "rootFiles": 43,
+        "rootTests": 802,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "budgetFreshFirst": 129,
+        "budgetLegacyFirst": 130,
+        "historicalRequests": 224,
+        "historicalOriginalCaptures": 452,
+        "historicalPreparedPrompts": 382,
+        "usedOldCaptures": 296,
+        "unusedContractChanged": 15,
+        "unusedBindingUnknown": 141,
+        "blindOldDigitReuse": false,
+        "buildIdentity": "docs/scene-import-verification/build-identity-r68.json",
+        "independentTests": 176,
+        "independentFixtureIncrement": 20,
+        "normalVerification": "docs/465-scene-claim-view-ownerless-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r68-claim-view-ownerless-normal-observation.json",
+        "normalRpc": {
+          "total": 36,
+          "fulfilled": 35,
+          "rejected": 1
+        },
+        "normalGenerations": 67,
+        "allInputTextHashesMatched": true,
+        "normalCoverageUnits": 1300,
+        "normalSceneMembers": 722,
+        "normalSceneRecords": 542,
+        "normalSceneIdentities": 537,
+        "normalUnresolvedIdentities": 1,
+        "normalSceneRelations": 44,
+        "normalArtifacts": 0,
+        "normalAppExit": 0,
+        "normalDriverExit": 2,
+        "sevenMinuteTargetVerified": false
+      },
+      "sameLiteralJoint": {
+        "status": "actualFailed",
+        "plan": "docs/466-scene-same-literal-joint-brief.md",
+        "planReview": "docs/466-scene-same-literal-joint-plan-review.md",
+        "cases": "docs/467-scene-same-literal-joint-cases.md",
+        "casesReview": "docs/467-scene-same-literal-joint-cases-review.md",
+        "codeReview": "docs/468-scene-same-literal-joint-code-review.md",
+        "newNormalRun": "R69",
+        "fullBookVerified": false,
+        "publicationVerified": false,
+        "reopenVerified": false,
+        "rootFiles": 44,
+        "rootTests": 808,
+        "typecheckExit": 0,
+        "desktopBuildExit": 0,
+        "budgetFreshFirst": 129,
+        "budgetLegacyFirst": 130,
+        "historicalRequests": 260,
+        "historicalOriginalCaptures": 519,
+        "historicalPreparedPrompts": 440,
+        "usedOldCaptures": 300,
+        "unusedContractChanged": 4,
+        "unusedBindingUnknown": 215,
+        "blindOldDigitReuse": false,
+        "buildIdentity": "docs/scene-import-verification/build-identity-r69.json",
+        "independentTests": 159,
+        "normalVerification": "docs/469-scene-same-literal-joint-real-verification.md",
+        "normalObservation": "docs/scene-import-verification/r69-same-literal-joint-normal-observation.json",
+        "normalRpc": {
+          "total": 40,
+          "fulfilled": 37,
+          "rejected": 3
+        },
+        "normalGenerations": 77,
+        "allInputTextHashesMatched": true,
+        "normalCoverageUnits": 1376,
+        "normalSceneMembers": 819,
+        "normalSceneRecords": 606,
+        "normalSceneIdentities": 593,
+        "normalUnresolvedIdentities": 2,
+        "normalSceneRelations": 45,
+        "normalArtifacts": 0,
+        "normalAppExit": 0,
+        "normalDriverExit": 2,
+        "sevenMinuteTargetVerified": false
+      }
+    },
+    "concreteSceneIdentityCases": "docs/324-scene-concrete-identity-cases.md",
+    "concreteSceneIdentityCasesReview": "docs/324-scene-concrete-identity-cases-review.md",
+    "concreteSceneIdentityServiceReview": "docs/325-scene-concrete-identity-service-code-review.md",
+    "concreteSceneIdentityMainReview": "docs/327-scene-concrete-identity-main-code-review.md",
+    "concreteSceneIdentityUiReview": "docs/328-scene-concrete-identity-ui-code-review.md",
+    "concreteSceneIdentityCoreReview": "docs/326-scene-concrete-identity-core-code-review.md",
+    "concreteSceneIdentityAcceptanceDriverReview": "docs/330-driver-review.md",
+    "jointGroupContinuation": {
+      "status": "actualFailed",
+      "plan": "docs/480-scene-joint-group-decisions-brief.md",
+      "planReview": "docs/480-scene-joint-group-decisions-plan-review.md",
+      "cases": "docs/481-scene-joint-group-decisions-cases.md",
+      "casesReview": "docs/481-scene-joint-group-decisions-cases-review.md",
+      "fullBookVerified": false,
+      "publicationVerified": false,
+      "reopenVerified": false,
+      "codeReview": "docs/482-scene-joint-group-decisions-code-review.md",
+      "normalVerification": "docs/483-scene-joint-group-decisions-real-verification.md",
+      "observation": "docs/scene-import-verification/r73-joint-group-normal-observation.json",
+      "rootFiles": 53,
+      "rootTests": 889,
+      "typecheckExit": 0,
+      "desktopBuildExit": 0,
+      "historyRequests": 368,
+      "historyCaptures": 719,
+      "actualRPC": 26,
+      "actualFulfilled": 19,
+      "actualRejected": 7,
+      "actualGenerations": 59,
+      "offlineValidationProviderCalls": 0,
+      "normalObservedProviderTransfers": 59
+    },
+    "userRequestedCloseout": {
+      "date": "2026-11-02",
+      "furtherTesting": false,
+      "furtherModelCalls": false,
+      "changesRetained": true,
+      "latestRegression": {
+        "files": 55,
+        "tests": 909,
+        "pass": 906,
+        "fail": 3
+      },
+      "fullSceneImportVerified": false,
+      "publicationVerified": false,
+      "reopenVerified": false
+    }
+  },
+  "novelImportRosterFaultIsolation20261113": {
+    "date": "2026-11-13",
+    "requirements": [
+      "单个角色或单个正文片段识别失败不得升级为整体角色识别失败并阻塞导入",
+      "使用《诡秘之主》第一卷进行真实导入测试",
+      "截图中的来源误报必须修复，同时保留真实来源内容变更拦截"
+    ],
+    "status": "implemented-and-real-roster-verified",
+    "actualFailure": "失败会话 d9d8646f-9233-41cb-9062-b9e68dd159ed 的源 SHA-256、device/inode/size/mtime 均不变，仅 ctime 改变；修复后 verifyNovelSources 已通过并仅刷新 proof.ctime。",
+    "implementation": [
+      "desktop/main/novel-import-files.ts",
+      "desktop/service/novel-import-ai.ts",
+      "desktop/main/novel-import.ts",
+      "desktop/core/novel-import.ts",
+      "desktop/core/novel-import-wizard-state.ts",
+      "desktop/shared/novel-import.ts",
+      "src/components/desktop/NovelImportWizard.tsx"
+    ],
+    "reviews": "独立技术方案审核、独立测试矩阵审核、独立代码审核均完成；驱动审核提出的独立第一卷正文 hash 与空清单假通过风险已修复。",
+    "testIds": [
+      "NI-F07b",
+      "NI-F07c",
+      "CP-F03-grant-ctime",
+      "RA-06",
+      "RA-06b",
+      "WR-M05",
+      "RS-08",
+      "RS-09",
+      "RS-10",
+      "NIW-U36b",
+      "NIW-U36c",
+      "NIW-B14b"
+    ],
+    "results": {
+      "typecheck": "passed on Node v24.18.0",
+      "desktopBuild": "passed on Node v24.18.0",
+      "relatedRegression": "Final related unit files 201/201 passed; legacy scene-identity UI 19/19 passed; SI-06 1/1 passed. The separate wizard-publish integration remains blocked by assertSceneRosterCanonical / 模型返回的场景清单与完整提及资料不一致；单独重跑仍失败，未修改该无关协议。",
+      "browserRegression": "53/53 passed; final NIW-B14/B14b rerun after warning assertions 2/2 passed",
+      "fullSuite": "4842 tests, 4782 passed, 59 failed, 1 cancelled (798.3s). Nineteen legacy-view failures caused by missing dropped fixtures and the old SI-06 whole-packet rejection assertion were fixed after this run and rerun green (19/19 and 1/1). Remaining failures span unmodified scene identity, backup/root migration, model lifecycle and release tests; full-suite green is not claimed."
+    },
+    "realFirstVolume": {
+      "driver": "scripts/run-lotm-wizard-import.mjs with LOTM_ROSTER_ONLY=1 and LOTM_FIRST_VOLUME_ONLY=1",
+      "evidence": "/private/tmp/shakeink-lotm-first-volume-20261113/run-r4/evidence/roster-r4/roster-timing.json",
+      "screenshot": "/private/tmp/shakeink-lotm-first-volume-20261113/run-r4/evidence/roster-r4/005-detect-char-done.png",
+      "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+      "chapters": 213,
+      "grantedIndices": [0, 212],
+      "workingUnits": 760,
+      "coveredUnits": 760,
+      "modelCallsFulfilled": 19,
+      "candidates": 136,
+      "incomplete": 0,
+      "droppedInvalid": 0,
+      "droppedUnlocatable": 1,
+      "retry": "not-exercised; deterministic RS-08 covers retry isolation",
+      "driverElapsedMs": 15991,
+      "sourceStableIdentityAndHashUnchanged": true,
+      "scope": "仅执行到识别角色，不宣称角色实体导入、后续步骤或发布已验收"
+    }
   }
 }

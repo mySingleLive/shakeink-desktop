@@ -88,3 +88,43 @@ test("DESK-M12/M13: original text generation runs through SDK and main gateway, 
     await works.close()
   } finally { await service.close(); await works.close(); await rm(root, { recursive: true, force: true }) }
 })
+
+test("LOTM-L-REVIEW-READONLY: actual SDK and model gateway run without database usage writes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "shakeink-readonly-review-"))
+  const works = new Workspaces(join(root, "app"), join(process.cwd(), "prisma/migrations"))
+  let repo!: ModelRepository; let calls = 0
+  const gateway = new ModelGateway({ keyFor: (id, rev) => repo.keyFor(id, rev), fetch: async (url, init) => {
+    assert.equal(String(url), draft.endpoint + "/chat/completions")
+    assert.equal(new Headers(init?.headers).get("authorization"), "Bearer " + draft.apiKey)
+    calls++
+    const chunks = [
+      { id: "readonly", created: 1, model: draft.modelId, choices: [{ index: 0, delta: { role: "assistant", content: "只读结果" }, finish_reason: null }] },
+      { id: "readonly", created: 1, model: draft.modelId, choices: [{ index: 0, delta: {}, finish_reason: "stop" }], usage: { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10 } },
+    ]
+    return new Response(chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n", { headers: { "content-type": "text/event-stream" } })
+  } })
+  repo = new ModelRepository(join(root, "state.json"), protection, gateway)
+  const service = new ModelService(repo, gateway)
+  configureModelTransport(async (method, input) => {
+    if (method === "model.defaults") return service.defaults() as never
+    if (method === "model.resolve") return service.resolve(input) as never
+    if (method === "model.start") return service.start(input) as never
+    if (method === "model.read") return service.read(input) as never
+    if (method === "model.cancel") return service.cancel(input) as never
+    throw new Error("Unexpected main call")
+  })
+  try {
+    await works.initialize()
+    let state = await repo.saveModel(0, draft)
+    state.settings.agent.textModelId = state.models[0].id
+    state = await repo.updateSettings(state.revision, state.settings)
+    const { readOnlyImportUsage } = await import("../../desktop/service/novel-import-ai")
+    await works.runWithGlobal("inbox", async () => {
+      const result = await generateText({ userId: "local-author", prompt: "只读测试", action: "lotm.review.readonly", usage: readOnlyImportUsage, maxNetworkRetries: 0 })
+      assert.equal(result.text, "只读结果"); assert.equal(result.promptTokens, 7); assert.equal(result.completionTokens, 3)
+      assert.equal(await prisma.usageRecord.count(), 0)
+      assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: "local-author" } })).tokenUsed, 0n)
+    })
+    assert.equal(calls, 1); assert.equal((await repo.read()).revision, state.revision)
+  } finally { await service.close(); await works.close(); await rm(root, { recursive: true, force: true }) }
+})

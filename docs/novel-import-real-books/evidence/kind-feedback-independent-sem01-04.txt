@@ -1,0 +1,12 @@
+✔ NI-SEM01: native character facts preserve supported profile fields and unknown values (6.442916ms)
+✔ NI-SEM02: place and world-setting identities retain typed parents without merging unrelated entities (3.237375ms)
+✔ NI-SEM03: all nine world setting contents survive the native editor content contract (7.083ms)
+✔ NI-SEM04: knowledge qualifiers survive every selected kind and native timeline reliability (23.877417ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 197.406209

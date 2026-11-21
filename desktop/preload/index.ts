@@ -1,11 +1,15 @@
 import { contextBridge, ipcRenderer } from "electron"
 import type { DesktopBridge, DesktopEvent } from "../shared/ipc"
 const bridge: DesktopBridge = {
+  novelImport: action=>ipcRenderer.invoke('desktop:novel-import',action),
+  novelImportSources: action=>ipcRenderer.invoke('desktop:novel-import-sources',action),
   bootstrap: () => ipcRenderer.invoke("desktop:bootstrap"),
   persistDraft: (sessionId,snapshot) => ipcRenderer.invoke("desktop:draft-persist",sessionId,snapshot),
   readDraft: sessionId => ipcRenderer.invoke("desktop:draft-read",sessionId),
   markDraftReady: sessionId => ipcRenderer.invoke("desktop:draft-ready",sessionId),
   replyClose: (sessionId,id,reply) => ipcRenderer.invoke("desktop:close-reply",sessionId,id,reply),
+  prompts: () => ipcRenderer.invoke("desktop:prompts"),
+  replyPrompt: (id,value) => ipcRenderer.invoke("desktop:prompt-reply",{id,value}),
   exportFile: request=>ipcRenderer.invoke("desktop:file-export",request),
   cancelFileExport: id=>ipcRenderer.invoke("desktop:file-export-cancel",id),
   exportDraft: (sessionId,snapshot) => ipcRenderer.invoke("desktop:draft-export",sessionId,snapshot),

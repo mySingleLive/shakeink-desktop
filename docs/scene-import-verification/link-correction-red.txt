@@ -1,0 +1,81 @@
+✖ SL-01: each rejected scene parent or typed link gets exact static field guidance and recovers without losing data (312.771209ms)
+✖ SL-02: permanent invalid links stay rejected after two generations with safe final field diagnostics (1.912291ms)
+✖ SL-03/04: scene link outer correction recovers on generation three with exact guidance (2229.700958ms)
+✖ SL-03/04: scene link outer correction stops at four generations (2161.006458ms)
+✔ SL-05: full catalog, context artifact and self links remain accepted and final diagnostics never inherit a previous field (5.440042ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 1
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5279.635708
+
+✖ failing tests:
+
+test at tests/unit/novel-import-scene-links.test.ts:2:3324
+✖ SL-01: each rejected scene parent or typed link gets exact static field guidance and recovers without losing data (312.771209ms)
+  AssertionError [ERR_ASSERTION]: parentId
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-links.test.ts:23:41)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-links.test.ts:2:4336
+✖ SL-02: permanent invalid links stay rejected after two generations with safe final field diagnostics (1.912291ms)
+  AssertionError [ERR_ASSERTION]: parentId
+      at Object.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-links.test.ts:29:11)
+      at expectedException (node:assert:578:17)
+      at expectsError (node:assert:703:21)
+      at strict.rejects (node:assert:769:3)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-links.test.ts:28:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-links.test.ts:2:5401
+✖ SL-03/04: scene link outer correction recovers on generation three with exact guidance (2229.700958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 3
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-links.test.ts:46:133)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-scene-links.test.ts:2:5401
+✖ SL-03/04: scene link outer correction stops at four generations (2161.006458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 4
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-scene-links.test.ts:46:133)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,42 @@
+✔ NI-W04: creating and catalog-previous branches reject a changed import payload with the same title/request (4662.525833ms)
+✔ NI-W04: a catalog retry verifies the original-material snapshot as well as the mutation receipt (964.553375ms)
+✔ NI-W06: source overlap, occupied target, changed directory identity and unresolved plans never publish (1009.858958ms)
+✔ NI-D01: every source character and chapter boundary survives safe splitting (6.094833ms)
+✔ NI-D02: classification coverage rejects gaps, overlaps and unclassified ranges (1.6705ms)
+✔ NI-F04: actual PDF extraction preserves text order and reports image or missing-text pages as blocked review ledgers (4542.083459ms)
+✔ NI-F07: protected roots, symlinks and source inode/content replacement fail closed (29.481125ms)
+✔ NI-L04: import-journal inventory ownership accepts only UUID session directories and exact committed filenames (1.328208ms)
+✔ NI-L04: real closed-root migration preserves the import journal and leaves unknown neighbours at the original root (736.602542ms)
+✔ NI-L02: actual import IPC enforces trusted frame, ready owner, strict action and business admission before any file/model work (88.439084ms)
+✔ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (26.496333ms)
+✔ NI-S02: full-book batches checkpoint successful work and retry the failed batch (460.649667ms)
+✔ NI-S07: pause drains an operation and a late success never advances stale epoch (74.004584ms)
+✔ NI-S08: journal restores checkpoints but target authorization must be renewed (434.151625ms)
+▶ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints
+  ✔ none (218.675625ms)
+  ✔ legacy (384.323209ms)
+  ✔ double-reopen (202.971584ms)
+  ✔ range (198.616292ms)
+  ✔ selection (119.856875ms)
+  ✔ target (77.184042ms)
+  ✔ replaced-target (67.78825ms)
+  ✔ working-revision (157.675875ms)
+✔ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints (1428.590625ms)
+▶ NI-S11: bounded fact review packs retain every deterministic task and checkpoint atomically
+  ✔ network (158.662875ms)
+  ✔ evidence (139.82725ms)
+  ✔ reference (139.393417ms)
+  ✔ unit-reference (157.705917ms)
+  ✔ pause (148.671333ms)
+  ✔ source-budget-and-distinct-evidence (148.496417ms)
+  ✔ exact-serialized-budget (81.068875ms)
+  ✔ oversized-single-task (70.706625ms)
+✔ NI-S11: bounded fact review packs retain every deterministic task and checkpoint atomically (1045.539667ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7403.400416

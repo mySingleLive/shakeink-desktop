@@ -1,0 +1,12 @@
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (5.015709ms)
+✔ NI-PDF09: old non-PDF hashes and restored checkpoints remain byte identical with absent PDF fields (0.603375ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (4.832917ms)
+✔ NI-PDF03: page preview actions reject unsafe schemas, foreign files and stale revisions before IO (2.075334ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 478.52425

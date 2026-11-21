@@ -1,0 +1,28 @@
+▶ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority
+  ✔ actual analyze, reconcile and review prompts keep guidance outside untrusted data (9.841333ms)
+  ✔ true preimplementation prompt and serialization goldens protect unchanged branches (1.32ms)
+  ✔ projection and locked targeted-reconcile gates still reject unauthorized results (1.869791ms)
+✔ NI-A07: fixed evidence and attribution guidance preserves payloads, phases and bounded authority (19.520542ms)
+▶ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract
+  ✔ all twelve actual generation paths retain exact data, notFound, role and signal (11.714958ms)
+  ✔ invalid and missing targets keep the original helper contract and zero-resolution guard (0.518416ms)
+  ✔ independent preimplementation hashes retain every unaffected phase (0.851417ms)
+✔ NI-A08: ordinary semantic analysis binds exactly one requested kind in its fixed output contract (14.350292ms)
+▶ NI-A09: emotional-impact business guidance follows selected and explicit trope targets only
+  ✔ real ordinary, explicit reconcile and selected review prompts preserve authority and data (4.340458ms)
+  ✔ true baseline hashes protect irrelevant targets and all unrelated phases (1.265708ms)
+  ✔ guidance does not authorize cross-phase notFound, unverified omissions or locked edits (1.196792ms)
+✔ NI-A09: emotional-impact business guidance follows selected and explicit trope targets only (7.542459ms)
+▶ NI-A10: world grouping guidance follows actual world targets without merging supported worlds
+  ✔ real ordinary, targeted reconcile and selected review paths retain native structures and data (6.359292ms)
+  ✔ independent true-baseline hashes protect unrelated targets, phases and legacy (1.265458ms)
+  ✔ world guidance preserves projection, target, lock and native graph rejection gates (2.141917ms)
+✔ NI-A10: world grouping guidance follows actual world targets without merging supported worlds (10.396334ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 243.901042

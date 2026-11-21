@@ -1,0 +1,1 @@
+{"newRuntimeRoots":["word-extractor","htmlparser2","jszip","pdfjs-dist"],"pdfResources":"present","iconLicense":"LICENSE.txt present","icons":"5 local SVG files present","scope":"new import build resources; packaged-app execution not performed"}

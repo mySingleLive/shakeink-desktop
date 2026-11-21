@@ -1,0 +1,89 @@
+✔ LOTM-AUD04: actual native fields, multisets, hierarchy and narrative fragments/references are exact (5698.398792ms)
+✔ LOTM-AUD06: links, wrong storage candidate, required-without-pointer and existing labels are blocked (124.553083ms)
+✔ LOTM-AUD07: original global/model/other-session paths are never traversed and originals stay stable (10786.298292ms)
+✖ LOTM-AUD04: reading line and nonempty chapter-outline card fields are checked exactly (44.301ms)
+✖ LOTM-AUD06: a valid original pointer still requires a strict matching required marker (4.277334ms)
+▶ LOTM-AUD07: replaced scratch or output is rejected before the engine factory is called
+  ✖ scratch (1.263917ms)
+  ✖ output (0.951083ms)
+✖ LOTM-AUD07: replaced scratch or output is rejected before the engine factory is called (2.637875ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 3
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17412.45775
+
+✖ failing tests:
+
+test at tests/unit/lotm-import-audit.test.ts:3:18610
+✖ LOTM-AUD04: reading line and nonempty chapter-outline card fields are checked exactly (44.301ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:66:917)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:19986
+✖ LOTM-AUD06: a valid original pointer still requires a strict matching required marker (4.277334ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:71:261)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:21199
+✖ scratch (1.263917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:76:802)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:76:41)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/lotm-import-audit.test.ts:3:21199
+✖ output (0.951083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:76:802)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/lotm-import-audit.test.ts:76:41)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

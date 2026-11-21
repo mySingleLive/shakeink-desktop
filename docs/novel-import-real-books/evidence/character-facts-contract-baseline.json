@@ -1,0 +1,10 @@
+{
+  "desktop/core/novel-import-ai-payload.ts": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6",
+  "desktop/service/novel-import-ai.ts": "3dba02c56f7572c49366bc7a6be9fd09a07bdf6fdc60235cdd997da76cdf7a94",
+  "tests/unit/novel-import-ai.test.ts": "401630f0fbef55ad0c4d7fed37d491c66e2d69050786a9ea94d2e14b898d2d28",
+  "tests/unit/novel-import-request-schema.test.ts": "e0ce2d2f3a6eb2bcfaea17b5c369a3c39aa5df68ffdb8b7b88bb5190b6c39404",
+  "desktop/main/novel-import.ts": "92ed3a9d6a6eceaf1a1c52f394b155ada93a913c2c13f292ac047b24a5a5491c",
+  "src/lib/ai/generate.ts": "51612305662fdbc383f01516c2fa5baf83c37e97123391752bdbdf3c9631fe22",
+  "desktop/core/novel-import-semantics.ts": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874",
+  "desktop/core/novel-import.ts": "6a11e1ef0ba7b66a89a070b38b5e134302b920a379c86ef2b489b1b5959971ef"
+}

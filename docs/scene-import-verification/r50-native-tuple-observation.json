@@ -1,0 +1,105 @@
+{
+  "run": "R50",
+  "diagnosticHarnessComplete": true,
+  "productTDDCondition412Satisfied": false,
+  "providerCalls": 2,
+  "novelInputSent": false,
+  "currentPairOnly": true,
+  "results": [
+    {
+      "id": "tuple-array",
+      "schemaSha256": "36c1a92c09a87dd6aafab57c843b302fd8c984f2173212ee75085a6f8c6e741d",
+      "schemaBytes": 2644,
+      "promptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "category": "HTTP_400",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "validation": {
+        "directJSON": false,
+        "schema": "not-run",
+        "keywordCounts": {}
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "36c1a92c09a87dd6aafab57c843b302fd8c984f2173212ee75085a6f8c6e741d",
+        "schemaBytes": 2644,
+        "inputTextSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 400,
+        "body": "parsed",
+        "complete": true,
+        "bytes": 219,
+        "knownCode": "invalid_request_error",
+        "knownParam": "none",
+        "keywords": {
+          "schema": true,
+          "items": false,
+          "array": false,
+          "object": false,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": true,
+          "additionalItems": false
+        }
+      }
+    },
+    {
+      "id": "homogeneous-items",
+      "schemaSha256": "ba1e4bcfb417fffa93cd7a51922139a4b674ddbe3d155168a406fa5b3048a346",
+      "schemaBytes": 2630,
+      "promptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "category": "HTTP_400",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "validation": {
+        "directJSON": false,
+        "schema": "not-run",
+        "keywordCounts": {}
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "ba1e4bcfb417fffa93cd7a51922139a4b674ddbe3d155168a406fa5b3048a346",
+        "schemaBytes": 2630,
+        "inputTextSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 400,
+        "body": "parsed",
+        "complete": true,
+        "bytes": 206,
+        "knownCode": "invalid_request_error",
+        "knownParam": "none",
+        "keywords": {
+          "schema": true,
+          "items": false,
+          "array": false,
+          "object": false,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    }
+  ],
+  "all101InputsUnchanged": true,
+  "all368ProtectedFilesUnchanged": true,
+  "stateUnchanged": true,
+  "normalAppExit": 0,
+  "quitTimedOut": false,
+  "pageErrors": 0,
+  "rawProviderErrorBodyPersisted": false,
+  "fullBookVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "interpretation": "Both encodings rejected; items-only fix unsupported; no product change permitted by 412"
+}

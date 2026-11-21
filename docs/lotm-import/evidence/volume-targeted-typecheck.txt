@@ -1,0 +1,147 @@
+[96mdesktop/main/novel-import-files.ts[0m:[93m9[0m:[93m27[0m - [91merror[0m[90m TS7016: [0mCould not find a declaration file for module 'word-extractor'. '/Users/dt_flys/Projects/shakeink-desktop/node_modules/word-extractor/lib/word.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/word-extractor` if it exists or add a new declaration (.d.ts) file containing `declare module 'word-extractor';`
+
+[7m9[0m import WordExtractor from 'word-extractor'
+[7m [0m [91m                          ~~~~~~~~~~~~~~~~[0m
+[96msrc/components/chat/composer-editor.ts[0m:[93m125[0m:[93m98[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m125[0m   return !!(root.classList.contains("chat-composer-editable") && root.ownerDocument.defaultView?.desktop
+[7m   [0m [91m                                                                                                 ~~~~~~~[0m
+[96msrc/components/chat/composer-editor.ts[0m:[93m395[0m:[93m98[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m395[0m         if (root.classList.contains("chat-composer-editable") && root.ownerDocument.defaultView?.desktop) br.setAttribute("data-composer-break", "true")
+[7m   [0m [91m                                                                                                 ~~~~~~~[0m
+[96msrc/components/content/ChapterContentPanel.tsx[0m:[93m268[0m:[93m62[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m268[0m       if (saved && !job.signal.aborted) toast.success(window.desktop ? "导出文件已保存" : "导出文件已生成", { id: notification })
+[7m   [0m [91m                                                             ~~~~~~~[0m
+[96msrc/components/content/planning/PlanningWorkspace.tsx[0m:[93m57[0m:[93m15[0m - [91merror[0m[90m TS2307: [0mCannot find module './planning.module.css' or its corresponding type declarations.
+
+[7m57[0m import s from "./planning.module.css";
+[7m  [0m [91m              ~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/components/content/use-autosave.tsx[0m:[93m25[0m:[93m61[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m25[0m     const release = typeof window !== "undefined" && window.desktop ? desktopSaveCoordinator.register(controller) : undefined
+[7m  [0m [91m                                                            ~~~~~~~[0m
+[96msrc/components/desktop/NovelImportDialog.tsx[0m:[93m135[0m:[93m78[0m - [91merror[0m[90m TS7006: [0mParameter 'item' implicitly has an 'any' type.
+
+[7m135[0m     else if (result.view.phase === 'conflicts' && result.view.conflicts.some(item => item.id === conflict.id && item.status === 'pending')) setPendingRevision(result.view.revision)
+[7m   [0m [91m                                                                             ~~~~[0m
+[96msrc/components/editor/use-editor-commands.ts[0m:[93m113[0m:[93m26[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m113[0m         try { if (window.desktop) await window.desktop.writeClipboardText(selection.text); else await navigator.clipboard.writeText(selection.text) }
+[7m   [0m [91m                         ~~~~~~~[0m
+[96msrc/components/editor/use-editor-commands.ts[0m:[93m113[0m:[93m48[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m113[0m         try { if (window.desktop) await window.desktop.writeClipboardText(selection.text); else await navigator.clipboard.writeText(selection.text) }
+[7m   [0m [91m                                               ~~~~~~~[0m
+[96msrc/components/editor/use-editor-commands.ts[0m:[93m114[0m:[93m40[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m114[0m         catch { throw new Error(window.desktop ? "无法写入本地剪贴板，请重试" : "无法写入剪贴板，请允许浏览器访问剪贴板后重试") }
+[7m   [0m [91m                                       ~~~~~~~[0m
+[96msrc/components/editor/use-editor-commands.ts[0m:[93m119[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m119[0m         try { replacement = window.desktop ? await window.desktop.readClipboardText() : await navigator.clipboard.readText() }
+[7m   [0m [91m                                   ~~~~~~~[0m
+[96msrc/components/editor/use-editor-commands.ts[0m:[93m119[0m:[93m59[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m119[0m         try { replacement = window.desktop ? await window.desktop.readClipboardText() : await navigator.clipboard.readText() }
+[7m   [0m [91m                                                          ~~~~~~~[0m
+[96msrc/components/editor/use-editor-commands.ts[0m:[93m120[0m:[93m40[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m120[0m         catch { throw new Error(window.desktop ? "无法读取本地剪贴板，请重试" : "无法读取剪贴板，请允许浏览器访问剪贴板，或在编辑视图使用粘贴快捷键") }
+[7m   [0m [91m                                       ~~~~~~~[0m
+[96msrc/lib/desktop/export.ts[0m:[93m7[0m:[93m70[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m7[0m   const current = typeof window === "undefined" ? undefined : window.desktop
+[7m [0m [91m                                                                     ~~~~~~~[0m
+[96msrc/lib/desktop/export.ts[0m:[93m16[0m:[93m68[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m16[0m   const owner = typeof window === "undefined" ? undefined : window.desktop
+[7m  [0m [91m                                                                   ~~~~~~~[0m
+[96msrc/lib/desktop/export.ts[0m:[93m26[0m:[93m129[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m26[0m     if (options.signal?.aborted || pending.get(bridge) !== token || (!options.bridge && typeof window !== "undefined" && window.desktop !== owner)) throw new Cancelled()
+[7m  [0m [91m                                                                                                                                ~~~~~~~[0m
+[96msrc/lib/desktop/monaco-text-context.ts[0m:[93m40[0m:[93m50[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m40[0m     const bridge=root.ownerDocument.defaultView?.desktop;if(!bridge)throw new Error('本地剪贴板尚未就绪')
+[7m  [0m [91m                                                 ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m48[0m:[93m25[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m48[0m   const bridge = window.desktop
+[7m  [0m [91m                        ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m113[0m:[93m38[0m - [91merror[0m[90m TS7006: [0mParameter 'item' implicitly has an 'any' type.
+
+[7m113[0m       const unit = source.units.find(item => item.kind === kind)
+[7m   [0m [91m                                     ~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m159[0m:[93m17[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m159[0m     void window.desktop?.novelImport({type:'cancel-pdf-preview',id:scope.id,requestId}).catch(()=>undefined)
+[7m   [0m [91m                ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m163[0m:[93m16[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m163[0m     if(!window.desktop?.novelImport)throw Error('请在桌面应用中核对 PDF 图像页。')
+[7m   [0m [91m               ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m164[0m:[93m33[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m164[0m     const response=await window.desktop.novelImport({type:'read-pdf-page',id:scope.id,revision:scope.revision,fileId:scope.fileId,page,requestId})
+[7m   [0m [91m                                ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m168[0m:[93m47[0m - [91merror[0m[90m TS7006: [0mParameter 'file' implicitly has an 'any' type.
+
+[7m168[0m     const failedNow=response.view?.files.find(file=>file.id===scope.fileId)?.pdfPreviewFailures?.some(item=>item.page===page)??false
+[7m   [0m [91m                                              ~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m168[0m:[93m103[0m - [91merror[0m[90m TS7006: [0mParameter 'item' implicitly has an 'any' type.
+
+[7m168[0m     const failedNow=response.view?.files.find(file=>file.id===scope.fileId)?.pdfPreviewFailures?.some(item=>item.page===page)??false
+[7m   [0m [91m                                                                                                      ~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m185[0m:[93m14[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m185[0m   if(!window.desktop?.novelImport)throw Error('请在桌面应用中核对 PDF 图像页。')
+[7m   [0m [91m             ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m186[0m:[93m31[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m186[0m   const response=await window.desktop.novelImport(action),current=useNovelImportStore.getState().view
+[7m   [0m [91m                              ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m197[0m:[93m14[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m197[0m   if(!window.desktop?.novelImport)throw Error('请在桌面应用中核对 PDF 图像页。')
+[7m   [0m [91m             ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m198[0m:[93m31[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m198[0m   const response=await window.desktop.novelImport({type:'report-pdf-preview-failure',id:scope.id,revision:scope.revision,fileId:scope.fileId,page,requestId})
+[7m   [0m [91m                              ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m208[0m:[93m37[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m208[0m   if (subscriptions === 1 && window.desktop?.novelImport) {
+[7m   [0m [91m                                    ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m209[0m:[93m26[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m209[0m     unsubscribe = window.desktop.subscribe(event => {
+[7m   [0m [91m                         ~~~~~~~[0m
+[96msrc/lib/desktop/novel-import.ts[0m:[93m209[0m:[93m44[0m - [91merror[0m[90m TS7006: [0mParameter 'event' implicitly has an 'any' type.
+
+[7m209[0m     unsubscribe = window.desktop.subscribe(event => {
+[7m   [0m [91m                                           ~~~~~[0m
+[96msrc/lib/manuscript-export.ts[0m:[93m98[0m:[93m48[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m98[0m   if (typeof window !== "undefined" && (window.desktop || window.location?.protocol === "shakeink:")) {
+[7m  [0m [91m                                               ~~~~~~~[0m
+[96msrc/stores/desktop.ts[0m:[93m44[0m:[93m61[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m44[0m       if (!before || typeof window==="undefined" || !window.desktop) throw new Error("本地设置尚未就绪")
+[7m  [0m [91m                                                            ~~~~~~~[0m
+[96msrc/stores/desktop.ts[0m:[93m45[0m:[93m46[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m45[0m       const next = onboarding ? await window.desktop.onboarding(action(before) as OnboardingAction) : await window.desktop.settings(action(before) as SettingsAction)
+[7m  [0m [91m                                             ~~~~~~~[0m
+[96msrc/stores/desktop.ts[0m:[93m45[0m:[93m116[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m45[0m       const next = onboarding ? await window.desktop.onboarding(action(before) as OnboardingAction) : await window.desktop.settings(action(before) as SettingsAction)
+[7m  [0m [91m                                                                                                                   ~~~~~~~[0m
+[96msrc/stores/desktop.ts[0m:[93m49[0m:[93m64[0m - [91merror[0m[90m TS2339: [0mProperty 'desktop' does not exist on type 'Window & typeof globalThis'.
+
+[7m49[0m       const actual = await (typeof window!=="undefined"?window.desktop?.bootstrap?.():undefined)?.catch(() => null)
+[7m  [0m [91m                                                               ~~~~~~~[0m
+
+diagnostics=36

@@ -1,0 +1,33 @@
+✔ NI-PDF05: only bounded PNG previews issue page and source bound confirmation tokens (85.289583ms)
+▶ NI-PDF04: preview verifies authorized source identity before cache use and after rendering
+  ✔ same-bytes-file (1369.864458ms)
+  ✔ ancestor-directory (1196.181709ms)
+  ✔ ancestor-link (1210.905625ms)
+  ✔ replacement after snapshot but before render result is checked again (1185.04875ms)
+✔ NI-PDF04: preview verifies authorized source identity before cache use and after rendering (4962.515417ms)
+✖ NI-PDF05: decode failures bind issued lineage, preserve saved decisions and stay blocked until successful retry (1238.29575ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 6
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6836.902875
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:15262
+✖ NI-PDF05: decode failures bind issued lineage, preserve saved decisions and stay blocked until successful retry (1238.29575ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:84:2)
+      at async controllerFixture (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:90:74)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /失效|旧|预览/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

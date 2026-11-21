@@ -1,0 +1,9 @@
+✔ NI-S12: local and synthetic AI source confirmation retain manual chapters across reopen (87.34775ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 332.046917

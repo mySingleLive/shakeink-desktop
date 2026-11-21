@@ -1,0 +1,21 @@
+✔ LOTM-E02: exact failed units halve through RPC with fresh context and frozen budget, then do not re-expand (2216.13275ms)
+✔ LOTM-E03: left checkpoints survive right failure, close/reopen and fresh consent without replay (429.564584ms)
+▶ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split
+  ✔ synthetic HTTP_429 (72.477083ms)
+  ✔ 模型证据无法定位（invented） (87.099875ms)
+  ✔ 模型证据无法定位（no-match）  (99.592583ms)
+  ✔ 模型返回结构不完整 (75.121584ms)
+  ✔ finite-one-unit-stop (135.530458ms)
+  ✔ actual-service-rejects-cross-phase-conflict (124.936833ms)
+  ✔ legitimate-merge-conflict-stops-unprocessed-siblings (131.66675ms)
+  ✔ authorization-change-after-failed-parent-prevents-child-send (83.524583ms)
+✔ LOTM-E04: exact allowlist only, one-unit evidence failures terminate and mixed contracts never split (812.237042ms)
+✔ LOTM-E05: pause drains a late right result without covering or publishing it (86.169541ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7833.665875

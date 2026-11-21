@@ -1,0 +1,107 @@
+{
+  "scope": "41/42 isolated synthetic runtime projection only; no app, journal, DB, model or LIFE result",
+  "checks": [
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "valid pending metadata retained exactly",
+      "passed": true
+    },
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "valid settled and drained metadata retained exactly",
+      "passed": true
+    },
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "unknown call key rejected without copying it",
+      "passed": true
+    },
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "unknown envelope key rejected",
+      "passed": true
+    },
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "cross session rejected",
+      "passed": true
+    },
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "oversize stdin rejected",
+      "passed": true
+    },
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "invalid UTF8 rejected",
+      "passed": true
+    },
+    {
+      "name": "cli exits cleanly without stderr or secret echo",
+      "passed": true
+    },
+    {
+      "name": "invalid JSON rejected",
+      "passed": true
+    },
+    {
+      "name": "Python sends and retains only approved metadata",
+      "passed": true
+    },
+    {
+      "name": "legacy without fields is unchanged",
+      "passed": true
+    },
+    {
+      "name": "non semantic session not projected",
+      "passed": true
+    },
+    {
+      "name": "boolean semantic version not accepted",
+      "passed": true
+    },
+    {
+      "name": "Python oversize refused before child",
+      "passed": true
+    },
+    {
+      "name": "build identity includes desktop/core/novel-import-runtime-proof.ts",
+      "passed": true
+    },
+    {
+      "name": "build identity includes scripts/project-real-novel-import-runtime.ts",
+      "passed": true
+    },
+    {
+      "name": "build identity includes scripts/observe-real-novel-import.py",
+      "passed": true
+    }
+  ],
+  "sourceSha256": {
+    "desktop/core/novel-import-runtime-proof.ts": "ed77bbf8fe0f1c572e49e4d8178bbc27d712f56799616cc27ab4a6acf78bf5d7",
+    "scripts/project-real-novel-import-runtime.ts": "7b74ef87b4d61bc741be7dd282489e99f60dadab01585ee398f76a12a5f925a8",
+    "scripts/observe-real-novel-import.py": "2f7db9e979798b888c9e5be1c186800d3135a43478ee13a04726db1987051a4e",
+    "scripts/verify-real-novel-runtime-observer.py": "e0ab69b0c80e8637200e7412b59c919bf3ce05a274e4298d0a739ab45edf2032"
+  }
+}

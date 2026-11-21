@@ -1,0 +1,38 @@
+{
+  "project": "vscode-icons/vscode-icons",
+  "license": "MIT",
+  "retrieved": "2026-10-25",
+  "usage": "Bundled local file-type icons for the novel import UI; no runtime external requests.",
+  "files": [
+    {
+      "file": "text.svg",
+      "source": "https://github.com/vscode-icons/vscode-icons/blob/master/icons/file_type_text.svg",
+      "git_blob_sha": "c40ef30fe47a68cc049cf946951f83645fabfc67"
+    },
+    {
+      "file": "markdown.svg",
+      "source": "https://github.com/vscode-icons/vscode-icons/blob/master/icons/file_type_markdown.svg",
+      "git_blob_sha": "9089066138a14ba97c017e1769c021ee68407c8f"
+    },
+    {
+      "file": "word.svg",
+      "source": "https://github.com/vscode-icons/vscode-icons/blob/master/icons/file_type_word.svg",
+      "git_blob_sha": "98c6846106d8f703622c8ac2d4ff51f1374a312b"
+    },
+    {
+      "file": "pdf.svg",
+      "source": "https://github.com/vscode-icons/vscode-icons/blob/master/icons/file_type_pdf.svg",
+      "git_blob_sha": "bc09d8bd6fcc2510958d0c6dfec26aa13818297e"
+    },
+    {
+      "file": "html.svg",
+      "source": "https://github.com/vscode-icons/vscode-icons/blob/master/icons/file_type_html.svg",
+      "git_blob_sha": "ec627268ba0ebe0dd51dcc81a406d9eacdc39b88"
+    },
+    {
+      "file": "LICENSE.txt",
+      "source": "https://github.com/vscode-icons/vscode-icons/blob/master/LICENSE",
+      "git_blob_sha": "8ae68c54bc21e9ea4633279e8791d2df14c2a603"
+    }
+  ]
+}

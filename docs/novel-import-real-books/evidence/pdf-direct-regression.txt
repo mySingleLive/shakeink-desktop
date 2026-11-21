@@ -1,0 +1,49 @@
+✔ NI-D01: every source character and chapter boundary survives safe splitting (3.055208ms)
+✔ NI-D02: classification coverage rejects gaps, overlaps and unclassified ranges (0.55475ms)
+✔ NI-F04: actual PDF extraction preserves text order and reports image or missing-text pages as blocked review ledgers (3932.916458ms)
+✔ NI-F07: protected roots, symlinks and source inode/content replacement fail closed (35.576292ms)
+✔ NI-L04: import-journal inventory ownership accepts only UUID session directories and exact committed filenames (1.299042ms)
+✔ NI-L04: real closed-root migration preserves the import journal and leaves unknown neighbours at the original root (432.108917ms)
+✔ NI-L02: actual import IPC enforces trusted frame, ready owner, strict action and business admission before any file/model work (45.372291ms)
+✖ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (15.221958ms)
+✔ NI-S02: full-book batches checkpoint successful work and retry the failed batch (260.843291ms)
+✔ NI-S07: pause drains an operation and a late success never advances stale epoch (40.145958ms)
+✔ NI-S08: journal restores checkpoints but target authorization must be renewed (211.485917ms)
+▶ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints
+  ✔ none (153.199083ms)
+  ✔ legacy (108.690458ms)
+  ✔ double-reopen (132.687125ms)
+  ✔ range (159.455167ms)
+  ✔ selection (142.798084ms)
+  ✔ target (62.639083ms)
+  ✔ replaced-target (68.906125ms)
+  ✔ working-revision (132.151125ms)
+✔ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints (961.755916ms)
+▶ NI-S11: bounded fact review packs retain every deterministic task and checkpoint atomically
+  ✔ network (121.2975ms)
+  ✔ evidence (110.76025ms)
+  ✔ reference (128.367625ms)
+  ✔ unit-reference (124.494917ms)
+  ✔ pause (153.785292ms)
+  ✔ source-budget-and-distinct-evidence (109.365125ms)
+  ✔ exact-serialized-budget (81.3535ms)
+  ✔ oversized-single-task (63.591417ms)
+✔ NI-S11: bounded fact review packs retain every deterministic task and checkpoint atomically (893.988208ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 28
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4341.789625
+
+✖ failing tests:
+
+test at tests/unit/novel-import-integration.test.ts:2:23085
+✖ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (15.221958ms)
+  ReferenceError: novelImport is not defined
+      at repairNovelImportTarget (eval at evaluate (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:2:11340), <anonymous>:82:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-integration.test.ts:152:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)

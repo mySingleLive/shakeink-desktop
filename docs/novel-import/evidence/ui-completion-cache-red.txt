@@ -1,0 +1,21 @@
+✖ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (8327.351916ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8916.990541
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:13750
+✖ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (8327.351916ms)
+  page.waitForFunction: Timeout 6000ms exceeded.
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:71:312)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:401)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:67:115) {
+    name: 'TimeoutError',
+    log: []
+  }

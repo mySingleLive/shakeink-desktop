@@ -17,6 +17,10 @@ import {BusinessGate} from '../../desktop/main/business-gate'
 import {ApplicationMetadataGate} from '../../desktop/main/application-metadata-gate'
 import {CloseCoordinator} from '../../desktop/main/close-coordinator'
 import {closedWorkLeaseTarget} from '../../desktop/service/closed-work-lease-target'
+const nativeOrder:Record<string,string[]>={'仍有创作任务运行':['cancel','stop'],'作品锁修复交接尚未完成':['retry','cancel'],'尚不能关闭':['retry','export','cancel'],'修复异常退出锁':['cancel','repair'],'作品锁恢复结果':['ok'],'迁移应用数据':['cancel','migrate'],'修复导入保存目录的异常退出锁':['cancel','repair']}
+// Prompts now render in the workbench; route them through each test's former native stub (same response indexes).
+const promptsVia=(dialog:{showMessageBox:(...args:any[])=>any})=>({ask:async(options:any,extra:{signal?:AbortSignal}={})=>{const order=nativeOrder[options.title]??options.buttons.map((b:any)=>b.value),result=await dialog.showMessageBox({},{type:options.tone,title:options.title,message:options.message,detail:options.detail,buttons:order,signal:extra.signal});return order[result?.response]??options.cancelValue}})
+
 
 const source=ts.createSourceFile('main.ts',readFileSync('desktop/main/index.ts','utf8'),ts.ScriptTarget.Latest,true)
 const declaration=(name:string)=>{const node=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name);assert.ok(node);return node.getText(source)}
@@ -53,7 +57,7 @@ async function fixture(){
   return{response:1}
  }},app:{hasSingleInstanceLock:()=>host,relaunch:()=>events.push('relaunch'),quit:()=>events.push('quit')},worker:{terminate:async()=>{}},send:(value:{type:string})=>events.push('event:'+value.type)}
  const code=`let workLease=null,businessClosed=false,closingFlow=null,closeCommitted=false,quitting=false;const closePermits=new WeakSet();${declaration('trusted')}\n${declaration('restoreBusiness')}\n${declaration('beginClose')}\nconst closeCoordinator=new CloseCoordinator(${services});const handler=${callback};return{run:(input,origin=event)=>handler(origin,input),state:()=>({closed:businessClosed,pending:workLease?.requiresRestart??false})}`
- const bindings={...dependencies,workNames}
+ const bindings={novelImport:null,novelImportRepairing:false,novelImportServiceLost:false,novelImportOwner:null,novelImportCloseIntent:null,novelImportSourcePicker:{cancel(){}},...dependencies,appPrompts:promptsVia((dependencies as any).dialog),workNames}
  const api=new Function(...Object.keys(bindings),transformSync(code,{loader:'ts'}).code)(...Object.values(bindings)) as {run(input:unknown,origin?:unknown):Promise<string>;state():{closed:boolean;pending:boolean}}
  return{...api,root,gate,events,frame,ownerBytes,action:{type:'start',workId:id},stopEntered:stopEntered.promise,confirmEntered:confirmEntered.promise,setActive:(value:number)=>active=value,setStopGate:(value:Promise<void>)=>stopGate=value,setConfirmGate:(value:Promise<void>)=>confirmGate=value,declineStop:()=>declineStop=true,setConfirm:(value:number)=>confirmResponse=value,failNotice:(value:boolean)=>noticeFails=value,loseHost:()=>host=false,cleanup:()=>rm(root,{recursive:true,force:true})}
 }

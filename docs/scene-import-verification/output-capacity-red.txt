@@ -1,0 +1,140 @@
+✖ SO-01: optional JSON schema reaches the real SDK call while ordinary generation retains text output (14.176416ms)
+✔ SO-02: complete immutable typed catalogs restore index zero, aliases, context artifacts and all business fields (12.8575ms)
+✔ SO-03: malformed wire controls, fields, typed indexes and every bad evidence entry fail without dropping data (2.63225ms)
+✖ SO-04: actual Responses SDK uses the authorized gateway, strict format, reasoning none and no legacy fallback (17.6625ms)
+✔ SO-05: controller scene imports decode structured wire through the original complete canonical gates (2333.79625ms)
+✔ SO-06: schema and added index metadata count toward the original budget before any generation (1.993708ms)
+✔ SO-07: structured scene recovers on generation three without leaking provider keys (2271.133ms)
+✔ SO-07: structured scene stops after four generations without leaking provider keys (2159.340458ms)
+✔ SO-08: successful wire cannot bypass the final authorization, snapshot or cancellation gates (10.893417ms)
+✔ SO-09: explicit review generation uses its own eligibility and schema budget (3.687375ms)
+▶ OC-03: output headroom includes complete prompt/schema UTF8 bytes, wrapper reserve and the actual role pin
+  ✔ complete-byte boundary -1 (2.871542ms)
+  ✖ complete-byte boundary 0 (2.066791ms)
+  ✖ complete-byte boundary 1 (1.483417ms)
+  ✔ review capacity cannot borrow a larger text window (2.354458ms)
+  ✖ eligible review capacity is used when text is unrelated and small (1.493667ms)
+  ✔ invalid or unavailable capacity undefined (2.133916ms)
+  ✔ invalid or unavailable capacity 0 (1.994125ms)
+  ✔ invalid or unavailable capacity -1 (1.883125ms)
+  ✔ invalid or unavailable capacity NaN (8.122209ms)
+  ✔ invalid or unavailable capacity Infinity (2.164209ms)
+  ✔ invalid or unavailable capacity 1048576.5 (2.035459ms)
+✖ OC-03: output headroom includes complete prompt/schema UTF8 bytes, wrapper reserve and the actual role pin (29.875916ms)
+▶ OC-04: complete large synthetic wire is preserved, while parsable length-finished output remains a bounded failure
+  ✖ stop (7.862166ms)
+  ✖ length (6.842958ms)
+✖ OC-04: complete large synthetic wire is preserved, while parsable length-finished output remains a bounded failure (14.996791ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 16
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7576.802208
+
+✖ failing tests:
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:5086
+✖ SO-01: optional JSON schema reaches the real SDK call while ordinary generation retains text output (14.176416ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 32768
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:33:344)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 32768,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:13406
+✖ SO-04: actual Responses SDK uses the authorized gateway, strict format, reasoning none and no legacy fallback (17.6625ms)
+  Error: 模型结构化输出请求失败，请核对模型服务后重试
+      at Object.generateImportAiJson (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:275:10)
+      at async Object.runImportAi (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:556:12)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:77:16)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:28495
+✖ complete-byte boundary 0 (2.066791ms)
+  Error: 模型结构化输出请求失败，请核对模型服务后重试
+      at Object.generateImportAiJson (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:275:10)
+      at async check (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:132:28)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:139:174)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:139:31)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:28495
+✖ complete-byte boundary 1 (1.483417ms)
+  Error: 模型结构化输出请求失败，请核对模型服务后重试
+      at Object.generateImportAiJson (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:275:10)
+      at async check (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:132:28)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:139:174)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:139:31)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:28964
+✖ eligible review capacity is used when text is unrelated and small (1.493667ms)
+  Error: 模型结构化输出请求失败，请核对模型服务后重试
+      at Object.generateImportAiJson (/Users/dt_flys/Projects/shakeink-desktop/desktop/service/novel-import-ai.ts:275:10)
+      at async check (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:132:28)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:141:335)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:141:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:31174
+✖ stop (7.862166ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 32768
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:154:49)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:149:49)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 32768,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-structured-scene.test.ts:2:31174
+✖ length (6.842958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 32768
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:154:49)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-structured-scene.test.ts:149:49)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 32768,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

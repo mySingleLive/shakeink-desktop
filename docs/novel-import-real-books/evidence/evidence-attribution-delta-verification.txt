@@ -1,0 +1,3 @@
+Production reverse-delta byte identity: PASS (one conditional fixed guidance string and concatenation only).
+Old AI test bytes: PASS (exact unchanged prefix; only NI-A07 appended).
+Serialization, budget constants/checks, source classification, legacy prompts, reviewProjection and reconcile contracts: unchanged.

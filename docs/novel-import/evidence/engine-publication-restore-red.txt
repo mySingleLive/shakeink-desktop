@@ -1,0 +1,18 @@
+✖ NI-S08: journal restores checkpoints but target authorization must be renewed (245.823ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 436.179625
+
+✖ failing tests:
+
+test at tests/unit/novel-import-session.test.ts:2:16311
+✖ NI-S08: journal restores checkpoints but target authorization must be renewed (245.823ms)
+  Error: 请重新选择并授权保存目录
+      at NovelImportController.start (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:160:165)
+      at NovelImportController.resume (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:179:14)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:104:43)

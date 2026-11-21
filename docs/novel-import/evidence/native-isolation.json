@@ -1,0 +1,11 @@
+{
+  "pid": 7945,
+  "root": "/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/shakeink-import-native-WADyJ8/data",
+  "bootstrap": "/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/shakeink-import-native-WADyJ8/data-bootstrap",
+  "windows": 1,
+  "dataRoot": "/private/var/folders/xj/5c__pm_j6s74shtqfcbg87640000gn/T/shakeink-import-native-WADyJ8/data",
+  "catalog": 2,
+  "models": 0,
+  "guarded": true,
+  "phase": "reopened"
+}

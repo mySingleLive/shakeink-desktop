@@ -1,0 +1,16 @@
+✔ LOTM-V01: explicit eight-volume headings preserve sixteen source chapters, repeated numbers and exact prose (2.98525ms)
+✔ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (0.561833ms)
+▶ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership
+  ✔ metadata binds analysis and plan; legacy goldens remain byte-identical (1.901208ms)
+  ✔ manual re-confirmation derives labels and rejects moved/deleted boundaries (1.084041ms)
+  ✔ normal controller choose/set-chapters/save/reopen and old journal recovery (88.154541ms)
+✔ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership (91.647541ms)
+✔ LOTM-V05: optional volume fields and unknown chapter versions reject invalid data (1.007625ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 767.721833

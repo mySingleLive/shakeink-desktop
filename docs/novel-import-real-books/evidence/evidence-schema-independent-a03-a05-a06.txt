@@ -1,0 +1,11 @@
+✔ NI-A03: missing ids, unknown categories and fabricated evidence are rejected (4.153041ms)
+✔ NI-A05: phase output contracts allow empty no-op arrays while rejecting actual cross-phase mutations (1.514125ms)
+✔ NI-A06: evidence layout anchoring restores unique exact source spans without changing text or word boundaries (1.987084ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 186.4765

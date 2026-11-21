@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "family": "Noto Sans SC",
+  "version": "2.004",
+  "source": "https://github.com/notofonts/noto-cjk/blob/Sans2.004/Sans/Variable/TTF/Subset/NotoSansSC-VF.ttf",
+  "license": "SIL Open Font License 1.1",
+  "licenseFile": "LICENSE",
+  "licenseSha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+  "existingAsset": "NotoSansSC-Regular.ttf.gz",
+  "gzipSha256": "cff80a0848ccb2c2da3660dcc3349f9df32ea8fd7e0af3ffc2a79633f09e0699",
+  "decodedTtfSha256": "6fb994f703468a02b8abff77a75ec1ece966b03c7a93a213454531fffae1f53e",
+  "derivation": "Existing repository asset: FontTools 4.65.0, fixed wght=400, glyph padding=4, deterministic gzip mtime=0; preserves original characters and copyright metadata.",
+  "pdfImportConsumer": "desktop/main/novel-import-pdf-resources.ts",
+  "limits": {"gzipBytes": 8388608, "decodedBytes": 12582912},
+  "runtime": "Register verified bytes in the dedicated PDF worker; no temporary TTF, network, system-font or external-cache fallback.",
+  "pdfLibrary": "pdfjs-dist 6.3.289 (Apache-2.0)",
+  "canvas": "@napi-rs/canvas 1.0.10 (MIT)",
+  "pdfResourceManifest": "desktop/main/novel-import-pdf-resource-manifest.json"
+}

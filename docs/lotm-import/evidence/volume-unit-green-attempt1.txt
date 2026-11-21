@@ -1,0 +1,107 @@
+✖ LOTM-V01: explicit eight-volume headings preserve sixteen source chapters, repeated numbers and exact prose (7.174209ms)
+✔ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (0.851917ms)
+▶ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership
+  ✔ metadata binds analysis and plan; legacy goldens remain byte-identical (1.554916ms)
+  ✖ manual re-confirmation derives labels and rejects moved/deleted boundaries (1.269917ms)
+  ✖ normal controller choose/set-chapters/save/reopen and old journal recovery (85.469834ms)
+✖ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership (88.978042ms)
+✔ LOTM-V05: optional volume fields and unknown chapter versions reject invalid data (0.574125ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 3
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 613.870125
+
+✖ failing tests:
+
+test at tests/unit/novel-import-volumes.test.ts:7:1363
+✖ LOTM-V01: explicit eight-volume headings preserve sixteen source chapters, repeated numbers and exact prose (7.174209ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      '初卷',
+      '初卷',
+      '次卷',
+      '次卷',
+  ...
+      '末卷',
+  +   undefined
+  -   '末卷'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:21:107)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [
+      '初卷',    '初卷', '次卷',
+      '次卷',    '三卷', '三卷',
+      '四卷',    '四卷', '五卷',
+      '五卷',    '六卷', '六卷',
+      '七卷',    '七卷', '末卷',
+      undefined
+    ],
+    expected: [
+      '初卷', '初卷', '次卷',
+      '次卷', '三卷', '三卷',
+      '四卷', '四卷', '五卷',
+      '五卷', '六卷', '六卷',
+      '七卷', '七卷', '末卷',
+      '末卷'
+    ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-volumes.test.ts:7:5728
+✖ manual re-confirmation derives labels and rejects moved/deleted boundaries (1.269917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'b55cf8e366621d46b0e4c736f84a9e1eab729ece5848d16b6b04c7b2e6bc243f'
+  - '65e98a4ccda1ab15be7771cea44ed7a537c73bc82dbd3dde8c87b01da1caa1d4'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:44:154)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:40:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'b55cf8e366621d46b0e4c736f84a9e1eab729ece5848d16b6b04c7b2e6bc243f',
+    expected: '65e98a4ccda1ab15be7771cea44ed7a537c73bc82dbd3dde8c87b01da1caa1d4',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-volumes.test.ts:7:7231
+✖ normal controller choose/set-chapters/save/reopen and old journal recovery (85.469834ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '56058e7123886b7c0210c234b7aa26dc1b5f2f35ce0d4a14b195885f455b2a96'
+  - 'b541a4efaae1c5fa396a9eba37e056ea56d0acd43805b7d7766e05bb1ea412f5'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:56:348)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-volumes.test.ts:46:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '56058e7123886b7c0210c234b7aa26dc1b5f2f35ce0d4a14b195885f455b2a96',
+    expected: 'b541a4efaae1c5fa396a9eba37e056ea56d0acd43805b7d7766e05bb1ea412f5',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

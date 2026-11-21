@@ -1,0 +1,22 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "observations": [
+        {
+          "reason": "stop",
+          "promptTokens": 13904,
+          "completionTokens": 2402,
+          "textCharacters": 3941,
+          "maxOutputTokens": 32768
+        }
+      ],
+      "artifacts": 1
+    }
+  ],
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  }
+}

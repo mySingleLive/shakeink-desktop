@@ -1,0 +1,20 @@
+{
+  "sessionId": "072a0d7c-6d20-44a6-b711-790159cf13ea",
+  "phase": "select",
+  "step": "detect-scene",
+  "stepError": "模型接口请求失败（HTTP 402）",
+  "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+  "sourceUnchanged": true,
+  "chapters": 1402,
+  "workingUnits": 5589,
+  "selectedTargets": [
+    "scene"
+  ],
+  "sceneCoverage": 0,
+  "sceneCandidates": 0,
+  "sceneArtifacts": 0,
+  "performanceStatus": "not-verified",
+  "reason": "configured provider rejected recognition with HTTP 402",
+  "publicationVerified": false,
+  "reopenVerified": false
+}

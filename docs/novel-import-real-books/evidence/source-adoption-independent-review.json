@@ -1,0 +1,58 @@
+{
+  "status": "PASS",
+  "scope": "63 isolated source-adoption observer code review and only two approved verifiers",
+  "baselineSha256": "2f7db9e979798b888c9e5be1c186800d3135a43478ee13a04726db1987051a4e",
+  "frozenSha256": {
+    "scripts/observe-real-novel-import.py": "138767ccdf6fc6cfc479fe3736a72435e689b9da80bbcfacefd5e833603acfca",
+    "scripts/verify-real-novel-source-adoption.py": "d4b2253f60c8d914bda93ddae637e32ff0e518baadc20eda92e23ac8d769c37e",
+    "scripts/verify-real-novel-runtime-observer.py": "e0ab69b0c80e8637200e7412b59c919bf3ce05a274e4298d0a739ab45edf2032"
+  },
+  "fullDiffIndependentlyRegeneratedByteExact": true,
+  "fullDiffSha256": "e258a09f6e6546dab06a6570c9cb44712af76cafa1e6f991baa4a2ae23772abb",
+  "unchangedFunctionsSha256": {
+    "regular_bytes": "a1e52b1ade3284b0919af3f2f85732c73752b9b174d8e68fae9b60de46092284",
+    "runtime_diagnostics": "df3b10fd922533f7fb7cb8e0c657f08803ac203496f52921af2df3042cdfbd4e",
+    "record_build": "b4c82a0412b74de02d4f56c8a67f15f83cba87ba8a05f3a8dd1bd23cc1d6bbfd",
+    "frozen_input": "643176a01b58bb27e2557e38693f1317ce0eb6e690800a42a4bbfcdcb863f522",
+    "save_bytes": "00ab09a68c4fd8f5b798915e81e60a09f8f8a0ea924dcc1e47fb188f15e1ef5e",
+    "save": "6cb4675ea3021e0b709957f1ec362806bfdca0d7485fb5764e009838c1669485",
+    "run_directory": "3c63a07b770c1e7f4bbbf50a6f2a1c38ddeac5dcc69fd3cd2d5fd9a11954e4f4",
+    "corpus_bytes": "6f864250fd299f8b86f5d4b4362bffdb53fe048cdbba7818766b71c034c2aeb5",
+    "checked_directory": "b4ab08ddf03c8a6f210a156d2275fc1dcb3d15474a8fbd26a68512ff74c52694",
+    "opened_directory": "9c85cb98c3a38fe6ec1447f13667b8eb7768c19c760c0cf2fd46029b6bdcf718"
+  },
+  "defaultNewJournalScanAstUnchanged": true,
+  "safeProjectionAndObservationTailByteIdentical": true,
+  "reports": {
+    "source-adoption-independent-result.json": {
+      "sha256": "972a88158f6abd6f544da1f9f16b6bfd28d35b5ef888041e9b3d4f879d4de762",
+      "checks": 130,
+      "outputPath": "/private/tmp/novel-import-adoption-independent-63.json"
+    },
+    "source-adoption-runtime-independent-result.json": {
+      "sha256": "788a6b913cf9fd0ca1b2514c9acac95f81172394914327729e43a4b67ab0b70d",
+      "checks": 24,
+      "outputPath": "/private/tmp/novel-import-adoption-runtime-independent-63.json"
+    }
+  },
+  "logsSha256": {
+    "source-adoption-independent-final.txt": "4631cb4553e1ef9136d2794209ad2253953d15741fea82a90637d4a46604025c",
+    "source-adoption-runtime-independent-final.txt": "ee35643fcfdd4aabfa3aa7a807c569c30cc897f00381d180e78aef18985f389e",
+    "source-adoption-red.txt": "1d3f96c3c7786f231aebd22dd5abe489dff0de3b8392751a77a38fca00e2a062"
+  },
+  "results": [
+    {
+      "verifier": "source-adoption",
+      "passedChecks": 130,
+      "failed": 0,
+      "exitCode": 0
+    },
+    {
+      "verifier": "runtime-observer",
+      "passedChecks": 24,
+      "failed": 0,
+      "exitCode": 0
+    }
+  ],
+  "boundary": "No real corpus/journal/source/app/model/database reads or writes; no production/test edits, extra suite or pycompile execution; only output paths differ from approved commands"
+}

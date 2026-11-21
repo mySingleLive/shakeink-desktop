@@ -1,0 +1,21 @@
+▶ NI-SEM08: bounded semantic repair checkpoints atomically and resumes without stale credit
+  ✔ repair-cartesian-product-is-bounded-before-task-allocation (1.7115ms)
+  ✔ fragment-success-pending-pause-reopen (490.527875ms)
+  ✔ same-hash-persistent-conflict-survives-reopen-and-retry (191.855708ms)
+  ✔ invalid-second-fragment-retries-without-credit (434.342ms)
+  ✔ two-round-limit-is-durable (422.272125ms)
+✔ NI-SEM08: bounded semantic repair checkpoints atomically and resumes without stale credit (1541.88375ms)
+✔ NI-SEM09: source-only and inference-disabled imports never invoke semantic inference (958.111958ms)
+▶ NI-SEM10: evidence-backed omission work adds missing selected targets without oracle input
+  ✔ selected-evidence-completion (274.648583ms)
+  ✔ out-of-scope-omission-rejected (105.246333ms)
+  ✔ selected-nonbody-source-omission (202.855083ms)
+✔ NI-SEM10: evidence-backed omission work adds missing selected targets without oracle input (583.7295ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3385.714333

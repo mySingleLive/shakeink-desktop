@@ -1,0 +1,97 @@
+--- /private/tmp/evidence-schema-70-baseline/novel-import-ai.ts
++++ desktop/service/novel-import-ai.ts
+@@ -31,7 +31,12 @@
+   if(!IMPORT_RELIABILITIES.some(value=>value===reliability)){ctx.addIssue({code:'custom',path:['reliability'],message:'reliability必须为'+reliabilityValues+'之一'});return}
+   if(reliability!=='客观事实'&&!facts.attribution?.trim())ctx.addIssue({code:'custom',path:['attribution'],message:'非客观可靠性必须提供非空 attribution 信息归属说明'})
+  })
+- const requestedArtifact=artifact.extend({text:z.string(),kind:z.literal(kind,{error:'kind必须为本次唯一目标 '+kind+'，子类型不能放到kind'}),origin:z.literal('inferred',{error:'origin必须为 inferred'}),sourceUnitIds:z.array(z.string()).min(1,{error:'必须提供本次来源单元'}).refine(ids=>ids.every(id=>unitIds.has(id)),{error:'来源单元必须全部属于本次输入'}),facts}).strict()
++ const requestedEvidence=evidence.superRefine((entry,ctx)=>{
++  // Check with the exact late matcher, without replacing the raw quote. The
++  // late gate still restores source layout after the final schema parse.
++  try{anchorEvidence([entry],request.units)}catch{ctx.addIssue({code:'custom',message:'证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'})}
++ })
++ const requestedArtifact=artifact.extend({text:z.string(),kind:z.literal(kind,{error:'kind必须为本次唯一目标 '+kind+'，子类型不能放到kind'}),origin:z.literal('inferred',{error:'origin必须为 inferred'}),sourceUnitIds:z.array(z.string()).min(1,{error:'必须提供本次来源单元'}).refine(ids=>ids.every(id=>unitIds.has(id)),{error:'来源单元必须全部属于本次输入'}),facts,evidence:z.array(requestedEvidence).min(1)}).strict()
+  return base.extend({artifacts:z.array(requestedArtifact).optional()}).strict()
+ }
+ /** Internal service generation bridge. Production resolves its own model/user;
+--- /private/tmp/evidence-schema-70-baseline/novel-import-request-schema.test.ts
++++ tests/unit/novel-import-request-schema.test.ts
+@@ -74,7 +74,8 @@
+  const worldRequest={...request(),kind:'world' as const,selectedTargets:['world' as const]},world={...scene,kind:'world' as const,text:'',facts:{entityType:'WORLD'}},simultaneous={artifacts:[{...world,kind:'MODEL-KIND-SYNTHETIC-SECRET' as any,sourceUnitIds:[currentId,foreignId]}]},parsed=factory(worldRequest).safeParse(simultaneous);assert.equal(parsed.success,false);if(!parsed.success){const paths=parsed.error.issues.map(i=>i.path.join('.'));assert.ok(paths.includes('artifacts.0.kind'));assert.ok(paths.includes('artifacts.0.sourceUnitIds'));for(const issue of parsed.error.issues)for(const secret of ['MODEL-KIND-SYNTHETIC-SECRET',currentId,foreignId])assert.ok(!issue.message.includes(secret))}await assert.rejects(call(simultaneous,worldRequest),/结构|类别/);assert.deepEqual(await call({artifacts:[world]},worldRequest),{artifacts:[world]},'neutral WORLD text may remain empty; no kind/text coercion')
+  for(const item of cases){assert.equal(factory(r).safeParse({artifacts:[item.artifact]}).success,false,item.name+' is a request schema error');await assert.rejects(call({artifacts:[item.artifact]}),/结构|类别/);assert.deepEqual(r,before)}
+  const duplicate={artifacts:[{...scene,sourceUnitIds:[currentId,currentId]}]};assert.deepEqual(await call(duplicate),duplicate,'valid IDs/text remain exact, with no new deduplication or repair');assert.deepEqual(r,before)
+- for(const artifact of [{...scene,facts:{entityType:'EVENT'}},{...scene,evidence:[{unitId:currentId,quote:'不存在于合成原文的引句'}]},{...scene,facts:{...scene.facts,parentId:'unknown-parent'}}]){assert.equal(factory(r).safeParse({artifacts:[artifact]}).success,true,'native/evidence/link validation stays at its existing later gate');await assert.rejects(call({artifacts:[artifact]}),/地点|类型|证据|引用|实体/);assert.deepEqual(r,before)}
++ for(const artifact of [{...scene,facts:{entityType:'EVENT'}},{...scene,facts:{...scene.facts,parentId:'unknown-parent'}}]){assert.equal(factory(r).safeParse({artifacts:[artifact]}).success,true,'native/link validation stays at its existing later gate');await assert.rejects(call({artifacts:[artifact]}),/地点|类型|证据|引用|实体/);assert.deepEqual(r,before)}
++ const unanchored={artifacts:[{...scene,evidence:[{unitId:currentId,quote:'不存在于合成原文的引句'}]}]};assert.equal(factory(r).safeParse(unanchored).success,false,'evidence location now participates in the existing correction schema');await assert.rejects(call(unanchored),/结构|类别/);assert.deepEqual(r,before)
+  const legacy={...r,semanticVersion:undefined,selectedTargets:undefined};for(const item of cases){assert.equal(factory(legacy).safeParse({artifacts:[item.artifact]}).success,true,'legacy base schema stays unchanged');await assert.rejects(call({artifacts:[item.artifact]},legacy),/无效实体|来源单元/)}
+  const classify={...r,phase:'classify' as const,kind:undefined,artifacts:[]},review={...r,phase:'review' as const,kind:undefined},conflict={id:'synthetic-conflict',hash:'fixed',type:'body-body' as const,kind:'body' as const,entity:'陈述',field:'状态',source:{text:'原值',value:'原值',unitId:currentId},candidate:{text:'新值',value:'新值',unitId:currentId},evidence:scene.evidence,status:'pending' as const},patch={...r,phase:'patch' as const,kind:undefined,conflict},reconcile={...r,kind:'character' as const,intent:'reconcile' as const,reconcile:{targetIds:[existing.id],locks:[],decisionHash:'c'.repeat(64),workingRevision:0}}
+  const compatible=[{request:classify,result:{classifications:[{unitId:currentId,kind:'body'}]}},{request:review,result:{conflicts:[]}},{request:patch,result:{patches:[{id:'patch',start:0,end:2,before:sourceText.slice(0,2),after:'新文',reason:'合成逐处提案',workingRevision:0,conflictId:conflict.id}]}},{request:reconcile,result:{artifactEdits:[],conflicts:[]}}]
+@@ -82,3 +83,68 @@
+  const aborted=new AbortController();aborted.abort(Error('synthetic canceled'));await assert.rejects(call(result,r,{signal:aborted.signal}),/canceled/);const late=new AbortController();await assert.rejects(ai.runImportAi(r,late.signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>{late.abort(Error('synthetic canceled'));return structuredClone(result)}}),/canceled/)
+  let assertions=0;await assert.rejects(call(result,r,{assert:async()=>{if(++assertions===2)throw Error('合成授权已撤销')}}),/授权/);assert.equal(assertions,2);let resolutions=0;await assert.rejects(call(result,r,{resolve:async()=>++resolutions===1?model:{...model,authRevision:2}}),/模型配置|授权/);assert.equal(resolutions,2);assert.deepEqual(r,before)
+ })
++
++test('NI-J03: evidence location uses the existing bounded correction without transforming quotes',async t=>{
++ const bridge=api.generateImportAiJson,factory=api.importAiResponseSchema;assert.ok(bridge);assert.ok(factory)
++ const context={userId:'synthetic-evidence-user',resolvedModel:{} as ResolvedModel},quoteSecret='EVIDENCE-QUOTE-SYNTHETIC-SECRET',guidance='证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
++ const r=request(),before=structuredClone(r),prompt=importAiPrompt(r),bad={artifacts:[{...scene,evidence:[{unitId:currentId,quote:quoteSecret}]}]},badBefore=structuredClone(bad),good=structuredClone(result)
++ const generated=(raw:unknown)=>({text:JSON.stringify(raw),promptTokens:0,completionTokens:0,cost:0,finishReason:'stop'})
++ const late=(input:ImportAiRequest,raw:unknown)=>ai.runImportAi(input,new AbortController().signal,{resolve:async()=>model,assert:async()=>{},generate:async()=>structuredClone(raw)})
++ await t.test('production bridge corrects a bad location exactly once with safe bounded feedback',async()=>{
++  const controller=new AbortController(),prompts:string[]=[]
++  const output=await bridge(r,context,controller.signal,prompt,{generateText:async opts=>{
++   assert.equal(Object.hasOwn(opts,'schema'),false);assert.equal(Object.hasOwn(opts,'response_format'),false)
++   assert.equal(opts.resolvedModel,context.resolvedModel);assert.equal(opts.userId,context.userId);assert.equal(opts.abortSignal,controller.signal);assert.equal(opts.role,'text');assert.equal(opts.action,'novel.import.analyze')
++   prompts.push('prompt'in opts?opts.prompt:'');return generated(prompts.length===1?bad:good)
++  }})
++  assert.deepEqual(output,good);assert.equal(prompts.length,2);assert.ok(prompts[1].startsWith(prompts[0]))
++  const feedback=prompts[1].slice(prompts[0].length);assert.ok(feedback.includes('artifacts.0.evidence.0'));assert.ok(feedback.includes(guidance))
++  for(const secret of [quoteSecret,currentId,foreignId,scene.id,scene.name,scene.text,sourceText,model.endpoint,'no-match','unknown-unit','too-short','ambiguous'])assert.ok(!feedback.includes(secret),'fixed correction must not echo source, IDs or caught errors')
++  assert.ok(Buffer.byteLength(prompts[1])-Buffer.byteLength(prompt)<=IMPORT_JSON_WRAPPER_RESERVE_BYTES);assertImportFixedPromptReserve(prompt,serializeImportAiPayload(r))
++  assert.deepEqual(await late(r,output),good);assert.deepEqual(r,before);assert.deepEqual(bad,badBefore)
++ })
++ await t.test('two invalid attempts stop and a first valid answer needs only one generation',async()=>{
++  let calls=0;await assert.rejects(bridge(r,context,new AbortController().signal,prompt,{generateText:async()=>{calls++;return generated(bad)}}),error=>error instanceof StructuredGenerationError&&error.kind==='invalid_schema'&&error.invalidFields.includes('artifacts.0.evidence.0'));assert.equal(calls,2)
++  let firstGood=0;assert.deepEqual(await bridge(r,context,new AbortController().signal,prompt,{generateText:async()=>{firstGood++;return generated(good)}}),good);assert.equal(firstGood,1);assert.deepEqual(r,before);assert.deepEqual(bad,badBefore)
++ })
++ await t.test('literal acceptance cases agree with the unchanged legacy late matcher',async()=>{
++  const cases:{name:string;text:string;quote:string;exact?:string;error?:string;unitId?:string;second?:string}[]=[
++   {name:'precise-short',text:'回声。回声。',quote:'回',exact:'回'},
++   {name:'precise-repeated',text:'回声。回声。',quote:'回声',exact:'回声'},
++   {name:'Han-layout-and-UTF16',text:'😀首。甲𠀀\r\n丙丁戊己庚辛。尾😀',quote:'甲𠀀丙丁戊己庚辛',exact:'甲𠀀\r\n丙丁戊己庚辛'},
++   {name:'Latin-whitespace-preserved',text:'abcdefgh\r\nijklmnop',quote:'abcdefgh ijklmnop',exact:'abcdefgh\r\nijklmnop'},
++   {name:'no-match',text:'甲乙丙丁戊己庚辛',quote:quoteSecret,error:'no-match'},
++   {name:'unknown-unit',text:'甲乙丙丁戊己庚辛',quote:'甲乙丙丁戊己庚辛',unitId:foreignId,error:'unknown-unit'},
++   {name:'layout-too-short',text:'甲乙\r\n丙丁',quote:'甲乙丙丁',error:'too-short'},
++   {name:'layout-ambiguous',text:'甲乙\r\n丙丁戊己庚辛。甲乙\t丙丁戊己庚辛',quote:'甲乙丙丁戊己庚辛',error:'ambiguous'},
++   {name:'Latin-word-boundary',text:'abcdefgh ijklmnop',quote:'abcdefghijklmnop',error:'no-match'},
++   {name:'digit-word-boundary',text:'1234 5678',quote:'12345678',error:'no-match'},
++   {name:'cross-unit-join',text:'甲乙丙丁',second:'戊己庚辛',quote:'甲乙丙丁戊己庚辛',error:'no-match'},
++   {name:'noncontiguous-join',text:'甲乙丙丁隔戊己庚辛',quote:'甲乙丙丁戊己庚辛',error:'no-match'}
++  ]
++  for(const item of cases){
++   const units=[{...r.units[0],text:item.text,end:item.text.length},...(item.second?[{...r.units[0],id:'second-synthetic-unit',text:item.second,start:item.text.length,end:item.text.length+item.second.length}]:[])],input={...request(),units},snapshot=structuredClone(input),raw={artifacts:[{...scene,evidence:[{unitId:item.unitId??currentId,quote:item.quote}]}]},rawBefore=structuredClone(raw),legacy={...input,semanticVersion:undefined,selectedTargets:undefined},checked=factory(input).safeParse(raw)
++   assert.equal(checked.success,!item.error,item.name+' early schema has the original acceptance set');assert.equal(factory(legacy).safeParse(raw).success,true,item.name+' does not alter the legacy schema')
++   if(item.error){
++    assert.equal(checked.success,false);if(!checked.success){assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',0,'evidence',0]]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}
++    await assert.rejects(late(input,raw),/结构|类别/,item.name);await assert.rejects(late(legacy,raw),error=>error instanceof Error&&error.message==='模型证据无法定位（'+item.error+'）',item.name+' original late matcher still rejects')
++   }else{
++    assert.ok(checked.success);assert.deepEqual(checked.data,raw,item.name+' schema only checks; no quote transformation')
++    const expected={artifacts:[{...raw.artifacts[0],evidence:[{unitId:currentId,quote:item.exact!}]}]}
++    assert.deepEqual(await late(input,raw),expected,item.name+' semantic late gate restores exact source');assert.deepEqual(await late(legacy,raw),expected,item.name+' original late gate agrees');assert.ok(item.exact!.isWellFormed());assert.ok(item.text.includes(item.exact!))
++    if(item.exact!==item.quote){let calls=0;assert.deepEqual(await bridge(input,context,new AbortController().signal,importAiPrompt(input),{generateText:async()=>{calls++;return generated(raw)}}),raw,'the real bridge preserves raw layout and UTF16 quotes until the late gate');assert.equal(calls,1)}
++   }
++   assert.deepEqual(input,snapshot);assert.deepEqual(raw,rawBefore)
++  }
++ })
++ await t.test('each entry has its own safe path and other stages keep their original schema',async()=>{
++  const raw={artifacts:[structuredClone(scene),{...scene,id:'second-synthetic-artifact',evidence:[...scene.evidence,{unitId:foreignId,quote:quoteSecret}]}]},rawBefore=structuredClone(raw),checked=factory(r).safeParse(raw)
++  assert.equal(checked.success,false);if(!checked.success){assert.deepEqual(checked.error.issues.map(issue=>issue.path),[['artifacts',1,'evidence',1]]);assert.deepEqual(checked.error.issues.map(issue=>issue.message),[guidance])}
++  const simultaneous={artifacts:[{...bad.artifacts[0],kind:'MODEL-KIND-SYNTHETIC-SECRET',sourceUnitIds:[currentId,foreignId]}]},multiple=factory(r).safeParse(simultaneous);assert.equal(multiple.success,false);if(!multiple.success){assert.deepEqual(multiple.error.issues.map(issue=>issue.path.join('.')).sort(),['artifacts.0.evidence.0','artifacts.0.kind','artifacts.0.sourceUnitIds']);for(const issue of multiple.error.issues)for(const secret of [quoteSecret,currentId,foreignId,'MODEL-KIND-SYNTHETIC-SECRET'])assert.ok(!issue.message.includes(secret))}
++  const stages=[{...r,phase:'classify' as const},{...r,phase:'review' as const},{...r,phase:'patch' as const},{...r,intent:'reconcile' as const}]
++  for(const input of stages){assert.equal(factory(input),factory(stages[1]));assert.deepEqual(factory(input).parse(bad),bad,'evidence schema is not widened to other phases or reconcile')}
++  const review={...r,phase:'review' as const,kind:undefined},conflict={id:'synthetic-evidence-conflict',hash:'fixed',type:'body-body' as const,kind:'body' as const,entity:'合成陈述',field:'状态',source:{text:'原值',value:'原值',unitId:currentId},candidate:{text:'新值',value:'新值',unitId:currentId},evidence:bad.artifacts[0].evidence,status:'pending' as const}
++  assert.equal(factory(review).safeParse({conflicts:[conflict]}).success,true);await assert.rejects(late(review,{conflicts:[conflict]}),error=>error instanceof Error&&error.message==='模型证据无法定位（no-match）','review evidence remains subject to its unchanged late gate')
++  assert.deepEqual(raw,rawBefore);assert.deepEqual(r,before)
++ })
++})

@@ -1,0 +1,17 @@
+▶ NI-R02: policy migration commits before AI and omission conflicts stop the workflow
+  ✔ migration-post-rename-rejection-adopts-and-blocks-the-committed-candidate (211.28675ms)
+  ✔ omission-post-rename-rejection-adopts-and-blocks-the-committed-candidate (217.633083ms)
+  ✔ same-draft-migrates-old-pending-after-authorization (222.870833ms)
+  ✔ all-preflight-refusals-keep-credit-and-policy (431.626375ms)
+  ✔ same-policy-reopen-keeps-successful-credit (296.899292ms)
+  ✔ publication-resumes-before-policy-and-legacy-zero-ai-remain-unversioned (260.059583ms)
+  ✔ first-omission-conflict-stops-before-later-work (112.889084ms)
+✔ NI-R02: policy migration commits before AI and omission conflicts stop the workflow (1755.02075ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2029.434542

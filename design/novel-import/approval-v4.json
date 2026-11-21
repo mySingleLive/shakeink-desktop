@@ -1,0 +1,16 @@
+{
+  "approvedAt": "2026-10-25",
+  "timezone": "Asia/Shanghai",
+  "userStatement": "UI 设计审核通过，可以继续",
+  "revision": "v4",
+  "sources": {
+    "index.html": "439c0a497f25b5931d16792e75c49527f0ae5e0e56c1db69b26119576dd450ba",
+    "flow.html": "865919e2b995a4e23fc78e0c3f8199ee5b6a150077dbde4a495e7133c331f48a",
+    "preview.js": "8a63805a527fdf0f334106fb836c57f908877c37ea7e973d43b0cefb027e9c8f",
+    "preview.css": "389c6260351b1eb6a0dc10313fa959e05bdb02c9fc94f0ca3ac487583d816829"
+  },
+  "productDocument": "docs/novel-import/02-product.md",
+  "uiDocument": "docs/novel-import/04-ui-design.md",
+  "testScope": "Only novel-import targeted cases; full suite prohibited",
+  "doesNotAssertImplementationOrAcceptance": true
+}

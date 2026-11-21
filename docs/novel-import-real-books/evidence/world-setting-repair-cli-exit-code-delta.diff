@@ -1,0 +1,20 @@
+--- startup-fixed-cb157247.ts
++++ exit-policy-15971f73.ts
+@@ -184,10 +184,16 @@
+ }
+ async function syncDirectory(path:string){const pin=worldRepairDirectoryPin(path),before=lstatSync(path,{bigint:true}),h=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_DIRECTORY);try{const opened=await h.stat({bigint:true});requireCli(opened.isDirectory()&&opened.dev===before.dev&&opened.ino===before.ino,'DIRECTORY_CHANGED');pin.assertCurrent();await h.sync();pin.assertCurrent()}finally{await h.close()}}
+ 
++/** Only confirmed successful outcomes are shell success; future/unknown states
++ * and cleanup failures must remain nonzero even when the engine was closed. */
++export function worldRepairCliExitCode(result:{status:unknown;cleanupStatus:unknown}):0|2{
++ return result.cleanupStatus==='closed'&&(result.status==='dry-run'||result.status==='committed'||result.status==='restored')?0:2
++}
++
+ async function main(){
+  if(process.argv.includes('--help')){console.log('Usage: node --import tsx scripts/repair-real-novel-world-structure.ts --run S01-20261026-0355 --plan <file inside run evidence> --label <unique label> --app-closed [--mode dry-run|apply|rollback]');return}
+  const repoRoot=resolve(dirname(resolve(process.argv[1])),'..')
+- try{const result=await runWorldRepairCli(process.argv.slice(2),{repoRoot,corpusRoot:'/Users/dt_flys/Documents/拆书/真实小说导入测试-20261026',appRoot:'/Users/dt_flys/.shakeink',authorizedRun:'S01-20261026-0355'});console.log(JSON.stringify(result));if(result.cleanupStatus!=='closed'||result.status==='committed-export-failed')process.exitCode=2}
++ try{const result=await runWorldRepairCli(process.argv.slice(2),{repoRoot,corpusRoot:'/Users/dt_flys/Documents/拆书/真实小说导入测试-20261026',appRoot:'/Users/dt_flys/.shakeink',authorizedRun:'S01-20261026-0355'});console.log(JSON.stringify(result));process.exitCode=worldRepairCliExitCode(result)}
+  catch(error){console.error(JSON.stringify({status:error instanceof WorldRepairCliFailure?error.status:'blocked',code:safeCode(error),...(error instanceof WorldRepairCliFailure?{cleanupStatus:error.cleanupStatus}:{})}));process.exitCode=1}
+ }
+ if(basename(process.argv[1]??'')==='repair-real-novel-world-structure.ts')void main()

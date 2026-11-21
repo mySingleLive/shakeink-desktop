@@ -1,0 +1,11 @@
+✔ NI-PDF11: two-page review drafts survive navigation and cancel retains saved decisions (1725.149125ms)
+✔ NI-PDF12: failed previews, OCR and changed sources cannot be confirmed by the review UI (2168.7865ms)
+✔ NI-PDF13: PDF review keeps fixed controls, readable zoom and focus at 390 by 600 in both themes (2123.632542ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6444.822167

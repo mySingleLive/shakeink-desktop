@@ -1,0 +1,111 @@
+PDF backend component handoff, 2026-10-26
+
+Scope: approved 15/16/17 PDF page review implementation. No full suite, actual
+application launch, model request, user journal edit, or real source modification.
+Shared/controller/main/core/publish were handed to the budget owner before their
+18 integration; later defects in those files were fixed by that single owner.
+
+Bindings
+- All new PDF component tests use an explicit absolute path to
+  desktop/main/novel-import-pdf-worker.ts through a sourceClient factory.
+  Existing dist/main output cannot satisfy these tests accidentally.
+- NI-F04 also supplies an explicit source-bound PDF client through the internal
+  extractNovelText options. pdf-extractor-source-binding-red.txt first proves
+  the old implementation ignored this injected client. The final regression
+  includes a started-job assertion and the real source worker.
+- Tests labeled with controlled Worker fixtures exercise job/result boundaries;
+  tests labeled actual worker use node:worker_threads and the source PDF worker.
+  The initial-choose lifecycle fixture runs a real, deliberately pending Worker
+  so the actual exit promise is observable independently of public cancellation.
+- Source file hashes: pdf-backend-final-source-sha.txt. No renderer/shared
+  production change was made after the budget-owner handoff.
+
+Commands (Node 24.18.0)
+1. node --import tsx --test
+   --test-name-pattern='^NI-PDF(?:01|02|03|04|05|06|07|08|09|14):'
+   tests/unit/novel-import-pdf.test.ts
+   Evidence: pdf-backend-source-final-green.txt; 39/39, exit 0, no skips.
+2. node --import tsx --test
+   --test-name-pattern='^NI-(?:F(?:04|07)|D(?:01|02)|S(?:02|07|08|10|11)|L(?:02|04)):'
+   tests/unit/novel-import-files.test.ts
+   tests/unit/novel-import-domain.test.ts
+   tests/unit/novel-import-session.test.ts
+   tests/unit/novel-import-integration.test.ts
+   Evidence: pdf-direct-regression-final-green.txt; 29/29, exit 0, no skips.
+3. node node_modules/typescript/bin/tsc --noEmit --pretty false
+   Evidence: pdf-backend-typecheck-final.txt; exit 0, empty diagnostics.
+4. shasum -a 256 -c evidence/pdf-backend-final-source-sha.txt
+   All nine recorded independent source/resource entries match.
+
+Notable RED -> GREEN evidence (original failures retained)
+- pdf-schema-red / pdf-schema-green: strict page actions and unsafe fields.
+- pdf-registry-red / pdf-registry-green: one running, one metadata queue.
+- pdf-engine-red / pdf-engine-green: full-page text ledger and OCR default block.
+- pdf-gate-red / pdf-gate-green: required source/decision validation.
+- pdf-old-hash-red / pdf-old-hash-green: non-PDF legacy fingerprint compatibility.
+- pdf-decisions-red / pdf-decisions-green: atomic decisions and revocation.
+- pdf-preview-output-red / pdf-preview-output-green: IHDR/dimension mismatch
+  and late sealed diagnostic reject a candidate PNG.
+- pdf-lifecycle-red / pdf-lifecycle-source-final-green: cancellation enters
+  before the serial tail; actual FS/Worker settlement precedes release.
+- pdf-source-lineage-red / pdf-source-lineage-green: an older issued request
+  cannot poison a later successful retry. The controller owner fixed this.
+- pdf-engine-budget-red / pdf-engine-budget-green: a real page exceeding
+  100000 operators previously continued and was marked complete. It now stops
+  with incomplete/budget and explicitly marks the remaining physical pages.
+- pdf-progress-header-red / pdf-progress-budget-green: retain known pageCount
+  even when the first physical page never produces a successful result.
+- pdf-format-contract-red: approved former NI-F04 contract change, retained as
+  historical evidence; the final bound NI-F04 keeps text-order and failure checks.
+- pdf-extractor-source-binding-red: current-source injection assertion fails
+  before the component extractor accepts the explicit internal client.
+
+Coverage summary
+- NI01/02: all physical pages, zero-character cover, middle/tail and mixed-page
+  text retained; full scans/page-number-only OCR, blank/document-error, partial
+  progress, >5000 pages, operator limits and no silently truncated success.
+- NI03/04: strict schema, actual main trusted/ready/owner/maintenance guards,
+  cancel outside business admission, foreign/excluded/non-PDF/stale/out-of-range
+  rejects before IO, file/ancestor replacement and symlink, post-snapshot
+  replacement, cache verification, canceled/multiple/non-PDF reselect, new fileId
+  without inherited decisions or old token authority.
+- NI05/06: actual PNGs, output geometry/IHDR/byte limits, stdout/stderr and sealed
+  late diagnostics, decode-failure lineage, 2-page LRU, <=16MiB cache, 100 tokens,
+  10-minute expiry, foreign page/random/expired tokens rejected; atomic batch,
+  no-op, explicit revocation, persistent failure and extracted prose preservation.
+- NI07/09: pending PDF blocks actual classify/start/resume/retry/resolve/patch
+  paths despite forced body/excluded ranges or copy-only selection; source
+  replacement after an AI send drops the response before coverage adoption;
+  old non-PDF hashes and legacy checkpoint/facts restoration remain unchanged.
+- NI08/14: initial choose before session creation, reselect, legacy inspection,
+  real Worker held exit, real FileHandle read held during snapshot or postverify,
+  public Abort/timeout while active/bytes stay charged, metadata queue never
+  starts another chain, actual main beginClose/stopTasks/closeData order,
+  owner revocation, equivalent close deadline retaining root then successful
+  retry, bounded diagnostics and glyph-checked closed fallback exception.
+
+Fixtures/implementation limits
+- The legacy-PDF checkpoint fixture now includes frozen historical model grants
+  with contextWindow 16000. Its earlier artificial completed facts plus models:{}
+  correctly failed the newly approved budget policy; production rejection was
+  preserved, not loosened. Checkpoint bytes/scope/facts remain asserted unchanged.
+- The first postverify test expected exactly two read calls. The real snapshot
+  performs an additional EOF check, so the fixture now captures readsAtHold and
+  proves no further chain starts. No production change was needed for this.
+- Family fallback permits only the two closed PDF.js warning patterns when
+  relevant fonts are unembedded and every required codepoint has a nonzero glyph
+  in the verified repository Noto font. Missing/corrupt fonts/CMaps, unknown
+  diagnostics, image drops and decode failures remain blocked.
+- Worker heap/pixel/operator/source/cache caps do not constitute a total native
+  RSS guarantee. Resource/diagnostic/timeout ambiguity never emits a valid token.
+
+Separate parent-owned verification
+- NI-PDF10 actual PGlite publication/read audit and W04/W06 are run by root;
+  their evidence is separate, not claimed as this agent's execution.
+- NI-PDF15 real macOS arm64 builder/isolated package is run by root after the
+  frozen module hashes. Source component tests do not replace package validation.
+- No actual Windows verification or real app/RB-PDF01/RB-L01/RB-PDF02 acceptance
+  is claimed here. Independent code review is still required by root.
+- Parent's real L01 oracle comparison identified seven pages with A1AD mapping
+  differences (GBK U+2026 versus Adobe CMap U+22EF). No replacement, CMap mutation
+  or relaxation of the real-input acceptance criterion was implemented here.

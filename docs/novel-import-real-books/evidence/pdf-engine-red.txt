@@ -1,0 +1,32 @@
+✔ NI-PDF01: full PDF inspection retains cover, every text page and mixed-page text without image approval (832.846791ms)
+✖ NI-PDF02: scan and partial PDF failures keep explicit blocked page ledgers instead of truncated success (1690.697708ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3330.305875
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:3584
+✖ NI-PDF02: scan and partial PDF failures keep explicit blocked page ledgers instead of truncated success (1690.697708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'page-error'
+  - 'ocr-required'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:24:159)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'page-error',
+    expected: 'ocr-required',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

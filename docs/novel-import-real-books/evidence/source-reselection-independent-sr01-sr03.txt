@@ -1,0 +1,57 @@
+▶ NI-SR01: fresh same-file grants retain complete preanalysis drafts and exact decoding
+  ✔ TXT (83.117333ms)
+  ✔ MD with another source (73.386166ms)
+  ✔ HTML (68.976833ms)
+  ✔ HTM (72.638875ms)
+  ✔ DOCX (68.046542ms)
+  ✔ permitted DOC (78.576542ms)
+  ✔ confirmed GB18030 (90.553125ms)
+  ✔ confirmed BOMless UTF16 (83.764ms)
+  ✔ fresh ancestor, excluded source and classification credit survive without authorization reuse (93.360042ms)
+✔ NI-SR01: fresh same-file grants retain complete preanalysis drafts and exact decoding (718.614667ms)
+▶ NI-SR02: rejection preserves owners and drafts and gates the picker before analysis
+  ✔ cancel preserves all business fields (60.990084ms)
+  ✔ multiple (52.11125ms)
+  ✔ directory (52.769583ms)
+  ✔ other-path (60.673916ms)
+  ✔ changed-bytes (69.085791ms)
+  ✔ symlink (54.583125ms)
+  ✔ stale-grant (63.480291ms)
+  ✔ ancestor-drift (60.750542ms)
+  ✔ protected (57.87425ms)
+  ✔ scan-read-race (68.506375ms)
+  ✔ format-mismatch (75.726875ms)
+  ✔ decoded-text-mismatch (58.506ms)
+  ✔ encoding-mismatch (56.971709ms)
+  ✔ decode-fails (80.8745ms)
+  ✔ docx-scan-error (92.327875ms)
+  ✔ fresh source changes after successful redecode still reject (46.314375ms)
+  ✔ before picker: running (56.054042ms)
+  ✔ before picker: recognizing (51.441125ms)
+  ✔ before picker: conflicts (61.415125ms)
+  ✔ before picker: publication (57.3095ms)
+  ✔ before picker: steps (55.605708ms)
+  ✔ before picker: artifacts (56.568ms)
+  ✔ before picker: decisions (54.164375ms)
+  ✔ before picker: semanticState (52.917417ms)
+  ✔ before picker: workingRevision (41.562667ms)
+  ✔ before picker: coverage (43.4865ms)
+  ✔ before picker: analysisCheckpoint (36.089583ms)
+  ✔ before picker: jobs (42.602417ms)
+  ✔ before picker: pdf-request (40.596917ms)
+  ✔ before picker: pdf-active (39.70025ms)
+  ✔ before picker: old-error (34.276458ms)
+  ✔ before picker: unconfirmed (49.644833ms)
+✔ NI-SR02: rejection preserves owners and drafts and gates the picker before analysis (1788.088375ms)
+▶ NI-SR03: real candidate writes preserve precommit state and park post-rename commits as source
+  ✔ actual temporary write failure does not adopt or alter old journal (43.961792ms)
+  ✔ post-rename owner failure adopts identical paused source candidate and blocks until reopen (84.354708ms)
+✔ NI-SR03: real candidate writes preserve precommit state and park post-rename commits as source (128.72625ms)
+ℹ tests 46
+ℹ suites 0
+ℹ pass 46
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2950.509875

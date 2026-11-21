@@ -1,0 +1,26 @@
+{
+  "diagnosticOnly": true,
+  "acceptance": false,
+  "identities": [
+    {
+      "file": "observe-scene-memory.cjs",
+      "sha256": "41036cdaa602b878603a96a8be1eba32f9ffa7318c245dba81db9bb69b6f38a9",
+      "bytes": 5290
+    },
+    {
+      "file": "observe-scene-worker-memory-bootstrap.cjs",
+      "sha256": "d2bfcbfc16125c512c2604049c819f892b1b3d0f23758eb8388ca81de0eeb585",
+      "bytes": 5303
+    },
+    {
+      "file": "verify-memory-worker-bootstrap.mjs",
+      "sha256": "92492ef48f1140c435326e9e741389063aa36ecd39a682fc2488c2137c862d1d",
+      "bytes": 2086
+    },
+    {
+      "file": "run-r20-memory-diagnostic.mjs",
+      "sha256": "9caf85616bf17b44d3fb19db0df77eedcf4babef534a847591ff1b5fae1a8f1c",
+      "bytes": 30063
+    }
+  ]
+}

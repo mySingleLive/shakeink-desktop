@@ -1,0 +1,67 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (58.0035ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (20.495584ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (0.977333ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.790041ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (8.373708ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.398792ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (12.039333ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (7.79025ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (22.917833ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (2.297209ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.284792ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.067375ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.132042ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (35.481583ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.413167ms)
+  ✔ ordinary narrative fixtures now reject early after native format validation (1.242709ms)
+  ✔ actual reconcile field edits reach both distinct character-reference late failures (1.90025ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.121208ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (6.061625ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (17.494875ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (4.881625ms)
+  ✔ empty results retain the late gate while narrative references reject early and reconcile still rejects late (1.35075ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (24.223042ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✔ original native constraints enter the real bridge correction without transforming values (26.565334ms)
+  ✔ strict catalog and global chapter constraints enter the same bounded correction (16.05875ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (11.197ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (0.991542ms)
+✔ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (55.588958ms)
+▶ NI-J08: final character schema errors expose only bounded static business labels
+  ✔ actual bridge generateJSON Zod runImportAi and main safeError preserve final bounded diagnostics (1.64225ms)
+  ✔ first bad then good and first good remain exact successes with two or one calls (1.540917ms)
+  ✔ actual Zod unknown and truncated paths cannot echo or falsely identify known fields (5.016292ms)
+  ✔ synthetic typed metadata covers full-path allowlist and first-six bounds only (1.771916ms)
+  ✔ all unrelated phases kinds legacy and original error identities pass through (1.870208ms)
+✔ NI-J08: final character schema errors expose only bounded static business labels (12.304792ms)
+▶ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance
+  ✔ array aliases uses the actual bounded correction (1.791125ms)
+  ✔ object relationships uses the actual bounded correction (1.145042ms)
+  ✔ numeric age uses the actual bounded correction (1.16725ms)
+  ✔ boolean occupation uses the actual bounded correction (1.790333ms)
+  ✔ null clothing uses the actual bounded correction (1.492833ms)
+  ✔ literal old acceptance cases for strings nonstrings optional shape and prototype keys remain unchanged (6.3225ms)
+  ✔ other kind phase reconcile and legacy string validation retains the original error (2.469125ms)
+  ✔ string encoding does not bypass original knowledge source native and link gates (4.992292ms)
+✔ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance (65.3245ms)
+▶ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority
+  ✔ unknown-unit uses the production bridge and preserves exact late-gate evidence (1.355959ms)
+  ✔ too-short uses the production bridge and preserves exact late-gate evidence (1.170416ms)
+  ✔ ambiguous uses the production bridge and preserves exact late-gate evidence (1.66675ms)
+  ✔ no-match uses the production bridge and preserves exact late-gate evidence (1.472875ms)
+  ✔ all twelve ordinary target schemas reject the same four reasons without transforming input (19.500542ms)
+  ✔ matching text in another supplied unit never repairs a wrong declared unit (0.872541ms)
+  ✔ Abort identity remains unchanged through the real correction bridge (0.404167ms)
+✔ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority (26.987042ms)
+ℹ tests 51
+ℹ suites 0
+ℹ pass 51
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1076.381958

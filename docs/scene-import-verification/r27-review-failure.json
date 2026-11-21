@@ -1,0 +1,23 @@
+{
+  "run": "R27",
+  "stagePassed": true,
+  "scenes": 1055,
+  "bodyReviewCovered": 4718,
+  "bodyUnits": 5589,
+  "factsReviewCovered": 0,
+  "pendingConflicts": 59,
+  "omissions": 19,
+  "status": "full-review-failed-generic-error",
+  "failedBodyUnitIndices": [
+    2350,
+    2426
+  ],
+  "failedPacketUnits": 77,
+  "driverExitCode": 2,
+  "appExitCode": 0,
+  "sourceBodyUnchanged": true,
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "historicalFailedReplyPreserved": false
+}

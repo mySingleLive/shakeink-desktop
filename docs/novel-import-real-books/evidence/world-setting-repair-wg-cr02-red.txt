@@ -1,0 +1,99 @@
+✖ NI-WR01: explicit legacy repair is read-only by default, atomic and idempotent (1633.589875ms)
+▶ NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative
+  ✔ cross-novel Review incoming edge (16.976458ms)
+  ✔ TextComment unknown target type (15.65975ms)
+  ✔ PreparedTextChange (17.617292ms)
+  ✔ SubAgentRun (16.057125ms)
+  ✔ SopNodeRun (21.153ms)
+  ✔ ForeshadowReference (15.278875ms)
+  ✔ ChatWriteEffect metadata-only target (15.194ms)
+  ✔ ContentCandidate historical chapterId (15.829458ms)
+  ✔ ContentImprovementRun historical chapterId (15.8005ms)
+  ✔ ContentVersion target history (22.247833ms)
+  ✔ ContentMutation target history (16.414375ms)
+  ✔ TargetTextRevision global bounded target (15.4265ms)
+  ✔ SopPlan conservative own-novel block (15.319958ms)
+  ✔ CascadeJob conservative own-novel block (15.372875ms)
+  ✔ world children and attached settings block without cascade deletion (21.110333ms)
+  ✔ planning parse, world pointer and opaque artifact link are closed guards (53.855708ms)
+  ✔ actual transaction failures after writes and before commit restore all business and audit rows (97.492625ms)
+  ✔ ack export failures and lost commit acknowledgements confirm without duplicate writes (278.731167ms)
+  ✔ startup readiness rejection keeps the actual lease until closure is confirmed (158.523459ms)
+  ✔ sync-constructor-throw (235.393584ms)
+  ✔ readiness-reject-close-fails (233.357625ms)
+✔ NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative (12868.826416ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 22
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14905.119167
+
+✖ failing tests:
+
+test at tests/integration/novel-import-world-repair.test.ts:2:13101
+✖ NI-WR01: explicit legacy repair is read-only by default, atomic and idempotent (1633.589875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  ... Skipped lines
+  
+    {
+  +   afterHash: '253621c4d32b7f45d8dca10a8a2830a9a399ef59b6f0d6681845163564bf7d0e',
+  +   beforeHash: '154419d70b648f37c1c65f066f8bede94bb184112532cf2cf6194e38aed39a99',
+  +   operationId: 'bf11e1ce-8d3d-4a62-8563-ec3edce77c51',
+  -   afterHash: '154419d70b648f37c1c65f066f8bede94bb184112532cf2cf6194e38aed39a99',
+  -   beforeHash: '253621c4d32b7f45d8dca10a8a2830a9a399ef59b6f0d6681845163564bf7d0e',
+  -   operationId: 'ca49c37d-39ab-492f-9480-9897dc734a37',
+      planHash: 'acc989b80ae77b31995d5b9021ee17c6be83ac6792deb1bd10ed8c2042f06870',
+      rootId: 'wr-9e23e673-94c1-42fa-b960-f74d2a81ba76-root',
+      settings: [
+        {
+          newSettingId: 'wr-9e23e673-94c1-42fa-b960-f74d2a81ba76-setting-0',
+  ...
+      ],
+  +   snapshotId: '8d4a9a8d-b5cd-4919-bcce-f9b079292ff3',
+  -   snapshotId: '643d81fa-b428-4101-87b8-b586808b3143',
+      status: 'restored'
+    }
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/integration/novel-import-world-repair.test.ts:76:115)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: {
+      status: 'restored',
+      operationId: 'bf11e1ce-8d3d-4a62-8563-ec3edce77c51',
+      planHash: 'acc989b80ae77b31995d5b9021ee17c6be83ac6792deb1bd10ed8c2042f06870',
+      snapshotId: '8d4a9a8d-b5cd-4919-bcce-f9b079292ff3',
+      beforeHash: '154419d70b648f37c1c65f066f8bede94bb184112532cf2cf6194e38aed39a99',
+      afterHash: '253621c4d32b7f45d8dca10a8a2830a9a399ef59b6f0d6681845163564bf7d0e',
+      rootId: 'wr-9e23e673-94c1-42fa-b960-f74d2a81ba76-root',
+      settings: [
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object]
+      ]
+    },
+    expected: {
+      status: 'restored',
+      operationId: 'ca49c37d-39ab-492f-9480-9897dc734a37',
+      planHash: 'acc989b80ae77b31995d5b9021ee17c6be83ac6792deb1bd10ed8c2042f06870',
+      snapshotId: '643d81fa-b428-4101-87b8-b586808b3143',
+      beforeHash: '253621c4d32b7f45d8dca10a8a2830a9a399ef59b6f0d6681845163564bf7d0e',
+      afterHash: '154419d70b648f37c1c65f066f8bede94bb184112532cf2cf6194e38aed39a99',
+      rootId: 'wr-9e23e673-94c1-42fa-b960-f74d2a81ba76-root',
+      settings: [
+        [Object], [Object],
+        [Object], [Object],
+        [Object], [Object],
+        [Object]
+      ]
+    },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

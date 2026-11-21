@@ -1,0 +1,28 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (58.195166ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (20.133417ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (0.901959ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.786083ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (8.681917ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.27925ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (12.165167ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (6.70275ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (18.234833ms)
+  ✔ formatted unknown references stay schema-valid and fail only at the existing graph gate (4.123334ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.298875ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.062625ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.13225ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (33.289709ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ actual valid worldline requests reach both distinct character-reference late failures (1.184583ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (2.155375ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (3.611958ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 972.965333

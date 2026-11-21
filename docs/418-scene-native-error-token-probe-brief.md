@@ -1,0 +1,17 @@
+# 当前已知正控与内联失败对照的私有诊断
+
+R50及R52两例均HTTP400，不能据此批准产品变更。仅新增两次静态PRIVATE诊断：第一例逐字复用R48实际成功的`enum-positive`原schema、prompt及witness；第二例逐字复用R52的B′（已完整内联、homogeneous items）schema、prompt及witness。分别核原SHA，不重新改写任何schema。两例模型、授权、生成参数及原生factory相同；不同prompt/schema是明确的正控/坏对照，不称单变量schema实验。R49产品、R48/R50/R52全部历史源与CJS保持不变；不发送小说，不重复旧批次。
+
+沿用真实SDK→同一生产ModelService/Gateway→当前已授权接口、readonlyUsage、maxNetworkRetries=0、每例一次且全局最终fetch硬限2；不走generateJSON，不自动重试。按序执行，授权失效/取消后停止。保留既有wire type/strict/schemaSHA/inputSHA、finish、本地Ajv完整验证、delta与SDK文本一致证明、正常quit原始timeout门、私有新0700目录及wx0600文件。vault内部照常使用凭据，诊断不inspect/持久化真实Key、headers或URL。root在420独审和保护368/构建输入核验后才实际执行。
+
+只增强非ok HTTP的安全原因投影：原64KiB/1000ms上限、同步clone和后台读取/有界cancel/drain机制不变；复制已冻结实现至新PRIVATE文件，仅把pure projector替换为本段规则，旧文件不改。原response身份、delegate顺序不变；不声称tee后原body.cancel零延迟。完整EOF且JSON解析成功时，仅从own `error.message`（或无error封套的own `message`）字符串提取原因；其它shape不猜，不读任意嵌套字段。原code/param及9词布尔仍只闭合投影。任何开放HTTP正文、错误字符串、原始帧都不落盘、不输出。
+
+新增`reasonTokens`最多128项，及`reasonTokensTruncated`布尔；仅是错误文本的有损闭合投影，不是供应商支持性的充分证据。先移除URL非空白段和Authorization/Bearer从标记到行尾的整段，再扫描完整Unicode字母/数字/组合符号及`_`/`$`/`.`/`/`/连字符段，纯数字/点斜线连字符段跳过，数字或非ASCII前后缀混合词、路径或连字符组合词必须整个归other；禁止跳过前缀后对未知词作子串匹配。词元大小写折叠，仅精确映射至下列固定词表的规范拼写；其它一律`other`，连续other合并；不输出数字、路径、名称、未知键或任意provider字符串。超128只标截断，不用截断正文冒作完整捕获；原body完整性仍独立报告。
+
+固定词表：`schema,type,object,array,string,number,integer,boolean,null,properties,required,additionalProperties,items,prefixItems,additionalItems,anyOf,oneOf,allOf,not,enum,const,definitions,$defs,$ref,minItems,maxItems,uniqueItems,minLength,maxLength,minimum,maximum,pattern,format,response_format,text.format,strict,invalid,unsupported,supported,expected,found,must,should,be,is,are,have,has,missing,unknown,unrecognized,allowed,allow,only,cannot,can,with,without,key,keys,value,values,field,fields,parameter,parameters,response,output,input,request,root,nested,reference,references,definition,contains,contain,property,boolean,valid,not,support,mode,enable,enabled,disabled,provided,requires,require,at,least,one,of,to,in,for,and,or,the,a,an,as,empty,nonempty,single,multiple,additional,all,same,duplicate,duplicates,tuple`（去除重复项后固定导出）。未知内容仅映射other，诊断不得用任意error文本作为结果分类。
+
+root准入时要求补足判读词，固定追加而非运行时学习：`true,false,json,json_schema,got,defined,parse,validation,either,too,large,limit,limits,exceeds,exceeded,complex,complexity,depth,length,size,supplied,absent,context,when,if,specified,incorrect,does,invalid_request_error,multipleOf,exclusiveMinimum,exclusiveMaximum,minProperties,maxProperties,patternProperties,propertyNames,dependencies,dependentRequired,dependentSchemas,minContains,maxContains,additionalItems,contentEncoding,contentMediaType,title,description,default,examples,readOnly,writeOnly,$schema,$comment`。仍完全词元精确映射，大小写只映回固定规范词，所有其它值统一other；不得借此动态扩词表。
+
+最终`REASON_WORDS`按前两串从左至右首次出现去重，恰161词；`SHA256(UTF8(JSON.stringify(REASON_WORDS)))=3dbf70687442994beab17da86ba6aefe7ef979711ae4797fe14f043b30b6be44`。`other`是固定未知分类，不计入这161个词；测试核全集/顺序/指纹，运行时禁止新增。该固定增量由root在本次准入后明确授权，未读取真实HTTP错误学习词汇。
+
+交付新PRIVATE helper/cases/projector/tests/builder与`dist/review/scene-native-error-token-probe.cjs`，manifest `scene-native-error-token-probe-build-manifest.json`，API `run({root,destination})`；新目录前缀`native-error-token-r54-UUID`。结果两个安全scalar及原约定networkStarts/readonlyUsage/maxNetworkRetries/writeFailures/closeFailed，不承诺constraint通过才算诊断完成。新增reasonTokens均来自闭合类型。本次不改产品接受门/预算/四代/原协议，也不沿用412准入。已知正控成功且B′拒绝只能缩小当前差异；任一例结果不能当全书通过或普遍Native约束保证。

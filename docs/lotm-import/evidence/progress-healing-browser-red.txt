@@ -1,0 +1,24 @@
+✖ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (10080.531375ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11145.713291
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:13799
+✖ NI-U05: pause/resume, minimized task recovery, cancel retention and completed close are distinct (10080.531375ms)
+  locator.waitFor: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByText('导入正文', { exact: true }) to be visible[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:68:208)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:450)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:67:115) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByText('导入正文', { exact: true }) to be visible" ]
+  }

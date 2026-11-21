@@ -21,15 +21,38 @@ import {assertDirectory,directoryIdentity,readMetadata,sameIdentity,within} from
 import {CURRENT_NAMES,BRAND_NAMES,type BrandNames} from "../shared/brand-names"
 import {readApplicationBrand,readWorkBrand,assertBrandControls,brandRootIdentity,type BrandObservation} from "../core/brand-names"
 import {WorkCreationReservations} from "./work-creation-reservations"
+import {markWorkFault} from "./work-unavailability"
 import type {RootIdentity} from "../core/data-root"
 
 const identitySchema = z.object({ device: z.string(), inode: z.string() }).strict()
 const recordSchema = z.object({ id: z.uuid(), path: z.string(), identity: identitySchema, novelId: z.string(), title: z.string(), requestId: z.string(), requestHash: z.string(), createdAt: z.string() }).strict()
 export const catalogSchema = z.array(recordSchema)
 export type WorkRecord = z.infer<typeof recordSchema>
+export interface WorkImportInitializer { importHash:string; initialize(novelId:string):Promise<void>; verify(novelId:string):Promise<void>; phase?(phase:'before-initialize'|'domain-writing'|'database-committed'|'manifest-ready'|'catalog-committed'):void|Promise<void> }
 interface Connection { engine: PGlite; db: PrismaClient; assets:WorkspaceAssets; unlock: () => Promise<void>; assertCurrent():void; assertLease():Promise<void>; storagePath:string }
 interface Slot { connection: Promise<Connection>; active: number; lastUsed: number }
 async function identity(path: string) { const info = await stat(path, { bigint: true }); return { device: String(info.dev), inode: String(info.ino) } }
+function alive(pid:number){try{process.kill(pid,0);return true}catch(error){return (error as NodeJS.ErrnoException).code!=="ESRCH"}}
+/** App-written top-level names in a work directory: either brand family's manifest, storage, lock,
+ * lease, restore/preserve and migration entries and the app root marker, plus database, assets and
+ * atomic-write temporaries. Finder's .DS_Store and author files do not count. */
+const WORK_STORAGE_ENTRY=/^\.?(shakeink|xuanxiang)-/u,WORK_STORAGE_NAMES=new Set(['database','assets']),ATOMIC_TEMPORARY=/^\.[0-9a-f-]{36}\.tmp$/u
+async function holdsWorkStorage(path:string):Promise<boolean>{
+  let names:string[]
+  try{names=await readdir(path)}
+  catch(error){const code=(error as NodeJS.ErrnoException).code;return !(code==='ENOENT'||code==='ENOTDIR')}
+  return names.some(name=>WORK_STORAGE_ENTRY.test(name)||WORK_STORAGE_NAMES.has(name)||ATOMIC_TEMPORARY.test(name))
+}
+/** Remove a directory tree without following symbolic links. */
+async function removeTree(path:string):Promise<void>{
+  const info=await lstat(path,{bigint:true})
+  if(info.isSymbolicLink()||!info.isDirectory()){await unlink(path);return}
+  const names=await readdir(path),again=await lstat(path,{bigint:true})
+  // The directory must not be swapped (e.g. for a link) between the check and the listing.
+  if(again.isSymbolicLink()||again.dev!==info.dev||again.ino!==info.ino)throw Error("作品目录内容已变化，已停止删除")
+  for(const name of names)await removeTree(join(path,name))
+  await rmdir(path)
+}
 async function regularFile(path: string) { const info = await lstat(path); if (!info.isFile() || info.isSymbolicLink()) throw new Error("作品元数据或数据库路径无效") }
 function assertAliasDirectory(path:string,root:RootIdentity){
   const info=lstatSync(path,{bigint:true})
@@ -44,7 +67,7 @@ async function canonicalDirectory(path:string){
 }
 
 /** Per-directory writer lease; never steal a live or foreign-host lease. */
-async function lockDirectory(path: string,names:Readonly<BrandNames>,assertRegistration?:()=>void): Promise<(()=>Promise<void>)&{assertHeld():Promise<void>}> {
+export async function lockDirectory(path: string,names:Readonly<BrandNames>,assertRegistration?:()=>void): Promise<(()=>Promise<void>)&{assertHeld():Promise<void>}> {
   assertRegistration?.()
   const leaseRoot=brandRootIdentity(path);assertBrandControls(leaseRoot,names)
   const lock = join(path, names.lock); const token = randomUUID()
@@ -52,8 +75,8 @@ async function lockDirectory(path: string,names:Readonly<BrandNames>,assertRegis
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
     if (!(await lstat(lock)).isDirectory() || (await lstat(lock)).isSymbolicLink()) throw new Error("作品目录锁无效")
     const previous = JSON.parse(await readFile(join(lock, "owner.json"), "utf8"))
-    if (previous.host !== hostname() || !Number.isSafeInteger(previous.pid) || previous.pid < 1) throw new Error("作品已在其他进程或设备打开")
-    try { process.kill(previous.pid, 0); throw new Error("作品已在其他进程打开") }
+    if (previous.host !== hostname() || !Number.isSafeInteger(previous.pid) || previous.pid < 1) throw markWorkFault(new Error("作品已在其他进程或设备打开"),"in-use")
+    try { process.kill(previous.pid, 0); throw markWorkFault(new Error("作品已在其他进程打开"),"in-use") }
     catch (cause) { if ((cause as NodeJS.ErrnoException).code !== "ESRCH") throw cause }
     // A pathname rename is not compare-and-swap: another process could have
     // replaced this stale lease. Recovery is a separate explicit operation
@@ -82,6 +105,8 @@ export class Workspaces {
   private readonly slots = new Map<string, Slot>()
   private readonly retiring = new Map<string, Promise<void>>()
   private readonly failedRetirements = new Map<string, Slot>()
+  /** Works removed from the index in this process; no new connection may start. */
+  private readonly forgotten = new Set<string>()
   private migrations: Migration[] = []
   private queue: Promise<unknown> = Promise.resolve()
   private closing = false
@@ -146,13 +171,30 @@ export class Workspaces {
     guard();return guard
   }
   async list(): Promise<WorkRecord[]> { return (await this.catalog.read()).value }
-  async protectedDirectories(): Promise<string[]> { return [...new Set([...(await this.list()).map(record=>record.path),...await this.creationReservations.directories()])] }
+  /** A listed or reserved directory is protected only while it still holds this app's work storage, so a
+   * folder emptied after its work was deleted can be chosen again (docs/567, 2R). Unreadable folders stay
+   * protected. Reservation records themselves are kept. */
+  async protectedDirectories(): Promise<string[]> {
+    const paths=[...new Set([...(await this.list()).map(record=>record.path),...await this.creationReservations.directories()])]
+    const kept=await Promise.all(paths.map(async path=>await holdsWorkStorage(path)?path:null))
+    return kept.filter((path):path is string=>path!==null)
+  }
   assertNoPendingCreation(requestId:string):Promise<void>{return this.creationReservations.assertNoPendingCreation(requestId)}
-  async create(selection: DirectoryProof, input: unknown,assertCreation?:()=>void): Promise<WorkRecord> {
+  async importLeaseTarget(selection:DirectoryProof,input:{requestId:string;title:string;importHash:string},assertCurrent:()=>void):Promise<RootIdentity>{
+    assertCurrent();const canonical=await this.verifySelection(selection),assertBoundary=await this.assertWorkDataBoundary(canonical)
+    const assertSelection=()=>{assertCurrent();assertBoundary();assertAliasDirectory(selection.path,selection)};assertSelection()
+    const fingerprint=requestHash({title:input.title,importHash:input.importHash})
+    await this.creationReservations.requireExisting({requestId:input.requestId,requestHash:fingerprint,selection})
+    assertSelection();const target={path:canonical,device:selection.device,inode:selection.inode},brand=await readWorkBrand(target);assertSelection()
+    if(brand.value.requestId!==input.requestId||brand.value.requestHash!==fingerprint)throw Error('原导入目录请求不匹配')
+    brand.assertCurrent();assertSelection();return target
+  }
+  async create(selection: DirectoryProof, input: unknown,assertCreation?:()=>void,initializer?:WorkImportInitializer): Promise<WorkRecord> {
     assertCreation?.()
     const path = selection.path
     const parsed = novelCreationSchema.parse(input)
-    const fingerprint = requestHash({ title: parsed.title, ...(parsed.position ? { position: parsed.position } : {}) })
+    if(initializer&&!/^[a-f0-9]{64}$/.test(initializer.importHash))throw Error('导入指纹无效')
+    const fingerprint = requestHash({ title: parsed.title, ...(parsed.position ? { position: parsed.position } : {}),...(initializer?{importHash:initializer.importHash}:{}) })
     return this.serialize(async () => {
       assertCreation?.()
       const canonical = await this.verifySelection(selection)
@@ -171,6 +213,7 @@ export class Workspaces {
         manifestObservation=await readWorkBrand(await directoryIdentity(canonical));const manifest=manifestObservation.value
         if (manifest.id !== previous.id || manifest.novelId !== previous.novelId || manifest.phase !== "ready") throw new Error("作品目录身份不匹配")
         await this.validateWorkDatabase(canonical)
+        if(initializer)await this.run(previous.id,()=>initializer.verify(previous.novelId))
         assertRegistration()
         await this.creationReservations.reserve(reservation,assertRegistration)
         assertRegistration()
@@ -179,51 +222,129 @@ export class Workspaces {
         return previous
       }
       let manifest: z.infer<typeof manifestSchema>,names:Readonly<BrandNames>=CURRENT_NAMES
-      const contents = await readdir(canonical)
+      // Finder writes .DS_Store as soon as a folder is shown; it is not work content (docs/560).
+      let contents = (await readdir(canonical)).filter(name => name !== ".DS_Store")
       assertRegistration()
-      if (contents.length) {
-        if (!BRAND_NAMES.some(names=>contents.includes(names.workManifest))) throw new Error("创建作品需要空目录，现有作品请使用打开")
-        const brand=manifestObservation=await readWorkBrand(await directoryIdentity(canonical));names=brand.names;manifest=brand.value;brand.assertCurrent()
-        if (manifest.requestId !== parsed.requestId || manifest.requestHash !== fingerprint) throw new ContentError("REQUEST_CONFLICT","此目录属于其他建书请求，请核对原请求")
-        await this.creationReservations.reserve(reservation,assertRegistration)
-        assertRegistration()
-      } else {
-        manifest = { schemaVersion: 1, id: randomUUID(), phase: "creating", novelId: null, title: parsed.title, requestId: parsed.requestId, requestHash: fingerprint, createdAt: new Date().toISOString() }
-        await this.verifySelection(selection)
-        assertRegistration()
-        // Bind before the first target file write. Unknown outcomes keep this
-        // exact directory; invalid selections never reserve a new request.
-        await this.creationReservations.reserve(reservation,assertRegistration)
-        assertRegistration()
-        await writeFile(join(canonical, names.workManifest), JSON.stringify(manifest), { flag: "wx", mode: 0o600 })
+      // docs/567 2R: an older listed work on this folder no longer has its data here (the folder holds nothing
+      // or only this request's files). Close its connection before anything is written, so its engine cannot
+      // touch the new work's files, then confirm the folder did not change. It leaves the list at registration.
+      // Only when the folder is empty or holds this request's own manifest; any other content keeps the old
+      // work listed and fails below with the usual error.
+      const ownsFolder = !contents.length || (BRAND_NAMES.some(n => contents.includes(n.workManifest)) &&
+        await readWorkBrand(await directoryIdentity(canonical)).then(brand => brand.value.requestId === parsed.requestId && brand.value.requestHash === fingerprint, () => false))
+      const stale = ownsFolder ? before.value.filter(row => row.path === canonical) : []
+      const restoreStale = () => { for (const row of stale) this.forgotten.delete(row.id) }
+      if (stale.length) {
+        await this.retireStaleWorks(stale)
+        const after = (await readdir(canonical)).filter(name => name !== ".DS_Store")
+        if (after.length !== contents.length || after.some(name => !contents.includes(name))) { restoreStale(); throw new Error("所选目录内容已变化，请重新选择目录") }
+        contents = after
       }
-      manifestObservation=await readWorkBrand(await directoryIdentity(canonical))
-      for (const name of ["assets"]) {
-        await this.verifySelection(selection)
-        assertRegistration()
-        await mkdir(join(canonical, name), { recursive: true })
-        const info = await lstat(join(canonical, name))
-        if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("作品资源目录无效")
-      }
-      await this.verifySelection(selection)
-      assertRegistration()
-      const connection = await this.connect(canonical, manifest.phase === "creating",assertRegistration)
       try {
-        assertRegistration()
-        const result = await runInDatabaseContext({ workspaceId: manifest.id, database: connection.db, allowNovelCreation: true }, () => createNovelOnce(LOCAL_AUTHOR_ID, parsed,assertRegistration))
-        manifest.novelId = result.id; manifest.phase = "ready"
-        assertRegistration()
-        await atomicWrite(join(canonical, names.workManifest), JSON.stringify(manifest),{beforeRename:async()=>assertRegistration()})
+        if (contents.length) {
+          if (!BRAND_NAMES.some(names=>contents.includes(names.workManifest))) throw new Error("创建作品需要空目录，现有作品请使用打开")
+          const brand=manifestObservation=await readWorkBrand(await directoryIdentity(canonical));names=brand.names;manifest=brand.value;brand.assertCurrent()
+          if (manifest.requestId !== parsed.requestId || manifest.requestHash !== fingerprint) throw new ContentError("REQUEST_CONFLICT","此目录属于其他建书请求，请核对原请求")
+          await this.creationReservations.reserve(reservation,assertRegistration)
+          assertRegistration()
+        } else {
+          manifest = { schemaVersion: 1, id: randomUUID(), phase: "creating", novelId: null, title: parsed.title, requestId: parsed.requestId, requestHash: fingerprint, createdAt: new Date().toISOString() }
+          await this.verifySelection(selection)
+          assertRegistration()
+          // Bind before the first target file write. Unknown outcomes keep this
+          // exact directory; invalid selections never reserve a new request.
+          await this.creationReservations.reserve(reservation,assertRegistration)
+          assertRegistration()
+          await writeFile(join(canonical, names.workManifest), JSON.stringify(manifest), { flag: "wx", mode: 0o600 })
+        }
         manifestObservation=await readWorkBrand(await directoryIdentity(canonical))
-        if(manifestObservation.names.family!==names.family||manifestObservation.value.id!==manifest.id||manifestObservation.value.novelId!==manifest.novelId||manifestObservation.value.phase!=="ready")throw Error("作品目录身份不匹配")
-        const record: WorkRecord = { id: manifest.id, path: canonical, identity: await identity(canonical), novelId: result.id, title: result.title, requestId: parsed.requestId, requestHash: fingerprint, createdAt: manifest.createdAt }
+        for (const name of ["assets"]) {
+          await this.verifySelection(selection)
+          assertRegistration()
+          await mkdir(join(canonical, name), { recursive: true })
+          const info = await lstat(join(canonical, name))
+          if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("作品资源目录无效")
+        }
+        await this.verifySelection(selection)
         assertRegistration()
-        await this.catalog.update(before.revision, [...before.value, record],assertRegistration)
-        assertRegistration()
-        await this.creationReservations.complete(reservation,assertRegistration)
-        assertRegistration()
-        return record
-      } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
+        const connection = await this.connect(canonical, manifest.phase === "creating",assertRegistration)
+        try {
+          assertRegistration()
+          const result = await runInDatabaseContext({ workspaceId: manifest.id, database: connection.db, allowNovelCreation: true }, () => createNovelOnce(LOCAL_AUTHOR_ID, parsed,assertRegistration))
+          if(initializer)await runInDatabaseContext({workspaceId:manifest.id,database:connection.db,assets:connection.assets},async()=>{await initializer.phase?.('before-initialize');assertRegistration();await initializer.initialize(result.id);assertRegistration();await initializer.verify(result.id);await initializer.phase?.('database-committed');assertRegistration()})
+          manifest.novelId = result.id; manifest.phase = "ready"
+          assertRegistration()
+          await atomicWrite(join(canonical, names.workManifest), JSON.stringify(manifest),{beforeRename:async()=>assertRegistration()})
+          manifestObservation=await readWorkBrand(await directoryIdentity(canonical))
+          await initializer?.phase?.('manifest-ready')
+          if(manifestObservation.names.family!==names.family||manifestObservation.value.id!==manifest.id||manifestObservation.value.novelId!==manifest.novelId||manifestObservation.value.phase!=="ready")throw Error("作品目录身份不匹配")
+          const record: WorkRecord = { id: manifest.id, path: canonical, identity: await identity(canonical), novelId: result.id, title: result.title, requestId: parsed.requestId, requestHash: fingerprint, createdAt: manifest.createdAt }
+          assertRegistration()
+          for (const row of stale) await this.staleWorkHook?.(row.id)
+          assertRegistration()
+          await this.catalog.update(before.revision, [...before.value.filter(row => !stale.includes(row)), record],assertRegistration)
+          await initializer?.phase?.('catalog-committed')
+          assertRegistration()
+          await this.creationReservations.complete(reservation,assertRegistration)
+          assertRegistration()
+          return record
+        } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
+      } catch (error) {
+        // The old works reopen only while the catalog still lists them (the registration write did not happen).
+        const listed = (await this.catalog.read().catch(() => before)).value
+        if (stale.some(old => listed.some(row => row.id === old.id))) restoreStale()
+        throw error
+      }
+    })
+  }
+  /** docs/560: undo what an unfinished import save wrote in its reserved folder. Only entries this request
+   * created are removed, the manifest last; anything unexpected keeps the folder and is reported. */
+  async discardImportCreation(input:{requestId:string;title:string;importHash:string},assertCurrent:()=>void):Promise<{state:'none'|'work'|'cleaned'|'kept';reason?:string}>{
+    if(!/^[a-f0-9]{64}$/.test(input.importHash))throw Error('导入指纹无效')
+    const fingerprint=requestHash({title:input.title,importHash:input.importHash})
+    const kept=(reason:string)=>({state:'kept' as const,reason})
+    return this.serialize(async()=>{try{
+      assertCurrent()
+      if((await this.catalog.read()).value.some(row=>row.requestId===input.requestId))return {state:'work' as const}
+      const reservation=await this.creationReservations.find(input.requestId);assertCurrent()
+      if(!reservation)return {state:'none' as const}
+      if(reservation.requestHash!==fingerprint)return {state:'kept' as const,reason:'目录预留属于其他导入请求'}
+      const release=async()=>{await this.creationReservations.release({requestId:reservation.requestId,requestHash:reservation.requestHash,selection:reservation.selection},assertCurrent)}
+      let root:RootIdentity
+      // Only a folder that is really gone releases its reservation; any other read error keeps it (docs/563).
+      try{root=await directoryIdentity(await realpath(reservation.selection.path))}
+      catch(error){const code=(error as NodeJS.ErrnoException).code;if(code==='ENOENT'||code==='ENOTDIR'){await release();return {state:'none' as const}}return kept('无法读取目标目录')}
+      if(root.path!==reservation.selection.path||root.device!==reservation.selection.device||root.inode!==reservation.selection.inode){await release();return {state:'none' as const}}
+        const entries=await readdir(root.path),found=BRAND_NAMES.filter(n=>entries.includes(n.workManifest))
+        if(found.length>1)return kept('目录中同时有新旧两种作品清单，无法确认归属')
+        const names=found[0]
+        if(!names){await release();return {state:'none' as const}}
+        const manifestPath=join(root.path,names.workManifest),manifestInfo=await lstat(manifestPath)
+        if(!manifestInfo.isFile()||manifestInfo.isSymbolicLink())return kept('作品清单路径无效')
+        const manifest=manifestSchema.safeParse(await readMetadata(manifestPath,64*1024))
+        if(!manifest.success||manifest.data.requestId!==input.requestId||manifest.data.requestHash!==fingerprint)return kept('目录已属于其他作品')
+        if(manifest.data.phase==='ready')return kept('目录中的作品已完成建库，尚未登记到作品列表；请用“打开作品目录”找回')
+        const temporary=/^\.[0-9a-f-]{36}\.tmp$/u
+        const known=new Set([names.workManifest,'database','assets',names.storage,names.storageRequired,names.lock])
+        const ours=entries.filter(name=>known.has(name)||temporary.test(name))
+        const foreign=entries.filter(name=>!ours.includes(name))
+        if(foreign.some(name=>name.startsWith('.shakeink')||name.startsWith('.xuanxiang')||name===names.restores||name===names.preserved))return kept('目录中有无法确认来源的作品数据')
+        for(const name of ours){const info=await lstat(join(root.path,name));if(info.isSymbolicLink())return kept('目录中有符号链接，无法确认归属')}
+        const lock=join(root.path,names.lock)
+        if(ours.includes(names.lock)){
+          // A lock is removed only when it holds exactly a readable owner.json from this host whose process is gone or is this one.
+          const lockEntries=await readdir(lock),owner=lockEntries.length===1&&lockEntries[0]==='owner.json'?await readMetadata(join(lock,'owner.json'),4096).catch(()=>null) as {pid?:unknown;host?:unknown}|null:null
+          if(!owner||owner.host!==hostname()||typeof owner.pid!=='number'||owner.pid!==process.pid&&alive(owner.pid))return kept('作品目录正在使用或目录锁无法确认')
+        }
+        const guard=async()=>{assertCurrent();await assertDirectory(root)}
+        for(const name of ours.filter(name=>temporary.test(name))){await guard();await unlink(join(root.path,name))}
+        for(const name of ['assets','database']){if(!ours.includes(name))continue;await guard();await removeTree(join(root.path,name))}
+        for(const name of [names.storage,names.storageRequired]){if(!ours.includes(name))continue;await guard();await unlink(join(root.path,name))}
+        if(ours.includes(names.lock)){await guard();await removeTree(lock)}
+        await guard();await unlink(manifestPath)
+        await release()
+        return {state:'cleaned' as const}
+      }catch(error){return kept(error instanceof Error&&/^[\u4e00-\u9fa5]/u.test(error.message)&&error.message.length<=200?error.message:'目录内容无法删除')}
     })
   }
   async open(selection: DirectoryProof): Promise<WorkRecord> {
@@ -247,26 +368,100 @@ export class Workspaces {
         if (!novel || await db.novel.count() !== 1) throw new Error("作品目录与数据库不匹配")
         record.title = novel.title
       }
-      if (previous && this.slots.has(previous.id)) {
+      // docs/569 2R 中2: an older row on this folder belongs to a work whose files are no longer here (the folder
+      // now holds this other work); it leaves the list as in create(), so one folder never shows two works.
+      const stale = before.value.filter(row => row.path === canonical && row.id !== record.id)
+      await this.retireStaleWorks(stale)
+      try {
+        if (previous && this.slots.has(previous.id)) {
+          assertRegistration()
+          await this.run(previous.id, async () => { const { getDatabaseContext } = await import("./context"); await validate(getDatabaseContext().database) })
+        } else {
+          await this.retiring.get(record.id)
+          const stranded = this.failedRetirements.get(record.id)
+          if (stranded) { await this.disconnect(stranded); this.failedRetirements.delete(record.id) }
+          assertRegistration()
+          const connection = await this.connect(canonical, false,assertRegistration)
+          try { await validate(connection.db) } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
+        }
         assertRegistration()
-        await this.run(previous.id, async () => { const { getDatabaseContext } = await import("./context"); await validate(getDatabaseContext().database) })
-      } else {
-        await this.retiring.get(record.id)
+        for (const row of stale) await this.staleWorkHook?.(row.id)
         assertRegistration()
-        const connection = await this.connect(canonical, false,assertRegistration)
-        try { await validate(connection.db) } finally { await connection.db.$disconnect(); await connection.engine.close(); await connection.unlock() }
+        await this.catalog.update(before.revision, [...before.value.filter(row => row.id !== record.id && !stale.includes(row)), record],assertRegistration)
+      } catch (error) {
+        const listed = (await this.catalog.read().catch(() => before)).value
+        if (stale.some(old => listed.some(row => row.id === old.id))) for (const row of stale) this.forgotten.delete(row.id)
+        throw error
       }
-      assertRegistration()
-      await this.catalog.update(before.revision, [...before.value.filter(row => row.id !== record.id), record],assertRegistration)
+      this.forgotten.delete(record.id)
       return record
     })
+  }
+  /** Set by the conversation runtime: marks a work's conversations deleted when the work leaves the list.
+   * Runs inside serialize(); code holding a conversation gate must never call create/open/forget/discard. */
+  staleWorkHook?: (id: string) => Promise<void>
+  /** Closes idle connections of works about to leave the list, as forget() does; a running task refuses.
+   * Their folder no longer holds their files, so a failed lock release (identity checked first, never
+   * the new work's lock) drops the connection instead of keeping a failed retirement. */
+  private async retireStaleWorks(rows: WorkRecord[]) {
+    // Busy checks and forgotten.add run in one synchronous block, so no run() can start between them (docs/569 2R 中1).
+    await Promise.all(rows.map(row => this.retiring.get(row.id)))
+    const busy = rows.find(row => (this.slots.get(row.id)?.active ?? 0) > 0)
+    if (busy) throw new ContentError("WORK_BUSY", `原目录中的作品《${busy.title}》仍有任务在运行，请稍后重试`, 409)
+    for (const row of rows) this.forgotten.add(row.id)
+    for (const row of rows) {
+      for (const slot of [this.slots.get(row.id), this.failedRetirements.get(row.id)]) {
+        if (!slot) continue
+        if (this.slots.get(row.id) === slot) this.slots.delete(row.id)
+        if (this.failedRetirements.get(row.id) === slot) this.failedRetirements.delete(row.id)
+        // Each step runs even if an earlier one fails: the lock release is expected to fail (its folder was
+        // emptied), but the engine must still close so no PGlite instance is left behind (docs/569 2R 低1).
+        const connection = await slot.connection.catch(() => null)
+        if (connection) {
+          await connection.db.$disconnect().catch(() => undefined)
+          if (!connection.engine.closed) await connection.engine.close().catch(() => undefined)
+          await connection.unlock().catch(() => undefined)
+        }
+      }
+    }
+  }
+  /** Removes one work from the index only. Never reads or writes its directory.
+   * The guard is set synchronously with the busy check so no request can open a
+   * new connection or register a conversation between cleanup and commit. */
+  async forget(id: string, beforeCommit: () => Promise<void>): Promise<WorkRecord> {
+    return this.serialize(async () => {
+      const before = await this.catalog.read()
+      const record = before.value.find(row => row.id === id)
+      if (!record || id === "inbox") throw new ContentError("WORK_NOT_FOUND", "作品不存在或已从列表中删除", 404)
+      await this.retiring.get(id)
+      if ((this.slots.get(id)?.active ?? 0) > 0) throw new ContentError("WORK_BUSY", "作品仍有任务在运行，请稍后重试", 409)
+      this.forgotten.add(id)
+      try {
+        const idle = this.slots.get(id)
+        if (idle) { this.slots.delete(id); await this.retire(id, idle) }
+        const stranded = this.failedRetirements.get(id)
+        if (stranded) await this.disconnect(stranded).then(() => { if (this.failedRetirements.get(id) === stranded) this.failedRetirements.delete(id) }, () => undefined)
+        await beforeCommit()
+        await this.catalog.update(before.revision, before.value.filter(row => row.id !== id))
+        return record
+      } catch (error) { this.forgotten.delete(id); throw error }
+    })
+  }
+  /** LRU-compatible retirement. A failed close is retained for close(); it never throws. */
+  private async retire(id: string, slot: Slot): Promise<boolean> {
+    const retiring = this.disconnect(slot); this.retiring.set(id, retiring)
+    try { await retiring; return true } catch { this.failedRetirements.set(id, slot); return false } finally { if (this.retiring.get(id) === retiring) this.retiring.delete(id) }
+  }
+  private retireForgotten(id: string, slot: Slot) {
+    if (!this.forgotten.has(id) || slot.active !== 0 || this.slots.get(id) !== slot) return Promise.resolve(true)
+    this.slots.delete(id); return this.retire(id, slot)
   }
   private async validateDatabase(path: string) {
     try {
       const info = await lstat(join(path, "database"))
       if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("invalid")
       await regularFile(join(path, "database", "PG_VERSION"))
-    } catch { throw new Error("作品数据库缺失或路径无效，原作品已保留") }
+    } catch { throw markWorkFault(new Error("作品数据库缺失或路径无效，原作品已保留"),"damaged") }
   }
   private async dataPath(path:string,assertOwner?:()=>Promise<void>){
     if(path===join(this.root,"inbox"))return path
@@ -314,6 +509,7 @@ export class Workspaces {
   async run<T>(id: string, run: () => Promise<T>): Promise<T> {
     if (this.closing) throw new Error("正在关闭本地数据库，请稍后重试")
     if (this.failedRetirements.has(id)) throw new Error("数据库关闭未完成，请重试关闭后重新打开作品")
+    if (this.forgotten.has(id)) throw new Error("作品不在本地目录索引中")
     let slot = this.slots.get(id)
     if (!slot) {
       const connection = (async () => {
@@ -348,10 +544,10 @@ export class Workspaces {
         }
         const row = (await this.list()).find(work => work.id === id)
         if (!row) throw new Error("作品不在本地目录索引中")
-        const info = await identity(row.path)
-        if (info.device !== row.identity.device || info.inode !== row.identity.inode || await realpath(row.path) !== row.path) throw new Error("作品目录发生变化，请重新关联")
-        const brand=await readWorkBrand(await directoryIdentity(row.path)),manifest=brand.value;brand.assertCurrent()
-        if (manifest.id !== row.id || manifest.novelId !== row.novelId || manifest.phase !== "ready") throw new Error("作品目录身份不匹配")
+        const info = await identity(row.path).catch(error => { throw ["ENOENT","ENOTDIR"].includes((error as NodeJS.ErrnoException)?.code ?? "") ? markWorkFault(error,"missing") : error })
+        if (info.device !== row.identity.device || info.inode !== row.identity.inode || await realpath(row.path) !== row.path) throw markWorkFault(new Error("作品目录发生变化，请重新关联"),"changed")
+        const brand=await readWorkBrand(await directoryIdentity(row.path)).catch(error => { throw error instanceof Error && /^BRAND_MARKER_(MISSING|CONFLICT)$/.test(error.message) ? markWorkFault(error,"changed") : error }),manifest=brand.value;brand.assertCurrent()
+        if (manifest.id !== row.id || manifest.novelId !== row.novelId || manifest.phase !== "ready") throw markWorkFault(new Error("作品目录身份不匹配"),"changed")
         return this.connect(row.path, false,()=>brand.assertCurrent())
       })()
       slot = { connection, active: 0, lastUsed: Date.now() }; this.slots.set(id, slot)
@@ -365,15 +561,16 @@ export class Workspaces {
       const retainedSlot = slot
       const retainTask = () => {
         connection.assertCurrent()
-        if (this.closing || this.slots.get(id) !== retainedSlot || retainedSlot.active === 0) throw new Error("任务不能借用已关闭的数据库")
+        if (this.closing || this.forgotten.has(id) || this.slots.get(id) !== retainedSlot || retainedSlot.active === 0) throw new Error("任务不能借用已关闭的数据库")
         retainedSlot.active++
         let released = false
-        return () => { if (!released) { released = true; retainedSlot.active--; retainedSlot.lastUsed = Date.now() } }
+        return () => { if (!released) { released = true; retainedSlot.active--; retainedSlot.lastUsed = Date.now(); void this.retireForgotten(id, retainedSlot) } }
       }
       return await runInDatabaseContext({ workspaceId: id, database: db, assets, retainTask }, run)
     }
     finally {
       slot.active--; slot.lastUsed = Date.now()
+      await this.retireForgotten(id, slot)
       // Active scopes retain their connection; only idle instances can leave the LRU.
       if (this.slots.size > 4) {
         const idle = [...this.slots.entries()].filter(([, value]) => value.active === 0).sort((a,b) => a[1].lastUsed-b[1].lastUsed)[0]

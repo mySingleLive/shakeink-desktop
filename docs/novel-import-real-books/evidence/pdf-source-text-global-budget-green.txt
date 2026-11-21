@@ -1,0 +1,9 @@
+✔ NI-PDF16: raw resource closure bounds inheritance, references, forms and executable resource ambiguity (170.483916ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 663.588459

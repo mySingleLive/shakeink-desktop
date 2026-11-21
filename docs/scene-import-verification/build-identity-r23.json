@@ -1,0 +1,87 @@
+{
+  "at": "2026-10-31T02:55:40.131Z",
+  "runtimeBundleId": "ink.shakeink.lotm-verification",
+  "runtimeBinarySha256": "c9da78c3c79b9e6d6714fbf2a1136c4eb4a93cc5edad0f8ccfb058d681325e7e",
+  "identities": [
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "sha256": "98fe90a9f4819fccee4c357af2adda377a722789c8836ad58da64566b7ba61de",
+      "bytes": 45008
+    },
+    {
+      "path": "desktop/core/novel-import-semantics.ts",
+      "sha256": "b49a89ee01286899b39e63e117d8a3bfca529a149549dbdae3fe74506cab5a2c",
+      "bytes": 43866
+    },
+    {
+      "path": "desktop/core/novel-import-wizard-roster.ts",
+      "sha256": "ed54ec67f310eac9bba49eac23d0172bfdb9ae3fd4feb18971223573d242859a",
+      "bytes": 7938
+    },
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "sha256": "f385eb3b903d73621ddcae2c2bc5bbaf716f4276ee40f35e97e645e305becb38",
+      "bytes": 73909
+    },
+    {
+      "path": "desktop/service/novel-import-structured-scene.ts",
+      "sha256": "25e90e20c71a4e8a175dcc41a067dfd4db0659cf94e4eeb92b48b76e25baf0fa",
+      "bytes": 14535
+    },
+    {
+      "path": "desktop/main/novel-import.ts",
+      "sha256": "24dc6a2287ab261adbb059472e1e3acae04277de201fba9dcb3e63f8fabbec45",
+      "bytes": 218573
+    },
+    {
+      "path": "desktop/shared/novel-import-scene-links.ts",
+      "sha256": "338223a3517f45b2d47155debcf28c27c6ad5a7fba8fd01c201da15fef8dd10d",
+      "bytes": 1577
+    },
+    {
+      "path": "src/lib/ai/generate.ts",
+      "sha256": "daddd1aff439dfb574813db5197a0980990e99443e9c4aed27ecae1ba840a87f",
+      "bytes": 12159
+    },
+    {
+      "path": "scripts/run-lotm-wizard-import.mjs",
+      "sha256": "f012f1b77efadbc538f1c1ea41d209bc4125db719f0f8dcaf91287284a9233c6",
+      "bytes": 29031
+    },
+    {
+      "path": "scripts/verify-lotm-scenes-persistence.mjs",
+      "sha256": "127a2b70a0e9330e90d1e2097dbef7847a7921088fbfde92846b38c142757dce",
+      "bytes": 7450
+    },
+    {
+      "path": "dist/main/index.cjs",
+      "sha256": "1fe1e8a8dda049cae36750ae000d9af74697816d4662f300380432afb6e9611b",
+      "bytes": 3192459
+    },
+    {
+      "path": "dist/service/index.cjs",
+      "sha256": "3885df24a166226911929ea7d78720936b71463b2de18ee9b817e157686d7db2",
+      "bytes": 3986620
+    },
+    {
+      "path": ".next/BUILD_ID",
+      "sha256": "0f012e0874786f95a5779bfbe7a6f961ca51d3c41d6463f0673a451d43cd5dbd",
+      "bytes": 21
+    },
+    {
+      "path": "src/lib/quota.ts",
+      "sha256": "c1861e9937e729857bdf41e4fec98dd36bc5c4670bff8cf95117db9f3e38e409",
+      "bytes": 4249
+    },
+    {
+      "path": "desktop/shared/novel-import.ts",
+      "sha256": "e06ea3793f288444ba37b38c8a075f4bd822379ae4a060da0d5e54883a91ed69",
+      "bytes": 18594
+    },
+    {
+      "path": "desktop/shared/novel-import-scene-review.ts",
+      "sha256": "abcb6b2732629fe6ede222dc586aa3e71836411e07c600286c61c9ac0dd77215",
+      "bytes": 1103
+    }
+  ]
+}

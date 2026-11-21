@@ -1,0 +1,57 @@
+{
+ "scope": "macOS arm64 built Electron, isolated SHAKEINK_TEST_ROOT, copy-only, no model",
+ "finishedAt": "2026-11-16T18:06:14.088Z",
+ "results": [
+  {
+   "id": "RT-R0 first copy-only import saves into the folder",
+   "ok": true,
+   "entries": [
+    ".shakeink-lock",
+    "assets",
+    "database",
+    "shakeink-work.json"
+   ]
+  },
+  {
+   "id": "RT-R0b normal delete keeps the folder files untouched",
+   "ok": true,
+   "entries": [
+    ".shakeink-lock",
+    "assets",
+    "database",
+    "shakeink-work.json"
+   ]
+  },
+  {
+   "id": "RT-R2 a deleted work whose files remain is still refused",
+   "ok": true,
+   "shown": "保存目录不能与来源或应用目录重叠",
+   "targetReady": false
+  },
+  {
+   "id": "RT-R1 the emptied folder of a deleted work is accepted at step 1",
+   "ok": true,
+   "targetReady": true,
+   "error": null,
+   "shown": ""
+  },
+  {
+   "id": "RT-R1b the re-import saves; the list shows exactly one work for the folder",
+   "ok": true,
+   "works": 1,
+   "entries": [
+    ".DS_Store",
+    ".shakeink-lock",
+    "assets",
+    "database",
+    "shakeink-work.json"
+   ]
+  },
+  {
+   "id": "RT-R1c after restart one work, no unavailable work",
+   "ok": true,
+   "novels": 1,
+   "unavailable": 0
+  }
+ ]
+}

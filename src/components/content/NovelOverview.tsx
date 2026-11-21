@@ -14,6 +14,7 @@ import type { NovelStage } from "@/generated/prisma/enums"
 import { NOVEL_STAGES, SETTING_TYPE_LABELS } from "./labels"
 import type { ContentPanelProps } from "./registry"
 import type { NovelDetail, WorldRecord } from "./types"
+import {NovelImportRecord} from '@/components/desktop/NovelImportRecord'
 
 const STAGE_INDEX = new Map(NOVEL_STAGES.map((s, i) => [s.value, i]))
 
@@ -149,6 +150,7 @@ export function NovelOverview({ novelId }: ContentPanelProps) {
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <Card>
           <CardHeader>
+            <NovelImportRecord novelId={novelId}/>
             <div className="flex items-center gap-3">
               <div className="flex size-11 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary">
                 {novel.coverUrl ? (

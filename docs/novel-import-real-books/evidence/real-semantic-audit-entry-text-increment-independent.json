@@ -1,0 +1,224 @@
+{
+  "scope": "Actual AST-extracted publishedByKind/publishedText/publishedOptionalFact and seven ordinary native assertion statements; synthetic rows and independent literal expected prefix; no producer formatter/main/real corpus/journal/DB/model/CUA/suite",
+  "scriptSha256": "becc7ddb3fb4b615b77a87c11b778d375e9f4a2530c256c19053e3ef6afe8472",
+  "extractedSha256": "142e48e9f4ceb8c5b91b8d2efb9f902a75e1e5798ac03b6d3fbc0c8e3680bd8f",
+  "caseCount": 54,
+  "cases": [
+    {
+      "name": "strict-all-normal-row-assertions-pass",
+      "passed": true
+    },
+    {
+      "name": "strict-all-text-and-optional-empty-whitespace-exact",
+      "passed": true
+    },
+    {
+      "name": "strict-wrong-text-item-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-wrong-text-outline-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-wrong-text-theme-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-wrong-text-style-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-wrong-text-foreshadow-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-wrong-text-trope-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-wrong-text-goldenFinger-fails",
+      "passed": true
+    },
+    {
+      "name": "confirmed-all-normal-row-assertions-pass",
+      "passed": true
+    },
+    {
+      "name": "confirmed-all-text-and-optional-empty-whitespace-exact",
+      "passed": true
+    },
+    {
+      "name": "confirmed-wrong-text-item-fails",
+      "passed": true
+    },
+    {
+      "name": "confirmed-wrong-text-outline-fails",
+      "passed": true
+    },
+    {
+      "name": "confirmed-wrong-text-theme-fails",
+      "passed": true
+    },
+    {
+      "name": "confirmed-wrong-text-style-fails",
+      "passed": true
+    },
+    {
+      "name": "confirmed-wrong-text-foreshadow-fails",
+      "passed": true
+    },
+    {
+      "name": "confirmed-wrong-text-trope-fails",
+      "passed": true
+    },
+    {
+      "name": "confirmed-wrong-text-goldenFinger-fails",
+      "passed": true
+    },
+    {
+      "name": "source-all-normal-row-assertions-pass",
+      "passed": true
+    },
+    {
+      "name": "source-all-text-and-optional-empty-whitespace-exact",
+      "passed": true
+    },
+    {
+      "name": "source-wrong-text-item-fails",
+      "passed": true
+    },
+    {
+      "name": "source-wrong-text-outline-fails",
+      "passed": true
+    },
+    {
+      "name": "source-wrong-text-theme-fails",
+      "passed": true
+    },
+    {
+      "name": "source-wrong-text-style-fails",
+      "passed": true
+    },
+    {
+      "name": "source-wrong-text-foreshadow-fails",
+      "passed": true
+    },
+    {
+      "name": "source-wrong-text-trope-fails",
+      "passed": true
+    },
+    {
+      "name": "source-wrong-text-goldenFinger-fails",
+      "passed": true
+    },
+    {
+      "name": "legacy-all-normal-row-assertions-pass",
+      "passed": true
+    },
+    {
+      "name": "legacy-all-text-and-optional-empty-whitespace-exact",
+      "passed": true
+    },
+    {
+      "name": "legacy-wrong-text-item-fails",
+      "passed": true
+    },
+    {
+      "name": "legacy-wrong-text-outline-fails",
+      "passed": true
+    },
+    {
+      "name": "legacy-wrong-text-theme-fails",
+      "passed": true
+    },
+    {
+      "name": "legacy-wrong-text-style-fails",
+      "passed": true
+    },
+    {
+      "name": "legacy-wrong-text-foreshadow-fails",
+      "passed": true
+    },
+    {
+      "name": "legacy-wrong-text-trope-fails",
+      "passed": true
+    },
+    {
+      "name": "legacy-wrong-text-goldenFinger-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-unprojectable-all-kinds-filtered",
+      "passed": true
+    },
+    {
+      "name": "strict-fake-native-unprojectable-item-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-fake-native-unprojectable-outline-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-fake-native-unprojectable-theme-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-fake-native-unprojectable-style-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-fake-native-unprojectable-foreshadow-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-fake-native-unprojectable-trope-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-fake-native-unprojectable-goldenFinger-fails",
+      "passed": true
+    },
+    {
+      "name": "source-unprojectable-all-kinds-filtered",
+      "passed": true
+    },
+    {
+      "name": "source-fake-native-unprojectable-item-fails",
+      "passed": true
+    },
+    {
+      "name": "source-fake-native-unprojectable-outline-fails",
+      "passed": true
+    },
+    {
+      "name": "source-fake-native-unprojectable-theme-fails",
+      "passed": true
+    },
+    {
+      "name": "source-fake-native-unprojectable-style-fails",
+      "passed": true
+    },
+    {
+      "name": "source-fake-native-unprojectable-foreshadow-fails",
+      "passed": true
+    },
+    {
+      "name": "source-fake-native-unprojectable-trope-fails",
+      "passed": true
+    },
+    {
+      "name": "source-fake-native-unprojectable-goldenFinger-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-goldenFinger-unqualified-trigger-fails",
+      "passed": true
+    },
+    {
+      "name": "strict-goldenFinger-unqualified-limitation-fails",
+      "passed": true
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode, type RefObject } from "react"
 import { DropdownMenu, DropdownMenuContent } from "@/components/ui/dropdown-menu"
+import { ContextMenu } from "@/components/ui/context-menu"
 import type { CharacterRoleType, SettingType } from "@/generated/prisma/enums"
 
 export const NAVIGATION_VIEWS = ["works", "settings", "characters", "content", "conversations"] as const
@@ -25,6 +26,13 @@ export function NavigationMenu(props: ComponentProps<typeof DropdownMenu>) {
   const [open, setOpen] = useState(false)
   useEffect(() => { setOpen(false) }, [paused, epoch])
   return <DropdownMenu {...props} open={!paused && open} onOpenChange={(next, details) => { setOpen(!paused && next); props.onOpenChange?.(next, details) }} />
+}
+/** Right-click entry with the same transient rules as NavigationMenu. */
+export function NavigationContextMenu({ children, onShow, ...props }: ComponentProps<typeof ContextMenu> & { onShow?(): void }) {
+  const { paused, epoch } = useNavigationTransient()
+  const [open, setOpen] = useState(false)
+  useEffect(() => { setOpen(false) }, [paused, epoch])
+  return <ContextMenu {...props} open={!paused && open} onOpenChange={(next, details) => { if (next && !paused) onShow?.(); setOpen(!paused && next); props.onOpenChange?.(next, details) }}>{children}</ContextMenu>
 }
 export function NavigationMenuContent(props: ComponentProps<typeof DropdownMenuContent>) {
   const { paused } = useNavigationTransient()

@@ -1,0 +1,18 @@
+{
+  "diagnosticOnly": true,
+  "acceptance": false,
+  "normalBundleSha256": "a7555810dde5652ff0cfc8683ccd28121a837c19bf050ffd0f69305732aab562",
+  "instrumentedBundleSha256": "ade494417ec72d67edf2e1c7d27cc8dc62081c3276c5176f37a51a7a3868fd37",
+  "loggerSha256": "9421c640d9b0d2235fecc8e0ca968caae7549da6f261501dadbf4575600fa931",
+  "instrumentation": "ready marker and nonthrowing capture before existing error conversion",
+  "strongKillRecovery": "SIGKILL cannot run cleanup; recover only from service-normal-r17.cjs when its hash matches normalBundleSha256",
+  "bootstrap": {
+    "code": 0,
+    "signal": null
+  },
+  "run": {
+    "code": 2,
+    "signal": null
+  },
+  "restoredBundleSha256": "a7555810dde5652ff0cfc8683ccd28121a837c19bf050ffd0f69305732aab562"
+}

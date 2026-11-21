@@ -1,0 +1,10 @@
+✔ NI-PDF15: packaged PDF rendering resolves only bundled CJK fonts, maps and native canvas offline (2427.717167ms)
+ℹ {"passed":true,"systemFonts":false,"network":false,"nativeArchitecture":"arm64","checkedResources":201,"renderedPages":3,"negativeResources":3,"workerHash":"2b4eed0e693561021db534140438a168808bfe02606ff4936554b53eecc63ca8"}
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2622.575209

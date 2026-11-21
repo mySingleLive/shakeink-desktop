@@ -1,0 +1,103 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "stage": "pure-main-postvalidation-passed-before-commit",
+      "resultPath": "/private/tmp/shakeink-scene-import-20261031/r27-failed-body-review-replay1-service-result-private.json",
+      "observations": [
+        {
+          "rawShape": {
+            "textCharacters": 610,
+            "textScalarCharacters": 610,
+            "whitespaceCharacters": 185,
+            "longestWhitespaceRun": 11,
+            "nonWhitespaceCharacters": 425,
+            "firstClass": "codefence",
+            "jsonParsePassed": false,
+            "edgeNgrams": [
+              {
+                "n": 1,
+                "prefixRepeats": 3,
+                "suffixRepeats": 3
+              },
+              {
+                "n": 2,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 4,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 8,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 16,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 32,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              },
+              {
+                "n": 64,
+                "prefixRepeats": 1,
+                "suffixRepeats": 1
+              }
+            ],
+            "sourceCopy": {
+              "rawVerbatim": {
+                "minimumCharacters": 100,
+                "sourceUnits": 77,
+                "sourceUnitCharacters": 66360,
+                "eligibleUnits": 77,
+                "eligibleUnitCharacters": 66360,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              },
+              "rawJsonEscaped": {
+                "minimumCharacters": 100,
+                "sourceUnits": 77,
+                "sourceUnitCharacters": 66360,
+                "eligibleUnits": 77,
+                "eligibleUnitCharacters": 66360,
+                "allEligibleUnitsMatched": false,
+                "matchedUnits": 0,
+                "matchedUnitCharacters": 0,
+                "uniqueMatchedSourceCharacters": 0
+              }
+            }
+          },
+          "reason": "stop",
+          "promptTokens": 118115,
+          "completionTokens": 35518,
+          "textCharacters": 610,
+          "maxOutputTokens": null
+        }
+      ],
+      "conflicts": 1,
+      "missingTargets": 0,
+      "missingScalars": [],
+      "ownerWrites": 0,
+      "modelCallsInPostvalidation": 0,
+      "sourceUnchanged": true,
+      "notHistoricalFailedReply": true
+    }
+  ],
+  "elapsedMs": 162011,
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "scope": "snapshot rebuilt first failed review packet; historical payload/reply identity unavailable",
+  "fullSceneImportVerified": false
+}

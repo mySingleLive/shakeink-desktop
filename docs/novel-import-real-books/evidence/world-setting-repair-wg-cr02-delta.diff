@@ -1,0 +1,29 @@
+--- a/desktop/service/novel-import-world-repair.ts
++++ b/desktop/service/novel-import-world-repair.ts
+@@ -101,7 +101,7 @@
+  })
+  const emitCommitted=async(result:WorldRepairResult,after:Rows)=>{try{await guard();await options.writeEvidence('after',{planHash:result.planHash,rows:after,result});await guard();await options.writeEvidence('ack',result);return result}catch{return {...result,status:'committed-export-failed' as const}}}
+  if(preflight.previous&&(mode!=='rollback'||preflight.previous.rollback)){
+-  const result=preflight.previous.rollback?{...preflight.previous.receipt,status:'restored' as const}:preflight.previous.receipt
++  const result=preflight.previous.rollback?parseReceipt(preflight.previous.rollback.result,plan,true):preflight.previous.receipt
+   return emitCommitted(result,preflight.current)
+  }
+  const before=preflight.current,preview={schemaVersion:1,mode,planHash:worldRepairHash(plan),plan,beforeHash:rowsHash(before),root:{id:plan.rootId,name:plan.rootName,description:''},settings:plan.mappings.map(m=>({id:m.newSettingId,worldId:plan.rootId,type:m.type,name:plan.expectedWorlds.find(w=>w.id===m.worldId)!.name,content:{text:plan.expectedWorlds.find(w=>w.id===m.worldId)!.description}}))}
+--- a/tests/integration/novel-import-world-repair.test.ts
++++ b/tests/integration/novel-import-world-repair.test.ts
+@@ -69,6 +69,15 @@
+  const repeated=await api.repairWorldSettings(f.database,f.plan,{...options,mode:'apply'});assert.equal(repeated.snapshotId,result.snapshotId);assert.deepEqual(await rows(f.database,f.novelId),after)
+  await assert.rejects(api.repairWorldSettings(f.database,{...f.plan,rootName:'不同计划'}, {...options,mode:'apply'}))
+  const restored=await api.repairWorldSettings(f.database,f.plan,{...options,mode:'rollback'});assert.equal(restored.status,'restored');assert.deepEqual(await rows(f.database,f.novelId),f.baseline);assert.equal((await api.repairWorldSettings(f.database,f.plan,{...options,mode:'apply'})).status,'restored');assert.ok(evidence.some(e=>e.kind==='before')&&evidence.some(e=>e.kind==='after'))
++ assert.equal(restored.operationId,f.plan.rollbackOperationId);assert.notEqual(restored.snapshotId,result.snapshotId);assert.equal(restored.beforeHash,result.afterHash);assert.equal(restored.afterHash,result.beforeHash)
++ const rollbackSnapshot=await f.database.contentVersion.findUniqueOrThrow({where:{id:restored.snapshotId!}}),savedRollback=rollbackSnapshot.snapshot as unknown as {mode:string;before:unknown;after:unknown}
++ assert.equal(savedRollback.mode,'rollback');assert.equal(api.worldRepairHash(savedRollback.before),restored.beforeHash);assert.equal(api.worldRepairHash(savedRollback.after),restored.afterHash)
++ for(const mode of ['rollback','apply'] as const){
++  const offset=evidence.length,replayed=await api.repairWorldSettings(f.database,f.plan,{...options,mode});assert.deepEqual(replayed,restored)
++  const exported=evidence.slice(offset);assert.deepEqual(exported.map(e=>e.kind),['after','ack'])
++  const afterExport=exported[0].value as {rows:unknown;result:typeof restored};assert.deepEqual(afterExport.result,restored);assert.deepEqual(exported[1].value,restored);assert.equal(api.worldRepairHash(afterExport.rows),restored.afterHash);assert.equal(restored.beforeHash,result.afterHash);assert.equal(restored.afterHash,result.beforeHash)
++  assert.deepEqual(await rows(f.database,f.novelId),f.baseline);assert.equal(await f.database.contentVersion.count({where:{targetType:'NOVEL_WORLD_SETTING_REPAIR',targetId:f.novelId}}),2);assert.equal(await f.database.contentMutation.count({where:{novelId:f.novelId,targetType:'NOVEL_WORLD_SETTING_REPAIR'}}),2)
++ }
+ })
+ 
+ test('NI-WR02: repair refuses drift and references, rolls back failures and keeps commit authoritative',{timeout:120000},async t=>{

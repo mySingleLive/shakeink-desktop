@@ -1,0 +1,20 @@
+# browser full run: ℹ tests 781 ℹ pass 710 ℹ fail 71 
+# failing files, change vs baseline (serial)
+tests/browser/about-text-selection.test.ts [change] # pass 0 # fail 1 
+tests/browser/about-text-selection.test.ts [base] # pass 0 # fail 1 
+tests/browser/command-catalog-generation-review.test.ts [change] # pass 4 # fail 2 
+tests/browser/command-catalog-generation-review.test.ts [base] # pass 4 # fail 2 
+tests/browser/monaco-text-context.test.ts [change] # pass 0 # fail 16 
+tests/browser/monaco-text-context.test.ts [base] # pass 0 # fail 16 
+tests/browser/root-relocation-routing.test.ts [change] # pass 1 # fail 1 
+tests/browser/root-relocation-routing.test.ts [base] # pass 1 # fail 1 
+tests/browser/root-relocation-screen.test.ts [change] # pass 2 # fail 21 
+tests/browser/root-relocation-screen.test.ts [base] # pass 2 # fail 21 
+tests/browser/sidebar-surfaces.test.ts [change] # pass 13 # fail 1 
+tests/browser/sidebar-surfaces.test.ts [base] # pass 13 # fail 1 
+tests/browser/text-context-menu.test.ts [change] # pass 0 # fail 11 
+tests/browser/text-context-menu.test.ts [base] # pass 0 # fail 11 
+tests/browser/work-lease-ui-review.test.ts [change] # pass 0 # fail 4 
+tests/browser/work-lease-ui-review.test.ts [base] # pass 0 # fail 4 
+tests/browser/work-lease-ui.test.ts [change] # pass 0 # fail 14 
+tests/browser/work-lease-ui.test.ts [base] # pass 0 # fail 14 

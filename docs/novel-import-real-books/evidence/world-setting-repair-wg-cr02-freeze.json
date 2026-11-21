@@ -1,0 +1,87 @@
+{
+  "recordedAt": "2026-10-26T16:41:36.614Z",
+  "status": "wg-cr02-author-frozen-awaiting-independent-96-review",
+  "supersedesOwnedFilesIn": "docs/novel-import-real-books/evidence/world-setting-repair-final-freeze.json",
+  "files": [
+    {
+      "path": "desktop/service/novel-import-world-repair.ts",
+      "baseline": "/private/tmp/world-repair-wg-cr02-baseline/desktop__service__novel-import-world-repair.ts",
+      "baselineSha256": "8015c04938d27802b2691a5ff2050fe4f2f7a572c58cf15ffefa2d4c2fa658bb",
+      "sha256": "c3b560ead06b156875e464230c3eadad82f9ce16d1096664f9ee233ec75bd5f9"
+    },
+    {
+      "path": "tests/integration/novel-import-world-repair.test.ts",
+      "baseline": "/private/tmp/world-repair-wg-cr02-baseline/tests__integration__novel-import-world-repair.test.ts",
+      "baselineSha256": "0deedd3507e7eef5c49e97b11b504e66d88ded4b2879486082200c969c880dd2",
+      "sha256": "076b5400db9dfcaf9dbedd6915e7dafb79e3c831fca31f8b6978469382f6dee1"
+    }
+  ],
+  "unchangedFiles": [
+    {
+      "path": "scripts/repair-real-novel-world-structure.ts",
+      "sha256": "15971f7374aa2cf45426d5795cf61fedaf2e2dae93c2c75831618dd80b7e2a27"
+    },
+    {
+      "path": "desktop/service/workspaces.ts",
+      "sha256": "0ccaf52eef376457a207340783a050167bfe7e051a9c26bba5b3ebfd236da4b6"
+    },
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "sha256": "87b9c0c12a73df06e22c9ccda4d9ccec272bd95baffb56e32c4c0baa953855d6"
+    },
+    {
+      "path": "tests/unit/novel-import-ai.test.ts",
+      "sha256": "401630f0fbef55ad0c4d7fed37d491c66e2d69050786a9ea94d2e14b898d2d28"
+    },
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "sha256": "20b80cc24c14bde0d50e93d2521c129524aa82730805c665695aed10e7edc1ea"
+    },
+    {
+      "path": "desktop/main/novel-import.ts",
+      "sha256": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d"
+    },
+    {
+      "path": "tests/unit/novel-import-request-schema.test.ts",
+      "sha256": "4485611f4f5262fabf8f8bc142aa822e5fff8a32f6d8a1d5353e645b50fbbfa6"
+    }
+  ],
+  "delta": {
+    "path": "docs/novel-import-real-books/evidence/world-setting-repair-wg-cr02-delta.diff",
+    "sha256": "2f9d5c236c1697789074bec796c36b64ca00ffb511ee46410693148af4c9dd30"
+  },
+  "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-WR0[12]:' tests/integration/novel-import-world-repair.test.ts",
+  "results": {
+    "red": {
+      "tests": 23,
+      "pass": 22,
+      "fail": 1,
+      "skipped": 0,
+      "exitCode": 1
+    },
+    "green": {
+      "tests": 23,
+      "pass": 23,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "ownedTypeDiagnostics": 0
+  },
+  "logs": [
+    {
+      "path": "docs/novel-import-real-books/evidence/world-setting-repair-wg-cr02-red.txt",
+      "sha256": "0d728e0641fd8a6078bfba4f35a20a388bcded674783b324949d10e85d8a4fae"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/world-setting-repair-wg-cr02-green.txt",
+      "sha256": "98b0f75d5cf744c4bc6ab37ab586939afbb7725eb29f3a22a2e479fee27edc16"
+    },
+    {
+      "path": "docs/novel-import-real-books/evidence/world-setting-repair-wg-cr02-owned-typecheck.txt",
+      "sha256": "b59b969f477084d1857c52e8b258cf747f82b9fea4eeb25c7fee7dde47136db0"
+    }
+  ],
+  "change": "Replay a validated rollback receipt instead of relabeling the original apply receipt.",
+  "actualApplicationOrModelOrUserDatabaseOrCorpusAccess": false
+}

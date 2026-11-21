@@ -1,0 +1,31 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: level-multi-pathway-recursive-descriptions-qualified-without-changing-empty-fields-or-identity
++ actual - expected
+
++ [
++   {
++     name: 'semantic-nine-world-setting-content-world-and-map-parent-exact',
++     passed: false
++   }
++ ]
+- []
+
+    at positive (/private/tmp/real-novel-semantic-assertions-check.mts:33:149)
+    at <anonymous> (/private/tmp/real-novel-semantic-assertions-check.mts:76:1152) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      name: 'semantic-nine-world-setting-content-world-and-map-parent-exact',
+      passed: false
+    }
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.18.0

@@ -1,0 +1,7 @@
+npm test (parallel, working tree): 4732 tests, 4673 pass, 50 fail, 9 cancelled; tsc --noEmit exit 0
+serial rerun of the 27 files containing failures (--test-concurrency=1):
+  working tree: ℹ tests 212 / ℹ fail 41
+  baseline HEAD 22b1b10 (26 files, faulted-work-removal is new): ℹ tests 193 / ℹ fail 61
+  failing on working tree only: 0
+  faulted-work-removal WN tests failing serially: 0
+DesktopCommandController-mounting files (12): working tree 103 tests/20 fail; baseline 70/21; new failures: 0

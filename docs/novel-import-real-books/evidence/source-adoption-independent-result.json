@@ -1,0 +1,531 @@
+{
+  "scope": "61/62 isolated synthetic adoption only; no real app/corpus/journal/model/DB",
+  "passed": 130,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "real freeze CLI accepts explicit existing source adoption (old CLI has no such mode)",
+      "passed": true
+    },
+    {
+      "name": "existing IDs remain complete and retain the adopted ID",
+      "passed": true
+    },
+    {
+      "name": "adoption is explicit rather than pretending this was a new journal",
+      "passed": true
+    },
+    {
+      "name": "original revision creation time and bytes are recorded",
+      "passed": true
+    },
+    {
+      "name": "mode stores bounded-read identity and directory pin",
+      "passed": true
+    },
+    {
+      "name": "freeze never rewrites journal owner source or independent oracle",
+      "passed": true
+    },
+    {
+      "name": "adoption metadata never contains model credentials",
+      "passed": true
+    },
+    {
+      "name": "new mode limit is exactly 64 MiB",
+      "passed": true
+    },
+    {
+      "name": "exclusive verifier output cannot be reused",
+      "passed": true
+    },
+    {
+      "name": "invalid adoption UUID rejected before input read",
+      "passed": true
+    },
+    {
+      "name": "invalid adoption UUID rejected before input read",
+      "passed": true
+    },
+    {
+      "name": "invalid adoption UUID rejected before input read",
+      "passed": true
+    },
+    {
+      "name": "invalid adoption UUID rejected before input read",
+      "passed": true
+    },
+    {
+      "name": "invalid adoption UUID rejected before input read",
+      "passed": true
+    },
+    {
+      "name": "adoption option on observe is not silently ignored",
+      "passed": true
+    },
+    {
+      "name": "adoption option on build is not silently ignored",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses id 16",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses id 16 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses semanticVersion 18",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses semanticVersion 18 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses semanticVersion 20",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses semanticVersion 20 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses phase 22",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses phase 22 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingRevision 24",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingRevision 24 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingRevision 26",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingRevision 26 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingProse 28",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingProse 28 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses originalProse 30",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses originalProse 30 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingUnits 32",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses workingUnits 32 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses artifacts 34",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses artifacts 34 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses decisions 36",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses decisions 36 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses conflicts 38",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses conflicts 38 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses patches 40",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses patches 40 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses steps 42",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses steps 42 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses notFound 44",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses notFound 44 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses coverage 46",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses coverage 46 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses coverage 48",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses coverage 48 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses coverage 50",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses coverage 50 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses classificationGrant 52",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses classificationGrant 52 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses analysisGrant 54",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses analysisGrant 54 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses classificationCheckpoint 56",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses classificationCheckpoint 56 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses analysisCheckpoint 58",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses analysisCheckpoint 58 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses publication 60",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses publication 60 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses semanticState 62",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses semanticState 62 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses mappingWarnings 64",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses mappingWarnings 64 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses runtimeAiCall 66",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses runtimeAiCall 66 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses runtimePauseProof 68",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses runtimePauseProof 68 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses runtimeDiagnosticsStatus 70",
+      "passed": true
+    },
+    {
+      "name": "source-only refuses runtimeDiagnosticsStatus 70 does not create a run",
+      "passed": true
+    },
+    {
+      "name": "wrong-source",
+      "passed": true
+    },
+    {
+      "name": "wrong-source does not create a run",
+      "passed": true
+    },
+    {
+      "name": "wrong-hash",
+      "passed": true
+    },
+    {
+      "name": "wrong-hash does not create a run",
+      "passed": true
+    },
+    {
+      "name": "not-included",
+      "passed": true
+    },
+    {
+      "name": "not-included does not create a run",
+      "passed": true
+    },
+    {
+      "name": "boolean-inclusion-only",
+      "passed": true
+    },
+    {
+      "name": "boolean-inclusion-only does not create a run",
+      "passed": true
+    },
+    {
+      "name": "duplicate-source",
+      "passed": true
+    },
+    {
+      "name": "duplicate-source does not create a run",
+      "passed": true
+    },
+    {
+      "name": "extra-excluded-source",
+      "passed": true
+    },
+    {
+      "name": "extra-excluded-source does not create a run",
+      "passed": true
+    },
+    {
+      "name": "wrong owner rejected before creating run",
+      "passed": true
+    },
+    {
+      "name": "wrong-owner run absent",
+      "passed": true
+    },
+    {
+      "name": "symlink journal or owner rejected",
+      "passed": true
+    },
+    {
+      "name": "hardlinked journal or owner rejected",
+      "passed": true
+    },
+    {
+      "name": "symlink journal or owner rejected",
+      "passed": true
+    },
+    {
+      "name": "hardlinked journal or owner rejected",
+      "passed": true
+    },
+    {
+      "name": "symlink session directory rejected",
+      "passed": true
+    },
+    {
+      "name": "64 MiB sparse oversize rejected before stream read",
+      "passed": true
+    },
+    {
+      "name": "exact byte boundary accepted with limit+1 read requests",
+      "passed": true
+    },
+    {
+      "name": "one byte above configured bound rejected",
+      "passed": true
+    },
+    {
+      "name": "in-place change during bounded read rejected",
+      "passed": true
+    },
+    {
+      "name": "second freeze read detects atomic-identical-bytes",
+      "passed": true
+    },
+    {
+      "name": "partial evidence retained without run.json atomic-identical-bytes",
+      "passed": true
+    },
+    {
+      "name": "partial run cannot be reused atomic-identical-bytes",
+      "passed": true
+    },
+    {
+      "name": "partial bytes unchanged atomic-identical-bytes",
+      "passed": true
+    },
+    {
+      "name": "second freeze read detects same-size-with-restored-mtime",
+      "passed": true
+    },
+    {
+      "name": "partial evidence retained without run.json same-size-with-restored-mtime",
+      "passed": true
+    },
+    {
+      "name": "partial run cannot be reused same-size-with-restored-mtime",
+      "passed": true
+    },
+    {
+      "name": "partial bytes unchanged same-size-with-restored-mtime",
+      "passed": true
+    },
+    {
+      "name": "existing successful run cannot be overwritten",
+      "passed": true
+    },
+    {
+      "name": "original successful freeze remains immutable",
+      "passed": true
+    },
+    {
+      "name": "synthetic app replacement really changed journal inode",
+      "passed": true
+    },
+    {
+      "name": "progress and atomic journal replacement follow only pinned session",
+      "passed": true
+    },
+    {
+      "name": "later observation does not inherit the source-only capacity cap",
+      "passed": true
+    },
+    {
+      "name": "safe projection still excludes grants credentials and bad runtime",
+      "passed": true
+    },
+    {
+      "name": "freeze binding metadata remains unchanged after progress",
+      "passed": true
+    },
+    {
+      "name": "observe rejects changed id",
+      "passed": true
+    },
+    {
+      "name": "rejection leaves evidence unchanged id",
+      "passed": true
+    },
+    {
+      "name": "observe rejects changed createdAt",
+      "passed": true
+    },
+    {
+      "name": "rejection leaves evidence unchanged createdAt",
+      "passed": true
+    },
+    {
+      "name": "observe rejects source set hash or inclusion drift",
+      "passed": true
+    },
+    {
+      "name": "observe rejects source set hash or inclusion drift",
+      "passed": true
+    },
+    {
+      "name": "observe rejects source set hash or inclusion drift",
+      "passed": true
+    },
+    {
+      "name": "even matching metadata cannot bind an outside-corpus source",
+      "passed": true
+    },
+    {
+      "name": "outside-corpus rejection writes no checkpoint",
+      "passed": true
+    },
+    {
+      "name": "observe still requires exact owner",
+      "passed": true
+    },
+    {
+      "name": "missing pinned session never falls back to decoy",
+      "passed": true
+    },
+    {
+      "name": "same UUID in a replacement directory is rejected",
+      "passed": true
+    },
+    {
+      "name": "decoys never overwrite the pinned evidence",
+      "passed": true
+    },
+    {
+      "name": "default freeze has no new adoption fields",
+      "passed": true
+    },
+    {
+      "name": "default freeze metadata field set is unchanged",
+      "passed": true
+    },
+    {
+      "name": "default observe still excludes preexisting sessions",
+      "passed": true
+    },
+    {
+      "name": "default new-journal path remains operational",
+      "passed": true
+    },
+    {
+      "name": "existing regular_bytes implementation is byte-identical",
+      "passed": true
+    },
+    {
+      "name": "existing runtime_diagnostics implementation is byte-identical",
+      "passed": true
+    },
+    {
+      "name": "existing record_build implementation is byte-identical",
+      "passed": true
+    }
+  ],
+  "sourceSha256": {
+    "scripts/observe-real-novel-import.py": "138767ccdf6fc6cfc479fe3736a72435e689b9da80bbcfacefd5e833603acfca",
+    "scripts/verify-real-novel-source-adoption.py": "d4b2253f60c8d914bda93ddae637e32ff0e518baadc20eda92e23ac8d769c37e"
+  }
+}

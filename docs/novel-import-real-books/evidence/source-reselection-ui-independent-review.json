@@ -1,0 +1,36 @@
+{
+  "recordedAt": "2026-10-26T18:20:56.515372+00:00",
+  "reviewer": "remaining_books_oracle",
+  "scope": "101-A frozen UI only",
+  "subpackageConclusion": "PASS",
+  "whole101Conclusion": "PENDING backend freeze and independent review",
+  "filesBeforeAndAfter": {
+    "src/components/desktop/NovelImportDialog.tsx": "f3459f47b2b59ccd3ba10d2e703e888700e2175d89e80737b6ccb6066a6ea046",
+    "tests/browser/novel-import.test.ts": "c1a664b9555721cf88f049db1100fd05e9bc1e578e0a7d17a966b2f235f5325c",
+    "tests/helpers/novel-import-ui-fixture.tsx": "2143e959cdf4f73f699568a945678440d6a4f38c65896410b736deeb90b2e72d"
+  },
+  "baselineProductionSha256": "6335444f8bd92029990b049b577faf4fa3d252c34c34708cbe809b70fd69515f",
+  "productionOnlyPredicateButtonHelpChange": true,
+  "wholeOldBrowserPrefix": {
+    "bytes": 20811,
+    "sha256": "0393063f5a73cc0f98dbc89469f36e9fdd89c621a95e21f190c22dcceaa83516"
+  },
+  "actualStoredFixtureBaselineSha256": "c39878c8ccda0c32d65aea7e8f93ef17df577ed664c5811f24ba2219fff314ac",
+  "execution": {
+    "command": "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node --import tsx --test --test-name-pattern='^NI-U12:' tests/browser/novel-import.test.ts",
+    "exitCode": 0,
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "skipped": 0,
+    "log": "docs/novel-import-real-books/evidence/source-reselection-ui-independent-u12.txt",
+    "logSha256": "daed6a666345fbe0fd87a71066482e9307033c2112a45eebc2175010bae49ee5",
+    "headlessChromeIsolation": true,
+    "networkBlockedExceptLocalIconFixture": true
+  },
+  "actualNativePickerOrSourceOrApplicationOrDatabaseOrModelAccess": false,
+  "backendDriftingFilesReadOrExecuted": false,
+  "productionOrTestWrites": false,
+  "themeEvidence": "lightweight fixture bounds only; no new production theme paint or installed-app claim",
+  "reportSha256": "8708ece398c4f8fd3175f45d205ae73ec40b22e631c1b4d352a2478d7d292d2c"
+}

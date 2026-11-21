@@ -1,0 +1,14 @@
+tests/browser/novel-import-source-picker.test.ts(19,263): error TS2339: Property 'mountSourcePicker' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(21,51): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(22,51): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(42,147): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(53,33): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(54,33): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(55,33): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(63,43): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(65,34): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(66,36): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(71,33): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(72,33): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(73,33): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.
+tests/browser/novel-import-source-picker.test.ts(73,113): error TS2339: Property 'sourcePickerFixture' does not exist on type 'Window & typeof globalThis'.

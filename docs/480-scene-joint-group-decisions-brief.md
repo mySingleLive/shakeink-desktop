@@ -1,0 +1,21 @@
+# 480 · 保留联合选择组并压缩重复展示
+
+状态：私有量化已完成，待独立方案审核，尚未准入产品实现。
+
+479及独审确认R72正常导入仍失败：33请求31成功、2拒绝，59份完整捕获输入SHA匹配。两处均是各位置的选择单独合法，但同一mention occurrence或context完整窗口被重复使用，原联合门正确拒绝。大包下一代完整资料还超固定桶4434B。全文、发布、重开均未通过，不能去重答案、放宽来源门或跳过场景。原小说、当前DeepSeek及按具体地点拆分的用户授权持续。
+
+本方案保留原group的语义及完整组合。Fresh可信targeted新增内部joint策略：只对原multi-claim group尝试原compileBoundGroup；原256 options、4096 rowSteps、65536 requestSteps均不变，编译只做一次，超限丢弃该组全部partial options。可完整编译的组成为selection，其余全部claims按原claimIndexes顺序汇聚为同slot的一个claims remainder。singleton仍由原完整逐项域与最终联合门校验，不声称已通过联合枚举。原默认旧selection及显式claims策略保持，model/user不能指定策略。
+
+每row的selection组与remainder必须是完整、不交叉的分区：每个原claim恰出现一次，不拆原联合组，不少位置、不添位置。新解码先验证所有task的slot、claimIndexes及精确覆盖，合并后仍经原patch.apply/select/groupEvidence、完整source/owner/retention与目标remap。多个同slot任务不能覆盖前一个结果，replacement不得与该row任何patch任务混用。原good rows/keep/CF目录/证据窗口与unknown、partial、无资格行的完整replacement保持。
+
+Fresh selection主Native使用闭合{"selection":局部optionNumber}，完整options顺序不变；仅新策略的可信冻结deck编码标志选择此主表示，旧默认同deck Native仍保持原样。该标志须进入实际展示及合同指纹，不依赖隐含全局状态。原本地裸整数及明确selection wrapper兼容仍按同一局部范围。增加的明确claimChoices兼容只允许精确唯一匹配：键恰为该selection任务claimIndexes对应的1..K；每个数组含安全整数，位置、顺序和完整数组逐值等于一个且仅一个冻结option。0或多个匹配均拒，不排序、去重、补默认，不将[3]猜成option或CF。匹配后走同一原selection路径，Native不同时显示两种主答案。
+
+仅provider view消除重复表示。targeted.patch.claims按kind固定列展示，保全部claimRef、位置、literal/label、端点/relation、canReject和完整eligibleChoices；列定义随资料一次提供，0、false、空域、字段存在性和数组顺序全部保留，未知kind/字段/列长/类型拒绝而非strip。claims任务的重复domains可通过claimIndexes引用同slot完整claim表，私有完整domains及Native不变；独立逆变换必须逐字段深等原完整rows/tasks。唯一slot查找，不把稀疏slot当数组位置；缺row、越界或重复index不能变为空域。已有8列CF表、candidates/keep、原始首稿/当前完整失败答复及全部原始source不裁切、不改字。指南明确列、局部键、共享CF号与局部option号的区别。
+
+准备阶段单调有界：每个初始selection组最多并入remainder一次，每row最多原子转为terminal replacement一次，转换界为G+R（G为初始可完整编译multi组数，R为原坏row数）。整行replacement清该row全部任务及状态，不能复活；旧deck版本立即失效，激活后kind/分区/域/options/Native冻结。next以完整序列化前后控制体积差确定候选，固定稳定tie-break；不得每次重新编译或做全局组合搜索。此确定策略耗尽只表示本策略无可继续准备路径，不宣称所有可能表示均无解。四代、原三预算桶、原16KiB完整可选focus、usage/auth/abort/HTTP不变；不得扩大cap。重试空间为5000B软准备目标，不是第四硬门：先按原三个硬预算桶及原实际context找到首hard-fit；固定桶剩余小于5000B时，非破坏预览下一确定单调降级候选，构造其完整prompt/schema并复核原全部硬预算。仅候选全部hard-fit且固定桶实际更小时才一次commit；否则丢弃预览，保留当前已fit方案并停止。达到目标或无可继续候选也停止。预览不能decode/activate，peek及完整渲染不得改current boundData/boundSchema/text/focus/retention/version/计数；渲染返回独立完整bundle。commit须原版本仍当前且仅一次，原子采用同preview的任务/prompt/Native；丢弃须使token失效且不泄漏preview schema，保留current完整bundle，不能回拨、再prepare或重抓retention。全部搜索只在第二代激活前，后代完全冻结。5000B由本次完整实际失败负载4318B量级支持，仅提高余量，不承诺任意未来失败答均可容纳。原硬N/N-1边界保持；无soft-fit仍可采用原hard-fit。
+
+准入前须由私有两真实首稿量化完整g2及保留实际g2为不可信失败负载的g3，证明两实际冲突组仍完整selection且三桶fit；旧实际g2不被冒认新合同有效答案。所有投影逐字段逆变深等，源码/8bundle/303renderer保护哈希不变、0 App/API。实测1625大包经列式与去重复域后初始g2固定63951B；软目标降级至60434B（schema21299B/context373630B），保留6个selection与目标完整10 options；保留完整实际g2为失败负载的g3/g4固定64752B、schema21299B、context377948B，原固定硬门仍余784B。202小包g2固定30939B，g3/g4为31160B、schema607B/context323748B，原context组完整3 options保留。两种投影独立inverse深等；0App/API/SDK，368保护哈希不变。上述为私有原型数字，最终编码标志/指南实现须重新量化，不能直接搬用数字；5000目标停止点仅多102B余量，必须保证最终两冲突组确实仍selection。6000B私有试探会丢目标组，原记录保留，不作为产品策略。仅采用固定5000B软目标及上述可fit才commit规则；不用反事实充作供应商/全文通过。
+
+源码已先冻结R71为R73旧合同基线：368请求/719捕获，368原首输入SHA匹配，410 exact-prefix捕获已用于旧合同，309 binding-unknown未使用，617准备合同，历史1预算拒绝和1invalid_schema保留。新合同回放只在原actual前缀及完整source/首稿/metadata/分区/options/CF窗/Native相同时复用后续旧答，否则SDK前停止并互斥记账。新129和旧130首轮、全部已知首稿及R70三包+R72两包完整四代预算重测。
+
+文件owner：B仅bound-decisions.ts、targeted-repair.ts、组选择/列式/准备状态测试及必要定向fixture适配；A仅novel-import-ai.ts的describe与第二代软准备控制、指南/预算集成测试。claim-patch、retention、source/proof/Native基础能力门、其他产品源码冻结。根代理组合验收。独立方案审核→481用例独审→限定TDD→独立code review后，定向测试、类型、desktop build、全预算及真实正常全文。既有闭合对象/整数/数组/enum语法不新增供应商能力，不重复已有静态接口探针；新提示的实际理解只由正常全文证明。仍从原“允许分析并导入”计时420000ms，所有场景/资料/复核/发布/正常重开/DB完整深等、无skip/drop实际全部通过才完成。R73 driver与R72字节相同；离线snapshot检查器只修正旧R69硬编码的2处evidence及1处work路径，并须核本轮session/work/novel实际ID。R72未执行此发布检查，原失败收据不改。不跑全仓，不改上游Web或已批准UI，不提交源码与小说/密钥。

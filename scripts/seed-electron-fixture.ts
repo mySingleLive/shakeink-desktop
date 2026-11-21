@@ -18,6 +18,8 @@ try {
   const snapshot = await state.read()
   snapshot.value.settings.appearance.uiFont = "ShakeInk Missing Font Fixture"
   snapshot.value.settings.appearance.bodyFont = "ShakeInk Missing Font Fixture"
+  // Fixtures exercise the workbench itself; the first-run guide is covered by its own tests.
+  snapshot.value.onboarding = { version: 1, completed: true, step: "welcome", textModelId: null, imageModelId: null, receipt: null }
   await state.update(snapshot.revision, snapshot.value)
   const work = await works.create({ path, device: String(info.dev), inode: String(info.ino) }, { title: "桌面验收夹具", requestId: "native-appearance-fixture" })
   await works.run(work.id, async () => {

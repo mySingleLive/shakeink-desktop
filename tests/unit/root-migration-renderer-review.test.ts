@@ -39,7 +39,7 @@ test('U71-02: actual DesktopApp pending-cancel branch retains its dialog on fail
   useDesktopStore:{setState(){}},receiveDesktopState(){},toast:{error:(value:string)=>errors.push(value),info(){}},useChatStore:{getState(){return{}}},
  }
  const code=`let restorePending=false,retryingRestore=false;const setRestorePending=value=>restorePending=value,setRetryingRestore=value=>retryingRestore=value;
- let closing=false,migrationPending=false,retryingMigration=false,leasePending=false;const setClosing=value=>closing=value,setMigrationPending=value=>migrationPending=value,setRetryingMigration=value=>retryingMigration=value,setLeasePending=value=>leasePending=value;
+ let closing=false,migrationPending=false,retryingMigration=false,leasePending=false,promptOpen=false;const promptRef={current:false};const setClosing=value=>closing=value,setMigrationPending=value=>migrationPending=value,setRetryingMigration=value=>retryingMigration=value,setLeasePending=value=>leasePending=value;
  const setError=()=>{},setSettingsSection=()=>{},setSettingsOpen=()=>{},setTemplatesOpen=()=>{},setRecoveryOpen=()=>{},setModelRequired=()=>{};
  const effect=${effect};const cleanup=effect();return{view:()=>${dialog},cleanup};`
  const module={exports:{}};const compiled=transformSync(code,{loader:'tsx',jsx:'automatic',format:'cjs'}).code

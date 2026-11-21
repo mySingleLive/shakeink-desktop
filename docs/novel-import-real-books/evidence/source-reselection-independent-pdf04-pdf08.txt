@@ -1,0 +1,20 @@
+▶ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits
+  ✔ initial choose keeps one admitted real FS chain and an empty session until canceled resources settle (101.657125ms)
+  ✔ renderer cancel enters before a reselect inspection queued inside the real controller tail (947.534833ms)
+  ✔ real worker exit remains charged after pending preview is canceled (737.972875ms)
+✔ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits (1787.905458ms)
+▶ NI-PDF04: preview verifies authorized source identity before cache use and after rendering
+  ✔ same-bytes-file (1322.248875ms)
+  ✔ ancestor-directory (1354.905625ms)
+  ✔ ancestor-link (1418.164167ms)
+  ✔ replacement after snapshot but before render result is checked again (1326.570292ms)
+✔ NI-PDF04: preview verifies authorized source identity before cache use and after rendering (5422.421291ms)
+✔ NI-PDF04: source re-selection preserves canceled choices and never inherits a prior page confirmation (1951.765583ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10350.595833

@@ -1,0 +1,68 @@
+✖ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (48.893084ms)
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (1.319792ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1017.787291
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:5367
+✖ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (48.893084ms)
+  AssertionError [ERR_ASSERTION]: unknown-reliability uses the same correction bridge
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      artifacts: [
+        {
+          evidence: [
+            {
+  ...
+          facts: {
+  +         reliability: 'KNOWLEDGE-VALUE-SYNTHETIC-SECRET'
+  -         reliability: '客观事实',
+  -         temporalScope: '  仅合成早期阶段  '
+          },
+          id: 'model-artifact-SYNTHETIC-SECRET',
+          kind: 'theme',
+          name: '模型名-SYNTHETIC-SECRET',
+          origin: 'inferred',
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:50:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { artifacts: [ [Object] ] },
+    expected: { artifacts: [ [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:16370
+✖ NI-J02: request-bound import schema preserves strict validation and compatibility (1.319792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '导入处理失败，请核对来源、模型配置后重试'
+  - '推断结果的可靠性类型无效，请核对后重试'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:68:56)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '导入处理失败，请核对来源、模型配置后重试',
+    expected: '推断结果的可靠性类型无效，请核对后重试',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

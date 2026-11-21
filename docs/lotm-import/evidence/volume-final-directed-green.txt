@@ -1,0 +1,23 @@
+✔ LOTM-V04: native eight-volume publication retains per-volume chapter indices, full-book narrative references and idempotent receipts (4638.351959ms)
+✔ LOTM-V05: legacy/default/outline-only publication survives and invalid volume groupings are rejected before creation (6762.939458ms)
+✔ NI-CH01: standalone English word-number chapters preserve prologue through epilogue (2.769916ms)
+✔ NI-CH02: canonical Roman sequences preserve sixteen chapters and epilogue (0.775209ms)
+✔ NI-CH03: ambiguous prose and title sequences never create guessed chapter cuts (0.700416ms)
+✔ NI-CH04: unchanged manual session chapters survive implicit calculation with validation (1.014583ms)
+✔ LOTM-V01: explicit eight-volume headings preserve sixteen source chapters, repeated numbers and exact prose (3.28025ms)
+✔ LOTM-V02: actual prefaces survive and missing volume headings never inherit the previous volume (0.703875ms)
+▶ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership
+  ✔ metadata binds analysis and plan; legacy goldens remain byte-identical (1.620542ms)
+  ✔ manual re-confirmation derives labels and rejects moved/deleted boundaries (1.412208ms)
+  ✔ v2 missing-volume warnings remain visible after unchanged manual confirmation and recovery (0.677916ms)
+  ✔ normal controller choose/set-chapters/save/reopen and old journal recovery (256.277792ms)
+✔ LOTM-V03: cuts, projection, authorization and saved controller recovery retain volume ownership (261.132042ms)
+✔ LOTM-V05: optional volume fields and unknown chapter versions reject invalid data (9.023ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13876.685667

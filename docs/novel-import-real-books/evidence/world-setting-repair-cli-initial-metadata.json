@@ -1,0 +1,39 @@
+{
+  "recordedAt": "2026-10-26T16:11:34.901655+00:00",
+  "cliSha256": "916f63f7fbf176f5b70c4ded77ce135cea723f17d244c12aa29d89cd080d9378",
+  "workspacesSha256": "0ccaf52eef376457a207340783a050167bfe7e051a9c26bba5b3ebfd236da4b6",
+  "workspacesBaselineSha256": "22f0bbe491cb80c3b2524e68364f4ad0581482c863e6f4b9e557f1769124f541",
+  "workspacesOnlyExport": true,
+  "actualDatabaseAccess": false,
+  "actualCorpusAccess": false,
+  "types": {
+    "firstPureApiExitCode": 0,
+    "finalAttemptExitCode": 2,
+    "cliDiagnostics": 0,
+    "workspacesDiagnostics": 0,
+    "inProgressServiceDiagnostics": [
+      {
+        "file": "desktop/service/novel-import-world-repair.ts",
+        "line": 38,
+        "column": 115,
+        "code": "TS18048",
+        "message": "parsed is possibly undefined"
+      },
+      {
+        "file": "desktop/service/novel-import-world-repair.ts",
+        "line": 120,
+        "column": 32,
+        "code": "TS18048",
+        "message": "previous is possibly undefined"
+      },
+      {
+        "file": "desktop/service/novel-import-world-repair.ts",
+        "line": 120,
+        "column": 69,
+        "code": "TS18048",
+        "message": "previous is possibly undefined"
+      }
+    ]
+  },
+  "integrationVerification": "WR01/02 pending author final integration; no pass claim"
+}

@@ -1,0 +1,18 @@
+✔ NI-PDF06: explicit page decisions commit atomically, preserve page text and reblock after revocation (1978.408292ms)
+✖ NI-PDF06: OCR-only image decisions persist without admitting the source (597.898458ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3419.458292
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:35844
+✖ NI-PDF06: OCR-only image decisions persist without admitting the source (597.898458ms)
+  Error: PDF检查或来源已失效，请重新核对
+      at NovelImportController.setPdfDecisions (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:237:186)
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/desktop/main/novel-import.ts:129:47)

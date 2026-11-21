@@ -1,0 +1,54 @@
+{
+  "scope": "78 independent bounded review; no actual app/model/data access",
+  "sources": [
+    {
+      "path": "desktop/core/novel-import-ai-payload.ts",
+      "baselineHash": "49482e28232c89c8eb1276ed7c2b755e496d9b26607329cac9d5f34a07a5bb21",
+      "finalHash": "953d4a39701748dead1ee1e52e4a37306bc87f3d77fd012a0e0b58c499335298"
+    },
+    {
+      "path": "tests/unit/novel-import-ai.test.ts",
+      "baselineHash": "9dd2d4c3f4304f64bbf275304cf7704915e575826053d3009e87a25a7a3e2ec0",
+      "finalHash": "800a96245c22473cc83699711cbac74f173656308ab28eae903a28fce0e8eff8"
+    }
+  ],
+  "serviceHashUnchangedFrom72": "c88cf7f8941edcb4ab97449d244687f254db22aad5d1348404ef25a6d16d29c6",
+  "diffHash": "8b05e03a208d627bf1ebc6be5e11be3411d0cf1a739a091d4a27d9ae5879bc4a",
+  "diffMatchesAuthor": true,
+  "payloadOnlyApprovedWhitelistAndFixedKindContract": true,
+  "oldAiTestsIncludingA07ByteExact": true,
+  "eightUnchangedBranchGoldenLiteralsAndGuidanceMatchBaselineMetadata": true,
+  "baselineGoldenMetadataHash": "0a84dea7a9a1ee96f1503ea10e248d1b7cce1374581326e33adefa818714a1c7",
+  "commands": [
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-A0[78]:",
+        "tests/unit/novel-import-ai.test.ts"
+      ],
+      "pass": 8,
+      "skip": 0,
+      "exit": 0,
+      "log": "requested-kind-independent-a07-a08.txt",
+      "logHash": "4abb646cebba666c5948427fbd017cb97d45be68de54e9d3a91c0aa045525f24"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-J0[123]:",
+        "tests/unit/novel-import-request-schema.test.ts"
+      ],
+      "pass": 7,
+      "skip": 0,
+      "exit": 0,
+      "log": "requested-kind-independent-j01-j03.txt",
+      "logHash": "bc10b5ac941e49b1158899c8aea7a1af2a36ab53f309926d5d44b30a50f7b542"
+    }
+  ]
+}

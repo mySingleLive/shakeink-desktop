@@ -1,0 +1,29 @@
+✔ NI-PDF10: real publication audit binds PDF page decisions and history without paths pixels or preview tokens (3690.289042ms)
+✔ NI-PDF14: actual missing-dimension and decode warnings block otherwise visible PDF pages (2425.416333ms)
+✔ NI-PDF01: full PDF inspection retains cover, every text page and mixed-page text without image approval (669.846458ms)
+✔ NI-PDF02: scan and partial PDF failures keep explicit blocked page ledgers instead of truncated success (3209.382708ms)
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (4.653584ms)
+✔ NI-PDF09: old non-PDF hashes and restored checkpoints remain byte identical with absent PDF fields (0.504666ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (1.994042ms)
+▶ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation
+  ✔ cancel (28.983417ms)
+  ✔ timeout (125.806ms)
+✔ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation (155.171458ms)
+▶ NI-PDF14: initial PDF identity metadata is admitted before the first real source filesystem call
+  ✔ native (40.391584ms)
+  ✔ grant (35.930917ms)
+  ✔ discovered (42.449667ms)
+✔ NI-PDF14: initial PDF identity metadata is admitted before the first real source filesystem call (119.178833ms)
+✔ NI-PDF14: a directory named PDF releases preparation before child PDF admission without nested jobs (631.2985ms)
+✔ NI-PDF02: budget failure keeps already extracted text and marks every remaining physical page unscanned (15.680875ms)
+✔ NI-PDF14: actual page and operator caps keep bounded ledgers instead of continued success (1850.925459ms)
+✔ NI-PDF07: controller sending, retry, conflict and patch actions cannot bypass pending pages (711.661666ms)
+✔ NI-PDF07: source replacement after an AI send discards the late response before coverage adoption (720.059792ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11132.284

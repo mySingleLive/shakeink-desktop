@@ -1,0 +1,25 @@
+✖ NI-PDF16: raw resource closure bounds inheritance, references, forms and executable resource ambiguity (185.200458ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 633.972209
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf-source-text.test.ts:2:9267
+✖ NI-PDF16: raw resource closure bounds inheritance, references, forms and executable resource ambiguity (185.200458ms)
+  AssertionError [ERR_ASSERTION]: global graph budget must stop future lookups after the first exhausted page
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf-source-text.test.ts:82:322)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

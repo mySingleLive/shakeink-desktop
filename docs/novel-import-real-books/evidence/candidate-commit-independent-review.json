@@ -1,0 +1,67 @@
+{
+  "scope": "59 incremental code review of 60; only two approved source/test deltas and the same three test commands",
+  "status": "PASS",
+  "closedFinding": "RS-CR01",
+  "baselineSha256": {
+    "desktop/main/novel-import.ts": "727cddac9037120c8162667c8ef213ad799da8ef43c82024ff7837910015e546",
+    "tests/unit/novel-import-semantic-session.test.ts": "e6809422606534cbd96ae207e40de9b20c984650a8d94079f6c2fc3165c89f85"
+  },
+  "finalSha256": {
+    "desktop/main/novel-import.ts": "a0acd1a282eea4dc874ff45fa4b4b143cc2c2fe688880a235399bcff1d49bcd7",
+    "tests/unit/novel-import-semantic-session.test.ts": "8c9df1bcec64315bd6a585e89e994ec7f1bde302a5df169ddccafb3104ce6d6f",
+    "desktop/core/novel-import-ai-payload.ts": "8edd5629d1f5153d00a5b4c0bfd90dd0bddcad29b7409f5b9546869ed6cb2d98",
+    "desktop/core/novel-import-review-tasks.ts": "89e9c39e8a0c362d34baa5b393f44ca3dbfda1a52022ebc4ce66c9e6da566a82",
+    "desktop/core/novel-import-semantics.ts": "e33fe475457e8829ed321fc428c108145ec441934db6017e83313d4aacab1874",
+    "desktop/core/novel-import-semantic-state.ts": "592563c09ea0a12fed399a2f8eeef8016c5e9c099d46de9ab6f66e99a99f05d5",
+    "desktop/service/novel-import-ai.ts": "312fe64bf374168f6ec33267006a5c64d7e8b934093a33f4ef57398cf9271cd6"
+  },
+  "regeneratedFullIncrementalDiffMatchesAuthorBytes": true,
+  "incrementalDiffSha256": "90670692eaa7b37815c4468c38dc249b2af244d0e888b2c9d7e14ebd2e60108a",
+  "allPreviouslyFrozenTestLinesRemainByteExact": true,
+  "addedTestRanges": [
+    {
+      "oldLineBefore": 81,
+      "newStartLine": 82,
+      "newEndLine": 93
+    }
+  ],
+  "logsSha256": {
+    "candidate-commit-independent-r01-r02.txt": "d01c1532185cc25cb75178ee4a5c04ab3a1a8cfc276fbe18636bc655861aab3d",
+    "candidate-commit-independent-sem08-sem10.txt": "6b573702efdb7d16fd591066f54e259524cd2d6f1a5caf2603ba2e5524274760",
+    "candidate-commit-independent-sem04.txt": "7da6793ff2782cca39681b233eea95878436ebc30142e2b10796da17397a9871",
+    "candidate-commit-r02-post-rename-red.txt": "82a98d32a700f4fa6e5ff3afa03203cf2a7eb63d2634f33c65781d06b71c3e2e"
+  },
+  "results": [
+    {
+      "scope": "NI-R01/02",
+      "exitCode": 0,
+      "tests": 15,
+      "pass": 15,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 3857.119167
+    },
+    {
+      "scope": "NI-SEM08/09/10",
+      "exitCode": 0,
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 3664.747125
+    },
+    {
+      "scope": "NI-SEM04",
+      "exitCode": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 204.495916
+    }
+  ],
+  "boundary": "No production/test edits, user data, app, model, whole suite or independent typecheck; first NOT PASS and first green logs retained"
+}

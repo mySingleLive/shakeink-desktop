@@ -1,0 +1,132 @@
+{
+  "run": "R56",
+  "providerCalls": 2,
+  "novelInputSent": false,
+  "casePurposes": [
+    {
+      "id": "tuple-array",
+      "purpose": "typed-record-wrapper",
+      "historicalPromptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "historicalSchemaSha256": "273cd07be320239e5f4c39c6e1059afb44d85dcb750a6c39b889ff153cb70396"
+    },
+    {
+      "id": "homogeneous-items",
+      "purpose": "flat-typed-union",
+      "historicalPromptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "historicalSchemaSha256": "273cd07be320239e5f4c39c6e1059afb44d85dcb750a6c39b889ff153cb70396"
+    }
+  ],
+  "results": [
+    {
+      "id": "tuple-array",
+      "schemaSha256": "b362dca31ab75a3e3b7b8a8e202867e3fa27c3c8fea01f6ec1f27dc648d866e7",
+      "schemaBytes": 4882,
+      "promptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "category": "HTTP_400",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "unknown",
+      "validation": {
+        "directJSON": false,
+        "schema": "not-run",
+        "keywordCounts": {}
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "b362dca31ab75a3e3b7b8a8e202867e3fa27c3c8fea01f6ec1f27dc648d866e7",
+        "schemaBytes": 4882,
+        "inputTextSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 400,
+        "body": "parsed",
+        "complete": true,
+        "bytes": 194,
+        "reasonTokens": [
+          "an",
+          "object",
+          "with",
+          "other",
+          "properties",
+          "is",
+          "not",
+          "other"
+        ],
+        "reasonTokensTruncated": false,
+        "knownCode": "invalid_request_error",
+        "knownParam": "none",
+        "keywords": {
+          "schema": false,
+          "items": false,
+          "array": false,
+          "object": true,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    },
+    {
+      "id": "homogeneous-items",
+      "schemaSha256": "c4ec88220c597280f5f01a86996c14acc6adfa74eee28c89df808c166dd48392",
+      "schemaBytes": 4854,
+      "promptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "category": "completed",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "stop",
+      "validation": {
+        "directJSON": true,
+        "schema": "pass",
+        "keywordCounts": {},
+        "originalTuple": "pass",
+        "commonWitness": true
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "c4ec88220c597280f5f01a86996c14acc6adfa74eee28c89df808c166dd48392",
+        "schemaBytes": 4854,
+        "inputTextSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 200,
+        "body": "not-needed",
+        "complete": true,
+        "bytes": 0,
+        "reasonTokens": [],
+        "reasonTokensTruncated": false,
+        "knownCode": "none",
+        "knownParam": "none",
+        "keywords": {
+          "schema": false,
+          "items": false,
+          "array": false,
+          "object": false,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    }
+  ],
+  "all105InputsUnchangedAtRun": true,
+  "all368ProtectedFilesUnchangedAtRun": true,
+  "stateUnchanged": true,
+  "normalAppExit": 0,
+  "quitTimedOut": false,
+  "pageErrors": 0,
+  "independentOriginalTupleAndWitnessPass": true,
+  "productTDDCondition422Satisfied": true,
+  "fullBookVerified": false,
+  "scope": "This pair only; all ordinary local source/retention/owner/task gates still required"
+}

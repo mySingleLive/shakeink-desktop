@@ -1,0 +1,9 @@
+✔ NI-PDF07: every sending and publication path rejects unresolved PDF images including copy-only imports (5.420666ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 775.607292

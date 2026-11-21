@@ -1,0 +1,57 @@
+{
+  "run": "R62",
+  "result": "failed-scene-roster-repair",
+  "consentAt": "2026-11-01T09:20:11.965Z",
+  "failureAt": "2026-11-01T09:21:13.960Z",
+  "closedAt": "2026-11-01T09:21:16.702Z",
+  "normalAppExit": 0,
+  "driverExit": 2,
+  "rpc": {
+    "total": 27,
+    "fulfilled": 22,
+    "rejected": 5
+  },
+  "generations": 60,
+  "allInputTextHashesMatched": true,
+  "allProviderEventsCompleted": true,
+  "offlineReplayProviderCalls": 0,
+  "coverageUnits": 914,
+  "sceneMembers": 520,
+  "sceneRecords": 350,
+  "sceneIdentities": 340,
+  "observerStop": {
+    "requested": 27,
+    "transfers": 60,
+    "captured": 60,
+    "pending": 0,
+    "unmatched": 0,
+    "ambiguous": 0,
+    "observationFailures": 0,
+    "limitFailures": 0,
+    "retainedBytes": 0,
+    "writeFailures": 0,
+    "restored": true
+  },
+  "fullSceneImportVerified": false,
+  "sevenMinuteTargetVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "privateReplaySha256": "4abeb61714c73632353ec67eb05fc3d3dd2e68dfba3cda8a8af86f3abafe8239",
+  "buildIdentity": "docs/scene-import-verification/build-identity-r62.json",
+  "sceneRelations": 48,
+  "offlineFirstGuardDiagnosis": {
+    "providerCalls": 0,
+    "failedRPC": 5,
+    "failedBoundGenerations": 15,
+    "counts": {
+      "localSelectionType": 3,
+      "strictRecord": 4,
+      "answerCount": 2,
+      "contextLabelSource": 3,
+      "literalWindow": 3
+    },
+    "allPriorCorrectionAndFeedbackPresentInActualInput": true,
+    "sourceDigest": "51fc53e07a07c9a8eecc7bae6a5aebe336d238ff00d74ea14a6c393a2f7194cd",
+    "jointOrOwnerFirstRejectionObserved": false
+  }
+}

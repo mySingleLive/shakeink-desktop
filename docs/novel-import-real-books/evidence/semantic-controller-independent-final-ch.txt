@@ -1,0 +1,11 @@
+✔ NI-CH01: standalone English word-number chapters preserve prologue through epilogue (2.340041ms)
+✔ NI-CH02: canonical Roman sequences preserve sixteen chapters and epilogue (0.782042ms)
+✔ NI-CH03: ambiguous prose and title sequences never create guessed chapter cuts (1.010875ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 196.55625

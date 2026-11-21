@@ -1,0 +1,54 @@
+full browser suite (working tree): 769 tests, 721 pass, 48 fail
+baseline HEAD 22b1b10, same 10 files: 103 tests, 54 pass, 49 fail
+--- failing on working tree only (then rerun in isolation twice):
+✖ CD-01 long real caption completes preparation without capacity and overflow oscillation
+✖ DRAWER-RESIZE closing first/all 1800-899 paper DPR1.5
+✖ DRAWER-RESIZE concurrent fullscreen closing first/all 1800-899 ink DPR1.5
+✖ WZU15-05 management save-as persists a complete user WizardTemplate and keeps the original builtin metadata intact
+rerun: all four pass (CD-01 long caption passed on 2nd isolated run; timing-sensitive)
+--- failing on baseline too (pre-existing, unrelated):
+✖ CFG62-C01: actual installed two-context generation equals both shipped trusted/runtime command catalogs without writing production artifacts
+✖ CFG62-C02: actual build verifier accepts its complete pinned source snapshot and rejects a stale assembly file
+✖ LUI23-01 pending repair uses only the narrow retry command with no backup or work-selection bridge
+✖ LUI23-02 pending repair is single-flight and disables retry until the authoritative reply
+✖ LUI23-04-pending repair does not claim success or release the barrier after pending
+✖ LUI23-04-restarting repair does not claim success or release the barrier after restarting
+✖ LUI23-05 failed repair is safely described, retains the barrier, and permits deliberate retry
+✖ LUI23-06 missing repair bridge never invents an executable repair action or releases the barrier
+✖ LUI23-07 a late repair reply after unmount does not alter the detached view
+✖ LUI23-08 DesktopApp keeps the post-close repair dialog through close-cancelled and Escape, including disabled background save
+✖ LUI23-09 DesktopApp retries only the narrow repair API once and retains the barrier on rejection/cancelled
+✖ LUI23-10 restarting repair remains blocked, hides retry and does not call any new work command
+✖ LUI23-11 pending event still shows the restricted retry surface during bootstrap and survives late bootstrap
+✖ LUI23-12 an in-flight retry survives bootstrap completion without remounting or granting a second request
+✖ LUI23-13 actual pending dialog and Button remain readable without overflow in both themes at 360px
+✖ LUI23-14 unmounted retry ignores a late rejection and subscribed pending event without changing a new workspace
+✖ RH33-01 actual Home gives restricted relocation priority and never mounts workbench/maintenance leaves
+✖ RU33-01 subscribe before snapshot, synchronous event and late/equal snapshots cannot replace current authority
+✖ RU33-02 blocked pointer shows the recovery diagnosis and quit, never a picker or restart
+✖ RU33-03 choose single flight still allows cancel while native picker is physically pending
+✖ RU33-04 safe failed request retains current phase and explicit retry without leaking cause or fake success
+✖ RU33-05 actual native stages have no fake percentages and pending/complete preserve unread migration results
+✖ RU33-06 malformed/unknown or contradictory state never grants picker, preserves last valid state
+✖ RU33-07 unmounted connection ignores old subscriptions and late command failure
+✖ RU33-08 narrow long paths use both real themes without horizontal overflow or executable markup
+✖ RU33-10 postcommit uncertainty is diagnosis plus the reset exit, cannot guess safe restart or permit new relocation
+✖ RU33-11 Windows menu icon precedes system controls and sends only a single fixed menu action
+✖ SR-B-01 blocked with reset capability shows the unrepairable dialog copy and exactly reset+quit
+✖ SR-B-02 blocked history-needs-recovery keeps the locate heading and old copy with the reset exit
+✖ SR-B-03 the reset command reaches the in-place second confirmation with the default path warning
+✖ SR-B-04 a custom target source path adds the preservation line to the confirmation
+✖ SR-B-05 entering reset from the history notice adds the history-cleared warning line
+✖ SR-B-06 the resetting phase disables every action while the wipe runs
+✖ SR-B-07 a successful wipe shows the completion line and keeps the manual restart fallback
+✖ SR-B-08 a failed wipe shows the retry copy and the retry button resends reset-confirm
+✖ SR-B-09 unavailable and cancelled keep the locate flow with a reset exit and a working back path
+✖ SR-B-11 states with illegal reset fields are rejected instead of crashing the dialog
+✖ SR-B-12 a failed automatic restart keeps the reset-complete copy, dialog heading and restart fallback
+✖ SS-03 hover intent, owner handoff, card retention and delayed dismissal survive the portal
+✖ TS-ABOUT standalone production About document prevents selecting all UI text
+✖ WL90-U01: a late ordinary state reply cannot release the pending repair barrier or change the retained workspace
+✖ WL90-U02: malformed retry replies retain the barrier without leaking their cause and only deliberate retry sends another narrow command
+✖ WL90-U03: a pending retry survives bootstrap failure with the same DOM flight and disabled reload
+✖ WL90-U04: native and custom settings, templates and recovery commands cannot reopen background surfaces after lease pending
+✖ failing tests:

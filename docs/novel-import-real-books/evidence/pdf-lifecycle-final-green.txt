@@ -1,0 +1,17 @@
+▶ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains
+  ✔ legacy PDF supplementation is owned and canceled without changing frozen checkpoints (799.895083ms)
+  ✔ actual beginClose revokes initial choose before its real FS and BusinessGate settle (62.435667ms)
+✔ NI-PDF08: old PDF inspection and the actual main close entry cancel before serial and gate drains (863.04525ms)
+▶ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits
+  ✔ initial choose keeps one admitted real FS chain and an empty session until canceled resources settle (30.933208ms)
+  ✔ renderer cancel enters before a reselect inspection queued inside the real controller tail (674.287125ms)
+  ✔ real worker exit remains charged after pending preview is canceled (620.368375ms)
+✔ NI-PDF08: inspection and preview cancellation drain real jobs before controller serial waits (1326.083875ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2982.358667

@@ -1,0 +1,15 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "artifacts": 0,
+      "conflicts": 3,
+      "missingTargets": 1
+    }
+  ],
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  }
+}

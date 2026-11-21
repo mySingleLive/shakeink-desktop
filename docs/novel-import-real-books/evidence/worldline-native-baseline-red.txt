@@ -1,0 +1,163 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (57.551709ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (19.212541ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.02825ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (0.839709ms)
+  ✔ literal acceptance cases agree with the unchanged legacy late matcher (9.324709ms)
+  ✔ each entry has its own safe path and other stages keep their original schema (1.345ms)
+✔ NI-J03: evidence location uses the existing bounded correction without transforming quotes (13.075458ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✖ complete artifacts have the original pure-helper acceptance set and preserve raw values (4.543958ms)
+  ✖ production bridge gives native failures exactly one safe bounded correction (0.9215ms)
+  ✔ formatted unknown references stay schema-valid and fail only at the existing graph gate (2.285917ms)
+  ✖ actual prototype maps only fixed worldline literals and retains old safe behavior (0.200041ms)
+  ✖ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.187375ms)
+  ✖ long schema lists use a fixed structural message at the exact length boundary (0.13775ms)
+✖ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (10.1935ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 8
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1042.972125
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:41796
+✖ complete artifacts have the original pure-helper acceptance set and preserve raw values (4.543958ms)
+  AssertionError [ERR_ASSERTION]: missing-line-id schema reuses the strict helper
+  
+  true !== false
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:188:317)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:187:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:42751
+✖ production bridge gives native failures exactly one safe bounded correction (0.9215ms)
+  AssertionError [ERR_ASSERTION]: missing-line-id
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      artifacts: [
+        {
+          evidence: [
+            {
+  ...
+          facts: {
+  -         lineId: ' synthetic-line ',
+            lineName: ' 合成主线 ',
+            people: '[]',
+            reliability: '客观事实',
+            timeKind: 'unknown'
+          },
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:195:11)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:190:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { artifacts: [ [Object] ] },
+    expected: { artifacts: [ [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:49431
+✖ actual prototype maps only fixed worldline literals and retains old safe behavior (0.200041ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '导入处理失败，请核对来源、模型配置后重试'
+  - '世界线结果缺少事件线、时间类型或角色结构，请核对后重试'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:220:52)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:218:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '导入处理失败，请核对来源、模型配置后重试',
+    expected: '世界线结果缺少事件线、时间类型或角色结构，请核对后重试',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:51316
+✖ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.187375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '未知事件时间不得制造数值 WORLDLINE-NATIVE-SYNTHETIC-SECRET',
+  +   '未知事件时间不得制造数值\nWORLDLINE-NATIVE-SYNTHETIC-SECRET',
+  +   '未知事件时间不得制造数值\n',
+  +   '未知事件时间不得制造数',
+  +   '未知事件时间WORLDLINE-NATIVE-SYNTHETIC-SECRET'
+  -   '导入处理失败，请核对来源、模型配置后重试',
+  -   '导入处理失败，请核对来源、模型配置后重试',
+  -   '导入处理失败，请核对来源、模型配置后重试',
+  -   '导入处理失败，请核对来源、模型配置后重试',
+  -   '导入处理失败，请核对来源、模型配置后重试'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:229:83)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:225:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '未知事件时间不得制造数值 WORLDLINE-NATIVE-SYNTHETIC-SECRET', '未知事件时间不得制造数值\nWORLDLINE-NATIVE-SYNTHETIC-SECRET', '未知事件时间不得制造数值\n', '未知事件时间不得制造数', '未知事件时间WORLDLINE-NATIVE-SYNTHETIC-SECRET' ],
+    expected: [ '导入处理失败，请核对来源、模型配置后重试', '导入处理失败，请核对来源、模型配置后重试', '导入处理失败，请核对来源、模型配置后重试', '导入处理失败，请核对来源、模型配置后重试', '导入处理失败，请核对来源、模型配置后重试' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:51786
+✖ long schema lists use a fixed structural message at the exact length boundary (0.13775ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '导入处理失败，请核对来源、模型配置后重试'
+  - '模型返回结构不完整，请核对后重试'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:234:160)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:231:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '导入处理失败，请核对来源、模型配置后重试',
+    expected: '模型返回结构不完整，请核对后重试',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

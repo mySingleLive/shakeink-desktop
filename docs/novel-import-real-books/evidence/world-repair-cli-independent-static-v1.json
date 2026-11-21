@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-26T16:20:48.473669+00:00",
+  "reviewer": "remaining_books_oracle",
+  "scope": "CLI candidate static only; service/WR implementation pending",
+  "candidateScriptSha256": "916f63f7fbf176f5b70c4ded77ce135cea723f17d244c12aa29d89cd080d9378",
+  "scriptStillAtCandidateWhenRecording": false,
+  "candidateSnapshot": null,
+  "workspaceSha256": "0ccaf52eef376457a207340783a050167bfe7e051a9c26bba5b3ebfd236da4b6",
+  "workspaceBaselineSha256": "22f0bbe491cb80c3b2524e68364f4ad0581482c863e6f4b9e557f1769124f541",
+  "workspaceOnlyExportChange": true,
+  "localPGliteVersion": "0.5.8",
+  "localPGliteIndexSha256": "388fa6f88cfa02adda63b2f05853d310dec9a42fc0b91b0a78927f97d4bc5964",
+  "localPGliteCreateImplementation": "static async create(r,a){let o=typeof r==\"string\"?{dataDir:r,...a??{}}:r??a??{},_=new N(o);return await _.waitReady,_}",
+  "findings": [
+    {
+      "id": "WG-CR01",
+      "priority": "P1",
+      "status": "open accepted by root",
+      "line": 156,
+      "relatedLine": 169,
+      "description": "PGlite.create rejection loses constructed instance; missing engine does not establish closed authority"
+    }
+  ],
+  "staticConclusion": "NOT PASS",
+  "whole96Conclusion": "PENDING",
+  "additionalTestsExecuted": false,
+  "actualDataPlanDatabaseApplicationModelAccess": false,
+  "reportBeforeCliAppendSha256": "d4b729c7d201fc4a7f23fc1f0e6e3dae24fa1f6790866ef135e7e0faa5b7b594",
+  "reportAfterCliAppendSha256": "a6dc5fe9ff2d321680de4e8bf59854600b2580fa0b2821868715ebb4b91f4a1d"
+}

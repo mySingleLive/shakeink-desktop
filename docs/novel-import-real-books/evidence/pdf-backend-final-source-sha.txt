@@ -1,0 +1,9 @@
+0cc5f8125e937b2c0f35e22fb525eaa260c3bddef6d2a5d8f853fcc48c7a8259  desktop/main/novel-import-pdf-worker.ts
+bad0c316eaf923976ab9a2db4538432affd51271b1fe8f5dac08b678629d0ef5  desktop/main/novel-import-pdf-engine.ts
+a4123470e2066c17b64f471613207824b12947bd2cdd9b23c22f381022f47c48  desktop/main/novel-import-pdf-resources.ts
+ef8f2c7c5164ff18e305e35a9643b1a4ee10b2e2e5bf5a29adb679df7f0b3f2a  desktop/main/novel-import-pdf-client.ts
+0644e39d7611acf9b146817cf45da029a7e4cfefc9a7fdcb3419d0ff9d4bee24  desktop/main/novel-import-pdf-diagnostics.ts
+0ce6cbdc0f9aaf5e4d42e2baf52c426ec24623c78780876a04f8cbdb811c9e04  desktop/main/novel-import-pdf-resource-manifest.json
+76d3ae60ef2308a53cb27553be0ce305a1f88517f1fc316ff776c3177412965c  desktop/main/novel-import-files.ts
+15d05a6b5a36dedb70d0f49a2cc262ead3577df3c8677b8938f2df991eff34a3  desktop/core/novel-import-pdf.ts
+7b33251a779e163f646f5e6d13b02ae22edcb57a50ce5f84e3f4963f3759feea  public/fonts/noto-sans-sc/pdf-import-provenance.json

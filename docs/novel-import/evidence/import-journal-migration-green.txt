@@ -1,0 +1,10 @@
+✔ NI-L04: import-journal inventory ownership accepts only UUID session directories and exact committed filenames (1.449958ms)
+✔ NI-L04: real closed-root migration preserves the import journal and leaves unknown neighbours at the original root (718.306834ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1184.968166

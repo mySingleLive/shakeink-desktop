@@ -1,0 +1,28 @@
+✖ NI-PDF16: full scalar order and homogeneous original codes are required before an atomic page correction (3.554708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 618.951959
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf-source-text.test.ts:2:14111
+✖ NI-PDF16: full scalar order and homogeneous original codes are required before an atomic page correction (3.554708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf-source-text.test.ts:87:72)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

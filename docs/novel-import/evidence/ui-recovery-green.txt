@@ -1,0 +1,10 @@
+✔ NI-U03: classification consent precedes pending recognition, background result does not reopen, no-model local path (3635.771875ms)
+✔ NI-U04: title, isolated target and pinned model/range consent gate the real start action (1612.119625ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5792.288209

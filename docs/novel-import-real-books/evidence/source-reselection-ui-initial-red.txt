@@ -1,0 +1,89 @@
+▶ NI-U12: same-source reselection preserves the draft, exposes failures and never sends AI
+  ✖ per-file actions preserve source/selection/chapter identity and fit both themes (998.470458ms)
+  ✖ native selection in progress disables actions without a duplicate mutation (6518.830667ms)
+  ✖ cancel keeps the same visible source draft (6477.913875ms)
+  ✖ error keeps the same visible source draft (6480.813917ms)
+  ✖ started import/publication/modified draft and unsupported files have no refresh action (6502.713583ms)
+✖ NI-U12: same-source reselection preserves the draft, exposes failures and never sends AI (28315.766834ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 0
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 29053.084375
+
+✖ failing tests:
+
+test at tests/browser/novel-import.test.ts:2:24333
+✖ per-file actions preserve source/selection/chapter identity and fit both themes (998.470458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:111:57)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:450)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:109:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/browser/novel-import.test.ts:2:26570
+✖ native selection in progress disables actions without a duplicate mutation (6518.830667ms)
+  locator.click: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true })[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:132:16)
+      at fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:456)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:130:2) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true })" ]
+  }
+
+test at tests/browser/novel-import.test.ts:2:27586
+✖ cancel keeps the same visible source draft (6477.913875ms)
+  locator.click: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true })[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:140:63)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:450)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:138:39) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true })" ]
+  }
+
+test at tests/browser/novel-import.test.ts:2:27586
+✖ error keeps the same visible source draft (6480.813917ms)
+  locator.click: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true })[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:140:63)
+      at async fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:450)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:138:39) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true })" ]
+  }
+
+test at tests/browser/novel-import.test.ts:2:28469
+✖ started import/publication/modified draft and unsupported files have no refresh action (6502.713583ms)
+  locator.waitFor: Timeout 6000ms exceeded.
+  Call log:
+  [2m  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true }) to be visible[22m
+  
+      at <anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:147:96)
+      at fixture (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:19:456)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/browser/novel-import.test.ts:146:2) {
+    name: 'TimeoutError',
+    log: [ "  - waiting for getByRole('dialog').getByRole('button', { name: '重新选择 正文.txt', exact: true }) to be visible" ]
+  }

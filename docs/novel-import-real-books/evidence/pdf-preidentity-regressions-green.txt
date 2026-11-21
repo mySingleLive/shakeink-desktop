@@ -1,0 +1,39 @@
+✔ NI-D01: every source character and chapter boundary survives safe splitting (2.669541ms)
+✔ NI-D02: classification coverage rejects gaps, overlaps and unclassified ranges (0.563209ms)
+✔ NI-F04: actual PDF extraction preserves text order and reports image or missing-text pages as blocked review ledgers (4462.522625ms)
+✔ NI-F07: protected roots, symlinks and source inode/content replacement fail closed (32.010958ms)
+✔ NI-L04: import-journal inventory ownership accepts only UUID session directories and exact committed filenames (2.16675ms)
+✔ NI-L04: real closed-root migration preserves the import journal and leaves unknown neighbours at the original root (468.018417ms)
+✔ NI-L02: actual import IPC enforces trusted frame, ready owner, strict action and business admission before any file/model work (49.724125ms)
+✔ NI-L04: publication stays active until definite receipt; main stops/checkpoints before gate drain and DB close (17.011792ms)
+✔ NI-S02: full-book batches checkpoint successful work and retry the failed batch (335.751959ms)
+✔ NI-S07: pause drains an operation and a late success never advances stale epoch (35.777ms)
+✔ NI-S08: journal restores checkpoints but target authorization must be renewed (250.515375ms)
+▶ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints
+  ✔ none (177.128584ms)
+  ✔ legacy (136.625709ms)
+  ✔ double-reopen (149.142ms)
+  ✔ range (209.895209ms)
+  ✔ selection (177.538333ms)
+  ✔ target (65.06725ms)
+  ✔ replaced-target (71.083375ms)
+  ✔ working-revision (132.502958ms)
+✔ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints (1120.514ms)
+▶ NI-S11: bounded fact review packs retain every deterministic task and checkpoint atomically
+  ✔ network (172.811833ms)
+  ✔ evidence (164.382542ms)
+  ✔ reference (174.294125ms)
+  ✔ unit-reference (141.373333ms)
+  ✔ pause (175.842708ms)
+  ✔ source-budget-and-distinct-evidence (99.685875ms)
+  ✔ exact-serialized-budget (125.038042ms)
+  ✔ oversized-single-task (78.614333ms)
+✔ NI-S11: bounded fact review packs retain every deterministic task and checkpoint atomically (1133.062917ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4811.478958

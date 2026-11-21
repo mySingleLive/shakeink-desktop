@@ -1,0 +1,36 @@
+{
+  "verification": "Reviewed early missing-target validation real request replay; not full-import acceptance",
+  "atUtc": "2026-10-31T18:55:44.180541+00:00",
+  "sourceFilesUnchangedDuringProbe": true,
+  "sourceSha256": {
+    "desktop/core/novel-import-wizard.ts": "3b8c78cd065dc48a111440a174cefa08cbdeae04bb4f1e6be050db5e9caed9e2",
+    "desktop/core/novel-import-wizard-roster.ts": "ed54ec67f310eac9bba49eac23d0172bfdb9ae3fd4feb18971223573d242859a",
+    "desktop/core/novel-import-wizard-state.ts": "ca243c22245ddbefaf1f095afc820aa11fe5e37d7af2b230dcd735cfbc46bdb9",
+    "desktop/core/novel-import.ts": "8c06d808bdf10d2fe3acc9c316dcb8a0dc79839494b348af0e891786cd785468",
+    "desktop/core/novel-import-semantics.ts": "06bed2b2b9518a6be409cf4607f08a8d8e73fecda78f3d0a2a6e811a3cf8fe2d",
+    "desktop/core/novel-import-semantic-state.ts": "592563c09ea0a12fed399a2f8eeef8016c5e9c099d46de9ab6f66e99a99f05d5",
+    "desktop/core/novel-import-ai-payload.ts": "8b3e68ee03b73138de1ea13226304f5931c91b79f6e5d63c1a591ca13c8caeaa",
+    "desktop/service/novel-import-ai.ts": "2fe4b007b35e76e9b5b4fbfa06897b9d5bf6f8f73cc6d208a59e68b472791e95",
+    "desktop/shared/novel-import.ts": "e06ea3793f288444ba37b38c8a075f4bd822379ae4a060da0d5e54883a91ed69",
+    "desktop/shared/novel-import-wizard.ts": "95638e49bb24ff4feeb3704b4c7edb8f58da38a5a3537e8d98d24df71c5f3d7d",
+    "desktop/main/novel-import.ts": "57be3522ef917d6d3cca01309d5e667188d67d69deabdf75e9216599e85c0d47",
+    "src/lib/desktop/novel-import.ts": "98ba22eff1d952286cf45c4fd5c927d09c34476efc104127d755b5e5434c9548",
+    "src/components/desktop/NovelImportWizard.tsx": "e6801aa6eea3233217ea4accc72de52e65d1be7e490c5617aac6cf893c44a85f"
+  },
+  "units": 77,
+  "providerGenerations": 1,
+  "finishReasons": [
+    "stop"
+  ],
+  "elapsedMs": 152193,
+  "serviceAndPureMainValidationPassed": true,
+  "conflicts": 0,
+  "missingTargets": 1,
+  "ownerWrites": 0,
+  "postvalidationModelCalls": 0,
+  "stateUnchanged": true,
+  "appExitCode": 0,
+  "historicalFailedReplyReproduced": false,
+  "published": false,
+  "fullImportAccepted": false
+}

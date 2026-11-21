@@ -1,0 +1,431 @@
+--- a/desktop/main/novel-import.ts
++++ b/desktop/main/novel-import.ts
+@@ -102,171 +102,199 @@
+   try{await this.owner(s.id);await rename(temp,file);renamed=true;onCommit?.();await this.owner(s.id)}catch(error){if(!onCommit||!renamed)await unlink(temp).catch(()=>undefined);throw error}
+   if(notify)this.options.changed?.(toImportView(s))
+  }
+- private async commitCandidate(owner:ImportSession,candidate:ImportSession){
+-  this.assertCandidateOpen();const desired={phase:candidate.phase,resumePhase:candidate.resumePhase,error:candidate.error,targetNeedsAuthorization:candidate.targetNeedsAuthorization};let committed=false
+-  candidate.phase='paused';candidate.resumePhase='running';candidate.error=candidateBlockedMessage;candidate.targetNeedsAuthorization=true
+-  try{await this.save(candidate,false,()=>{committed=true;for(const key of Object.keys(owner))delete (owner as unknown as Record<string,unknown>)[key];Object.assign(owner,candidate)})}catch(error){if(!committed)throw error;this.candidateBlocked=true;throw new CandidateCommittedBlocked()}
+-  Object.assign(owner,desired)
+- }
+- private async rollback(s:ImportSession){try{const path=join(this.directory(s.id),'session.json');await this.owner(s.id);const info=await this.regular(path);if(info.size>IMPORT_JOURNAL_MAX_BYTES)return;const previous=JSON.parse(await readFile(path,'utf8'));if(!this.validJournal(previous,s.id))return;for(const key of Object.keys(s))delete (s as unknown as Record<string,unknown>)[key];Object.assign(s,previous)}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT'){this.session=null;this.options.changed?.(null)}}}
+- private response():ImportResponse{return {view:this.session?toImportView(this.session):null}}
+- async initialize(){await this.serial(async()=>{
+-  if(this.initialized)return;this.assert()
+-  // No symlink component may lead to the private journal root.
+-  for(let cursor=resolve(this.options.root);;cursor=dirname(cursor)){const stat=await lstat(cursor);if(stat.isSymbolicLink()||!stat.isDirectory())throw Error('导入任务根目录无效');if(dirname(cursor)===cursor)break}
+-  await mkdir(this.rootPath,{mode:0o700,recursive:true});this.anchors.set(this.rootPath,await this.identity(this.rootPath))
+-  const recovered:ImportSession[]=[]
+-  for(const id of await readdir(this.rootPath)){
+-   if(!/^[0-9a-f-]{36}$/iu.test(id))continue
+-   try{const dir=this.directory(id);this.anchors.set(dir,await this.identity(dir));await this.owner(id);const info=await this.regular(join(dir,'session.json'));if(info.size>IMPORT_JOURNAL_MAX_BYTES)continue;const raw=JSON.parse(await readFile(join(dir,'session.json'),'utf8'));validateImportBudgetState(raw);validateImportSemanticState(raw);if(!this.validJournal(raw,id))continue;const s=raw as ImportSession;if(s.phase==='discarded'||s.phase==='completed')continue;recovered.push(s)}catch(error){if(error instanceof ImportBudgetPolicyError||error instanceof ImportSemanticStateError)throw error;/* Unowned or damaged data is never removed. */}
+-  }
+-  recovered.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));this.session=recovered[0]??null
+-  if(this.session){const s=this.session;sanitizeImportRuntimeDiagnostics(s,true);
+-   captureImportLegacyBudget(s)
+-   // Older journals already bind successful analysis to this scope through the
+-   // grant. Keep that checkpoint identity before revoking sending permission.
+-   if(!s.analysisCheckpoint&&s.target&&s.steps.length&&s.analysisGrant?.hash===importScopeHash(s,'analyze'))s.analysisCheckpoint={hash:s.analysisGrant.hash,target:{...s.target}}
+-   s.epoch++;s.targetNeedsAuthorization=!!s.target;if(['running','recognizing','publishing'].includes(s.phase)){s.resumePhase=s.phase;s.phase='paused'}s.classificationGrant=undefined;s.analysisGrant=undefined;s.models=await this.options.models();await this.save()}
+-  this.initialized=true
+- })}
+- private validJournal(value:unknown,id:string):value is ImportSession{
+-  if(!value||typeof value!=='object')return false;const s=value as ImportSession
+-  const valid=s.version===1&&s.id===id&&Number.isSafeInteger(s.revision)&&Number.isSafeInteger(s.epoch)&&typeof s.title==='string'&&typeof s.originalProse==='string'&&typeof s.workingProse==='string'&&typeof s.updatedAt==='string'&&['source','recognizing','select','confirm','running','paused','conflicts','failed','publishing','completed','discarded'].includes(s.phase)&&['files','units','selected','targets','artifacts','conflicts','patches','chapters','steps','notFound','decisions'].every(key=>Array.isArray((s as unknown as Record<string,unknown>)[key]))&&!!s.coverage&&typeof s.coverage==='object'&&s.files.length<=5001&&s.files.every(f=>typeof f.id==='string'&&typeof f.text==='string'&&typeof f.path==='string')&&s.units.every(u=>typeof u.id==='string'&&typeof u.text==='string'&&[...IMPORT_KINDS,'unknown','excluded'].includes(u.kind))&&s.selected.every(k=>IMPORT_KINDS.includes(k))&&s.targets.every(k=>IMPORT_TARGETS.includes(k))
+-  if(!valid)return false;try{validateImportBudgetState(s);validateImportSemanticState(s);validatePdfStoredFields(s.files,s.pdfPageDecisionEvents);return true}catch{return false}
+- }
+- async act(input:unknown):Promise<ImportResponse>{
+-  const parsed=importActionSchema.safeParse(input);if(!parsed.success)throw Error('导入操作参数无效')
+-  const action=parsed.data
+-  if(this.candidateBlocked){if(action.type==='current')return this.response();if(!['pause','cancel','cancel-pdf-preview','read-source'].includes(action.type))throw new CandidateCommittedBlocked()}
+-  if(action.type==='cancel-pdf-preview')return this.cancelPdfPreview(action.id,action.requestId)
+-  if(!this.initialized)await this.initialize()
+-  if(action.type==='read-pdf-page')return this.readPdfPage(action)
+-  if(action.type==='report-pdf-preview-failure')return this.reportPdfFailure(action)
+-  if(['pause','cancel'].includes(action.type)){this.cancelPdfWork();const generation=this.pdfGeneration;await this.drainPdfWork();try{return await this.stopAction(action as Extract<ImportAction,{type:'pause'|'cancel'}>)}finally{if(this.pdfGeneration===generation&&!this.pdf.active){try{this.options.assertPdfOwner?.();this.pdf.reopen()}catch{/* lifecycle close retains closed admission */}}}}
+-  this.actions++
+-  try{return await this.serial(async()=>{this.assert();if(this.candidateBlocked){if(action.type==='current')return this.response();if(action.type==='read-source')return this.readSource(this.require(action),action.fileId,action.offset??0,action.limit??32768);throw new CandidateCommittedBlocked()}if(action.type==='current'){if(this.session){captureImportLegacyBudget(this.session);this.session.models=await this.options.models();await this.ensurePdfInspections(this.session)}return this.response()};if(action.type==='choose')return this.choose(action.mode,!!action.append);const s=this.require(action);if(action.type==='read-source')return this.readSource(s,action.fileId,action.offset??0,action.limit??32768);if(this.jobs.size)throw Error('导入正在处理，请先暂停');if(this.pdfRequests.size)throw Error('PDF预览正在处理，请先完成或取消');if(['completed','discarded','publishing'].includes(s.phase)&&action.type!=='repair-target')throw Error('当前导入已结束或正在保存')
+-   if(this.stopping)throw Error('导入正在暂停，请等待在途请求结束')
+-   if(s.publication&&!['choose-target','start','resume','retry','repair-target','discard'].includes(action.type))throw Error('保存已开始，请保留原导入计划并重试')
+-   if(['start','resume','retry','resolve','apply-patches','repair-target'].includes(action.type))validatePdfPageReviews(s.files)
+-   switch(action.type){
+-    case 'set-pdf-page-decisions':return this.setPdfDecisions(s,action)
+-    case 'reselect-source':await this.reselectPdfSource(s,action.fileId);break
+-    case 'include':{const previous=available(s),file=this.file(s,action.fileId);if(action.included&&file.error)throw Error('请重新选择可读取的来源');file.included=action.included;this.invalidate(s,true);this.defaultNewKinds(s,previous);break}
+-    case 'move':{const i=s.files.findIndex(f=>f.id===action.fileId),j=i+action.delta;if(i<0||j<0||j>=s.files.length)throw Error('来源排序无效');[s.files[i],s.files[j]]=[s.files[j],s.files[i]];s.units=s.files.flatMap(f=>s.units.filter(u=>u.fileId===f.id).sort((a,b)=>a.start-b.start));this.invalidate(s,true);break}
+-    case 'set-range':{const previous=available(s),f=this.file(s,action.fileId);if(action.end<=action.start||!safeImportBoundary(f.text,action.start)||!safeImportBoundary(f.text,action.end))throw Error('片段范围无效或拆分了字符');const units:ImportUnit[]=[];for(const u of s.units){if(u.fileId!==f.id||u.end<=action.start||u.start>=action.end){units.push(u);continue}for(const [start,end,kind] of [[u.start,Math.max(u.start,action.start),u.kind],[Math.max(u.start,action.start),Math.min(u.end,action.end),action.kind],[Math.min(u.end,action.end),u.end,u.kind]] as const)if(end>start)units.push({...u,id:`${f.id}:${start}:${end}`,start,end,text:f.text.slice(start,end),kind})}s.units=units;this.invalidate(s,true);this.defaultNewKinds(s,previous);break}
+-    case 'set-encoding':{const previous=available(s),f=this.file(s,action.fileId);const decoded=await (this.options.redecode??(async(file,encoding)=>(await import('./novel-import-files')).redecodeNovelFile(file,encoding)))(f,action.encoding);s.files[s.files.indexOf(f)]=decoded;s.units=s.files.flatMap(file=>file.id===f.id?classifyLocalUnits([decoded],splitImportUnits([decoded])):s.units.filter(u=>u.fileId===file.id));this.invalidate(s,true);this.defaultNewKinds(s,previous);break}
+-    case 'set-chapters':{const text=s.workingRevision?s.workingProse:sourceBody(s);this.invalidate(s,false);s.chapters=importSessionChapters(s,text,action.cuts);s.phase='confirm';break}
+-    case 'select':{const found=available(s);if(action.selected.some(k=>!found.includes(k)))throw Error('不能选择未识别出的来源内容');if(s.selected.includes('body')!==action.selected.includes('body')){s.originalProse='';s.workingProse='';s.workingRevision=0;s.workingUnits=undefined;s.chapters=[]}s.selected=action.selected;s.targets=action.targets;s.infer=action.infer;this.invalidate(s,false);s.phase='select';break}
+-    case 'set-title':s.title=action.title;s.phase=s.phase==='source'?'source':'confirm';break
+-    case 'classify':await this.classify(s,action.mode,action.consent);break
+-    case 'choose-target':await this.chooseTarget(s);break
+-    case 'start':if(await this.start(s,action.consent,!!s.publication))return this.response();break
+-    case 'resume':case 'retry':if(await this.resume(s,action.consent))return this.response();break
+-    case 'resolve':await this.resolveConflict(s,action);break
+-    case 'apply-patches':applyImportPatches(s,action.patchIds);s.epoch++;break
+-    case 'repair-target':if(!this.options.repairTarget)throw Error('当前目标没有可修复的保存记录');if(s.targetNeedsAuthorization)throw Error('请先重新授权保存目录');await this.options.repairTarget(structuredClone(s));s.error=undefined;break
+-    case 'discard':await this.discard(s);return this.response()
+-    default:throw Error('当前导入操作不可用')
+-   }
+-   await this.save();return this.response()
+-  })}catch(error){if(error instanceof PdfFileChanged)await this.serial(async()=>{const current=this.session;if(current?.id===error.sessionId){this.markPdfSourceChanged(current,this.file(current,error.fileId));await this.save()}});throw error}finally{this.actions--}
+- }
+- private require(action:{id:string;revision?:number}){const s=this.session;if(!s||s.id!==action.id)throw Error('当前导入任务已变化');if(action.revision!==undefined&&s.revision!==action.revision)throw Error('导入版本已过期，请刷新后重试');return s}
+- private file(s:ImportSession,id:string){const file=s.files.find(f=>f.id===id);if(!file)throw Error('来源文件无效');return file}
+- private readSource(s:ImportSession,id:string,offset:number,limit:number):ImportResponse{const file=this.file(s,id);if(offset>file.text.length)throw Error('原文分页位置无效');if(!safeImportBoundary(file.text,offset))offset--;let end=Math.min(file.text.length,offset+limit);if(!safeImportBoundary(file.text,end))end--;return {...this.response(),source:{fileId:id,offset,total:file.text.length,text:file.text.slice(offset,end),units:s.units.filter(u=>u.fileId===id&&u.end>offset&&u.start<end).map(({id,start,end,kind,part})=>({id,start,end,kind,part}))}}}
+- private invalidate(s:ImportSession,source:boolean){const preserveManual=s.semanticVersion===1&&!source&&s.chapterDetection?.mode==='manual'&&s.chapters.map(c=>c.content).join('')===sourceBody(s);s.epoch++;s.analysisGrant=undefined;delete (s as CheckpointSession).analysisCheckpoint;delete (s as CheckpointSession).classificationCheckpoint;if(s.semanticVersion===1){delete s.semanticState;delete s.mappingWarnings;}s.classificationGrant=source?undefined:s.classificationGrant;s.coverage={};s.artifacts=[];s.conflicts=[];s.patches=[];s.decisions=[];s.notFound=[];s.steps=[];s.error=undefined;if(source||!s.workingRevision){s.originalProse='';s.workingProse='';s.workingRevision=0;s.workingUnits=undefined;if(!preserveManual)s.chapters=importSessionChapters(s,sourceBody(s))}if(source){s.selected=s.selected.filter(k=>available(s).includes(k));s.phase='source'}}
+- private defaultNewKinds(s:ImportSession,previous:ImportSession['selected']){s.selected=[...new Set([...s.selected,...available(s).filter(k=>!previous.includes(k))])];s.chapters=importSessionChapters(s,s.workingRevision?s.workingProse:sourceBody(s))}
+- private async choose(mode:'files'|'folder'|undefined,append:boolean){
+-  if(this.session&&!['completed','discarded'].includes(this.session.phase)&&!append)return this.response()
+-  if(append&&(!this.session||this.jobs.size||!['source','select','confirm'].includes(this.session.phase)))throw Error('当前不能添加来源')
+-  const generation=this.pdfGeneration
+-  const selection=await this.options.choose(mode);if(!selection?.length)return this.response();this.assert()
+-  const grants=typeof selection[0]==='string'?undefined:selection as ImportSourceGrant[],paths=grants?grants.map(item=>item.path):selection as string[]
+-  const protectedRoots=[this.options.root,...await this.options.protectedDirectories()]
+-  const files=await (this.options.scan??(async(p,o)=>(await import('./novel-import-files')).scanNovelSources(p,o)))(paths,{protectedRoots,...(grants?{grants}:{}),pdfClient:this.pdf,operationId:randomUUID(),assertCurrent:()=>this.pdfAssert(generation)});this.assert()
+-  if(!files.length)throw Error('所选来源中没有可导入的文本文件，请重新选择')
+-  const {NOVEL_SOURCE_LIMITS:limits}=await import('./novel-import-files'),combined=[...(append?this.session!.files:[]),...files]
+-  if(combined.length>limits.files+1||combined.filter(f=>!f.error).length>limits.files||combined.reduce((n,f)=>n+(f.text?f.bytes:0),0)>limits.totalBytes||combined.reduce((n,f)=>n+f.text.length,0)>limits.characters)throw Error('来源累计总量超过导入限制，请减少文件后重试')
+-  if(!append){const id=randomUUID(),now=new Date().toISOString();await this.checkDirectory(this.rootPath);const dir=this.directory(id);await mkdir(dir,{mode:0o700});this.anchors.set(dir,await this.identity(dir));const handle=await open(join(dir,'.owner'),'wx',0o600);try{await handle.writeFile(marker+id+'\n');await handle.sync()}finally{await handle.close()};this.session={semanticVersion:1,version:1,id,revision:0,phase:'source',title:files[0].name.replace(/\.[^.]+$/u,''),files:[],units:[],selected:[],targets:[...IMPORT_TARGETS],infer:true,artifacts:[],conflicts:[],patches:[],originalProse:'',workingProse:'',workingRevision:0,chapters:[],steps:[],coverage:{},notFound:[],epoch:0,createdAt:now,updatedAt:now,decisions:[]}}
+-  const s=this.session!,previous=available(s);for(const f of files){if(s.files.some(existing=>existing.id===f.id))throw Error('来源标识重复，请重新选择');if(s.files.some(existing=>existing.hash&&existing.hash===f.hash)){f.included=false;f.error='重复内容，请核对并排除'}s.files.push(f);s.units.push(...classifyLocalUnits([f],splitImportUnits([f])))}
+-  this.invalidate(s,true);s.selected=[...new Set([...s.selected,...available(s).filter(k=>!previous.includes(k))])];s.chapters=importSessionChapters(s,sourceBody(s));captureImportLegacyBudget(s);s.models=await this.options.models();if(!append){const policy=createImportBudgetPolicy(s.models);if(policy)s.budgetPolicy=policy;else captureImportLegacyBudget(s)}await this.save();return this.response()
+- }
+- private prunePdfAbilities(){const now=Date.now();for(const [id,value]of this.pdfTokens)if(value.expires<=now)this.pdfTokens.delete(id);for(const [id,value]of this.pdfIssued)if(value.expires<=now)this.pdfIssued.delete(id);while(this.pdfTokens.size>PDF_LIMITS.tokens)this.pdfTokens.delete(this.pdfTokens.keys().next().value!);while(this.pdfIssued.size>PDF_LIMITS.tokens)this.pdfIssued.delete(this.pdfIssued.keys().next().value!)}
+- private cachePdf(key:string,bitmap:PdfBitmap){this.pdfCache.delete(key);this.pdfCache.set(key,bitmap);while(this.pdfCache.size>PDF_LIMITS.cachePages||[...this.pdfCache.values()].reduce((size,value)=>size+value.png.byteLength,0)>PDF_LIMITS.cacheBytes)this.pdfCache.delete(this.pdfCache.keys().next().value!)}
+- private assertPdfPhase(s:ImportSession){if(!['source','select','confirm','paused','failed'].includes(s.phase)||s.publication||this.jobs.size)throw Error('当前阶段不能核对PDF页面，请先暂停或完成保存')}
+- private async ensurePdfInspections(s:ImportSession){
+-  const generation=this.pdfGeneration
+-  for(const file of s.files.filter(file=>file.format==='pdf'&&file.included&&!file.pdfInspection&&!file.pdfSourceInvalidated)){
+-   if(!file.proof||!file.hash){this.markPdfSourceChanged(s,file);await this.save();continue}
+-   const result=await this.pdf.inspect({path:file.path,proof:file.proof,ancestors:file.ancestors,hash:file.hash},{operationId:randomUUID(),sourceTextPolicy:'legacy',assertCurrent:()=>{this.pdfAssert(generation);if(this.session!==s)throw stopped()}})
+-   this.pdfAssert(generation)
+-   if(result.extracted.text!==file.text||file.pages&&importHash(result.extracted.pages)!==importHash(file.pages)){file.pdfSourceInvalidated=true;s.error='旧PDF文字表示不一致，已保留原草稿，请重新选择来源并重新授权';await this.save();continue}
+-   file.pdfInspection=result.extracted.pdfInspection;await this.save()
+-  }
+- }
+- private markPdfSourceChanged(s:ImportSession,file:ImportFile){
+-  if(!file.pdfSourceInvalidated&&file.pdfInspection){const at=new Date().toISOString();for(const page of file.pdfInspection.pages.filter(page=>page.raster==='present')){const decision=file.pdfPageDecisions?.find(value=>value.page===page.page);(s.pdfPageDecisionEvents??=[]).push({fileId:file.id,page:page.page,sourceHash:file.hash,ledgerHash:file.pdfInspection.ledgerHash,resourceProfileHash:file.pdfInspection.resourceProfileHash,decision:'pending',action:'source-invalidated',at,decisionRevision:(decision?.decisionRevision??0)+1})}}
+-  file.pdfSourceInvalidated=true;delete file.pdfPageDecisions;this.pdfTokens.clear();for(const [id,value]of this.pdfIssued)if(value.fileId===file.id)this.pdfIssued.delete(id);this.pdfCache.clear();this.invalidate(s,true);s.error='来源PDF已变化，旧确认已失效，请重新选择原文件'
+- }
+- private async readPdfPage(action:Extract<ImportAction,{type:'read-pdf-page'}>):Promise<ImportResponse>{
+-  this.actions++
+-  let prepared:{session:ImportSession;file:ImportFile;sourceKey:string;epoch:number;generation:number}|undefined
+-  try{
+-   prepared=await this.serial(async()=>{this.assertCandidateOpen();const s=this.require(action);this.assertPdfPhase(s);const file=this.file(s,action.fileId),inspection=file.pdfInspection
+-    if(file.format!=='pdf'||!file.included||!inspection||!file.proof||file.pdfSourceInvalidated||!inspection.pages.some(page=>page.page===action.page))throw Error('PDF页号或授权来源无效，请重新核对来源')
+-    validatePdfStoredFields([file]);if(this.pdfRequests.has(action.requestId)||this.pdfCanceled.has(action.requestId)||this.pdfIssued.has(action.requestId))throw Error('PDF预览请求已存在或已取消')
+-    this.pdfRequests.set(action.requestId,{sessionId:s.id,fileId:file.id,page:action.page,operationId:action.requestId})
+-    return {session:s,file,sourceKey:pdfSourceKey(file),epoch:s.epoch,generation:this.pdfGeneration}
+-   })
+-   const {session:s,file,sourceKey,epoch,generation}=prepared,key=s.id+':'+sourceKey+':'+action.page
+-   const bitmap=await this.pdf.preview(file,action.page,{operationId:action.requestId,assertCurrent:()=>{this.pdfAssert(generation);this.current(s,epoch);if(s.revision!==action.revision||pdfSourceKey(file)!==sourceKey||!this.pdfRequests.has(action.requestId))throw stopped()}},this.pdfCache.get(key))
+-   return await this.serial(async()=>{this.pdfAssert(generation);this.current(s,epoch);if(s.revision!==action.revision||pdfSourceKey(file)!==sourceKey||!this.pdfRequests.has(action.requestId))throw stopped()
+-    if(bitmap.resourceProfileHash!==file.pdfInspection!.resourceProfileHash)throw new PdfJobError('resource-missing')
+-    if(file.pdfPreviewFailures?.some(failure=>failure.page===action.page)){file.pdfPreviewFailures=file.pdfPreviewFailures.filter(failure=>failure.page!==action.page);if(!file.pdfPreviewFailures.length)delete file.pdfPreviewFailures;await this.save()}
+-    this.cachePdf(key,bitmap);this.prunePdfAbilities();const expires=Date.now()+PDF_LIMITS.tokenMs
+-    this.pdfIssued.set(action.requestId,{sessionId:s.id,fileId:file.id,page:action.page,sourceKey,revision:s.revision,requestRevision:action.revision,expires})
+-    let previewToken:string|undefined
+-    if(file.pdfInspection!.pages.find(page=>page.page===action.page)?.raster==='present'&&!file.pdfInspection!.blocker){previewToken=randomUUID();this.pdfTokens.set(previewToken,{sessionId:s.id,fileId:file.id,page:action.page,sourceKey,revision:s.revision,requestRevision:action.revision,requestId:action.requestId,expires,pngHash:createHash('sha256').update(bitmap.png).digest('hex')})}
+-    this.prunePdfAbilities()
+-    const pdfPage:ImportPdfPageResponse={status:'ready',requestId:action.requestId,id:s.id,requestRevision:action.revision,fileId:file.id,page:action.page,ledgerHash:file.pdfInspection!.ledgerHash,mime:'image/png',png:bitmap.png,width:bitmap.width,height:bitmap.height,pageWidth:bitmap.pageWidth,pageHeight:bitmap.pageHeight,...(previewToken?{previewToken}:{})}
+-    return {...this.response(),pdfPage}
+-   })
+-  }catch(error){
+-   if(error instanceof CandidateCommittedBlocked||error instanceof DOMException&&error.name==='AbortError'||!prepared)throw error
+-   const {session:s,file,generation}=prepared
+-   return this.serial(async()=>{this.assertCandidateOpen();if(this.session!==s||this.pdfGeneration!==generation)throw stopped();const sourceChanged=!(error instanceof PdfJobError)||error.code==='source-changed',code=sourceChanged?'source-changed':error.code==='busy'?'budget':error.code
+-    let failureChanged=sourceChanged
+-    if(sourceChanged)this.markPdfSourceChanged(s,file)
+-    else if(!file.pdfPreviewFailures?.some(failure=>failure.page===action.page&&failure.code===code)){file.pdfPreviewFailures=[...(file.pdfPreviewFailures??[]).filter(failure=>failure.page!==action.page),{page:action.page,code,at:new Date().toISOString()}];failureChanged=true}
+-    for(const [id,value]of this.pdfTokens)if(value.fileId===file.id&&value.page===action.page)this.pdfTokens.delete(id)
+-    if(failureChanged)await this.save()
+-    return {...this.response(),pdfPage:{status:'failed',requestId:action.requestId,id:s.id,requestRevision:action.revision,fileId:file.id,page:action.page,ledgerHash:file.pdfInspection?.ledgerHash??'',code} as ImportPdfPageResponse}
+-   })
+-  }finally{this.pdfRequests.delete(action.requestId);this.actions--}
+- }
+- private async reportPdfFailure(action:Extract<ImportAction,{type:'report-pdf-preview-failure'}>){
+-  return this.serial(async()=>{this.assertCandidateOpen();const s=this.require({id:action.id});this.prunePdfAbilities();const issued=this.pdfIssued.get(action.requestId),file=this.file(s,action.fileId)
+-   const latest=[...this.pdfIssued].findLast(([,value])=>value.sessionId===s.id&&value.fileId===file.id&&value.page===action.page&&value.sourceKey===pdfSourceKey(file))
+-   if(latest?.[0]!==action.requestId)throw Error('PDF预览报告已失效，请重新核对')
+-   if(!issued||issued.sessionId!==s.id||issued.fileId!==file.id||issued.page!==action.page||![issued.requestRevision,issued.revision].includes(action.revision)||issued.sourceKey!==pdfSourceKey(file)||s.publication||['completed','discarded'].includes(s.phase))throw Error('PDF预览报告已失效，请重新核对')
+-   for(const [id,value]of this.pdfTokens)if(value.fileId===file.id&&value.page===action.page)this.pdfTokens.delete(id)
+-   if(!file.pdfPreviewFailures?.some(failure=>failure.page===action.page&&failure.code==='render-failed')){file.pdfPreviewFailures=[...(file.pdfPreviewFailures??[]).filter(failure=>failure.page!==action.page),{page:action.page,code:'render-failed',at:new Date().toISOString()}];await this.save()}
+-   return this.response()
+-  })
+- }
+- private async setPdfDecisions(s:ImportSession,action:Extract<ImportAction,{type:'set-pdf-page-decisions'}>){
+-  this.assertPdfPhase(s);if(this.pdfRequests.size)throw Error('请等待当前PDF预览结束')
+-  const file=this.file(s,action.fileId),inspection=file.pdfInspection;validatePdfStoredFields([file]);this.prunePdfAbilities()
+-  const ocrDecision=inspection?.blocker==='ocr-required'&&inspection.pageCount!==null&&!file.pdfPreviewFailures?.length&&action.changes.every(change=>change.decision!=='exclude-image')&&!inspection.pages.some(page=>page.raster==='unknown'||page.textState==='failed'||page.textState==='not-scanned'||page.textState==='empty'&&page.raster==='none'||page.errors?.some(code=>code!=='PDF_BUNDLED_FONT_FALLBACK'))
+-  if(file.format!=='pdf'||!file.included||!inspection||inspection.ledgerHash!==action.ledgerHash||inspection.scanState!=='complete'||inspection.blocker&&!ocrDecision||file.pdfSourceInvalidated)throw Error('PDF检查或来源已失效，请重新核对')
+-  const changes=action.changes.filter(change=>file.pdfPageDecisions?.find(value=>value.page===change.page)?.decision!==change.decision)
+-  if(!changes.length)return this.response()
+-  for(const change of changes){if(!inspection.pages.some(page=>page.page===change.page&&page.raster==='present'))throw Error('此PDF页尚未完成图像检查');if(change.decision==='exclude-image'){const token=this.pdfTokens.get(change.previewToken);if(!token||token.sessionId!==s.id||token.fileId!==file.id||token.page!==change.page||token.revision!==s.revision||token.sourceKey!==pdfSourceKey(file)||file.pdfPreviewFailures?.some(failure=>failure.page===change.page))throw Error('PDF预览确认已过期，请重新预览这一页')}}
+-  const generation=this.pdfGeneration
+-  try{await this.pdf.verify(file,{operationId:randomUUID(),assertCurrent:()=>this.pdfAssert(generation)})}catch(error){if(error instanceof DOMException&&error.name==='AbortError'||error instanceof PdfJobError&&error.code!=='source-changed')throw error;throw new PdfFileChanged(s.id,file.id)}
+-  const next=[...(file.pdfPageDecisions??[])],events:ImportPdfPageDecisionEvent[]=[],at=new Date().toISOString()
+-  for(const change of changes){const index=next.findIndex(value=>value.page===change.page),old=index>=0?next[index]:undefined,value:ImportPdfPageDecision={fileId:file.id,page:change.page,sourceHash:file.hash,proof:structuredClone(file.proof!),ledgerHash:inspection.ledgerHash,resourceProfileHash:inspection.resourceProfileHash,decision:change.decision,confirmedAt:at,decisionRevision:(old?.decisionRevision??0)+1};if(index>=0)next[index]=value;else next.push(value);events.push({fileId:file.id,page:change.page,sourceHash:file.hash,ledgerHash:inspection.ledgerHash,resourceProfileHash:inspection.resourceProfileHash,decision:change.decision,action:change.decision==='exclude-image'?'confirm':change.decision==='pending'?'revoke':change.decision,at,decisionRevision:value.decisionRevision})}
+-  file.pdfPageDecisions=next.sort((a,b)=>a.page-b.page);s.pdfPageDecisionEvents=[...(s.pdfPageDecisionEvents??[]),...events];this.invalidate(s,true);await this.save();this.pdfTokens.clear();return this.response()
++ private async commitCandidate(owner:ImportSession,candidate:ImportSession,parkedResumePhase:ImportSession['resumePhase']='running'){
++  this.assertCandidateOpen();const desired={phase:candidate.phase,resumePhase:candidate.resumePhase,error:candidate.error,targetNeedsAuthorization:candidate.targetNeedsAuthorization};let committed=false
++  candidate.phase='paused';candidate.resumePhase=parkedResumePhase;candidate.error=candidateBlockedMessage;candidate.targetNeedsAuthorization=true
++  try{await this.save(candidate,false,()=>{committed=true;for(const key of Object.keys(owner))delete (owner as unknown as Record<string,unknown>)[key];Object.assign(owner,candidate)})}catch(error){if(!committed)throw error;this.candidateBlocked=true;throw new CandidateCommittedBlocked()}
++  Object.assign(owner,desired)
++ }
++ private async rollback(s:ImportSession){try{const path=join(this.directory(s.id),'session.json');await this.owner(s.id);const info=await this.regular(path);if(info.size>IMPORT_JOURNAL_MAX_BYTES)return;const previous=JSON.parse(await readFile(path,'utf8'));if(!this.validJournal(previous,s.id))return;for(const key of Object.keys(s))delete (s as unknown as Record<string,unknown>)[key];Object.assign(s,previous)}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT'){this.session=null;this.options.changed?.(null)}}}
++ private response():ImportResponse{return {view:this.session?toImportView(this.session):null}}
++ async initialize(){await this.serial(async()=>{
++  if(this.initialized)return;this.assert()
++  // No symlink component may lead to the private journal root.
++  for(let cursor=resolve(this.options.root);;cursor=dirname(cursor)){const stat=await lstat(cursor);if(stat.isSymbolicLink()||!stat.isDirectory())throw Error('导入任务根目录无效');if(dirname(cursor)===cursor)break}
++  await mkdir(this.rootPath,{mode:0o700,recursive:true});this.anchors.set(this.rootPath,await this.identity(this.rootPath))
++  const recovered:ImportSession[]=[]
++  for(const id of await readdir(this.rootPath)){
++   if(!/^[0-9a-f-]{36}$/iu.test(id))continue
++   try{const dir=this.directory(id);this.anchors.set(dir,await this.identity(dir));await this.owner(id);const info=await this.regular(join(dir,'session.json'));if(info.size>IMPORT_JOURNAL_MAX_BYTES)continue;const raw=JSON.parse(await readFile(join(dir,'session.json'),'utf8'));validateImportBudgetState(raw);validateImportSemanticState(raw);if(!this.validJournal(raw,id))continue;const s=raw as ImportSession;if(s.phase==='discarded'||s.phase==='completed')continue;recovered.push(s)}catch(error){if(error instanceof ImportBudgetPolicyError||error instanceof ImportSemanticStateError)throw error;/* Unowned or damaged data is never removed. */}
++  }
++  recovered.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));this.session=recovered[0]??null
++  if(this.session){const s=this.session;sanitizeImportRuntimeDiagnostics(s,true);
++   captureImportLegacyBudget(s)
++   // Older journals already bind successful analysis to this scope through the
++   // grant. Keep that checkpoint identity before revoking sending permission.
++   if(!s.analysisCheckpoint&&s.target&&s.steps.length&&s.analysisGrant?.hash===importScopeHash(s,'analyze'))s.analysisCheckpoint={hash:s.analysisGrant.hash,target:{...s.target}}
++   s.epoch++;s.targetNeedsAuthorization=!!s.target;if(['running','recognizing','publishing'].includes(s.phase)){s.resumePhase=s.phase;s.phase='paused'}s.classificationGrant=undefined;s.analysisGrant=undefined;s.models=await this.options.models();await this.save()}
++  this.initialized=true
++ })}
++ private validJournal(value:unknown,id:string):value is ImportSession{
++  if(!value||typeof value!=='object')return false;const s=value as ImportSession
++  const valid=s.version===1&&s.id===id&&Number.isSafeInteger(s.revision)&&Number.isSafeInteger(s.epoch)&&typeof s.title==='string'&&typeof s.originalProse==='string'&&typeof s.workingProse==='string'&&typeof s.updatedAt==='string'&&['source','recognizing','select','confirm','running','paused','conflicts','failed','publishing','completed','discarded'].includes(s.phase)&&['files','units','selected','targets','artifacts','conflicts','patches','chapters','steps','notFound','decisions'].every(key=>Array.isArray((s as unknown as Record<string,unknown>)[key]))&&!!s.coverage&&typeof s.coverage==='object'&&s.files.length<=5001&&s.files.every(f=>typeof f.id==='string'&&typeof f.text==='string'&&typeof f.path==='string')&&s.units.every(u=>typeof u.id==='string'&&typeof u.text==='string'&&[...IMPORT_KINDS,'unknown','excluded'].includes(u.kind))&&s.selected.every(k=>IMPORT_KINDS.includes(k))&&s.targets.every(k=>IMPORT_TARGETS.includes(k))
++  if(!valid)return false;try{validateImportBudgetState(s);validateImportSemanticState(s);validatePdfStoredFields(s.files,s.pdfPageDecisionEvents);return true}catch{return false}
++ }
++ async act(input:unknown):Promise<ImportResponse>{
++  const parsed=importActionSchema.safeParse(input);if(!parsed.success)throw Error('导入操作参数无效')
++  const action=parsed.data
++  if(this.candidateBlocked){if(action.type==='current')return this.response();if(!['pause','cancel','cancel-pdf-preview','read-source'].includes(action.type))throw new CandidateCommittedBlocked()}
++  if(action.type==='cancel-pdf-preview')return this.cancelPdfPreview(action.id,action.requestId)
++  if(!this.initialized)await this.initialize()
++  if(action.type==='read-pdf-page')return this.readPdfPage(action)
++  if(action.type==='report-pdf-preview-failure')return this.reportPdfFailure(action)
++  if(['pause','cancel'].includes(action.type)){this.cancelPdfWork();const generation=this.pdfGeneration;await this.drainPdfWork();try{return await this.stopAction(action as Extract<ImportAction,{type:'pause'|'cancel'}>)}finally{if(this.pdfGeneration===generation&&!this.pdf.active){try{this.options.assertPdfOwner?.();this.pdf.reopen()}catch{/* lifecycle close retains closed admission */}}}}
++  this.actions++
++  try{return await this.serial(async()=>{this.assert();if(this.candidateBlocked){if(action.type==='current')return this.response();if(action.type==='read-source')return this.readSource(this.require(action),action.fileId,action.offset??0,action.limit??32768);throw new CandidateCommittedBlocked()}if(action.type==='current'){if(this.session){captureImportLegacyBudget(this.session);this.session.models=await this.options.models();await this.ensurePdfInspections(this.session)}return this.response()};if(action.type==='choose')return this.choose(action.mode,!!action.append);const s=this.require(action);if(action.type==='read-source')return this.readSource(s,action.fileId,action.offset??0,action.limit??32768);if(this.jobs.size)throw Error('导入正在处理，请先暂停');if(this.pdfRequests.size)throw Error('PDF预览正在处理，请先完成或取消');if(['completed','discarded','publishing'].includes(s.phase)&&action.type!=='repair-target')throw Error('当前导入已结束或正在保存')
++   if(this.stopping)throw Error('导入正在暂停，请等待在途请求结束')
++   if(s.publication&&!['choose-target','start','resume','retry','repair-target','discard'].includes(action.type))throw Error('保存已开始，请保留原导入计划并重试')
++   if(['start','resume','retry','resolve','apply-patches','repair-target'].includes(action.type))validatePdfPageReviews(s.files)
++   switch(action.type){
++    case 'set-pdf-page-decisions':return this.setPdfDecisions(s,action)
++    case 'reselect-source':if(this.file(s,action.fileId).format==='pdf')await this.reselectPdfSource(s,action.fileId);else await this.reselectOrdinarySource(s,action.fileId);break
++    case 'include':{const previous=available(s),file=this.file(s,action.fileId);if(action.included&&file.error)throw Error('请重新选择可读取的来源');file.included=action.included;this.invalidate(s,true);this.defaultNewKinds(s,previous);break}
++    case 'move':{const i=s.files.findIndex(f=>f.id===action.fileId),j=i+action.delta;if(i<0||j<0||j>=s.files.length)throw Error('来源排序无效');[s.files[i],s.files[j]]=[s.files[j],s.files[i]];s.units=s.files.flatMap(f=>s.units.filter(u=>u.fileId===f.id).sort((a,b)=>a.start-b.start));this.invalidate(s,true);break}
++    case 'set-range':{const previous=available(s),f=this.file(s,action.fileId);if(action.end<=action.start||!safeImportBoundary(f.text,action.start)||!safeImportBoundary(f.text,action.end))throw Error('片段范围无效或拆分了字符');const units:ImportUnit[]=[];for(const u of s.units){if(u.fileId!==f.id||u.end<=action.start||u.start>=action.end){units.push(u);continue}for(const [start,end,kind] of [[u.start,Math.max(u.start,action.start),u.kind],[Math.max(u.start,action.start),Math.min(u.end,action.end),action.kind],[Math.min(u.end,action.end),u.end,u.kind]] as const)if(end>start)units.push({...u,id:`${f.id}:${start}:${end}`,start,end,text:f.text.slice(start,end),kind})}s.units=units;this.invalidate(s,true);this.defaultNewKinds(s,previous);break}
++    case 'set-encoding':{const previous=available(s),f=this.file(s,action.fileId);const decoded=await (this.options.redecode??(async(file,encoding)=>(await import('./novel-import-files')).redecodeNovelFile(file,encoding)))(f,action.encoding);s.files[s.files.indexOf(f)]=decoded;s.units=s.files.flatMap(file=>file.id===f.id?classifyLocalUnits([decoded],splitImportUnits([decoded])):s.units.filter(u=>u.fileId===file.id));this.invalidate(s,true);this.defaultNewKinds(s,previous);break}
++    case 'set-chapters':{const text=s.workingRevision?s.workingProse:sourceBody(s);this.invalidate(s,false);s.chapters=importSessionChapters(s,text,action.cuts);s.phase='confirm';break}
++    case 'select':{const found=available(s);if(action.selected.some(k=>!found.includes(k)))throw Error('不能选择未识别出的来源内容');if(s.selected.includes('body')!==action.selected.includes('body')){s.originalProse='';s.workingProse='';s.workingRevision=0;s.workingUnits=undefined;s.chapters=[]}s.selected=action.selected;s.targets=action.targets;s.infer=action.infer;this.invalidate(s,false);s.phase='select';break}
++    case 'set-title':s.title=action.title;s.phase=s.phase==='source'?'source':'confirm';break
++    case 'classify':await this.classify(s,action.mode,action.consent);break
++    case 'choose-target':await this.chooseTarget(s);break
++    case 'start':if(await this.start(s,action.consent,!!s.publication))return this.response();break
++    case 'resume':case 'retry':if(await this.resume(s,action.consent))return this.response();break
++    case 'resolve':await this.resolveConflict(s,action);break
++    case 'apply-patches':applyImportPatches(s,action.patchIds);s.epoch++;break
++    case 'repair-target':if(!this.options.repairTarget)throw Error('当前目标没有可修复的保存记录');if(s.targetNeedsAuthorization)throw Error('请先重新授权保存目录');await this.options.repairTarget(structuredClone(s));s.error=undefined;break
++    case 'discard':await this.discard(s);return this.response()
++    default:throw Error('当前导入操作不可用')
++   }
++   await this.save();return this.response()
++  })}catch(error){if(error instanceof PdfFileChanged)await this.serial(async()=>{const current=this.session;if(current?.id===error.sessionId){this.markPdfSourceChanged(current,this.file(current,error.fileId));await this.save()}});throw error}finally{this.actions--}
++ }
++ private require(action:{id:string;revision?:number}){const s=this.session;if(!s||s.id!==action.id)throw Error('当前导入任务已变化');if(action.revision!==undefined&&s.revision!==action.revision)throw Error('导入版本已过期，请刷新后重试');return s}
++ private file(s:ImportSession,id:string){const file=s.files.find(f=>f.id===id);if(!file)throw Error('来源文件无效');return file}
++ private readSource(s:ImportSession,id:string,offset:number,limit:number):ImportResponse{const file=this.file(s,id);if(offset>file.text.length)throw Error('原文分页位置无效');if(!safeImportBoundary(file.text,offset))offset--;let end=Math.min(file.text.length,offset+limit);if(!safeImportBoundary(file.text,end))end--;return {...this.response(),source:{fileId:id,offset,total:file.text.length,text:file.text.slice(offset,end),units:s.units.filter(u=>u.fileId===id&&u.end>offset&&u.start<end).map(({id,start,end,kind,part})=>({id,start,end,kind,part}))}}}
++ private invalidate(s:ImportSession,source:boolean){const preserveManual=s.semanticVersion===1&&!source&&s.chapterDetection?.mode==='manual'&&s.chapters.map(c=>c.content).join('')===sourceBody(s);s.epoch++;s.analysisGrant=undefined;delete (s as CheckpointSession).analysisCheckpoint;delete (s as CheckpointSession).classificationCheckpoint;if(s.semanticVersion===1){delete s.semanticState;delete s.mappingWarnings;}s.classificationGrant=source?undefined:s.classificationGrant;s.coverage={};s.artifacts=[];s.conflicts=[];s.patches=[];s.decisions=[];s.notFound=[];s.steps=[];s.error=undefined;if(source||!s.workingRevision){s.originalProse='';s.workingProse='';s.workingRevision=0;s.workingUnits=undefined;if(!preserveManual)s.chapters=importSessionChapters(s,sourceBody(s))}if(source){s.selected=s.selected.filter(k=>available(s).includes(k));s.phase='source'}}
++ private defaultNewKinds(s:ImportSession,previous:ImportSession['selected']){s.selected=[...new Set([...s.selected,...available(s).filter(k=>!previous.includes(k))])];s.chapters=importSessionChapters(s,s.workingRevision?s.workingProse:sourceBody(s))}
++ private async choose(mode:'files'|'folder'|undefined,append:boolean){
++  if(this.session&&!['completed','discarded'].includes(this.session.phase)&&!append)return this.response()
++  if(append&&(!this.session||this.jobs.size||!['source','select','confirm'].includes(this.session.phase)))throw Error('当前不能添加来源')
++  const generation=this.pdfGeneration
++  const selection=await this.options.choose(mode);if(!selection?.length)return this.response();this.assert()
++  const grants=typeof selection[0]==='string'?undefined:selection as ImportSourceGrant[],paths=grants?grants.map(item=>item.path):selection as string[]
++  const protectedRoots=[this.options.root,...await this.options.protectedDirectories()]
++  const files=await (this.options.scan??(async(p,o)=>(await import('./novel-import-files')).scanNovelSources(p,o)))(paths,{protectedRoots,...(grants?{grants}:{}),pdfClient:this.pdf,operationId:randomUUID(),assertCurrent:()=>this.pdfAssert(generation)});this.assert()
++  if(!files.length)throw Error('所选来源中没有可导入的文本文件，请重新选择')
++  const {NOVEL_SOURCE_LIMITS:limits}=await import('./novel-import-files'),combined=[...(append?this.session!.files:[]),...files]
++  if(combined.length>limits.files+1||combined.filter(f=>!f.error).length>limits.files||combined.reduce((n,f)=>n+(f.text?f.bytes:0),0)>limits.totalBytes||combined.reduce((n,f)=>n+f.text.length,0)>limits.characters)throw Error('来源累计总量超过导入限制，请减少文件后重试')
++  if(!append){const id=randomUUID(),now=new Date().toISOString();await this.checkDirectory(this.rootPath);const dir=this.directory(id);await mkdir(dir,{mode:0o700});this.anchors.set(dir,await this.identity(dir));const handle=await open(join(dir,'.owner'),'wx',0o600);try{await handle.writeFile(marker+id+'\n');await handle.sync()}finally{await handle.close()};this.session={semanticVersion:1,version:1,id,revision:0,phase:'source',title:files[0].name.replace(/\.[^.]+$/u,''),files:[],units:[],selected:[],targets:[...IMPORT_TARGETS],infer:true,artifacts:[],conflicts:[],patches:[],originalProse:'',workingProse:'',workingRevision:0,chapters:[],steps:[],coverage:{},notFound:[],epoch:0,createdAt:now,updatedAt:now,decisions:[]}}
++  const s=this.session!,previous=available(s);for(const f of files){if(s.files.some(existing=>existing.id===f.id))throw Error('来源标识重复，请重新选择');if(s.files.some(existing=>existing.hash&&existing.hash===f.hash)){f.included=false;f.error='重复内容，请核对并排除'}s.files.push(f);s.units.push(...classifyLocalUnits([f],splitImportUnits([f])))}
++  this.invalidate(s,true);s.selected=[...new Set([...s.selected,...available(s).filter(k=>!previous.includes(k))])];s.chapters=importSessionChapters(s,sourceBody(s));captureImportLegacyBudget(s);s.models=await this.options.models();if(!append){const policy=createImportBudgetPolicy(s.models);if(policy)s.budgetPolicy=policy;else captureImportLegacyBudget(s)}await this.save();return this.response()
++ }
++ private prunePdfAbilities(){const now=Date.now();for(const [id,value]of this.pdfTokens)if(value.expires<=now)this.pdfTokens.delete(id);for(const [id,value]of this.pdfIssued)if(value.expires<=now)this.pdfIssued.delete(id);while(this.pdfTokens.size>PDF_LIMITS.tokens)this.pdfTokens.delete(this.pdfTokens.keys().next().value!);while(this.pdfIssued.size>PDF_LIMITS.tokens)this.pdfIssued.delete(this.pdfIssued.keys().next().value!)}
++ private cachePdf(key:string,bitmap:PdfBitmap){this.pdfCache.delete(key);this.pdfCache.set(key,bitmap);while(this.pdfCache.size>PDF_LIMITS.cachePages||[...this.pdfCache.values()].reduce((size,value)=>size+value.png.byteLength,0)>PDF_LIMITS.cacheBytes)this.pdfCache.delete(this.pdfCache.keys().next().value!)}
++ private assertPdfPhase(s:ImportSession){if(!['source','select','confirm','paused','failed'].includes(s.phase)||s.publication||this.jobs.size)throw Error('当前阶段不能核对PDF页面，请先暂停或完成保存')}
++ private async ensurePdfInspections(s:ImportSession){
++  const generation=this.pdfGeneration
++  for(const file of s.files.filter(file=>file.format==='pdf'&&file.included&&!file.pdfInspection&&!file.pdfSourceInvalidated)){
++   if(!file.proof||!file.hash){this.markPdfSourceChanged(s,file);await this.save();continue}
++   const result=await this.pdf.inspect({path:file.path,proof:file.proof,ancestors:file.ancestors,hash:file.hash},{operationId:randomUUID(),sourceTextPolicy:'legacy',assertCurrent:()=>{this.pdfAssert(generation);if(this.session!==s)throw stopped()}})
++   this.pdfAssert(generation)
++   if(result.extracted.text!==file.text||file.pages&&importHash(result.extracted.pages)!==importHash(file.pages)){file.pdfSourceInvalidated=true;s.error='旧PDF文字表示不一致，已保留原草稿，请重新选择来源并重新授权';await this.save();continue}
++   file.pdfInspection=result.extracted.pdfInspection;await this.save()
++  }
++ }
++ private markPdfSourceChanged(s:ImportSession,file:ImportFile){
++  if(!file.pdfSourceInvalidated&&file.pdfInspection){const at=new Date().toISOString();for(const page of file.pdfInspection.pages.filter(page=>page.raster==='present')){const decision=file.pdfPageDecisions?.find(value=>value.page===page.page);(s.pdfPageDecisionEvents??=[]).push({fileId:file.id,page:page.page,sourceHash:file.hash,ledgerHash:file.pdfInspection.ledgerHash,resourceProfileHash:file.pdfInspection.resourceProfileHash,decision:'pending',action:'source-invalidated',at,decisionRevision:(decision?.decisionRevision??0)+1})}}
++  file.pdfSourceInvalidated=true;delete file.pdfPageDecisions;this.pdfTokens.clear();for(const [id,value]of this.pdfIssued)if(value.fileId===file.id)this.pdfIssued.delete(id);this.pdfCache.clear();this.invalidate(s,true);s.error='来源PDF已变化，旧确认已失效，请重新选择原文件'
++ }
++ private async readPdfPage(action:Extract<ImportAction,{type:'read-pdf-page'}>):Promise<ImportResponse>{
++  this.actions++
++  let prepared:{session:ImportSession;file:ImportFile;sourceKey:string;epoch:number;generation:number}|undefined
++  try{
++   prepared=await this.serial(async()=>{this.assertCandidateOpen();const s=this.require(action);this.assertPdfPhase(s);const file=this.file(s,action.fileId),inspection=file.pdfInspection
++    if(file.format!=='pdf'||!file.included||!inspection||!file.proof||file.pdfSourceInvalidated||!inspection.pages.some(page=>page.page===action.page))throw Error('PDF页号或授权来源无效，请重新核对来源')
++    validatePdfStoredFields([file]);if(this.pdfRequests.has(action.requestId)||this.pdfCanceled.has(action.requestId)||this.pdfIssued.has(action.requestId))throw Error('PDF预览请求已存在或已取消')
++    this.pdfRequests.set(action.requestId,{sessionId:s.id,fileId:file.id,page:action.page,operationId:action.requestId})
++    return {session:s,file,sourceKey:pdfSourceKey(file),epoch:s.epoch,generation:this.pdfGeneration}
++   })
++   const {session:s,file,sourceKey,epoch,generation}=prepared,key=s.id+':'+sourceKey+':'+action.page
++   const bitmap=await this.pdf.preview(file,action.page,{operationId:action.requestId,assertCurrent:()=>{this.pdfAssert(generation);this.current(s,epoch);if(s.revision!==action.revision||pdfSourceKey(file)!==sourceKey||!this.pdfRequests.has(action.requestId))throw stopped()}},this.pdfCache.get(key))
++   return await this.serial(async()=>{this.pdfAssert(generation);this.current(s,epoch);if(s.revision!==action.revision||pdfSourceKey(file)!==sourceKey||!this.pdfRequests.has(action.requestId))throw stopped()
++    if(bitmap.resourceProfileHash!==file.pdfInspection!.resourceProfileHash)throw new PdfJobError('resource-missing')
++    if(file.pdfPreviewFailures?.some(failure=>failure.page===action.page)){file.pdfPreviewFailures=file.pdfPreviewFailures.filter(failure=>failure.page!==action.page);if(!file.pdfPreviewFailures.length)delete file.pdfPreviewFailures;await this.save()}
++    this.cachePdf(key,bitmap);this.prunePdfAbilities();const expires=Date.now()+PDF_LIMITS.tokenMs
++    this.pdfIssued.set(action.requestId,{sessionId:s.id,fileId:file.id,page:action.page,sourceKey,revision:s.revision,requestRevision:action.revision,expires})
++    let previewToken:string|undefined
++    if(file.pdfInspection!.pages.find(page=>page.page===action.page)?.raster==='present'&&!file.pdfInspection!.blocker){previewToken=randomUUID();this.pdfTokens.set(previewToken,{sessionId:s.id,fileId:file.id,page:action.page,sourceKey,revision:s.revision,requestRevision:action.revision,requestId:action.requestId,expires,pngHash:createHash('sha256').update(bitmap.png).digest('hex')})}
++    this.prunePdfAbilities()
++    const pdfPage:ImportPdfPageResponse={status:'ready',requestId:action.requestId,id:s.id,requestRevision:action.revision,fileId:file.id,page:action.page,ledgerHash:file.pdfInspection!.ledgerHash,mime:'image/png',png:bitmap.png,width:bitmap.width,height:bitmap.height,pageWidth:bitmap.pageWidth,pageHeight:bitmap.pageHeight,...(previewToken?{previewToken}:{})}
++    return {...this.response(),pdfPage}
++   })
++  }catch(error){
++   if(error instanceof CandidateCommittedBlocked||error instanceof DOMException&&error.name==='AbortError'||!prepared)throw error
++   const {session:s,file,generation}=prepared
++   return this.serial(async()=>{this.assertCandidateOpen();if(this.session!==s||this.pdfGeneration!==generation)throw stopped();const sourceChanged=!(error instanceof PdfJobError)||error.code==='source-changed',code=sourceChanged?'source-changed':error.code==='busy'?'budget':error.code
++    let failureChanged=sourceChanged
++    if(sourceChanged)this.markPdfSourceChanged(s,file)
++    else if(!file.pdfPreviewFailures?.some(failure=>failure.page===action.page&&failure.code===code)){file.pdfPreviewFailures=[...(file.pdfPreviewFailures??[]).filter(failure=>failure.page!==action.page),{page:action.page,code,at:new Date().toISOString()}];failureChanged=true}
++    for(const [id,value]of this.pdfTokens)if(value.fileId===file.id&&value.page===action.page)this.pdfTokens.delete(id)
++    if(failureChanged)await this.save()
++    return {...this.response(),pdfPage:{status:'failed',requestId:action.requestId,id:s.id,requestRevision:action.revision,fileId:file.id,page:action.page,ledgerHash:file.pdfInspection?.ledgerHash??'',code} as ImportPdfPageResponse}
++   })
++  }finally{this.pdfRequests.delete(action.requestId);this.actions--}
++ }
++ private async reportPdfFailure(action:Extract<ImportAction,{type:'report-pdf-preview-failure'}>){
++  return this.serial(async()=>{this.assertCandidateOpen();const s=this.require({id:action.id});this.prunePdfAbilities();const issued=this.pdfIssued.get(action.requestId),file=this.file(s,action.fileId)
++   const latest=[...this.pdfIssued].findLast(([,value])=>value.sessionId===s.id&&value.fileId===file.id&&value.page===action.page&&value.sourceKey===pdfSourceKey(file))
++   if(latest?.[0]!==action.requestId)throw Error('PDF预览报告已失效，请重新核对')
++   if(!issued||issued.sessionId!==s.id||issued.fileId!==file.id||issued.page!==action.page||![issued.requestRevision,issued.revision].includes(action.revision)||issued.sourceKey!==pdfSourceKey(file)||s.publication||['completed','discarded'].includes(s.phase))throw Error('PDF预览报告已失效，请重新核对')
++   for(const [id,value]of this.pdfTokens)if(value.fileId===file.id&&value.page===action.page)this.pdfTokens.delete(id)
++   if(!file.pdfPreviewFailures?.some(failure=>failure.page===action.page&&failure.code==='render-failed')){file.pdfPreviewFailures=[...(file.pdfPreviewFailures??[]).filter(failure=>failure.page!==action.page),{page:action.page,code:'render-failed',at:new Date().toISOString()}];await this.save()}
++   return this.response()
++  })
++ }
++ private async setPdfDecisions(s:ImportSession,action:Extract<ImportAction,{type:'set-pdf-page-decisions'}>){
++  this.assertPdfPhase(s);if(this.pdfRequests.size)throw Error('请等待当前PDF预览结束')
++  const file=this.file(s,action.fileId),inspection=file.pdfInspection;validatePdfStoredFields([file]);this.prunePdfAbilities()
++  const ocrDecision=inspection?.blocker==='ocr-required'&&inspection.pageCount!==null&&!file.pdfPreviewFailures?.length&&action.changes.every(change=>change.decision!=='exclude-image')&&!inspection.pages.some(page=>page.raster==='unknown'||page.textState==='failed'||page.textState==='not-scanned'||page.textState==='empty'&&page.raster==='none'||page.errors?.some(code=>code!=='PDF_BUNDLED_FONT_FALLBACK'))
++  if(file.format!=='pdf'||!file.included||!inspection||inspection.ledgerHash!==action.ledgerHash||inspection.scanState!=='complete'||inspection.blocker&&!ocrDecision||file.pdfSourceInvalidated)throw Error('PDF检查或来源已失效，请重新核对')
++  const changes=action.changes.filter(change=>file.pdfPageDecisions?.find(value=>value.page===change.page)?.decision!==change.decision)
++  if(!changes.length)return this.response()
++  for(const change of changes){if(!inspection.pages.some(page=>page.page===change.page&&page.raster==='present'))throw Error('此PDF页尚未完成图像检查');if(change.decision==='exclude-image'){const token=this.pdfTokens.get(change.previewToken);if(!token||token.sessionId!==s.id||token.fileId!==file.id||token.page!==change.page||token.revision!==s.revision||token.sourceKey!==pdfSourceKey(file)||file.pdfPreviewFailures?.some(failure=>failure.page===change.page))throw Error('PDF预览确认已过期，请重新预览这一页')}}
++  const generation=this.pdfGeneration
++  try{await this.pdf.verify(file,{operationId:randomUUID(),assertCurrent:()=>this.pdfAssert(generation)})}catch(error){if(error instanceof DOMException&&error.name==='AbortError'||error instanceof PdfJobError&&error.code!=='source-changed')throw error;throw new PdfFileChanged(s.id,file.id)}
++  const next=[...(file.pdfPageDecisions??[])],events:ImportPdfPageDecisionEvent[]=[],at=new Date().toISOString()
++  for(const change of changes){const index=next.findIndex(value=>value.page===change.page),old=index>=0?next[index]:undefined,value:ImportPdfPageDecision={fileId:file.id,page:change.page,sourceHash:file.hash,proof:structuredClone(file.proof!),ledgerHash:inspection.ledgerHash,resourceProfileHash:inspection.resourceProfileHash,decision:change.decision,confirmedAt:at,decisionRevision:(old?.decisionRevision??0)+1};if(index>=0)next[index]=value;else next.push(value);events.push({fileId:file.id,page:change.page,sourceHash:file.hash,ledgerHash:inspection.ledgerHash,resourceProfileHash:inspection.resourceProfileHash,decision:change.decision,action:change.decision==='exclude-image'?'confirm':change.decision==='pending'?'revoke':change.decision,at,decisionRevision:value.decisionRevision})}
++  file.pdfPageDecisions=next.sort((a,b)=>a.page-b.page);s.pdfPageDecisionEvents=[...(s.pdfPageDecisionEvents??[]),...events];this.invalidate(s,true);await this.save();this.pdfTokens.clear();return this.response()
++ }
++ private async reselectOrdinarySource(s:CheckpointSession,fileId:string){
++  if(!['source','select','confirm','paused','failed'].includes(s.phase)||s.publication||s.steps.length||s.artifacts.length||s.decisions.length||s.semanticState||s.workingRevision!==0||s.analysisCheckpoint||Object.entries(s.coverage).some(([kind,ids])=>kind!=='classify'&&(!Array.isArray(ids)||ids.length))||this.jobs.size||this.operations.size||this.pdfRequests.size||this.pdf.active)throw Error('当前阶段不能重新选择来源，请保留原草稿')
++  const old=this.file(s,fileId),textFormat=['txt','md','html','htm'].includes(old.format)
++  if(!['txt','md','doc','docx','html','htm'].includes(old.format)||old.error||old.requiresEncodingConfirmation||!old.text||!old.hash||!old.proof||!old.ancestors?.length||textFormat&&!old.encoding)throw Error('来源尚未完成读取和编码确认，请保留原草稿')
++  const epoch=s.epoch,generation=this.pdfGeneration,current=()=>{this.assertCandidateOpen();this.assert();if(this.session!==s||s.epoch!==epoch||this.pdfGeneration!==generation||this.stopping)throw stopped()}
++  const selection=await this.options.choose();current();if(!selection?.length)return
++  if(selection.length!==1)throw Error('请只重新选择相同原文件，原来源保持不变')
++  const grant=typeof selection[0]==='string'?await captureNovelSourceGrant(selection[0]):selection[0];current()
++  if(grant.directory||grant.path!==old.path)throw Error('请重新选择相同原文件，原来源保持不变')
++  const protectedRoots=[this.options.root,...await this.options.protectedDirectories()];current()
++  const files=await (this.options.scan??(async(paths,options)=>(await import('./novel-import-files')).scanNovelSources(paths,options)))([grant.path],{protectedRoots,grants:[grant],assertCurrent:current});current()
++  const fresh=files[0]
++  if(files.length!==1||!fresh||fresh.path!==old.path||fresh.format!==old.format||fresh.hash!==old.hash||fresh.bytes!==old.bytes||!fresh.proof||!fresh.ancestors?.length||fresh.proof.size!==String(fresh.bytes))throw Error('来源文件或完整读取身份不符，原草稿保持不变')
++  if(!textFormat&&(fresh.error||fresh.requiresEncodingConfirmation))throw Error('来源无法完整解析，原草稿保持不变')
++  const verify=this.options.verifySources??(async(files:ImportFile[])=>(await import('./novel-import-files')).verifyNovelSources(files))
++  // A text decoder may reject the default encoding AFTER the complete byte
++  // read. Only that complete fresh identity can authorize the old encoding;
++  // filesystem failures have no proof/hash and never reach this transient check.
++  await verify([{...fresh,included:true,error:undefined}]);current()
++  const decoded=textFormat?await (this.options.redecode??(async(file,encoding)=>(await import('./novel-import-files')).redecodeNovelFile(file,encoding)))(fresh,old.encoding!):fresh;current()
++  if(decoded.error||decoded.requiresEncodingConfirmation||decoded.path!==old.path||decoded.format!==old.format||decoded.hash!==old.hash||decoded.bytes!==old.bytes||decoded.text!==old.text||decoded.encoding!==old.encoding||!decoded.proof||!decoded.ancestors?.length)throw Error('来源解释文本或确认编码不符，原草稿保持不变')
++  await verify([{...decoded,included:true}]);current()
++  const candidate=structuredClone(s),index=candidate.files.findIndex(file=>file.id===fileId)
++  candidate.files[index]={...candidate.files[index],proof:structuredClone(decoded.proof),ancestors:structuredClone(decoded.ancestors)}
++  delete candidate.classificationGrant;delete candidate.analysisGrant;delete candidate.classificationCheckpoint;delete candidate.analysisCheckpoint
++  candidate.phase='source';delete candidate.resumePhase;delete candidate.error;candidate.epoch++;if(candidate.target)candidate.targetNeedsAuthorization=true
++  await this.commitCandidate(s,candidate,'source')
+  }
+  private async reselectPdfSource(s:ImportSession,fileId:string){
+   this.assertPdfPhase(s);const old=this.file(s,fileId);if(old.format!=='pdf')throw Error('此来源不是PDF')
+--- /dev/null
++++ b/tests/unit/novel-import-source-reselection.test.ts
+@@ -0,0 +1,61 @@
++import assert from 'node:assert/strict'
++import {test} from 'node:test'
++import fs from 'node:fs/promises'
++import {syncBuiltinESMExports} from 'node:module'
++import {tmpdir} from 'node:os'
++import {join,basename,resolve} from 'node:path'
++import JSZip from 'jszip'
++import {NovelImportController} from '../../desktop/main/novel-import'
++import {captureNovelSourceGrant,scanNovelSources,redecodeNovelFile,verifyNovelSources,type ImportSourceGrant} from '../../desktop/main/novel-import-files'
++import {sourceBody,safeImportBoundary,importScopeHash} from '../../desktop/core/novel-import'
++import type {ImportFile,ImportModel,ImportSession} from '../../desktop/shared/novel-import'
++
++type Options=ConstructorParameters<typeof NovelImportController>[0]
++type Selection=Awaited<ReturnType<Options['choose']>>
++const model:ImportModel={id:'source-test',name:'合成模型',modelId:'synthetic',endpoint:'https://synthetic.invalid',authRevision:1,contextWindow:1048576}
++async function docx(){const zip=new JSZip();zip.file('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');zip.file('word/document.xml','<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>合成正文首😀</w:t><w:br/><w:t>完整末句</w:t></w:r></w:p></w:body></w:document>');zip.file('word/footnotes.xml','<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>合成附注</w:t></w:r></w:p></w:footnotes>');return zip.generateAsync({type:'nodebuffer'})}
++async function replaceSame(path:string){const bytes=await fs.readFile(path),next=path+'.replacement';await fs.writeFile(next,bytes);await fs.rename(next,path)}
++const clone=<T>(value:T):T=>structuredClone(value)
++async function fixture(spec:{name?:string;bytes?:Buffer;encoding?:string;other?:boolean}={}){
++ const temp=await fs.realpath(await fs.mkdtemp(join(tmpdir(),'novel-source-reselection-'))),root=join(temp,'app'),sources=join(temp,'sources'),target=join(temp,'target');for(const dir of [root,sources,target])await fs.mkdir(dir)
++ const path=join(sources,spec.name??'合成正文.txt');await fs.writeFile(path,spec.bytes??Buffer.from('第一章\r\n完整开头😀。\r\n\r\n第二章\r\n完整结尾。\r\n'))
++ const paths=[path];if(spec.other){const other=join(sources,'另一原来源.md');await fs.writeFile(other,'第一章\n另一份正文原字。\n');paths.push(other)}
++ let selection:Selection=paths,picks=0,ai=0,publishes=0,controller:NovelImportController
++ const targetStat=await fs.stat(target,{bigint:true}),options:Options={root,choose:async()=>{picks++;return selection},chooseTarget:async()=>({path:target,device:String(targetStat.dev),inode:String(targetStat.ino)}),protectedDirectories:async()=>[],models:async()=>({text:model,review:{...model,id:'review'}}),ai:async r=>{ai++;return r.phase==='classify'?{classifications:r.units.map(u=>({unitId:u.id,kind:'body' as const}))}:{notFound:true}},cancelAi:async()=>{},publish:async()=>{publishes++;throw Error('source reselection cannot publish')}}
++ controller=new NovelImportController(options)
++ const raw=()=>((controller as any).session as ImportSession),act=async(type:string,fields:Record<string,unknown>={})=>controller.act({type,...(type==='choose'||type==='current'?{}:{id:raw().id,revision:raw().revision}),...fields}),journal=()=>join(root,'novel-imports',raw().id,'session.json')
++ await controller.initialize();await act('choose',{mode:'files'});if(spec.encoding)await act('set-encoding',{fileId:raw().files[0].id,encoding:spec.encoding});for(const file of raw().files){assert.equal(file.error,undefined);assert.ok(!file.requiresEncodingConfirmation);await act('set-range',{fileId:file.id,start:0,end:file.text.length,kind:'body'})}
++ await act('classify',{mode:'local',consent:false});await act('select',{selected:['body'],targets:['character','scene'],infer:true});const body=sourceBody(raw());let cut=Math.floor(body.length/2);while(!safeImportBoundary(body,cut))cut--;await act('set-chapters',{cuts:[{start:0,title:'保留手动首章'},{start:cut,title:'保留手动末章'}]});await act('set-title',{title:'保留的合成草稿'});await act('choose-target')
++ const handle={temp,root,sources,path,options,raw,act,journal,get controller(){return controller},get picks(){return picks},get ai(){return ai},get publishes(){return publishes},setSelection(value:Selection){selection=value},async saved(){return JSON.parse(await fs.readFile(journal(),'utf8')) as ImportSession},async persist(){await (controller as any).save()},async reselect(){return act('reselect-source',{fileId:raw().files[0].id})},async reopen(){await controller.close();controller=new NovelImportController(options);await controller.initialize()},async dispose(){(controller as any).jobs.clear();(controller as any).pdfRequests.clear();delete (controller as any).pdf.active;await controller.close();await fs.rm(temp,{recursive:true,force:true})}}
++ return handle
++}
++type Fixture=Awaited<ReturnType<typeof fixture>>
++async function state(f:Fixture){return {live:clone(f.raw()),disk:await fs.readFile(f.journal(),'utf8'),owner:await fs.readFile(join(f.root,'novel-imports',f.raw().id,'.owner'),'utf8')}}
++async function unchanged(f:Fixture,before:Awaited<ReturnType<typeof state>>){assert.deepEqual(f.raw(),before.live);assert.equal(await fs.readFile(f.journal(),'utf8'),before.disk);assert.equal(await fs.readFile(join(f.root,'novel-imports',f.raw().id,'.owner'),'utf8'),before.owner);assert.equal(f.ai,0);assert.equal(f.publishes,0)}
++function stable(s:ImportSession){const v=JSON.parse(JSON.stringify(s)) as any;for(const key of ['revision','updatedAt','phase','resumePhase','error','epoch','classificationGrant','analysisGrant','classificationCheckpoint','analysisCheckpoint','targetNeedsAuthorization'])delete v[key];for(const f of v.files){delete f.proof;delete f.ancestors}return v}
++async function expectSuccess(f:Fixture){const before=clone(f.raw()),old=clone(before.files[0]);await replaceSame(f.path);await assert.rejects(verifyNovelSources([{...old,included:true}]),/变化/);f.setSelection([await captureNovelSourceGrant(f.path)]);const ai=f.ai,pub=f.publishes;await f.reselect();const now=f.raw();assert.deepEqual(stable(now),stable(before));assert.notDeepEqual(now.files[0].proof,old.proof);assert.equal(now.id,before.id);assert.equal(now.files[0].id,old.id);assert.equal(now.phase,'source');assert.equal(now.resumePhase,undefined);assert.equal(now.error,undefined);assert.equal(now.epoch,before.epoch+1);assert.equal(now.targetNeedsAuthorization,true);assert.equal(now.classificationGrant,undefined);assert.equal(now.analysisGrant,undefined);assert.equal((now as any).classificationCheckpoint,undefined);assert.equal((now as any).analysisCheckpoint,undefined);assert.equal(f.ai,ai);assert.equal(f.publishes,pub);await verifyNovelSources([{...now.files[0],included:true}]);assert.deepEqual(await f.saved(),JSON.parse(JSON.stringify(now)));return before}
++
++test('NI-SR01: fresh same-file grants retain complete preanalysis drafts and exact decoding',async t=>{
++ const cases=[{label:'TXT',name:'合成.txt'},{label:'MD with another source',name:'合成.md',other:true},{label:'HTML',name:'合成.html',bytes:Buffer.from('<html><body><p>完整首😀</p><p>完整末</p><script>不导入</script></body></html>')},{label:'HTM',name:'合成.htm',bytes:Buffer.from('<p>首行</p><p>末行😀</p>')},{label:'DOCX',name:'合成.docx',bytes:await docx()},{label:'permitted DOC',name:'合成.doc',bytes:await fs.readFile(resolve('tests/fixtures/novel-import/test01.doc'))},{label:'confirmed GB18030',name:'合成旧编码.txt',bytes:Buffer.concat([Buffer.from('first\r\n'),Buffer.from([0xd6,0xd0,0xce,0xc4]),Buffer.from('\r\nlast')]),encoding:'gb18030'},{label:'confirmed BOMless UTF16',name:'合成UTF16.txt',bytes:Buffer.from('first\r\n中文\r\nlast','utf16le'),encoding:'utf-16le'}]
++ for(const spec of cases)await t.test(spec.label,async()=>{const f=await fixture(spec);try{if(spec.encoding==='utf-16le'){await replaceSame(f.path);const scan=await scanNovelSources([f.path],{grants:[await captureNovelSourceGrant(f.path)]});assert.ok(scan[0].error);assert.ok(scan[0].proof&&scan[0].hash&&scan[0].ancestors?.length);assert.equal(scan[0].hash,f.raw().files[0].hash);assert.equal(scan[0].bytes,f.raw().files[0].bytes)}await expectSuccess(f);await replaceSame(f.path);await assert.rejects(verifyNovelSources([{...f.raw().files[0],included:true}]),/变化/)}finally{await f.dispose()}})
++ await t.test('fresh ancestor, excluded source and classification credit survive without authorization reuse',async()=>{const f=await fixture({other:true});try{await f.act('include',{fileId:f.raw().files[0].id,included:false});await f.act('set-chapters',{cuts:[{start:0,title:'排除一源后仍手动'}]});const s=f.raw();s.coverage={classify:s.units.map(u=>u.id)};s.classificationGrant={hash:importScopeHash(s,'classify'),textModel:clone(model)};s.analysisGrant={hash:importScopeHash(s,'analyze'),textModel:clone(model),reviewModel:{...model,id:'review'}};(s as any).classificationCheckpoint={sourceHash:'a'.repeat(64),resultHash:'b'.repeat(64)};await f.persist();const old=clone(s),parent=s.files[0].ancestors!.find(a=>a.path===f.sources)!;await fs.rename(f.sources,f.sources+'-old');await fs.mkdir(f.sources);for(const file of old.files)await fs.copyFile(join(f.sources+'-old',basename(file.path)),file.path);f.setSelection([f.path]);await f.reselect();assert.deepEqual(stable(f.raw()),stable(old));assert.notEqual(f.raw().files[0].ancestors!.find(a=>a.path===f.sources)!.inode,parent.inode);assert.deepEqual(f.raw().files[1],old.files[1]);assert.deepEqual(f.raw().coverage,old.coverage);assert.equal(f.raw().classificationGrant,undefined);assert.equal(f.raw().analysisGrant,undefined);assert.equal((f.raw() as any).classificationCheckpoint,undefined);assert.equal(f.raw().files[0].included,false);assert.equal(f.ai,0);await assert.rejects(f.act('classify',{mode:'ai',consent:false}),/允许/);assert.equal(f.ai,0);assert.equal(f.publishes,0)}finally{await f.dispose()}})
++})
++
++test('NI-SR02: rejection preserves owners and drafts and gates the picker before analysis',async t=>{
++ await t.test('cancel preserves all business fields',async()=>{const f=await fixture();try{f.setSelection(null);const before=await state(f);await f.reselect();const now=clone(f.raw()) as any,was=clone(before.live) as any;delete now.revision;delete now.updatedAt;delete was.revision;delete was.updatedAt;assert.deepEqual(now,was);assert.equal(f.ai,0);assert.equal(f.publishes,0)}finally{await f.dispose()}})
++ for(const mode of ['multiple','directory','other-path','changed-bytes','symlink','stale-grant','ancestor-drift','protected','scan-read-race','format-mismatch','decoded-text-mismatch','encoding-mismatch','decode-fails','docx-scan-error'] as const)await t.test(mode,async()=>{
++  const f=await fixture(mode==='docx-scan-error'?{name:'合成.docx',bytes:await docx()}:{});try{let redecodeCalls=0;const realScan=scanNovelSources;f.options.redecode=async(file,encoding)=>{redecodeCalls++;if(mode==='decoded-text-mismatch')return {...await redecodeNovelFile(file,encoding),text:file.text+'差异'};if(mode==='encoding-mismatch')return {...await redecodeNovelFile(file,encoding),encoding:'gb18030'};if(mode==='decode-fails')throw Error('受控最终旧编码失败');return redecodeNovelFile(file,encoding)}
++   if(mode==='multiple')f.setSelection([f.path,f.path]);else if(mode==='directory')f.setSelection([f.sources]);else if(mode==='other-path'||mode==='symlink'){const p=join(f.sources,'另一文件.txt');if(mode==='symlink')await fs.symlink(f.path,p);else await fs.copyFile(f.path,p);f.setSelection([p])}else if(mode==='changed-bytes'){await fs.writeFile(f.path,'改变后的原始字节');f.setSelection([f.path])}else if(mode==='stale-grant'||mode==='ancestor-drift'){const grant=await captureNovelSourceGrant(f.path);if(mode==='stale-grant')await replaceSame(f.path);else{await fs.rename(f.sources,f.sources+'-old');await fs.mkdir(f.sources);await fs.copyFile(join(f.sources+'-old',basename(f.path)),f.path)}f.setSelection([grant])}else f.setSelection([f.path])
++   if(mode==='protected')f.options.protectedDirectories=async()=>[f.sources]
++   if(['scan-read-race','format-mismatch','docx-scan-error'].includes(mode))f.options.scan=async(paths,options)=>{const files=await realScan(paths,options);if(mode==='scan-read-race')await replaceSame(f.path);if(mode==='format-mismatch')files[0].format='docx';if(mode==='docx-scan-error'){files[0].error='DOCX 受控解析失败';files[0].included=false;files[0].text=''}return files}
++   const before=await state(f);await assert.rejects(f.reselect());await unchanged(f,before);if(mode==='protected'||mode==='stale-grant'||mode==='ancestor-drift'||mode==='docx-scan-error')assert.equal(redecodeCalls,0)
++  }finally{await f.dispose()}
++ })
++ await t.test('fresh source changes after successful redecode still reject',async()=>{const f=await fixture();try{f.setSelection([f.path]);f.options.redecode=async(file,encoding)=>{const decoded=await redecodeNovelFile(file,encoding);await replaceSame(f.path);return decoded};const before=await state(f);await assert.rejects(f.reselect());await unchanged(f,before)}finally{await f.dispose()}})
++ for(const gate of ['running','recognizing','conflicts','publication','steps','artifacts','decisions','semanticState','workingRevision','coverage','analysisCheckpoint','jobs','pdf-request','pdf-active','old-error','unconfirmed'] as const)await t.test('before picker: '+gate,async()=>{const f=await fixture();const valid=clone(f.raw());try{const s=f.raw() as any,c=f.controller as any;if(['running','recognizing','conflicts'].includes(gate))s.phase=gate;else if(gate==='publication')s.publication={requestId:s.id};else if(['steps','artifacts','decisions'].includes(gate))s[gate]=[{}];else if(gate==='semanticState')s.semanticState={};else if(gate==='workingRevision')s.workingRevision=1;else if(gate==='coverage')s.coverage.character=['old-credit'];else if(gate==='analysisCheckpoint')s.analysisCheckpoint={hash:'old'};else if(gate==='jobs')c.jobs.add(new Promise(()=>{}));else if(gate==='pdf-request')c.pdfRequests.set('held',{});else if(gate==='pdf-active')Object.defineProperty(c.pdf,'active',{get:()=>1,configurable:true});else if(gate==='old-error')s.files[0].error='来源旧错误';else if(gate==='unconfirmed')s.files[0].requiresEncodingConfirmation=true;const picked=f.picks,before=await state(f);await assert.rejects(f.reselect());assert.equal(f.picks,picked);await unchanged(f,before)}finally{(f.controller as any).session=valid;await f.dispose()}})
++})
++
++test('NI-SR03: real candidate writes preserve precommit state and park post-rename commits as source',async t=>{
++ await t.test('actual temporary write failure does not adopt or alter old journal',async()=>{const f=await fixture();const originalOpen=fs.open;try{await replaceSame(f.path);f.setSelection([f.path]);const before=await state(f);let writes=0;fs.open=(async(...args:Parameters<typeof fs.open>)=>{const handle=await originalOpen(...args);if(String(args[0]).startsWith(join(f.root,'novel-imports',f.raw().id,'.session-')))return new Proxy(handle,{get(target,key){if(key==='writeFile')return async()=>{writes++;throw Error('受控候选写失败')};const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value}});return handle}) as typeof fs.open;syncBuiltinESMExports();await assert.rejects(f.reselect(),/受控候选写失败/);assert.equal(writes,1);await unchanged(f,before);assert.equal((f.controller as any).candidateBlocked,false)}finally{fs.open=originalOpen;syncBuiltinESMExports();await f.dispose()}})
++ await t.test('post-rename owner failure adopts identical paused source candidate and blocks until reopen',async()=>{const f=await fixture(),originalOwner=(f.controller as any).owner;try{await replaceSame(f.path);f.setSelection([f.path]);const before=await state(f),c=f.controller as any,owner=c.owner.bind(c);let rejected=0;c.owner=async(id:string)=>{await owner(id);if(await fs.readFile(f.journal(),'utf8')!==before.disk){rejected++;throw Error('受控提交后归属失败')}};await assert.rejects(f.reselect(),/检查点已保存为暂停/);assert.equal(rejected,1);const disk=await f.saved(),live=JSON.parse(JSON.stringify(f.raw()));assert.deepEqual(live,disk);assert.equal(disk.phase,'paused');assert.equal(disk.resumePhase,'source');assert.equal(c.candidateBlocked,true);assert.deepEqual(stable(disk),stable(before.live));assert.notDeepEqual(disk.files[0].proof,before.live.files[0].proof);await verifyNovelSources([{...disk.files[0],included:true}]);const frozen=await fs.readFile(f.journal(),'utf8');await f.act('current');await assert.rejects(f.act('retry',{consent:true}),/检查点已保存为暂停/);await f.controller.close();assert.equal(await fs.readFile(f.journal(),'utf8'),frozen);assert.equal(f.ai,0);assert.equal(f.publishes,0);await f.reopen();assert.equal(f.raw().id,before.live.id);assert.equal(f.raw().resumePhase,'source');assert.deepEqual(stable(f.raw()),stable(before.live));await f.act('resume',{consent:false});assert.equal(f.raw().phase,'confirm');assert.equal(f.raw().targetNeedsAuthorization,true);assert.equal(f.ai,0);await f.act('choose-target');await f.act('resume',{consent:false});assert.equal(f.raw().phase,'source');assert.equal(f.ai,0);await assert.rejects(f.act('classify',{mode:'ai',consent:false}),/允许/);await f.act('classify',{mode:'ai',consent:true});for(let i=0;i<1000&&f.raw().phase==='recognizing';i++)await new Promise(r=>setTimeout(r,1));assert.notEqual(f.raw().phase,'recognizing');assert.equal(f.ai,1);assert.equal(f.publishes,0)}finally{(f.controller as any).owner=originalOwner;await f.dispose()}})
++})

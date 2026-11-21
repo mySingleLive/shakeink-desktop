@@ -1,0 +1,59 @@
+{
+  "scope": "93 independent bounded code review; no actual app/model/data access",
+  "sources": [
+    {
+      "path": "desktop/service/novel-import-ai.ts",
+      "baselineHash": "f29c2c6003c6aa513471ff3fa5acfa132ae9cade1ce7ed9baf1860950aeb1d68",
+      "finalHash": "20b80cc24c14bde0d50e93d2521c129524aa82730805c665695aed10e7edc1ea"
+    },
+    {
+      "path": "tests/unit/novel-import-request-schema.test.ts",
+      "baselineHash": "5e44faf4e835a8a9102c5ab6492cfc2b468f4b9d22146af67e2c296a62690471",
+      "finalHash": "4485611f4f5262fabf8f8bc142aa822e5fff8a32f6d8a1d5353e645b50fbbfa6"
+    }
+  ],
+  "diffHash": "ecb09dda81ba713ceab19c52ca313b2d086401a049179899238cfe8a81d4b578",
+  "diffMatchesAuthor": true,
+  "serviceOnlyApprovedNarrativeNativeAndGraphPrechecks": true,
+  "originalWorldlineNativeBranchByteExact": true,
+  "originalHelpersAndAllLateCallsByteExact": true,
+  "oldJ01J03ByteExact": true,
+  "J04J05J06OnlyApprovedPremiseAndRealReconcileRouteAdaptations": true,
+  "preservedFiles": {
+    "desktop/main/novel-import.ts": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d",
+    "desktop/core/novel-import-ai-payload.ts": "239cac9bf2f40c7e1004ffb28cfc36ff834f98b549f6ae7326cfafb42187ab55",
+    "tests/unit/novel-import-ai.test.ts": "663097fb08265b6467aafc43223724b88287cfcc6c27342c84716206cf9c9903"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-J0[1234567]:",
+        "tests/unit/novel-import-request-schema.test.ts"
+      ],
+      "pass": 28,
+      "skip": 0,
+      "exit": 0,
+      "log": "narrative-schema-independent-j01-j07.txt",
+      "logHash": "e6c1e740d068ae9079f4ee4caef1f4028566bbae3b39ec6ca326b1f2aa344518"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-A0[789]:",
+        "tests/unit/novel-import-ai.test.ts"
+      ],
+      "pass": 12,
+      "skip": 0,
+      "exit": 0,
+      "log": "narrative-schema-independent-a07-a09.txt",
+      "logHash": "19fe6f86e28a3bbdcf5d8a54bd3fc2910f00cd330b5c6c789f26a21245b2147e"
+    }
+  ]
+}

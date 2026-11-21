@@ -1,0 +1,19 @@
+✔ NI-PDF05: only bounded PNG previews issue page and source bound confirmation tokens (85.602083ms)
+✔ NI-PDF14: actual missing-dimension and decode warnings block otherwise visible PDF pages (1296.10275ms)
+✔ NI-PDF05: decode failures bind issued lineage, preserve saved decisions and stay blocked until successful retry (1193.588917ms)
+✔ NI-PDF14: PDF worker budgets bound admission, canvas, cache and cleanup without accepting partial output (1.865ms)
+▶ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation
+  ✔ cancel (26.143458ms)
+  ✔ timeout (127.241208ms)
+✔ NI-PDF14: pending real post-verification IO stays charged after timeout or cancellation (153.780042ms)
+✔ NI-PDF03: page preview actions reject unsafe schemas, foreign files and stale revisions before IO (2.200958ms)
+✔ NI-PDF03: runtime page checks reject foreign, excluded and non-PDF sources before any IO (614.29975ms)
+✔ NI-PDF05: preview capabilities expire, remain page scoped and respect the bounded LRU (3005.186875ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6987.612125

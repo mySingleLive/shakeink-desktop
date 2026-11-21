@@ -1,0 +1,35 @@
+{
+  "trials": [
+    {
+      "ok": true,
+      "observations": [
+        {
+          "reason": "length",
+          "promptTokens": 51082,
+          "completionTokens": 32768,
+          "textCharacters": 50397,
+          "maxOutputTokens": 32768,
+          "wireStatus": "unavailable"
+        },
+        {
+          "reason": "stop",
+          "promptTokens": 51121,
+          "completionTokens": 1315,
+          "textCharacters": 2338,
+          "maxOutputTokens": 32768,
+          "wireStatus": "unavailable"
+        }
+      ],
+      "artifacts": 1
+    }
+  ],
+  "elapsedMs": 137518,
+  "stateUnchanged": true,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "scope": "same target first request reconstructed from saved snapshot; historical byte identity unproven",
+  "requestSha256": "94ac378dfa5c14e6de68bf7d2b5c11474e5fca6cd5fcd71646051e5a9ff26fce",
+  "fullSceneImportVerified": false
+}

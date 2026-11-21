@@ -1,0 +1,326 @@
+TAP version 13
+# Subtest: LOTM-DIAG01: explicit gates, successful generations and excluded stages stay silent
+    # Subtest: [null,null]
+    ok 1 - [null,null]
+      ---
+      duration_ms: 8.995709
+      ...
+    # Subtest: ["1",null]
+    ok 2 - ["1",null]
+      ---
+      duration_ms: 2.5135
+      ...
+    # Subtest: [null,"/private/tmp/synthetic"]
+    ok 3 - [null,"/private/tmp/synthetic"]
+      ---
+      duration_ms: 1.642042
+      ...
+    # Subtest: ["",""]
+    ok 4 - ["",""]
+      ---
+      duration_ms: 1.3235
+      ...
+    # Subtest: ["1",""]
+    ok 5 - ["1",""]
+      ---
+      duration_ms: 1.614875
+      ...
+    # Subtest: ["","/private/tmp/synthetic"]
+    ok 6 - ["","/private/tmp/synthetic"]
+      ---
+      duration_ms: 1.805208
+      ...
+    # Subtest: ["true","/private/tmp/synthetic"]
+    ok 7 - ["true","/private/tmp/synthetic"]
+      ---
+      duration_ms: 1.935792
+      ...
+    # Subtest: ["1","relative"]
+    ok 8 - ["1","relative"]
+      ---
+      duration_ms: 1.354625
+      ...
+    # Subtest: ["1","   "]
+    ok 9 - ["1","   "]
+      ---
+      duration_ms: 1.417667
+      ...
+    # Subtest: enabled final rejection once despite multiple JSON candidates
+    ok 10 - enabled final rejection once despite multiple JSON candidates
+      ---
+      duration_ms: 1.667958
+      ...
+    # Subtest: final success is silent
+    ok 11 - final success is silent
+      ---
+      duration_ms: 0.987
+      ...
+    # Subtest: final success is silent
+    ok 12 - final success is silent
+      ---
+      duration_ms: 1.478708
+      ...
+    # Subtest: success from second candidate after failed fenced candidate
+    ok 13 - success from second candidate after failed fenced candidate
+      ---
+      duration_ms: 1.08325
+      ...
+    # Subtest: excluded {"phase":"review"}
+    ok 14 - excluded {"phase":"review"}
+      ---
+      duration_ms: 0.829833
+      ...
+    # Subtest: excluded {"phase":"classify"}
+    ok 15 - excluded {"phase":"classify"}
+      ---
+      duration_ms: 0.436042
+      ...
+    # Subtest: excluded {"intent":"reconcile"}
+    ok 16 - excluded {"intent":"reconcile"}
+      ---
+      duration_ms: 0.569375
+      ...
+    # Subtest: excluded {}
+    ok 17 - excluded {}
+      ---
+      duration_ms: 0.832916
+      ...
+    1..17
+ok 1 - LOTM-DIAG01: explicit gates, successful generations and excluded stages stay silent
+  ---
+  duration_ms: 32.422584
+  ...
+# Subtest: LOTM-DIAG02: literal positions, strict geometry, UTF16 and four primary reasons
+    # Subtest: four primary reasons and mutually exclusive secondary counts
+    ok 1 - four primary reasons and mutually exclusive secondary counts
+      ---
+      duration_ms: 6.991208
+      ...
+    # Subtest: one-position
+    ok 2 - one-position
+      ---
+      duration_ms: 1.117792
+      ...
+    # Subtest: same-unit-two-positions
+    ok 3 - same-unit-two-positions
+      ---
+      duration_ms: 0.801042
+      ...
+    # Subtest: two-units
+    ok 4 - two-units
+      ---
+      duration_ms: 0.90725
+      ...
+    # Subtest: literal-only
+    ok 5 - literal-only
+      ---
+      duration_ms: 0.896166
+      ...
+    # Subtest: valid
+    ok 6 - valid
+      ---
+      duration_ms: 1.568333
+      ...
+    # Subtest: different-file
+    ok 7 - different-file
+      ---
+      duration_ms: 0.953833
+      ...
+    # Subtest: gap
+    ok 8 - gap
+      ---
+      duration_ms: 0.950208
+      ...
+    # Subtest: overlap
+    ok 9 - overlap
+      ---
+      duration_ms: 0.806166
+      ...
+    # Subtest: reverse
+    ok 10 - reverse
+      ---
+      duration_ms: 0.911666
+      ...
+    # Subtest: bad-length
+    ok 11 - bad-length
+      ---
+      duration_ms: 0.965583
+      ...
+    # Subtest: negative
+    ok 12 - negative
+      ---
+      duration_ms: 0.796833
+      ...
+    # Subtest: unsafe
+    ok 13 - unsafe
+      ---
+      duration_ms: 0.848166
+      ...
+    # Subtest: fractional
+    ok 14 - fractional
+      ---
+      duration_ms: 0.852666
+      ...
+    # Subtest: one-sided matches are never straddles
+    ok 15 - one-sided matches are never straddles
+      ---
+      duration_ms: 1.278041
+      ...
+    # Subtest: three-unit concatenation is not a two-unit boundary
+    not ok 16 - three-unit concatenation is not a two-unit boundary
+      ---
+      duration_ms: 3.821875
+      location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:9346'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        diagnostic (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:33:9)
+        TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:62:219)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:62:2)
+        async Test.run (node:internal/test_runner/test:797:9)
+        async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+      ...
+    # Subtest: multiple cross positions are not unique
+    ok 17 - multiple cross positions are not unique
+      ---
+      duration_ms: 1.401042
+      ...
+    # Subtest: other unit wins over a simultaneous unique cross
+    ok 18 - other unit wins over a simultaneous unique cross
+      ---
+      duration_ms: 0.873292
+      ...
+    1..18
+not ok 2 - LOTM-DIAG02: literal positions, strict geometry, UTF16 and four primary reasons
+  ---
+  duration_ms: 27.975416
+  location: '/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-anchor-diagnostics.test.ts:2:6308'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: LOTM-DIAG03: fixed data-only log cannot disclose synthetic secrets or dynamic paths
+ok 3 - LOTM-DIAG03: fixed data-only log cannot disclose synthetic secrets or dynamic paths
+  ---
+  duration_ms: 2.772
+  ...
+# Subtest: LOTM-DIAG04: no stale provenance, bounded work, saturation and diagnostics failures
+    # Subtest: invalid-json
+    ok 1 - invalid-json
+      ---
+      duration_ms: 0.865292
+      ...
+    # Subtest: incomplete
+    ok 2 - incomplete
+      ---
+      duration_ms: 0.70825
+      ...
+    # Subtest: network
+    ok 3 - network
+      ---
+      duration_ms: 0.737209
+      ...
+    # Subtest: cancellation suppresses diagnostics
+    ok 4 - cancellation suppresses diagnostics
+      ---
+      duration_ms: 0.96775
+      ...
+    # Subtest: seventh mixed issue false
+    ok 5 - seventh mixed issue false
+      ---
+      duration_ms: 3.960875
+      ...
+    # Subtest: seventh mixed issue true
+    ok 6 - seventh mixed issue true
+      ---
+      duration_ms: 1.970209
+      ...
+    # Subtest: issue count and truncated count saturate with only first hundred inspected
+    ok 7 - issue count and truncated count saturate with only first hundred inspected
+      ---
+      duration_ms: 63.616959
+      ...
+    # Subtest: quote UTF16 cap 2000
+    ok 8 - quote UTF16 cap 2000
+      ---
+      duration_ms: 1.631875
+      ...
+    # Subtest: quote UTF16 cap 2001
+    ok 9 - quote UTF16 cap 2001
+      ---
+      duration_ms: 1.05675
+      ...
+    # Subtest: unfinished two-million budget cannot claim a unique position
+    ok 10 - unfinished two-million budget cannot claim a unique position
+      ---
+      duration_ms: 0.98525
+      ...
+    # Subtest: exact two-million budget can complete a unique literal search
+    ok 11 - exact two-million budget can complete a unique literal search
+      ---
+      duration_ms: 1.607875
+      ...
+    # Subtest: quote cap counts supplementary characters as UTF16
+    ok 12 - quote cap counts supplementary characters as UTF16
+      ---
+      duration_ms: 1.033125
+      ...
+    # Subtest: no additional search before final failure or without gates
+    ok 13 - no additional search before final failure or without gates
+      ---
+      duration_ms: 2.603667
+      ...
+    # Subtest: budget is shared across issues
+    ok 14 - budget is shared across issues
+      ---
+      duration_ms: 1.343416
+      ...
+    # Subtest: logger failure retains bridge error
+    ok 15 - logger failure retains bridge error
+      ---
+      duration_ms: 0.9105
+      ...
+    # Subtest: JSON encoding failure retains bridge error
+    ok 16 - JSON encoding failure retains bridge error
+      ---
+      duration_ms: 1.0145
+      ...
+    # Subtest: literal search failure retains bridge error
+    ok 17 - literal search failure retains bridge error
+      ---
+      duration_ms: 0.934958
+      ...
+    # Subtest: same injected ordinary error instance is rethrown without diagnostics
+    ok 18 - same injected ordinary error instance is rethrown without diagnostics
+      ---
+      duration_ms: 0.745458
+      ...
+    1..18
+ok 4 - LOTM-DIAG04: no stale provenance, bounded work, saturation and diagnostics failures
+  ---
+  duration_ms: 87.957125
+  ...
+# Subtest: LOTM-DIAG05: real service boundary rejects bad evidence and returns no accepted data
+ok 5 - LOTM-DIAG05: real service boundary rejects bad evidence and returns no accepted data
+  ---
+  duration_ms: 3.400083
+  ...
+1..5
+# tests 58
+# suites 0
+# pass 56
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 739.444042

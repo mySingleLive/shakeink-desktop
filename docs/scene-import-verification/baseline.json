@@ -1,0 +1,16 @@
+{
+  "sessionId": "baf9c075-dfc6-482c-a84f-b5b7ebd53567",
+  "startedAt": "2026-10-30T18:45:06.378Z",
+  "observedAt": "2026-10-30T18:52:05.565160+00:00",
+  "elapsedMs": 419187,
+  "deadlineMs": 420000,
+  "scenes": 1013,
+  "done": 248,
+  "failed": 0,
+  "status": "not-passed",
+  "reason": "full scene list remains incomplete at the seven minute budget",
+  "lastObservedImportStepAt": "2026-10-30T18:52:25.034Z",
+  "stillIncompleteAtMs": 438656,
+  "exceededDeadline": true,
+  "stoppedNormally": true
+}

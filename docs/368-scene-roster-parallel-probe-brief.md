@@ -1,0 +1,9 @@
+# 同批只读模型诊断
+
+R39正常运行有准确SRU1：native=1、kind=invalid_json、finish=stop、candidateRoot=unparsed。不是长度结束；不臆测拒绝或服务内部原因。下一步仅PRIVATE诊断，对R39原planner首15包逐个payloadHash精确重建，在一次隔离App内用当前接口15并发新请求，保留原始生成text于权限600文件。新回复不是历史重现，也不是全书验收。
+
+沿已审单包helper的ModelRepository/Gateway/ModelService、授权快照、instantiate→light→native factory顺序及原SDK generateText；同批共用一个repository/service/transport，避免每请求重设或提前关闭全局transport。每请求独立AbortController、operationId、observations、代次和输出前缀，使用原runImportAi全部接受/保留门。readonlyUsage、零网络重试的差异明确；不拿它替代正常DB或全部场景通过。
+
+只写生成结果text/finish/计数及安全Schema元数据，不写options、headers、Key、端点或任意异常对象。根/目录隔离、state hash不变、normal quit及finally等待全部settle后才关闭service；输出目录700/文件600。错误只输出既有固定分类/白名单字段。产品源码及bundle不改。
+
+369按序独审后PRIVATE TDD/独立代码审，再执行一次batch；若全部成功照实保留未知，不循环跑到想要的结果。

@@ -1,0 +1,74 @@
+{
+  "scope": "87 independent bounded code review; no actual app/model/data access",
+  "sources": [
+    {
+      "path": "desktop/main/novel-import.ts",
+      "baselineHash": "b042aac2bb99e0993ee5629432070424bd7ab0da16a36177ba01e724877076a6",
+      "finalHash": "fee1997ffd3a0fd149ceaf05c83e42970e75137afd587b80ca1f17eaab63543d"
+    },
+    {
+      "path": "tests/unit/novel-import-request-schema.test.ts",
+      "baselineHash": "4844d54205c6f887b2c7ec9ca58e8471edc8661ae572403953d4cf047e00670b",
+      "finalHash": "afb0983cc6536549a7826ef30284e9784ac2de0964d80e79cfa2084cf11c250d"
+    }
+  ],
+  "diffHash": "0a26586bfc86df95bc0be41223c6ad782a155a62461796b71d7546951a93e90a",
+  "diffMatchesAuthor": true,
+  "mainOnlySixteenApprovedExactDictionaryKeys": true,
+  "oldJ01J04ByteExactPrefix": true,
+  "approvedKeys": [
+    "语义实体目录类型无效",
+    "角色引用类型无效",
+    "角色引用不存在或同名不明确",
+    "地点父引用必须为PLACE",
+    "世界父引用必须为WORLD",
+    "世界设定归属引用无效",
+    "MAP父引用必须属于同世界MAP",
+    "语义父级引用形成循环",
+    "叙事章节引用无效",
+    "Invalid Format",
+    "Authentication Fails",
+    "Insufficient Balance",
+    "Invalid Parameters",
+    "Rate Limit Reached",
+    "Server Error",
+    "Server Overloaded"
+  ],
+  "preservedFiles": {
+    "desktop/service/novel-import-ai.ts": "d86eb08bcb6c909a5338c76efab787ccb8a1cbf9ef9c2d40a4b90c46679d98ad",
+    "desktop/core/novel-import-ai-payload.ts": "239cac9bf2f40c7e1004ffb28cfc36ff834f98b549f6ae7326cfafb42187ab55",
+    "tests/unit/novel-import-ai.test.ts": "663097fb08265b6467aafc43223724b88287cfcc6c27342c84716206cf9c9903"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-J0[12345]:",
+        "tests/unit/novel-import-request-schema.test.ts"
+      ],
+      "pass": 17,
+      "skip": 0,
+      "exit": 0,
+      "log": "hidden-errors-independent-j01-j05.txt",
+      "logHash": "110a04c8af86ecf87c02b1df4f041fe939ceaca6cc73f81288ff0993e0906aed"
+    },
+    {
+      "argv": [
+        "/Users/dt_flys/.nvm/versions/node/v24.18.0/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "--test-name-pattern=^NI-A0[789]:",
+        "tests/unit/novel-import-ai.test.ts"
+      ],
+      "pass": 12,
+      "skip": 0,
+      "exit": 0,
+      "log": "hidden-errors-independent-a07-a09.txt",
+      "logHash": "5ea5b456da46a83ef3cac4ded8d23059b49507b4f6c269089e9e7f25aa2ddf67"
+    }
+  ]
+}

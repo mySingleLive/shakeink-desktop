@@ -1,0 +1,16 @@
+{
+  "run": "R15",
+  "scenes": 982,
+  "allSceneTasksDone": true,
+  "sceneArtifacts": 982,
+  "phase": "select",
+  "step": "verify",
+  "failure": "review evidence no-match",
+  "fullImportVerified": false,
+  "published": false,
+  "reopened": false,
+  "normalElectronExit": true,
+  "driverExit": 2,
+  "reconstructedReviewUnits": 90,
+  "reconstructedReviewArtifacts": 143
+}

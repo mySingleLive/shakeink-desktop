@@ -1,0 +1,69 @@
+{
+  "kind": "component-source-worker-input-verification",
+  "actualApplication": false,
+  "sourceHash": "fb1a231fc2cf94f38412566ad200d0a6d245ca92cdb6bae565e5329b462e9598",
+  "sourceUnchanged": true,
+  "oracleHash": "d6763cbba8d567a466a68d857a49e56ea3371fd34819f2e79fbe0609e8676f32",
+  "oracleUnchanged": true,
+  "codeUnchanged": true,
+  "code": {
+    "desktop/main/novel-import-pdf-source-text.ts": "78a31dac3ffde23c7b9f6ae31c4db41bbd99d5d23d1ae28d12efdf58812401c4",
+    "desktop/core/novel-import-pdf-source-text.ts": "27c5c1f9a1ac9951d00a71b0f1e9a4dd25a0008bf19c25c76b0c8e0102971841",
+    "desktop/main/novel-import-pdf-worker.ts": "7646106b347f7688d5af4cc604bca88562dd0c11d30611e6face67f2faf60410",
+    "desktop/main/novel-import-pdf-engine.ts": "b591c58571ab9e311f2d9767c4479957b221be9aed1eaed5b46d97c45ba08107",
+    "desktop/main/novel-import-pdf-client.ts": "1019a064409d6c27773dffa18cf3e2c25ea07e7e84000a3f0067744f32dcc53c",
+    "desktop/main/novel-import-files.ts": "76d3ae60ef2308a53cb27553be0ce305a1f88517f1fc316ff776c3177412965c",
+    "desktop/main/novel-import.ts": "9ebbfac07e229a98c717a7cb5aa059420d7e1ffbd1dfab5be38091ecc8ac0d2d",
+    "desktop/shared/novel-import.ts": "7b4eb3221d5b889db8387c073259f56f62a377c76c022e84e33cd439d2a35a41",
+    "desktop/core/novel-import-pdf.ts": "7cc93cf4cc7820d167f2432aef2c7c9de46dcd977dd21576cac4e5f4c3b9d905",
+    "desktop/core/novel-import.ts": "d8a3ff88122698450052b1e121dc8fcdcfa6fde8a6627f72656a688b20274b81",
+    "desktop/service/novel-import-publish.ts": "d63d33fadd04db22c79ac1127ab8f679e607476e1f8c80ba774d2ea64861d373",
+    "tests/unit/novel-import-pdf-source-text.test.ts": "d7a924acebb7050e66d11b289a126a27a77b1dfe8eea3880fce2fe54e05a4fcb"
+  },
+  "pages": 178,
+  "compared": 178,
+  "equal": 178,
+  "mismatch": [],
+  "scan": "complete",
+  "blocker": null,
+  "image": 1,
+  "textOnly": 177,
+  "characters": 123760,
+  "textHash": "df2c0077a06e3935e05b7e9b9bdd802bafae9c2ca2bb79a8c65c80228712c6de",
+  "proofValid": true,
+  "proof": {
+    "policy": "gbk-euc-h-a1ad-v1",
+    "proofHash": "41c9e9652712b7a03bf0489fcb711b4c299d255b455094700bfd033fdb39df31",
+    "pages": [
+      {
+        "page": 3,
+        "count": 135
+      },
+      {
+        "page": 4,
+        "count": 124
+      },
+      {
+        "page": 40,
+        "count": 2
+      },
+      {
+        "page": 46,
+        "count": 2
+      },
+      {
+        "page": 92,
+        "count": 2
+      },
+      {
+        "page": 121,
+        "count": 2
+      },
+      {
+        "page": 172,
+        "count": 2
+      }
+    ],
+    "count": 269
+  }
+}

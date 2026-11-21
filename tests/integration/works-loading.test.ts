@@ -59,7 +59,8 @@ test('WL-01/02/03: real databases retain healthy summaries beside stale leases; 
     await rename(healthy.path, healthy.path + '-absent')
     const all = await list(works)
     assert.deepEqual(all.novels, [])
-    assert.deepEqual(all.unavailableWorks.map(w => w.reason), ['unavailable', 'stale-lease'])
+    // WN-03: a moved directory is now reported as missing (docs/551 §7.1).
+    assert.deepEqual(all.unavailableWorks.map(w => w.reason), ['missing', 'stale-lease'])
     assert.deepEqual(await readFile(join(base, 'data', 'catalog.json')), catalog)
     await works.close(); await rename(healthy.path + '-absent', healthy.path)
     let approved: WorkLeaseRecoveryPreview | undefined

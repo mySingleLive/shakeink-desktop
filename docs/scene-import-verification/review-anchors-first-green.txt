@@ -1,0 +1,50 @@
+▶ RA-01: scene-only review corrects conflict and omission anchors through the actual bounded bridge and final service
+  ✔ conflicts (10.85775ms)
+  ✔ missingTargets (1.729834ms)
+✔ RA-01: scene-only review corrects conflict and omission anchors through the actual bounded bridge and final service (13.067292ms)
+▶ RA-02: every review anchor uses the original declared-unit acceptance set without modifying the schema output
+  ✔ conflicts exact short (0.900917ms)
+  ✔ conflicts exact repeated (0.584875ms)
+  ✔ conflicts Han layout and UTF16 (0.618541ms)
+  ✔ conflicts Latin whitespace (0.605292ms)
+  ✔ conflicts unknown unit (0.893708ms)
+  ✔ conflicts layout too short (0.968875ms)
+  ✔ conflicts layout ambiguous (0.712333ms)
+  ✔ conflicts no match (0.72ms)
+  ✔ conflicts Latin word boundary (0.702958ms)
+  ✔ conflicts digit word boundary (0.588333ms)
+  ✔ conflicts cross-unit join (0.571334ms)
+  ✔ conflicts noncontiguous join (0.614375ms)
+  ✔ conflicts other-unit verbatim must not rebind review (0.901459ms)
+  ✔ missingTargets exact short (0.597416ms)
+  ✔ missingTargets exact repeated (0.406625ms)
+  ✔ missingTargets Han layout and UTF16 (0.41025ms)
+  ✔ missingTargets Latin whitespace (0.440416ms)
+  ✔ missingTargets unknown unit (0.53925ms)
+  ✔ missingTargets layout too short (0.4925ms)
+  ✔ missingTargets layout ambiguous (0.747333ms)
+  ✔ missingTargets no match (0.676333ms)
+  ✔ missingTargets Latin word boundary (0.59125ms)
+  ✔ missingTargets digit word boundary (0.5285ms)
+  ✔ missingTargets cross-unit join (0.875083ms)
+  ✔ missingTargets noncontiguous join (0.668459ms)
+  ✔ missingTargets other-unit verbatim must not rebind review (0.838875ms)
+  ✔ all entries and both result arrays are checked; a bad middle entry cannot be dropped (0.475542ms)
+✔ RA-02: every review anchor uses the original declared-unit acceptance set without modifying the schema output (18.750833ms)
+▶ RA-03: exact scope preserves other schemas, and transport, authorization and abort errors do not become schema retries
+  ✔ other protocols, targets and stages retain their old early acceptance (2.224042ms)
+  ✔ network and abort identity pass through the actual bridge once (0.453708ms)
+  ✔ initial authorization failure never generates (0.113375ms)
+✔ RA-03: exact scope preserves other schemas, and transport, authorization and abort errors do not become schema retries (2.981709ms)
+▶ RA-04: corrected review evidence cannot bypass stage, source range, projection or final authorization gates
+  ✔ late conflict and omission references retain their original rejection (2.889541ms)
+  ✔ successful correction still requires the final authorization, snapshot and cancellation checks (1.179166ms)
+✔ RA-04: corrected review evidence cannot bypass stage, source range, projection or final authorization gates (4.227042ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 696.581375

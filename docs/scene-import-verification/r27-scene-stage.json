@@ -1,0 +1,38 @@
+{
+  "sessionId": "374b1ee2-2f71-4d88-9d65-5acf6cd48211",
+  "sourceSha256": "04e1a336e29d8437de3f2bd68ffe09f84befebe0748b8750e8f84caeebdd964e",
+  "chapters": 1402,
+  "units": 5589,
+  "covered": 5589,
+  "scenes": 1055,
+  "states": {
+    "done": 1055
+  },
+  "artifacts": 1055,
+  "parents": 282,
+  "dropped": 0,
+  "skipped": 0,
+  "mappingWarnings": 0,
+  "bodyUnchanged": true,
+  "pageErrors": [],
+  "selected": [
+    "body",
+    "outline"
+  ],
+  "targets": [
+    "scene"
+  ],
+  "sceneStartedAt": "2026-10-31T16:57:55.180Z",
+  "sceneEntityStartedAt": "2026-10-31T16:58:26.647Z",
+  "completedAt": "2026-10-31T17:02:52.741Z",
+  "durationMs": 297560.754958,
+  "entityDurationMs": 266093.450125,
+  "deadlineMs": 420000,
+  "performancePassed": true,
+  "run": "R27",
+  "scope": "scene extraction stage only; complete review/publication/reopen pending",
+  "fullSceneImportVerified": false,
+  "publicationVerified": false,
+  "reopenVerified": false,
+  "build": "build-identity-r27.json"
+}

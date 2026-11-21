@@ -1,0 +1,39 @@
+▶ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier
+  ✔ pending-real-promise-and-delayed-resources (152.2ms)
+  ✔ pre-invoke-source-work-and-synchronous-throw (69.953208ms)
+  ✔ fresh-task-flushes-resolver-before-observer-race (0.743209ms)
+  ✔ settled-raw-promise-with-stale-disk-and-live-operation-is-missed (77.658125ms)
+  ✔ lineage-change-does-not-sign-or-stop-new-owner (157.32825ms)
+  ✔ hard-token-and-byte-capacity-before-invoke (3.511125ms)
+  ✔ synchronous-cancel-failure-still-waits-raw-job (46.7235ms)
+  ✖ first-pending-write-failure-cancels-and-drains-with-zero-result-credit (2388.009542ms)
+  ✔ proof-write-failure-still-drains (47.357166ms)
+✖ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier (2946.286291ms)
+✔ NI-RT02: private runtime diagnostics survive restart without changing content identities (230.978541ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 9
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4071.535583
+
+✖ failing tests:
+
+test at tests/unit/novel-import-runtime-proof.test.ts:2:16095
+✖ first-pending-write-failure-cancels-and-drains-with-zero-result-credit (2388.009542ms)
+  AssertionError [ERR_ASSERTION]: controlled window reached
+      at until (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:18:131)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:31:639)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-runtime-proof.test.ts:31:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

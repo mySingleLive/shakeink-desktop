@@ -1,0 +1,135 @@
+{
+  "run": "R60",
+  "providerCalls": 2,
+  "novelInputSent": false,
+  "casePurposes": [
+    {
+      "id": "tuple-array",
+      "purpose": "strict-true-control",
+      "expectedStrict": true,
+      "expectedPromptSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+      "expectedSchemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646"
+    },
+    {
+      "id": "homogeneous-items",
+      "purpose": "strict-false-candidate",
+      "expectedStrict": false,
+      "expectedPromptSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+      "expectedSchemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646"
+    }
+  ],
+  "results": [
+    {
+      "id": "tuple-array",
+      "schemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646",
+      "schemaBytes": 1953,
+      "promptSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+      "category": "HTTP_400",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "unknown",
+      "validation": {
+        "directJSON": false,
+        "schema": "not-run",
+        "keywordCounts": {}
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646",
+        "schemaBytes": 1953,
+        "inputTextSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 400,
+        "body": "parsed",
+        "complete": true,
+        "bytes": 209,
+        "reasonTokens": [
+          "required",
+          "properties",
+          "must",
+          "other",
+          "all",
+          "properties",
+          "in",
+          "the",
+          "object",
+          "other"
+        ],
+        "reasonTokensTruncated": false,
+        "knownCode": "invalid_request_error",
+        "knownParam": "none",
+        "keywords": {
+          "schema": false,
+          "items": false,
+          "array": false,
+          "object": true,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    },
+    {
+      "id": "homogeneous-items",
+      "schemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646",
+      "schemaBytes": 1953,
+      "promptSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+      "category": "completed",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "stop",
+      "validation": {
+        "directJSON": true,
+        "schema": "pass",
+        "keywordCounts": {},
+        "originalTuple": "pass",
+        "commonWitness": true
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": false,
+        "schemaSha256": "a4714f84ef7da4ba3bb488e96dc32430c2c904ee08e2b1c78693b74244039646",
+        "schemaBytes": 1953,
+        "inputTextSha256": "b42f61b4035d7c8db6bbb743c60ff21212b1866586a33fd39c12453a5857a44f",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 200,
+        "body": "not-needed",
+        "complete": true,
+        "bytes": 0,
+        "reasonTokens": [],
+        "reasonTokensTruncated": false,
+        "knownCode": "none",
+        "knownParam": "none",
+        "keywords": {
+          "schema": false,
+          "items": false,
+          "array": false,
+          "object": false,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    }
+  ],
+  "currentWIP108InputsAnd368ProtectedUnchangedAtRun": true,
+  "stateUnchanged": true,
+  "normalAppExit": 0,
+  "quitTimedOut": false,
+  "pageErrors": 0,
+  "independentFiveTaskTupleWitnessPass": true,
+  "productTDDCondition431Satisfied": true,
+  "localAcceptanceConstraintsChanged": false,
+  "fullBookVerified": false
+}

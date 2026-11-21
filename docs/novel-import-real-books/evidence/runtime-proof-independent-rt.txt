@@ -1,0 +1,19 @@
+▶ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier
+  ✔ pending-real-promise-and-delayed-resources (95.610709ms)
+  ✔ pre-invoke-source-work-and-synchronous-throw (107.855834ms)
+  ✔ fresh-task-flushes-resolver-before-observer-race (0.9465ms)
+  ✔ settled-raw-promise-with-stale-disk-and-live-operation-is-missed (79.350709ms)
+  ✔ lineage-change-does-not-sign-or-stop-new-owner (254.203459ms)
+  ✔ hard-token-and-byte-capacity-before-invoke (3.517667ms)
+  ✔ synchronous-cancel-failure-still-waits-raw-job (98.382834ms)
+  ✔ proof-write-failure-still-drains (72.310083ms)
+✔ NI-RT01: runtime AI and pause proof bind a pending invocation to the actual stop barrier (714.6805ms)
+✔ NI-RT02: private runtime diagnostics survive restart without changing content identities (327.933375ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1614.640041

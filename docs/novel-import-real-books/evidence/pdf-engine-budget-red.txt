@@ -1,0 +1,31 @@
+✖ NI-PDF14: actual page and operator caps keep bounded ledgers instead of continued success (1823.4465ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2434.063458
+
+✖ failing tests:
+
+test at tests/unit/novel-import-pdf.test.ts:2:40366
+✖ NI-PDF14: actual page and operator caps keep bounded ledgers instead of continued success (1823.4465ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'complete'
+  - 'incomplete'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-pdf.test.ts:197:288)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'complete',
+    expected: 'incomplete',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

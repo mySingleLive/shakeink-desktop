@@ -1,0 +1,132 @@
+{
+  "run": "R54",
+  "diagnosticHarnessComplete": true,
+  "providerCalls": 2,
+  "novelInputSent": false,
+  "casePurposes": [
+    {
+      "id": "tuple-array",
+      "purpose": "known-good-control",
+      "historicalPromptSha256": "5f2fdae1c5ce678ba759aaaacea268aea282c07cbfde52478b273682e8686a87",
+      "historicalSchemaSha256": "7a66c20642614ea320856cf27d959482077169fc65d0cf9bb497cc4a31e5fcbc"
+    },
+    {
+      "id": "homogeneous-items",
+      "purpose": "inline-bad-control",
+      "historicalPromptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "historicalSchemaSha256": "273cd07be320239e5f4c39c6e1059afb44d85dcb750a6c39b889ff153cb70396"
+    }
+  ],
+  "results": [
+    {
+      "id": "tuple-array",
+      "schemaSha256": "7a66c20642614ea320856cf27d959482077169fc65d0cf9bb497cc4a31e5fcbc",
+      "schemaBytes": 850,
+      "promptSha256": "5f2fdae1c5ce678ba759aaaacea268aea282c07cbfde52478b273682e8686a87",
+      "category": "completed",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "stop",
+      "validation": {
+        "directJSON": true,
+        "schema": "pass",
+        "keywordCounts": {}
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "7a66c20642614ea320856cf27d959482077169fc65d0cf9bb497cc4a31e5fcbc",
+        "schemaBytes": 850,
+        "inputTextSha256": "5f2fdae1c5ce678ba759aaaacea268aea282c07cbfde52478b273682e8686a87",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 200,
+        "body": "not-needed",
+        "complete": true,
+        "bytes": 0,
+        "reasonTokens": [],
+        "reasonTokensTruncated": false,
+        "knownCode": "none",
+        "knownParam": "none",
+        "keywords": {
+          "schema": false,
+          "items": false,
+          "array": false,
+          "object": false,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    },
+    {
+      "id": "homogeneous-items",
+      "schemaSha256": "273cd07be320239e5f4c39c6e1059afb44d85dcb750a6c39b889ff153cb70396",
+      "schemaBytes": 4866,
+      "promptSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+      "category": "HTTP_400",
+      "generationCalls": 1,
+      "networkStarts": 1,
+      "fetchAttempts": 1,
+      "finishReason": "unknown",
+      "validation": {
+        "directJSON": false,
+        "schema": "not-run",
+        "keywordCounts": {}
+      },
+      "wire": {
+        "type": "json_schema",
+        "strict": true,
+        "schemaSha256": "273cd07be320239e5f4c39c6e1059afb44d85dcb750a6c39b889ff153cb70396",
+        "schemaBytes": 4866,
+        "inputTextSha256": "537c442e7cc719624fc2983b60e8c6c8be2e77e725ab65872c2b05ee93e6d3ba",
+        "matchesExpected": true
+      },
+      "http": {
+        "status": 400,
+        "body": "parsed",
+        "complete": true,
+        "bytes": 206,
+        "reasonTokens": [
+          "invalid",
+          "json",
+          "schema",
+          "field",
+          "anyOf",
+          "missing",
+          "field",
+          "type",
+          "other"
+        ],
+        "reasonTokensTruncated": false,
+        "knownCode": "invalid_request_error",
+        "knownParam": "none",
+        "keywords": {
+          "schema": true,
+          "items": false,
+          "array": false,
+          "object": false,
+          "tuple": false,
+          "unsupported": false,
+          "definitions": false,
+          "ref": false,
+          "additionalItems": false
+        }
+      }
+    }
+  ],
+  "all103InputsUnchanged": true,
+  "all368ProtectedFilesUnchanged": true,
+  "stateUnchanged": true,
+  "normalAppExit": 0,
+  "quitTimedOut": false,
+  "pageErrors": 0,
+  "arbitraryErrorStringsPersisted": false,
+  "productFixAdmitted": false,
+  "fullBookVerified": false,
+  "interpretation": "Current known-good schema succeeds; failed candidate reports missing type for anyOf field. Nested untyped anyOf is a concrete compatibility hypothesis, requiring lossless candidate verification."
+}

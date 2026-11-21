@@ -1,0 +1,18 @@
+▶ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints
+  ✔ none (308.005958ms)
+  ✔ legacy (299.48025ms)
+  ✔ double-reopen (272.777583ms)
+  ✔ range (303.296667ms)
+  ✔ selection (256.790416ms)
+  ✔ target (122.148917ms)
+  ✔ replaced-target (96.298875ms)
+  ✔ working-revision (189.088ms)
+✔ NI-S10: start after durable pause and target reauthorization retains only valid analysis checkpoints (1849.359916ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2221.930958

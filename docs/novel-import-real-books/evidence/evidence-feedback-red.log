@@ -1,0 +1,241 @@
+✔ NI-J01: request-bound import schema reuses the bounded JSON correction bridge (68.615708ms)
+✔ NI-J02: request-bound import schema preserves strict validation and compatibility (21.632959ms)
+▶ NI-J03: evidence location uses the existing bounded correction without transforming quotes
+  ✔ production bridge corrects a bad location exactly once with safe bounded feedback (1.099375ms)
+  ✔ two invalid attempts stop and a first valid answer needs only one generation (1.009084ms)
+  ✖ literal acceptance cases agree with the unchanged legacy late matcher (51.676375ms)
+  ✖ each entry has its own safe path and other stages keep their original schema (0.923208ms)
+✖ NI-J03: evidence location uses the existing bounded correction without transforming quotes (55.681875ms)
+▶ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics
+  ✔ complete artifacts have the original pure-helper acceptance set and preserve raw values (18.503875ms)
+  ✔ production bridge gives native failures exactly one safe bounded correction (29.107417ms)
+  ✔ formatted unknown worldline references fail early while native and other-phase gates remain (2.217917ms)
+  ✔ actual prototype maps only fixed worldline literals and retains old safe behavior (0.31ms)
+  ✔ unknown-event-time suffix and newline are redacted within the explicitly approved family (0.075625ms)
+  ✔ long schema lists use a fixed structural message at the exact length boundary (0.144041ms)
+✔ NI-J04: worldline native validation uses bounded correction and exact safe diagnostics (53.127ms)
+▶ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics
+  ✔ the original worldline fixtures now reject early after native format validation (1.239875ms)
+  ✔ ordinary narrative fixtures now reject early after native format validation (1.382042ms)
+  ✔ actual reconcile field edits reach both distinct character-reference late failures (1.505125ms)
+  ✔ only the sixteen approved complete strings map and every variant stays generic (1.029375ms)
+✔ NI-J05: hidden reference and standard service errors use exact fixed safe diagnostics (5.54575ms)
+▶ NI-J06: worldline reference checks use the trusted full catalog within bounded correction
+  ✔ real bridge corrects graph-invalid complete responses only once with fixed safe feedback (14.267584ms)
+  ✔ valid ids, unique names and batch parents preserve complete raw responses and local-only catalog entries (7.109917ms)
+  ✔ empty results retain the late gate while narrative references reject early and reconcile still rejects late (1.477ms)
+✔ NI-J06: worldline reference checks use the trusted full catalog within bounded correction (23.325834ms)
+▶ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates
+  ✔ original native constraints enter the real bridge correction without transforming values (46.055833ms)
+  ✔ strict catalog and global chapter constraints enter the same bounded correction (15.586625ms)
+  ✔ legal refs, raw strings, global indexes and unresolved frame materials preserve original acceptance (9.240042ms)
+  ✔ real reconcile field edits retain the untouched native and exact role-reference late gates (0.981584ms)
+✔ NI-J07: narrative native and reference checks reuse bounded correction and preserve real late gates (72.619334ms)
+▶ NI-J08: final character schema errors expose only bounded static business labels
+  ✔ actual bridge generateJSON Zod runImportAi and main safeError preserve final bounded diagnostics (1.450375ms)
+  ✔ first bad then good and first good remain exact successes with two or one calls (1.147542ms)
+  ✔ actual Zod unknown and truncated paths cannot echo or falsely identify known fields (4.909ms)
+  ✔ synthetic typed metadata covers full-path allowlist and first-six bounds only (2.387875ms)
+  ✔ all unrelated phases kinds legacy and original error identities pass through (2.104541ms)
+✔ NI-J08: final character schema errors expose only bounded static business labels (12.47825ms)
+▶ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance
+  ✔ array aliases uses the actual bounded correction (2.078292ms)
+  ✔ object relationships uses the actual bounded correction (5.272958ms)
+  ✔ numeric age uses the actual bounded correction (1.773875ms)
+  ✔ boolean occupation uses the actual bounded correction (1.205542ms)
+  ✔ null clothing uses the actual bounded correction (1.090583ms)
+  ✔ literal old acceptance cases for strings nonstrings optional shape and prototype keys remain unchanged (5.778917ms)
+  ✔ other kind phase reconcile and legacy string validation retains the original error (1.911542ms)
+  ✔ string encoding does not bypass original knowledge source native and link gates (3.797542ms)
+✔ NI-J09: ordinary character facts string errors clarify nested JSON without changing acceptance (84.305209ms)
+▶ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority
+  ✖ unknown-unit uses the production bridge and preserves exact late-gate evidence (5.508375ms)
+  ✖ too-short uses the production bridge and preserves exact late-gate evidence (1.876834ms)
+  ✖ ambiguous uses the production bridge and preserves exact late-gate evidence (1.2175ms)
+  ✖ no-match uses the production bridge and preserves exact late-gate evidence (1.025458ms)
+  ✖ all twelve ordinary target schemas reject the same four reasons without transforming input (1.066875ms)
+  ✖ matching text in another supplied unit never repairs a wrong declared unit (0.443291ms)
+  ✔ Abort identity remains unchanged through the real correction bridge (0.23275ms)
+✖ NI-J10: evidence correction identifies fixed anchor reasons without changing source authority (11.793167ms)
+ℹ tests 51
+ℹ suites 0
+ℹ pass 41
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1794.157416
+
+✖ failing tests:
+
+test at tests/unit/novel-import-request-schema.test.ts:2:32314
+✖ literal acceptance cases agree with the unchanged legacy late matcher (51.676375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
+  -   '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:135:162)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:116:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字' ],
+    expected: [ '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:36538
+✖ each entry has its own safe path and other stages keep their original schema (0.923208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
+  -   '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；unitId必须逐字取自本次输入单元；quote只能复制该单元text，不得借其它单元'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:148:160)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:146:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字' ],
+    expected: [ '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；unitId必须逐字取自本次输入单元；quote只能复制该单元text，不得借其它单元' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:114115
+✖ unknown-unit uses the production bridge and preserves exact late-gate evidence (5.508375ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(feedback.includes(messages[item.reason]))
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:491:116)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:482:26)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:114115
+✖ too-short uses the production bridge and preserves exact late-gate evidence (1.876834ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(feedback.includes(messages[item.reason]))
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:491:116)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:482:26)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:114115
+✖ ambiguous uses the production bridge and preserves exact late-gate evidence (1.2175ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(feedback.includes(messages[item.reason]))
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:491:116)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:482:26)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:114115
+✖ no-match uses the production bridge and preserves exact late-gate evidence (1.025458ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(feedback.includes(messages[item.reason]))
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:491:116)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:482:26)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:117020
+✖ all twelve ordinary target schemas reject the same four reasons without transforming input (1.066875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
+  - '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；unitId必须逐字取自本次输入单元；quote只能复制该单元text，不得借其它单元'
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:502:192)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:498:2)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字',
+    expected: '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；unitId必须逐字取自本次输入单元；quote只能复制该单元text，不得借其它单元',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/unit/novel-import-request-schema.test.ts:2:118324
+✖ matching text in another supplied unit never repairs a wrong declared unit (0.443291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字'
+  -   '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点'
+    ]
+  
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:510:159)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at TestContext.test (node:internal/test_runner/test:382:20)
+      at TestContext.<anonymous> (/Users/dt_flys/Projects/shakeink-desktop/tests/unit/novel-import-request-schema.test.ts:507:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字' ],
+    expected: [ '证据必须引用本次unitId中的原文连续片段，不可概述、拼接或补字；声明单元内未找到引文；核对unitId与quote配对，从该单元text原样复制，不跨单元、不改字标点' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
