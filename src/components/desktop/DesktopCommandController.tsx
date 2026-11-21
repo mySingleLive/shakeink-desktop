@@ -13,6 +13,8 @@ import {useChatStore} from '@/stores/chat'
 import {nativeTextEdits} from "@/lib/desktop/native-text-edits"
 import {installComposerTextCommands} from "@/lib/desktop/composer-text-commands"
 import {commandScope as scope} from "@/lib/desktop/command-scope"
+import {textShortcutFor,textShortcutAllowed,type TextShortcutId} from "@/lib/desktop/text-shortcuts"
+import {captureTextShortcut,copySpanningSelection} from "@/lib/desktop/text-shortcut-source"
 
 const nativeCommands=["app.settings","app.about","app.quit","app.hide","app.hideOthers","app.showAll","window.close","window.minimize","window.maximize","window.front","view.fullscreen","file.open","file.templates","file.chat","help.feedback","menu.file","menu.edit","menu.view","menu.window","menu.help","menu.app"]
 const editorCommand=(id:string)=>["view.edit","view.preview","view.split","editor.focus","file.save","file.export"].includes(id)
@@ -33,14 +35,55 @@ export function DesktopCommandController(){
   const textEdits=nativeTextEdits(document,()=>{if(!window.desktop)throw new Error("本地剪贴板尚未就绪");return window.desktop.readClipboardText()})
   const disposeInputs=installInputCommands({document,nativeEdit:textEdits.run})
   const contextIdentity=()=>{const state=useChatStore.getState();return JSON.stringify([state.accountId,state.conversationId,state.draftId,state.draftNovelId,state.recoveryStatus,state.creatingNovel,state.requestedConversationId,state.newConversationRequested,useTabsStore.getState().activeTabId])}
+  const clipboardText={readText:()=>{if(!window.desktop)throw Error('本地剪贴板尚未就绪');return window.desktop.readClipboardText()},writeText:(text:string)=>{if(!window.desktop)throw Error('本地剪贴板尚未就绪');return window.desktop.writeClipboardText(text)},nativeEdit:textEdits.run}
   const disposeInputMenu=installTextContextMenu({document,show:request=>{if(!window.desktop)throw Error('本地菜单尚未就绪');return window.desktop.showTextContextMenu(request)},cancel:id=>window.desktop?.cancelTextContextMenu(id),
-   readText:()=>{if(!window.desktop)throw Error('本地剪贴板尚未就绪');return window.desktop.readClipboardText()},writeText:text=>{if(!window.desktop)throw Error('本地剪贴板尚未就绪');return window.desktop.writeClipboardText(text)},nativeEdit:textEdits.run,
+   ...clipboardText,
    contextIdentity,subscribeContext:listener=>{const chat=useChatStore.subscribe(listener),tabs=useTabsStore.subscribe(listener);return()=>{chat();tabs()}},onError:()=>toast.error('文本菜单操作未完成，请重新选择后重试')})
   const disposeComposer=installComposerTextCommands(document,textEdits.run)
   const dispatcher=new ShortcutDispatcher()
   const nativeFirst=new WeakSet<KeyboardEvent>()
   const focus=(event:Event)=>{if(event.target instanceof HTMLElement)rememberDesktopCommandTarget(event.target);dispatcher.reset()}
   const run=(id:string,target:HTMLElement|null)=>{void desktopCommandTargets.execute(id,editorCommand(id)?desktopEditorTarget():target).then(done=>{if(!done)toast.info("此命令在当前视图不可用")}).catch(error=>toast.error(error instanceof Error?error.message:"命令执行失败"))}
+  // docs/598: Cmd/Ctrl+C/V/X/A/Z have no native menu source (menu shortcuts are
+  // ignored), so a text key no other binding claims is executed here.
+  const textFailed=()=>toast.error("文本操作未完成，请重新选择后重试")
+  const textShortcut=(id:TextShortcutId,target:HTMLElement|null,markdown:boolean)=>{
+   // Monaco's browser clipboard commands have no usable target row; its own
+   // text-context adapter decides read-only and selection.
+   if(!markdown){
+    const owner=desktopCommandTargets.owner(id,target)
+    if(owner==="enabled"){run(id,target);return}
+    if(owner==="disabled")return
+   }
+   const source=captureTextShortcut(target,document,clipboardText)
+   // No source: a spanning read-only selection copies; anything else (a dialog
+   // barrier, nothing selected) is an intended no-op, not a failure.
+   if(!source){copySpanningSelection(document,id);return}
+   if(!textShortcutAllowed(source,id))return
+   // Copy captured its text at keydown: once written, a later selection change is not a failure.
+   let checks=0
+   const assertCurrent=()=>{if(id==="text.copy"&&checks++>0)return;if(!source.isCurrent()||document.hasFocus?.()===false)throw Error("文本来源已变化")}
+   void Promise.resolve().then(()=>source.execute(id,assertCurrent)).catch(textFailed)
+  }
+  const textKey=(event:KeyboardEvent,target:HTMLElement|null,bootstrap:NonNullable<ReturnType<typeof useDesktopStore.getState>["bootstrap"]>,afterMonaco=false)=>{
+   if(document.querySelector('[data-desktop-recording="true"]')||isAPIKeyControl(target))return false
+   const stroke=capturedKey({key:event.key,code:event.code,metaKey:event.metaKey,ctrlKey:event.ctrlKey,altKey:event.altKey,shiftKey:event.shiftKey,isComposing:event.isComposing,repeat:false,keyCode:event.keyCode},bootstrap.platform)
+   if(!stroke)return false
+   const commands=desktopCommandCatalog(bootstrap.platform),overrides=bootstrap.settings.shortcuts[bootstrap.platform],currentScope=scope(target)
+   const markdown=currentScope==="markdown"
+   // In the editor Monaco resolves its own (conditional) bindings first, e.g.
+   // suggestWidgetCopy on Cmd+C; the text path runs at bubble time only if it
+   // did not consume the key. Monaco owns undo/redo/select-all there.
+   if(markdown!==afterMonaco)return false
+   const match=textShortcutFor(stroke,commands,overrides,markdown?"none":currentScope)
+   if(!match)return false
+   if(markdown&&["text.undo","text.redo","text.selectAll"].includes(match.id))return false
+   if(dispatcher.waitingFor({commands,overrides,platform:bootstrap.platform,scope:currentScope,focus:target,modal:!!document.querySelector(dialogSelector)}))return false
+   dispatcher.reset();event.preventDefault();event.stopImmediatePropagation()
+   // Holding Cmd+V must not paste repeatedly (docs/598 §4).
+   if(!match.removed&&!event.repeat)textShortcut(match.id,target,markdown)
+   return true
+  }
   const command=(event:Event)=>{
    dispatcher.reset()
    const id=(event as CustomEvent<string>).detail,target=desktopCommandTarget()
@@ -59,6 +102,7 @@ export function DesktopCommandController(){
    const bootstrap=useDesktopStore.getState().bootstrap
    if(!bootstrap||event.defaultPrevented||event.isComposing||event.keyCode===229){dispatcher.reset();return}
    const target=event.target instanceof HTMLElement?event.target:desktopCommandTarget()
+   if(!afterNative&&textKey(event,target,bootstrap))return
    if(target?.closest('[role="menu"],[role="listbox"],[data-slot="select-content"]')){dispatcher.reset();return}
    const recording=!!document.querySelector('[data-desktop-recording="true"]')
    if(recording){dispatcher.reset();return}
@@ -105,7 +149,13 @@ export function DesktopCommandController(){
    if(result.kind==="run")run(result.id,target)
   }
   const clear=()=>dispatcher.reset()
-  const bubble=(event:KeyboardEvent)=>{if(nativeFirst.delete(event))keydown(event,true)}
+  const bubble=(event:KeyboardEvent)=>{
+   if(nativeFirst.delete(event)){keydown(event,true);return}
+   const bootstrap=useDesktopStore.getState().bootstrap
+   if(!bootstrap||event.defaultPrevented||event.isComposing||event.keyCode===229)return
+   const target=event.target instanceof HTMLElement?event.target:desktopCommandTarget()
+   textKey(event,target,bootstrap,true)
+  }
   document.addEventListener("focusin",focus,true);document.addEventListener("pointerdown",focus,true)
   window.addEventListener("keydown",keydown,true);window.addEventListener("keydown",bubble);window.addEventListener("blur",clear)
   window.addEventListener("desktop:command",command)

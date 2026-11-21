@@ -12,6 +12,14 @@ export class CommandTargets<T> {
   return typeof handler==="function"||handler.enabled?.()!==false?{registration,handler}:null
  }
  enabled(id:string,target:T){return this.resolve(id,target)!==null}
+ /** docs/598: a single accepting registration that refuses the command must
+  * not be treated as "no owner" (which would allow a generic fallback). */
+ owner(id:string,target:T):"enabled"|"disabled"|"none"{
+  const matches=[...this.registrations].filter(registration=>registration.commands[id]&&registration.accepts(target))
+  if(!matches.length)return"none"
+  if(matches.length>1)return"disabled"
+  return this.resolve(id,target)?"enabled":"disabled"
+ }
  capture(id:string,target:T):(()=>Promise<boolean>)|null{
   const captured=this.resolve(id,target)
   if(!captured)return null

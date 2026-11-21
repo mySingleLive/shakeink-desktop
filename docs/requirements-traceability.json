@@ -5560,6 +5560,49 @@
       "纵向只描述当前构建范围（视窗左 3 屏、右 4 屏）的排版；隐藏和范围外的根事件画在底行；跳到构建范围外的点击只改时间",
       "macOS 应用菜单把 Escape 绑定为“停止生成”，真实应用中拖动时 Esc 到不了页面（现有行为，画布平移同样）；Esc 恢复只由浏览器夹具 MM-B7 验证"
     ]
+  },
+  {
+    "id": "TXT-598",
+    "requirement": "所有可框选文本（输入框、不可编辑但可框选的文本、AI 对话消息）可用 Cmd/Ctrl+C 复制；输入框还可 Cmd/Ctrl+V 粘贴、X 剪切、Shift+V 纯文本粘贴、A 全选、Z / Shift+Z（Ctrl+Y）撤销重做；不可编辑文本只复制（用户 2026-11-21；范围经用户选择“剪贴板 + 全选 + 撤销/重做”）",
+    "source": [
+      "docs/598-text-clipboard-shortcuts-plan.md",
+      "docs/598-text-clipboard-shortcuts-plan-review.md",
+      "docs/598-text-clipboard-shortcuts-code-review.md"
+    ],
+    "implementation": [
+      "src/components/desktop/DesktopCommandController.tsx",
+      "src/lib/desktop/text-shortcuts.ts",
+      "src/lib/desktop/text-shortcut-source.ts",
+      "src/lib/desktop/command-targets.ts",
+      "src/lib/desktop/monaco-text-context.ts"
+    ],
+    "testIds": [
+      "TS-01..05（tests/unit/text-shortcuts.test.ts）",
+      "CTRL598-01..08（tests/unit/desktop-command-controller.test.ts）",
+      "MONACOCTRL48-06/07（改，需求导致）",
+      "TSB-01..07、TSM-01..04（tests/browser/text-shortcuts.test.ts，CDP 按键不带编辑命令，安装版命令目录，内存剪贴板桥）",
+      "TSB-08（HEAD 控制器对照）",
+      "598-E1..E13（真实目标 e2e-598.mjs r6）"
+    ],
+    "verificationKind": "TEXT_SHORTCUT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "evidence": [
+      "根因（真实应用，sendInputEvent 按键）：setIgnoreMenuShortcuts(true) 且菜单 text.* 无 role，macOS 无原生编辑来源；控制器对未改动的文本键交给原生、none 作用域不启用 text 命令。改动前输入框、消息输入框、Monaco、对话消息 Cmd+C/V 均无效果",
+      "浏览器夹具（非真实目标）：tests/browser/text-shortcuts.test.ts 11/11 通过；对照 HEAD 控制器 TSB-01/02/03/05/07、TSM-01/02/03 失败，TSB-04/06（不复制守护）通过",
+      "既有浏览器回归 9 个文件 173/173 通过（api-key-clipboard、text-context-menu、text-selection、text-selection-cards、chat-empty-state、composer-clipboard、composer-clipboard-review、desktop-modal-commands-review、monaco-text-context）",
+      "单元：控制器相关 6 个文件 43/43 通过；npm test 全量失败项均为 HEAD 基线已失败的导入/启动用例（HEAD 工作树 /private/tmp/shakeink-598-base 对照，3 个仅本次失败的用例单独重跑在两边均通过，root-startup 在 HEAD 单跑 7 项失败）；tsc、npm run build 通过",
+      "真实目标 ~/shakeink-test-roots/copy-paste-598/evidence/r6（构建版、隔离根、复制的 WL-wl-base1、无模型调用）：E1 用户资料笔名 C/V/Z/A/X；E2 消息输入框 C/V/Z/Shift+Z/A/X/Shift+V；E3 Markdown 编辑器 C/V/Z/A/X；E4 正文预览拖选复制；E5 跨两条已存储对话消息复制；E6 单条 assistant 消息复制且 V/X/Z 不改变；E7 下拉菜单搜索框 C/V；E8 设置中删除 Cmd+C 后不复制、重新录制提示与 suggestWidgetCopy 冲突、恢复默认后复制；E9 由 TSB-04 覆盖；E10 外观数字输入框粘贴；E11 API Key 遮罩框不复制不剪切；E12 Monaco 查找框粘贴不改正文；E13 录制中 Cmd+C 被录制而不复制。全部 PASS；作品 Chapter 内容 md5 与源作品一致，证据无 Key"
+    ],
+    "verificationLimits": [
+      "真实目标的窗口聚焦为模拟：BrowserWindow.prototype.isFocused 打桩 + CDP Emulation.setFocusEmulationEnabled（会话无法让窗口成为前台）",
+      "Windows 未在真实目标验证：捕获阶段处理后取代 Blink 原生 Ctrl+C/V；无来源时 Ctrl+A 不再全选整页",
+      "AI 对话消息为写入隔离作品数据库的已存储消息，未经模型生成",
+      "改绑为多键组合的 text 命令在 none 作用域（静态文字、对话消息）不生效",
+      "禁用输入框内的选区不支持快捷键复制（右键菜单可以）",
+      "焦点在下拉选项上、背景有可选文字选区时 Cmd+C 复制该选区",
+      "只读 Monaco、世界线搜索框只在浏览器夹具验证；E9（对话框屏障）只在浏览器夹具验证",
+      "已知风险（未处理）：markdown 渲染不做 sanitize（src/lib/markdown.ts:22），CSP unsafe-inline；本次未新增 IPC"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

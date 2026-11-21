@@ -11,6 +11,7 @@ import { CommandTargets } from "../../src/lib/desktop/command-targets"
 import { installInputCommands, installInputContextMenu, isAPIKeyControl } from "../../src/lib/desktop/input-commands"
 import { nativeTextEdits } from "../../src/lib/desktop/native-text-edits"
 import { commandScope } from "../../src/lib/desktop/command-scope"
+import * as textShortcutsModule from "../../src/lib/desktop/text-shortcuts"
 
 // Real Controller/input/main function bodies, controlled IPC delivery and DOM.
 // A queued WebContents edit records its actual focused recipient. This does not
@@ -60,6 +61,7 @@ test("INPUT46-01: a paste captured for input A never mutates later-focused input
     "@desktop/core/shortcut-dispatch": { ShortcutDispatcher }, "@desktop/core/shortcuts": keys,
     "@/lib/desktop/input-commands": { installInputContextMenu, isAPIKeyControl, installInputCommands: (options: Parameters<typeof installInputCommands>[0]) => installInputCommands({ ...options, registerTarget: target => bus.register(target) }) },
     "@/lib/desktop/text-context-menu": { installTextContextMenu: () => () => {} },
+    "@/lib/desktop/text-shortcuts":textShortcutsModule,"@/lib/desktop/text-shortcut-source":{captureTextShortcut:()=>null,copySpanningSelection:()=>false},
     "@/lib/desktop/native-text-edits": { nativeTextEdits },
     "@/lib/desktop/composer-text-commands": { installComposerTextCommands: () => () => {} },
     "@/lib/desktop/command-scope": { commandScope },

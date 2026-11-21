@@ -10,6 +10,7 @@ import * as shortcutKeys from "../../desktop/core/shortcuts"
 import {platformCommands} from "../../desktop/shared/command-registry"
 import {desktopCommandCatalog,publishDesktopCommands} from "../../src/lib/desktop/command-runtime"
 import {commandScope} from "../../src/lib/desktop/command-scope"
+import * as textShortcutsModule from "../../src/lib/desktop/text-shortcuts"
 
 // Execute actual ChatPanel callbacks and the real Controller capture listener.
 // The DOM/hooks are bounded fixtures; this does not claim native event proof.
@@ -67,7 +68,7 @@ function controller(overrides:Record<string,string[]>={},mention:object|null=nul
   "@/stores/chat":{useChatStore:{getState:()=>({accountId:"local",conversationId:null,draftId:"shortcut-fixture",draftNovelId:null,recoveryStatus:"ready",creatingNovel:false,requestedConversationId:null,newConversationRequested:false}),subscribe:()=>()=>{}}},
   "@desktop/core/shortcut-dispatch":{ShortcutDispatcher},"@desktop/core/shortcuts":shortcutKeys,
   "@/lib/desktop/input-commands":{installInputCommands:()=>()=>{},installInputContextMenu:()=>()=>{},isAPIKeyControl:()=>false},"@/lib/desktop/native-text-edits":{nativeTextEdits:()=>({run(){},dispose(){}})},
-  "@/lib/desktop/text-context-menu":{installTextContextMenu:()=>()=>{}},
+  "@/lib/desktop/text-context-menu":{installTextContextMenu:()=>()=>{}},"@/lib/desktop/text-shortcuts":textShortcutsModule,"@/lib/desktop/text-shortcut-source":{captureTextShortcut:()=>null,copySpanningSelection:()=>false},
   "@/lib/desktop/composer-text-commands":{installComposerTextCommands:()=>()=>{}},
   "@/lib/desktop/command-scope":{commandScope},
   "@/lib/desktop/command-runtime":{desktopCommandCatalog:()=>platformCommands("darwin"),desktopCommandTargets:bus,desktopCommandTarget:()=>remembered,desktopEditorTarget:()=>editor,rememberDesktopCommandTarget:(next:ElementFixture)=>{remembered=next}},
