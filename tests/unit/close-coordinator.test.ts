@@ -51,3 +51,11 @@ test("failure dialog exceptions still release the flow and allow a new close att
  let fail=true;const r=rig({flush:async()=>{if(fail)throw Error()},failed:async()=>{throw Error("native dialog unavailable")}})
  assert.equal(await r.coordinator.request("window"),false);fail=false;assert.equal(await r.coordinator.request("window"),true);assert.equal(r.calls.filter(x=>x==="release").length,2)
 })
+test("force close after save failure skips the failed save, closes data, then discards drafts before committing",async()=>{
+ const r=rig({flush:async()=>{r.calls.push("flush");throw Error("isolated save failure")},failed:async()=>"discard",discardDrafts:async()=>{r.calls.push("discard")}})
+ assert.equal(await r.coordinator.request("window"),true);assert.deepEqual(r.calls,["stop","flush","data","discard","commit:window","release"])
+})
+test("a failed draft discard keeps the window and offers the choices again",async()=>{
+ let choices=0,fail=true;const r=rig({flush:async()=>{r.calls.push("flush");throw Error()},failed:async()=>choices++?(choices>2?"cancel":"discard"):"discard",discardDrafts:async()=>{r.calls.push("discard");if(fail){fail=false;throw Error("isolated unlink failure")}}})
+ assert.equal(await r.coordinator.request("quit"),true);assert.deepEqual(r.calls,["stop","flush","data","discard","discard","commit:quit","release"])
+})

@@ -33,7 +33,7 @@ test('RPM-01..06: each workbench prompt keeps its former meaning and defaults to
  const expected:Record<string,{buttons:string[];defaultValue:string;cancelValue:string}>={
   '仍有创作任务运行':{buttons:['cancel:outline','stop:destructive'],defaultValue:'cancel',cancelValue:'cancel'},
   '作品锁修复交接尚未完成':{buttons:['cancel:outline','retry:default'],defaultValue:'cancel',cancelValue:'cancel'},
-  '尚不能关闭':{buttons:['cancel:outline','export:outline','retry:default'],defaultValue:'cancel',cancelValue:'cancel'},
+  '尚不能关闭':{buttons:['cancel:outline','export:outline','discard:destructive','retry:default'],defaultValue:'cancel',cancelValue:'cancel'},
   '修复导入保存目录的异常退出锁':{buttons:['cancel:outline','repair:destructive'],defaultValue:'cancel',cancelValue:'cancel'},
   '修复异常退出锁':{buttons:['cancel:outline','repair:destructive'],defaultValue:'cancel',cancelValue:'cancel'},
   '作品锁恢复结果':{buttons:['ok:default'],defaultValue:'ok',cancelValue:'ok'},

@@ -465,9 +465,10 @@ async function launch() {
     afterClose:async()=>{await workLease?.finishClosed()},
     failed:async()=>{
       if(workLease?.requiresRestart)return await appPrompts.ask({tone:"warning",title:"作品锁修复交接尚未完成",message:"作品锁修复状态尚未确认保存。",detail:"原文件与恢复草稿已保留。工作台暂不接受修改，请重试完成交接后重新启动。",buttons:[{value:"cancel",label:"稍后重试",variant:"outline"},{value:"retry",label:"重试交接",variant:"default"}],defaultValue:"cancel",cancelValue:"cancel"})==="retry"?"retry":"cancel"
-      const choice=await appPrompts.ask({tone:"warning",title:"尚不能关闭",message:"部分修改尚未确认保存。",detail:"窗口和原草稿已保留。可以重试、导出恢复草稿，或返回继续处理。",buttons:[{value:"cancel",label:"取消关闭",variant:"outline"},{value:"export",label:"导出草稿",variant:"outline"},{value:"retry",label:"重试",variant:"default"}],defaultValue:"cancel",cancelValue:"cancel"})
-      return choice==="retry"||choice==="export"?choice:"cancel"
+      const choice=await appPrompts.ask({tone:"warning",title:"尚不能关闭",message:"部分修改尚未确认保存。",detail:"窗口和原草稿已保留。可以重试、导出恢复草稿，或返回继续处理。选择“关闭”将放弃未保存的修改并删除恢复草稿。",buttons:[{value:"cancel",label:"取消关闭",variant:"outline"},{value:"export",label:"导出草稿",variant:"outline"},{value:"discard",label:"关闭",variant:"destructive"},{value:"retry",label:"重试",variant:"default"}],defaultValue:"cancel",cancelValue:"cancel"})
+      return choice==="retry"||choice==="export"||choice==="discard"?choice:"cancel"
     },
+    discardDrafts:async()=>{await draftJournal.discard()},
     exportDraft:async owner=>{const reply=await closeChannel.request(owner,"export");if(!window||window.isDestroyed()||window.webContents.id!==owner.owner||draftSession?.owner!==owner.owner||draftSession.id!==owner.sessionId)throw new Error("草稿所属窗口已变化");if(reply.status!=="export")throw new Error("无法读取草稿");await exportDraftSnapshot(reply.snapshot)},
     commit:async intent=>{migrationHandoff?.commit();workLease?.commit();closeCommitted=true;if(window)closePermits.add(window);if(intent==="quit"){quitting=true;void worker.terminate();app.quit()}else window?.close()},
     release:async()=>{closeChannel.cancel();if(!closeCommitted){
