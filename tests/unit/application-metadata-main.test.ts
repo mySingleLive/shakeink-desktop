@@ -19,5 +19,5 @@ test('actual main writer options reach state, draft, and global avatar construct
  assert.deepEqual(collected,[metadataWrites,metadataWrites,metadataWrites])
  const id=await gate.acquire();let written=false;const pending=metadataWrites.withWrite(async()=>{written=true});await new Promise(resolve=>setImmediate(resolve));assert.equal(written,false)
  const disconnected=find(main,n=>ts.isVariableDeclaration(n)&&n.name.getText(main)==='disconnected') as ts.VariableDeclaration
- evaluate(disconnected.initializer!.getText(main),{applicationMetadata:gate,conversationDirectories:{revokeAll(){}},service:{dispose(){}},modelService:undefined,send(){},responseOwners:new Map()})();await pending;assert.equal(written,true);assert.throws(()=>gate.release(id))
+ const currentWorker={};evaluate(disconnected.initializer!.getText(main),{novelImport:undefined,novelImportSourcePicker:{cancel(){}},novelImportOwner:null,novelImportRepairing:false,worker:currentWorker,currentWorker,applicationMetadata:gate,conversationDirectories:{revokeAll(){}},service:{dispose(){}},modelService:undefined,send(){},responseOwners:new Map()})();await pending;assert.equal(written,true);assert.throws(()=>gate.release(id))
 })

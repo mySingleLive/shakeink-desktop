@@ -16,8 +16,8 @@ let dispatch='';function scan(n:ts.Node){if(ts.isNewExpression(n)&&n.expression.
 function workerFixture(){
  assert.ok(dispatch);let attempts=0,closeGate:Promise<void>|undefined;const responses=new Map(),starting=new Map(),pendingStarts=new Set<Promise<void>>()
  const rejected=async()=>{throw Error('CONTROLLED_ENTRY_REJECTED')}
- const deps={ready:Promise.resolve(),responses,starting,pendingStarts,localAttemptCount:()=>attempts,cancel:async()=>{},works:{close:async()=>{await closeGate},open:rejected,create:rejected,list:async()=>[]},closedWorkLeaseTarget:async(_works:unknown,_id:unknown,guard:()=>void)=>{guard();return'authorized-closed-target'},WorkBackupControl:class{handle=rejected},start:rejected}
- const run=new Function(...Object.keys(deps),transformSync(`let closing=false,closedForMaintenance=false;return ${dispatch}`,{loader:'ts'}).code)(...Object.values(deps)) as (method:string,data?:unknown)=>Promise<unknown>
+ const deps={ready:Promise.resolve(),responses,starting,pendingStarts,localAttemptCount:()=>attempts,cancel:async()=>{},works:{close:async()=>{await closeGate},open:rejected,create:rejected,list:async()=>[]},closedWorkLeaseTarget:async(_works:unknown,_id:unknown,guard:()=>void)=>{guard();return'authorized-closed-target'},WorkBackupControl:class{handle=rejected},start:rejected,importJobs:{active:0,stop:async()=>{},cancel(){},run:async()=>{throw Error('unexpected import job')}},importPublications:new Map()}
+ const run=new Function(...Object.keys(deps),transformSync(`let closing=false,closedForMaintenance=false,stoppingImports=false;return ${dispatch}`,{loader:'ts'}).code)(...Object.values(deps)) as (method:string,data?:unknown)=>Promise<unknown>
  return{run,responses,starting,pendingStarts,setAttempts:(n:number)=>attempts=n,setCloseGate:(p:Promise<void>)=>closeGate=p}
 }
 

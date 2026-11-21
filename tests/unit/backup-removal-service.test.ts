@@ -18,8 +18,8 @@ function actualRpc(){
  const scan=(node:ts.Node)=>{if(ts.isNewExpression(node)&&node.expression.getText(syntax)==='RpcPeer')callback=node.arguments![1].getText(syntax);ts.forEachChild(node,scan)};scan(syntax);assert(callback)
  const events:string[]=[],works={close:async()=>{events.push('close')},protectedDirectories:async()=>['/work']}
  class RemovedControl{async handle(){events.push('removed-backup-command');return{type:'removed-command-was-called'}}}
- const dependencies={ready:Promise.resolve(),works,responses:new Map(),starting:new Map(),pendingStarts:new Set(),localAttemptCount:()=>0,cancel:async()=>{},closedWorkLeaseTarget:async(_works:unknown,_data:unknown,guard:()=>void)=>{guard();return'closed-target'},WorkBackupControl:RemovedControl,ApplicationBackupControl:RemovedControl}
- const factory=new Function(...Object.keys(dependencies),transformSync(`let closing=false,closedForMaintenance=false;return ${callback}`,{loader:'ts'}).code)
+ const dependencies={ready:Promise.resolve(),works,responses:new Map(),starting:new Map(),pendingStarts:new Set(),localAttemptCount:()=>0,cancel:async()=>{},closedWorkLeaseTarget:async(_works:unknown,_data:unknown,guard:()=>void)=>{guard();return'closed-target'},WorkBackupControl:RemovedControl,ApplicationBackupControl:RemovedControl,importJobs:{active:0,stop:async()=>{},cancel(){},run:async()=>{throw Error('unexpected import job')}},importPublications:new Map()}
+ const factory=new Function(...Object.keys(dependencies),transformSync(`let closing=false,closedForMaintenance=false,stoppingImports=false;return ${callback}`,{loader:'ts'}).code)
  return{events,run:factory(...Object.values(dependencies)) as (method:string,input?:unknown)=>Promise<unknown>}
 }
 

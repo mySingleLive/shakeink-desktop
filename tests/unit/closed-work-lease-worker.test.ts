@@ -7,8 +7,8 @@ const source=ts.createSourceFile('service.ts',readFileSync('desktop/service/inde
 let callback='';const scan=(n:ts.Node)=>{if(ts.isNewExpression(n)&&n.expression.getText(source)==='RpcPeer')callback=n.arguments![1].getText(source);ts.forEachChild(n,scan)};scan(source)
 function fixture(){
  let fail=false,wait:Promise<void>|null=null,lookup:Promise<void>|null=null;const calls:string[]=[],pendingStarts=new Set<Promise<void>>()
- const dependencies={ready:Promise.resolve(),responses:new Map(),starting:new Map(),pendingStarts,localAttemptCount:()=>0,cancel:async()=>{},works:{close:async()=>{calls.push('close-enter');await wait;if(fail)throw Error('close failed');calls.push('closed')},open:async()=>calls.push('opened'),list:async()=>[],protectedDirectories:async()=>[]},closedWorkLeaseTarget:async(_works:unknown,id:string,guard:()=>void)=>{guard();calls.push('target');await lookup;guard();return id}}
- const code=`let closing=false,closedForMaintenance=false;return ${callback}`
+ const dependencies={ready:Promise.resolve(),responses:new Map(),starting:new Map(),pendingStarts,localAttemptCount:()=>0,cancel:async()=>{},works:{close:async()=>{calls.push('close-enter');await wait;if(fail)throw Error('close failed');calls.push('closed')},open:async()=>calls.push('opened'),list:async()=>[],protectedDirectories:async()=>[]},closedWorkLeaseTarget:async(_works:unknown,id:string,guard:()=>void)=>{guard();calls.push('target');await lookup;guard();return id},importJobs:{active:0,stop:async()=>{},cancel(){},run:async()=>{throw Error('unexpected import job')}},importPublications:new Map()}
+ const code=`let closing=false,closedForMaintenance=false,stoppingImports=false;return ${callback}`
  const run=new Function(...Object.keys(dependencies),transformSync(code,{loader:'ts'}).code)(...Object.values(dependencies)) as (method:string,data?:unknown)=>Promise<unknown>
  return{run,calls,pendingStarts,fail:(value:boolean)=>fail=value,wait:(value:Promise<void>|null)=>wait=value,lookup:(value:Promise<void>|null)=>lookup=value}
 }

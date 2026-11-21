@@ -22,14 +22,16 @@ function walk(node:ts.Node){
  ts.forEachChild(node,walk)
 }
 walk(file);assert.ok(dispatchSource)
+/** Idle novel-import worker state: no running AI job to stop. */
+const idleImportJobs=()=>({active:0,stop:async()=>{},cancel(){},run:async()=>{throw Error('unexpected import job')}})
 const compiled=ts.transpileModule(`const dispatch=${dispatchSource};`,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText
 
 test("C53-05: stopping must bound pending response cancellation before its task-finally deadline",async t=>{
  t.mock.timers.enable({apis:["setTimeout","Date"]})
  const gate=Promise.withResolvers<void>(),pendingStarts=new Set<Promise<void>>(),responses=new Map([["pending-response",{}]]),starting=new Map(),ready=Promise.resolve()
  let closed=false,settled=false,error:unknown
- const create=new Function("ready","localAttemptCount","abortAllLocalAttempts","responses","starting","cancel","pendingStarts","delay","works",`${compiled}\nreturn dispatch`)
- const dispatch=create(ready,()=>0,()=>{},responses,starting,async()=>gate.promise,pendingStarts,(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms)),{close:async()=>{closed=true}}) as (method:string,value?:unknown)=>Promise<unknown>
+ const create=new Function("ready","localAttemptCount","abortAllLocalAttempts","responses","starting","cancel","pendingStarts","delay","works","importJobs","importPublications",`let stoppingImports=false\n${compiled}\nreturn dispatch`)
+ const dispatch=create(ready,()=>0,()=>{},responses,starting,async()=>gate.promise,pendingStarts,(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms)),{close:async()=>{closed=true}},idleImportJobs(),new Map()) as (method:string,value?:unknown)=>Promise<unknown>
  const request=dispatch("stop-tasks").then(()=>{settled=true},reason=>{settled=true;error=reason})
  try {
   await new Promise(setImmediate)
@@ -46,8 +48,8 @@ test("C53-05b: pending handler-finally is bounded and its late stop cannot cance
  t.mock.timers.enable({apis:["setTimeout","Date"]})
  const gate=Promise.withResolvers<void>(),pendingStarts=new Set([gate.promise]),responses=new Map(),starting=new Map(),ready=Promise.resolve()
  let aborts=0,loops=0,active=1
- const create=new Function("ready","localAttemptCount","abortAllLocalAttempts","responses","starting","cancel","pendingStarts","delay","works",`${compiled}\nreturn dispatch`)
- const dispatch=create(ready,()=>active,()=>{aborts++},responses,starting,async()=>{},pendingStarts,(ms:number)=>{loops++;return new Promise(resolve=>setTimeout(resolve,ms))},{close:async()=>{throw Error("must retain database")}}) as (method:string)=>Promise<unknown>
+ const create=new Function("ready","localAttemptCount","abortAllLocalAttempts","responses","starting","cancel","pendingStarts","delay","works","importJobs","importPublications",`let stoppingImports=false\n${compiled}\nreturn dispatch`)
+ const dispatch=create(ready,()=>active,()=>{aborts++},responses,starting,async()=>{},pendingStarts,(ms:number)=>{loops++;return new Promise(resolve=>setTimeout(resolve,ms))},{close:async()=>{throw Error("must retain database")}},idleImportJobs(),new Map()) as (method:string)=>Promise<unknown>
  const old=dispatch("stop-tasks"),rejected=assert.rejects(old,/保存停止状态/)
  try{
   await new Promise(setImmediate);t.mock.timers.tick(8000);await rejected
@@ -77,7 +79,7 @@ test("C53-06: main stop timeout retains pending model ownership and a late compl
  const state=await repository.saveModel(0,draft),model=state.models[0]
  const input={id:randomUUID(),modelId:model.id,authRevision:model.authRevision,kind:model.kind,url:model.endpoint+"/chat/completions",method:"POST",headers:{},body:JSON.stringify({model:model.modelId})}
  const pending=modelService.start(input),cancelled=assert.rejects(pending,/AUTHORIZATION_REVOKED/);await entered.promise
- const stop=new Function("window","modelConfiguration","modelService","service",`${mainCompiled}\nreturn stop`)({webContents:{id:9}},{cancelOwner(){}},modelService,{call:async()=>true}) as ()=>Promise<void>
+ const stop=new Function("window","modelConfiguration","modelService","service","novelImport","novelImportSourcePicker",`${mainCompiled}\nreturn stop`)({webContents:{id:9}},{cancelOwner(){}},modelService,{call:async()=>true},undefined,{cancel(){}}) as ()=>Promise<void>
  const coordinator=new CloseCoordinator({current:()=>({owner:9,sessionId:"same-owner"}),busy:async()=>true,confirmStop:async()=>true,stopTasks:stop,flush:async()=>{flushes++},closeData:async()=>{closedData++},failed:async()=>"cancel",exportDraft:async()=>{},commit:()=>{commits++},release:()=>{resumed++;modelService.resume()}})
  t.mock.timers.enable({apis:["setTimeout","Date"]})
  try{
