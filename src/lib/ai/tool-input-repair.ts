@@ -147,6 +147,40 @@ function matchingContainerSchema(schema: Record<string, unknown>, parsed: Record
   return schema
 }
 
+/** 括号栈修正闭合符（issue #15）：仅改写/丢弃/补齐闭合符，不增删任何内容字符。
+    转义口径与 repairPlanningClosingBoundary 一致：通用 escaped 标志，任意 \ 后字符被消费。
+    返回 null 表示不可修复（字面量未闭合）。 */
+function repairContainerClosers(text: string): { value: string; rewritten: number; dropped: number; padded: number } | null {
+  const stack: string[] = []
+  const out: string[] = []
+  let inString = false, escaped = false, rewritten = 0, dropped = 0
+  for (const char of text) {
+    if (inString) {
+      out.push(char)
+      if (escaped) { escaped = false; continue }
+      if (char === "\\") { escaped = true; continue }
+      if (char === '"') inString = false
+      continue
+    }
+    if (char === '"') { inString = true; out.push(char); continue }
+    if (char === "{" || char === "[") { stack.push(char); out.push(char); continue }
+    if (char === "}" || char === "]") {
+      const top = stack.at(-1)
+      if (!top) { dropped++; continue }
+      const want = top === "{" ? "}" : "]"
+      if (char !== want) { out.push(want); rewritten++ } else out.push(char)
+      stack.pop()
+      continue
+    }
+    out.push(char)
+  }
+  // 字面量被切断在内部：结构证据不足，不补齐（防伪造内容）。
+  if (inString) return null
+  // LIFO 补齐缺失的尾部闭合符（栈顶→栈底）。
+  const closing = stack.slice().reverse().map(open => (open === "{" ? "}" : "]")).join("")
+  return { value: out.join("") + closing, rewritten, dropped, padded: closing.length }
+}
+
 /** 只在 schema 明确期望对象/数组时还原同构 JSON 文本；普通字符串字段不改写。 */
 function parseEncodedContainer(value: string, schema: Record<string, unknown>): Record<string, unknown> | unknown[] | undefined {
   const types = containerTypes(schema)
@@ -155,11 +189,26 @@ function parseEncodedContainer(value: string, schema: Record<string, unknown>): 
   if (types.has("string")) return undefined
   const text = value.trim()
   if (!text.startsWith("{") && !text.startsWith("[")) return undefined
-  try {
-    const parsed: unknown = JSON.parse(text)
+  const accept = (parsed: unknown): Record<string, unknown> | unknown[] | undefined => {
     if (types.has("object") && parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>
     if (types.has("array") && Array.isArray(parsed)) return parsed
-  } catch { return undefined }
+    return undefined
+  }
+  try {
+    const parsed: unknown = JSON.parse(text)
+    const direct = accept(parsed)
+    if (direct !== undefined) return direct
+  } catch {
+    // 内层 JSON 非法（供应商把闭合符类型/数量写错，issue #15）：按括号栈修正后再试。
+    const repaired = repairContainerClosers(text)
+    if (!repaired) return undefined
+    // 放行条件（docs/235）：模型确实写错闭合符类型（rewritten ≥ 1）才修；
+    // 纯尾部缺闭合符/纯多余闭合符（rewritten=0）无法区分真截断，一律放弃。
+    if (!(repaired.rewritten >= 1 && repaired.padded <= 1)) return undefined
+    let parsed: unknown
+    try { parsed = JSON.parse(repaired.value) } catch { return undefined }
+    return accept(parsed)
+  }
   return undefined
 }
 
