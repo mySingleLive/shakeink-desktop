@@ -90,7 +90,9 @@
 .treeRow.selectedRow { color: var(--foreground); font-weight: 600; }
 .treeRow.inView .treeDot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ec) 25%, transparent); }
 .treeRow.dim { opacity: 0.35; }
-.treeTwist { flex: none; width: 16px; text-align: center; font-size: 10px; color: var(--muted-foreground); transition: transform 0.15s; }
+.treeTwist { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: var(--muted-foreground); transition: transform 0.15s; }
+.treeTwist:has(svg):hover { background: var(--hover-wash); color: var(--foreground); }
+.treeTwist svg { display: block; }
 .treeTwist.closed { transform: rotate(-90deg); }
 .treeDot { flex: none; border-radius: 50%; background: var(--ec); }
 .treeTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }

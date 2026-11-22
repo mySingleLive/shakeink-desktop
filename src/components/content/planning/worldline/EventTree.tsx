@@ -1,5 +1,6 @@
 "use client";
 import { renderProbe } from "@/lib/planning/render-probe";
+import { ChevronDown } from "lucide-react";
 import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 import { CATEGORY_VAR, descendants, TREE_INDENT, type EventTree as Tree, type TreeNode } from "@/lib/planning/worldline-layout";
 import { Highlight, WorldlineCardContext } from "./EventCard";
@@ -158,7 +159,7 @@ export function EventTreeNav({
                 className={`${s.treeTwist} ${folded.has(n.id) ? s.closed : ""}`}
                 onClick={(ev) => { if (!hasKids) return; ev.stopPropagation(); onFold(n.id) }}
               >
-                {hasKids ? "▾" : ""}
+                {hasKids ? <ChevronDown size={14} strokeWidth={2.25} aria-hidden /> : null}
               </span>
               <span className={s.treeDot} style={{ width: size, height: size }} />
               <span className={s.treeTitle} title={e.title} data-tree-title=""><Highlight text={e.title} terms={ctx.searchTerms} /></span>
