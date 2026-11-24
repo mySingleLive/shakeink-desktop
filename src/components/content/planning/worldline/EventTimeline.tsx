@@ -349,16 +349,18 @@ export function EventTimeline({
   const cardCtx = useMemo(() => ({ ...ctx, onExpand: onAutoExpand }), [ctx, onAutoExpand]);
   // docs/592 §2.4: the status-line note, written after commit; cleared when the timeline unmounts.
   const toggleShowAll = useRef(() => {});
+  // docs/600 §9.3: the timeline and the event table share the panel's note store; each clears only its own note.
+  const noteOwner = useRef({}).current;
   toggleShowAll.current = () => setShowAll((v) => (v ? 0 : pointClass));
   useLayoutEffect(() => {
     if (!noteStore) return;
     // docs/593 H4: hidden events have no note; levels without points (4, 6) clear it.
-    noteStore.set(pointClass > 0 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, important: pointClass === 2, showAll } : null);
+    noteStore.set(pointClass > 0 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, important: pointClass === 2, showAll } : null, noteOwner);
   });
   useEffect(() => {
     if (!noteStore) return;
-    noteStore.actions = { toggleShowAll: () => toggleShowAll.current() };
-    return () => { noteStore.actions = null; noteStore.set(null); };
+    noteStore.register(noteOwner, { toggleShowAll: () => toggleShowAll.current() });
+    return () => noteStore.clear(noteOwner);
   }, [noteStore]);
 
   // Measured heights of open cards feed the next layout. One observer for the component's life; the open set

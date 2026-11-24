@@ -10,6 +10,7 @@ import {
   snapTimelineDelta,
 } from "@/lib/planning/timeline";
 import {
+  useContext,
   useCallback,
   useEffect,
   useMemo,
@@ -68,7 +69,7 @@ import { Button } from "@/components/ui/button";
 import { WorldlineHeader, type WorldlineSaveState } from "./worldline/WorldlineHeader";
 import { EventCard, EventEditorContext, WorldlineCardContext, type WorldlineCardContextValue } from "./worldline/EventCard";
 import { EventTable, type RailMode } from "./worldline/EventTable";
-import { EventTimeline, TimelineTreeNav, TimelineZoomNoteContext, ViewportRange, ViewportValue, ZoomNoteLine } from "./worldline/EventTimeline";
+import { EventTimeline, TimelineTreeNav, TimelineZoomLevelsContext, TimelineZoomNoteContext, ViewportRange, ViewportValue, ZoomNoteLine } from "./worldline/EventTimeline";
 import { createViewportStore, createZoomNoteStore, type ViewportStore, type ZoomNoteStore } from "@/lib/planning/worldline-viewport";
 import { renderProbe } from "@/lib/planning/render-probe";
 import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
@@ -261,6 +262,8 @@ function PlanningWorkspace({
     worldViews = useRef(
       new Map<string, { start: number; span: number; y: number }>(),
     );
+  // docs/600: the event table follows the same zoom-level switch as the timeline (product default on).
+  const zoomLevelsOn = useContext(TimelineZoomLevelsContext);
   const data = query.data?.data ?? planningSchema.parse({}),
     readonly = query.data?.readonly || busy,
     activeLine =
@@ -300,7 +303,8 @@ function PlanningWorkspace({
       return kept.length === selection.size ? selection : new Set(kept);
     }, [selection, wFiltered, wShownIds]),
     wAdapter = useMemo(() => adapterFor(data, worldId, timeBase || null), [data, worldId, timeBase]),
-    wZoom = useMemo(() => tableZoomBounds(wViewTree, wAdapter), [wViewTree, wAdapter]),
+    // docs/600 §8.6 P2-5: with zoom levels on, the table can zoom out to level 6.
+    wZoom = useMemo(() => tableZoomBounds(wViewTree, wAdapter, { levels: zoomLevelsOn }), [wViewTree, wAdapter, zoomLevelsOn]),
     wTerms = useMemo(() => toSearchTerms(searchApplied), [searchApplied]),
     wCharacters = query.data?.characters ?? EMPTY_CHARACTERS,
     wNames = useMemo(() => new Map(wCharacters.map((c) => [c.id, c.name])), [wCharacters]),
@@ -322,6 +326,7 @@ function PlanningWorkspace({
       onToggle: (id, detail) => actions.current.toggle(id, detail),
       onSelect: (id, detail, mods) => actions.current.select(id, detail, mods),
       onExpand: (id) => actions.current.expand(id),
+      onSelectOnly: (id) => { setEventSelection(id); setPinnedCard(id); },
       onMenu: (action, id) => actions.current.menu(action, id),
       onStartTimeDrag: (ev, id) => actions.current.drag(ev, id),
       renderRefs: (e) => actions.current.refs(e),
@@ -2228,6 +2233,8 @@ function PlanningWorkspace({
       const sc = tableScroller.current, el = sc?.querySelector<HTMLElement>(`[data-event-card][data-event-id="${CSS.escape(id)}"]`);
       if (!sc || !el) return;
       const top = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+      // docs/600 §12.2: a locate (tree, search, deep link) is user input for the table's auto-open.
+      sc.dispatchEvent(new CustomEvent("worldline-locate", { detail: id }));
       sc.scrollTop = top - sc.clientHeight / 3;
       flashCard(sc, id);
     }));
@@ -2478,7 +2485,7 @@ function PlanningWorkspace({
             selected={table ? 0 : shownSelection.size}
             shown={wFiltered ? wViewEvents.length : undefined}
             onShowAll={showAllTypes}
-            zoomNote={table ? undefined : <ZoomNoteLine store={zoomNote.current} />}
+            zoomNote={<ZoomNoteLine store={zoomNote.current} />}
           />
         )}
         {fork && (

@@ -221,6 +221,13 @@
 .slot { position: absolute; left: 12px; right: 24px; max-width: 880px; }
 /* docs/583 R1: a collapsed table card is as wide as its head needs, 220px to the slot width. */
 .slot:not(.slotOpen) > .card { width: fit-content; min-width: 220px; max-width: 100%; }
+/* docs/600 §8.2: a zoomed-out collapsed table card sits in a box as wide as the layout's unscaled width; the card
+ * fills it, so its title wraps exactly as the layout counted. */
+.tableZoom { position: relative; max-width: none; }
+.slot:not(.slotOpen) > .tableZoom > .card { width: 100%; min-width: 0; max-width: none; }
+.slot.slotPoint { height: 18px; }
+.slot.slotPoint > .tpoint { position: relative; }
+.slot.slotPoint > .tpoint > span[data-point-title] { max-width: none; flex: 0 1 auto; min-width: 0; text-overflow: ellipsis; }
 .slot.slotOpen { max-width: 920px; }
 /* docs/588 §1: the box border is an inset shadow, so children keep layout coordinates at every nesting depth. */
 .groupBox { position: absolute; left: 12px; right: 24px; max-width: 940px; border-radius: 12px;
@@ -229,18 +236,18 @@
 /* docs/588 §1: the parent card is the box header: full width, flush with the box top, 36px when collapsed. */
 .slot.slotHead, .slot.slotHead.slotOpen { left: 0; right: 0; max-width: none; }
 /* The header is opaque, so it draws the box's 3px type edge itself (no gap in the left bar). */
-.slot.slotHead > .card.groupHead { width: 100%; min-width: 0; border: 0; border-radius: 12px 12px 0 0;
+:is(.slot.slotHead, .slot.slotHead > .tableZoom) > .card.groupHead { width: 100%; min-width: 0; border: 0; border-radius: 12px 12px 0 0;
   box-shadow: inset 3px 0 0 var(--ec), inset 0 -1px 0 var(--border); background: color-mix(in srgb, var(--ec) 12%, var(--card)); }
-.slot.slotHead > .card.groupHead::before { display: none; }
+:is(.slot.slotHead, .slot.slotHead > .tableZoom) > .card.groupHead::before { display: none; }
 .slot.slotHead > .card.groupHead.open { border-radius: 12px; }
 .groupHead .head { height: 36px; }
 .groupHead.open .head { height: 42px; }
 /* docs/592 §1.3: a group header is 0 + 9 + 18 / 36 + 9 = 36 / 54 (no border); its first line stays 18 down. */
 .card.groupHead:not(.open) > .head { padding-top: 9px; padding-bottom: 9px; }
 .groupHead .title { font-weight: 600; }
-.slot.slotHead > .card.groupHead.hot:not(.selected) { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, var(--border)), 0 0 0 2px color-mix(in srgb, var(--ec) 22%, transparent); }
-.slot.slotHead > .card.groupHead.selected { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, transparent), 0 0 0 3px color-mix(in srgb, var(--ec) 14%, transparent); }
-.slot.slotHead > .card.groupHead.hit { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 2px var(--event-scheme); }
+:is(.slot.slotHead, .slot.slotHead > .tableZoom) > .card.groupHead.hot:not(.selected) { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, var(--border)), 0 0 0 2px color-mix(in srgb, var(--ec) 22%, transparent); }
+:is(.slot.slotHead, .slot.slotHead > .tableZoom) > .card.groupHead.selected { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 1px color-mix(in srgb, var(--ec) 70%, transparent), 0 0 0 3px color-mix(in srgb, var(--ec) 14%, transparent); }
+:is(.slot.slotHead, .slot.slotHead > .tableZoom) > .card.groupHead.hit { box-shadow: inset 3px 0 0 var(--ec), inset 0 0 0 2px var(--event-scheme); }
 /* docs/588 §2: aligned / equidistant rail toggle, top right of the table, not scrolling. */
 .railModeDock { position: sticky; top: 0; z-index: 7; height: 0; }
 .railMode { position: absolute; top: 8px; right: 24px; display: inline-flex; align-items: center; gap: 2px; height: 28px; padding: 3px;
@@ -388,7 +395,8 @@
 .card.stack:hover { border-color: color-mix(in srgb, var(--ec) 55%, var(--border)); }
 /* Event table: a stacked card is as wide as the group box it replaces. */
 .slot.slotStack { max-width: 940px; }
-.slot.slotStack > .stackWrap > .card { width: 100%; }
+:is(.slot.slotStack, .slot.slotStack > .tableZoom) > .stackWrap > .card { width: 100%; }
+.slot.slotStack > .tableZoom > .stackWrap { width: 100%; }
 .tcard .stackWrap { width: 100%; }
 
 /* ---------- docs/592 timeline: zoom, time points, hover ---------- */

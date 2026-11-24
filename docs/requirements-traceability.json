@@ -5666,6 +5666,57 @@
     "测试用例审核列出的 CE-03/06/11c/24/28/31e/38/45/46/48/50b/52 与 CE-66 的标题拖动、框选、小地图拖动未写，未执行，不计为通过",
     "Windows 未在真实目标验证"
    ]
+  },
+  {
+    "id": "WL-600",
+    "requirement": "世界线事件表视图：Ctrl + 滚轮缩放画布（只有滚轮时仍上下滚动），并与时间线视图一样随缩放程度自动展开 / 收起父事件的子事件、自动展开 / 收起普通卡片、把普通事件卡片收缩成一行标题、按重要度隐藏或显示事件卡片（用户 2026-11-23；确认：Ctrl + 滚轮缩放、与时间线相同的拥挤度规则、只在有空间时展开、收起卡片缩到 0.75、家族内子事件也按时间拉伸、分组头不参与自动展开）",
+    "source": [
+      "docs/600-worldline-table-zoom-plan.md",
+      "docs/600-worldline-table-zoom-plan-review.md",
+      "docs/600-worldline-table-zoom-test-review.md",
+      "docs/600-worldline-table-zoom-code-review.md"
+    ],
+    "implementation": [
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/lib/planning/worldline-layout.ts（tableLayout plan / gapMax / stretchChildren、tableZoomBounds levels、tableCrowding、tableGapFor、tableAutoOpenFits、projectAnchor、isProgrammaticScroll、decideAutoOpen）",
+      "src/lib/planning/worldline-viewport.ts（提示 store 按 owner 写入 / 清除）",
+      "src/components/content/planning/worldline/EventTimeline.tsx（提示 owner）",
+      "src/components/content/planning/worldline/EventCard.tsx（onSelectOnly）",
+      "src/components/content/planning/PlanningWorkspace.tsx（reuse：zoomLevelsOn、两视图都显示缩放提示、定位事件通知）",
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "TZ-01..14（tests/unit/worldline-table-zoom.test.ts；TZ-02 为 9dca205 上生成的布局快照）",
+      "TZB-01..21、06b..06e、12b、13e、17b（tests/browser/planning-worldline-table-zoom.test.ts）",
+      "ZB-02（改，需求导致：分级关闭）、ZB-05 / 08 / 37 / 40（只改注释）",
+      "600-r3（真实目标 table-zoom-600.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TABLE_ZOOM_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "T1 Ctrl + 滚轮缩放、普通滚轮滚动": "真实目标 600-r3 plain wheel scrolls + 每步记录 data-crowding；浏览器夹具 TZB-01、TZB-18",
+      "T2 收起卡片缩小": "真实目标 600-r3 复位级别 2 data-card-zoom 0.75；浏览器夹具 TZB-11（分组头、层叠卡、高度）",
+      "T3 一行标题（时间点）": "真实目标 600-r3 级别 2–5 时间点计数与截图 out-L2..L5；浏览器夹具 TZB-01/02/04/21",
+      "T4 自动折叠 / 展开父事件": "真实目标 600-r3 级别 3–4 层叠卡计数；浏览器夹具 TZB-02/03",
+      "T5 按重要度隐藏": "真实目标 600-r3 级别 6 无时间点、只剩关键卡片；浏览器夹具 TZB-01/15/16/17",
+      "T6 有空间时自动展开": "真实目标 600-r3 级别 0 滚动 20 屏：7 屏自动展开、切换 2 次（截图 level0-z1/z2）；浏览器夹具 TZB-06/06b..06e/07/13/13e/14",
+      "C1 界面状态不写作品、只作用于事件表": "真实目标 600-r3 作品版本 8→8；浏览器夹具 TZB-03/09",
+      "C2 已通过功能不变": "浏览器 planning-*.test.ts 全量 314 项：失败 CM-02/03/06/10（基线）、ZB-20（HEAD 同样失败）、CP-07（负载）、EC-73/74、WT-55（同文件 WT-55 超时 180 s 后连带，单独与 9dca205 上均 3/3 通过）"
+    },
+    "evidence": [
+      "tsc、npm run build 通过（~/shakeink-test-roots/worldline-ui-583-evidence/600/build-600.log）",
+      "单元：worldline-table-zoom + worldline-layout 114/114",
+      "浏览器 planning-*.test.ts 全量（browser-600b.log）：314 项 305 通过，失败见 C2",
+      "真实目标（构建版、隔离根 ~/shakeink-test-roots/worldline-ui-599、作品 LOTM-587-wg-r1、无模型调用）：600/r3 PASS 12/12；复位级别 2（d 21.657）；下限级别 6（d 0.12）；从下限 53 步进入级别 0；对齐时间轴圆点偏差每步 ≤ 0.5px；作品版本不变"
+    ],
+    "verificationLimits": [
+      "自动展开在停止输入约 160 ms 后出现 / 消失",
+      "级别 0 时根事件间空白随缩放增大，最多 1200px",
+      "首帧估算高度偏小时可能退出自动展开一次；家族跨度大于到下一根事件的间隔时该家族不自动展开",
+      "GAP / KEEP 回差边界只在单元层验证（浏览器夹具未构造刚好放得下的边界）",
+      "真实目标窄工具栏下“复位”按钮隐藏，复位改用 − 按钮验证；滚动为脚本写 scrollTop（模拟用户滚动）",
+      "Windows 未在真实目标验证"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

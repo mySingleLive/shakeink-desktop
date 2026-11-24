@@ -48,21 +48,35 @@ export interface ZoomNote {readonly count:number;readonly important:boolean;read
 export interface ZoomNoteStore {
  subscribe(listener:()=>void):()=>void
  getSnapshot():ZoomNote|null
- set(note:ZoomNote|null):void
- /** The current timeline's 显示为卡片 / 改回时间点 handler; null when no timeline is mounted. */
+ /** docs/600 §9.3: `owner` (the timeline or the event table) becomes the writer even when the note is equal. */
+ set(note:ZoomNote|null,owner?:unknown):void
+ /** Clears the note and the actions only when `owner` wrote them last. */
+ clear(owner:unknown):void
+ /** The current view's 显示为卡片 / 改回时间点 handler; null when no view registered one. */
  actions:{toggleShowAll():void}|null
+ /** Registers the actions for `owner` (it becomes the writer). */
+ register(owner:unknown,actions:{toggleShowAll():void}):void
 }
 export function createZoomNoteStore():ZoomNoteStore{
- let current:ZoomNote|null=null
+ let current:ZoomNote|null=null,writer:unknown
  const listeners=new Set<()=>void>()
- return {
+ const store:ZoomNoteStore={
   subscribe(listener){listeners.add(listener);return()=>{listeners.delete(listener)}},
   getSnapshot:()=>current,
-  set(note){
+  set(note,owner){
+   if(owner!==undefined)writer=owner
    if(note===current||(note&&current&&note.count===current.count&&note.important===current.important&&note.showAll===current.showAll))return
    current=note?Object.freeze({...note}):null
    for(const listener of [...listeners])listener()
   },
+  clear(owner){
+   if(writer!==owner)return
+   writer=undefined
+   store.actions=null
+   store.set(null)
+  },
+  register(owner,actions){writer=owner;store.actions=actions},
   actions:null,
  }
+ return store
 }

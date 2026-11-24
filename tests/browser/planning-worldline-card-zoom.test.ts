@@ -83,6 +83,8 @@ test("ZB-01: timeline, level 0: each collapsed card is one or two title lines, n
   assert.equal(await page.evaluate(() => [...document.querySelectorAll("[data-timeline-plane] [data-event-card] *")].filter(e => !e.closest("[data-stamp]") && getComputedStyle(e).textOverflow === "ellipsis").length), 0)
 }, Z))
 
+// docs/600 (需求导致): the event table has its own zoom levels now; with them on the reset view is level 1 (cards at
+// 0.75). ZB-02 tests the two-line titles, so it runs with levels off; TZB-11 covers the heights with levels on.
 test("ZB-02: event table at 470px: lines never fewer than needed, heights follow them, gaps exactly 6 / 4, dots on line 1", () => W(zoomView(), async page => {
   await tab(page, "事件表")
   await page.locator("[data-event-table] [data-event-card]").first().waitFor()
@@ -110,7 +112,7 @@ test("ZB-02: event table at 470px: lines never fewer than needed, heights follow
   const g = page.locator("[data-event-group]").first(), cs = await g.locator("[data-event-card]").all()
   const h0 = await rect(cs[0]), c1 = await rect(cs[1])
   assert.ok(Math.abs(c1.y - (h0.y + h0.h) - 4) <= 1)
-}, { ...Z, width: 470 }))
+}, { width: 470 }))
 test("ZB-03: collapsed cards keep their size at d ≥ 160 and are 0.75 of it at d < 40; open cards stay 420 at zoom 1", () => W(zoomView(), async page => {
   await openTimeline(page)
   // r1 is 重要, so it stays a card down to level 3.
@@ -165,6 +167,7 @@ test("ZB-05: at 2.5 ≤ d < 10 every parent is stacked; its fold button opens on
   await expect(cardById(page, "r2")).toHaveAttribute("data-stacked", "")
   await zoomTo(page, 12, 39)
   for (const id of ["r2", "r4", "r8"]) await expect(cardById(page, id)).not.toHaveAttribute("data-stacked", "")
+  // docs/600: the event table follows its own crowding, not the timeline's level (its reset here is level 1: no stack).
   await tab(page, "事件表")
   await expect(page.locator("[data-event-table] [data-event-card][data-stacked]")).toHaveCount(0)
   assert.equal(await posts(page), 0)
@@ -233,6 +236,7 @@ test("ZB-08: at level 6 a tree click on a 一般 child makes it a card in view, 
   await expect(cardById(page, "r8")).not.toHaveAttribute("data-stacked", "")
   // The locate moves the canvas over two frames (PlanningWorkspace.locateWorldEvent); poll until it settles in the lane.
   await expect.poll(async () => { const lane = await rect(page.locator("[data-timeline-lane]")), c = await rect(cardById(page, "r8c0")); return c.y >= lane.y && c.y + c.h <= lane.y + lane.h && c.x >= lane.x && c.x < lane.x + lane.w }).toBe(true)
+  // docs/600: the table keeps its own level (reset level 1), so the timeline's level-6 folding does not reach it.
   await tab(page, "事件表")
   await expect(page.locator("[data-event-table] [data-event-card][data-stacked]")).toHaveCount(0)
 }, Z))

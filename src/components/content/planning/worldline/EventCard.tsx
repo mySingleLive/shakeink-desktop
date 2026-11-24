@@ -27,6 +27,8 @@ export interface WorldlineCardContextValue {
   onSelect(id: string, detail: number, mods: { toggle: boolean; add: boolean }): void;
   /** Toggles the expanded state at once (the timeline's expand button). */
   onExpand(id: string): void;
+  /** docs/600 §9.6 P3-a: select a card as the primary (and pin it) without changing what is open. */
+  onSelectOnly(id: string): void;
   onMenu(action: "quote" | "detail" | "edit" | "locateChildren" | "newChild" | "copy" | "delete" | "fork" | "quoteSelection" | "deleteSelection", id: string): void;
   onStartTimeDrag(event: React.PointerEvent, id: string): void;
   renderRefs(event: PlanningEvent): ReactNode;

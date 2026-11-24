@@ -613,6 +613,13 @@ export interface TableCard {
   stacked: boolean;
   /** docs/592 R1: collapsed title lines decided by the layout (1 when expanded or without `widths`). */
   lines: 1 | 2;
+  /** docs/600 §2: a time point (one line: dot, date, title), 18px high. */
+  point: boolean;
+  /** docs/600 §2: the collapsed card zoom (plan.scale); 1 for open cards and points. */
+  zoom: number;
+  /** docs/600 §8.2: the width in the card's zoomed coordinates that the line count was decided at (the zoom wrapper's
+   * width; on screen it is width × zoom); 0 without `widths`. */
+  width: number;
 }
 export interface TableGroup {
   id: string;
@@ -631,6 +638,16 @@ export interface TableSegment {
   /** Card head y of every placed event in the segment. */
   heads: { id: string; t: number; y: number }[];
 }
+/** docs/600 §9.2: one block of a stacking level (a root, or a child inside its family): its time-stretched start and
+ * its laid-out top and bottom. `level` is the owning group's id ("" for roots). */
+export interface TableBlock {
+  id: string;
+  level: string;
+  stretch: number;
+  top: number;
+  bottom: number;
+  pending: boolean;
+}
 export interface TableBreak {
   kind: "gap" | "pending";
   top: number;
@@ -642,6 +659,8 @@ export interface TableBreak {
   gap: number;
 }
 export interface TableLayout {
+  /** docs/600 §9.2: stacking blocks in layout order (roots and family children). */
+  blocks: TableBlock[];
   cards: TableCard[];
   byId: Map<string, TableCard>;
   groups: TableGroup[];
@@ -656,6 +675,12 @@ export interface TableOptions {
   widths?: TableWidths;
   /** Collapsed head input per node (EventTable: collapsedCardInput with the table's avatar limit, no ⌄ button). */
   inputOf?: (n: TreeNode) => CollapsedCardInput;
+  /** docs/600 §2: the zoom plan (zoomPlan's points, hidden and collapsed card scale). */
+  plan?: { points: ReadonlySet<string>; hidden: ReadonlySet<string>; scale: number };
+  /** docs/600 §8.3: the stretch cap between adjacent blocks (default GAP_MAX). */
+  gapMax?: number;
+  /** docs/600 §8.5: stretch the children of a family by time too (from the second child on). */
+  stretchChildren?: boolean;
 }
 export interface TableWidths {
   slot(depth: number): number;
@@ -727,7 +752,13 @@ export interface TableZoomBounds {
   max: number;
 }
 /** docs/586 §1: reset scale and zoom range of the event table, all in px per worldline hour. */
-export function tableZoomBounds(tree: EventTree, adapter: CalendarAdapter): TableZoomBounds {
+export function tableZoomBounds(tree: EventTree, adapter: CalendarAdapter, options: { levels?: boolean } = {}): TableZoomBounds {
+  const b = tableZoomBoundsBase(tree, adapter);
+  // docs/600 §1 / §8.6 P2-5: with zoom levels on, the floor reaches level 6 (d < ZOOM_HIDE_KEY), on every calendar.
+  const gap = options.levels ? medianRootGap(tree) : null;
+  return gap ? { ...b, min: Math.min(b.min, (ZOOM_HIDE_KEY * 0.8) / gap) } : b;
+}
+function tableZoomBoundsBase(tree: EventTree, adapter: CalendarAdapter): TableZoomBounds {
   let main: RailSegment | null = null;
   for (const s of railSegments(tree.roots, adapter))
     if (s.t1 > s.t0 && (!main || s.roots.length > main.roots.length)) main = s;
@@ -757,55 +788,81 @@ export function tableLayout(
   let y = 0,
     first = true;
   const widths = options.widths, inputOf = options.inputOf ?? ((n: TreeNode) => tableCardInput(n, EMPTY_SET, tree));
+  // docs/600 §2: the zoom plan. Hidden events (and their subtrees) leave the layout; points are one 18px line.
+  const zplan = options.plan, hidden = zplan?.hidden ?? EMPTY_SET, points = zplan?.points ?? EMPTY_SET;
+  const zc = zplan && Number.isFinite(zplan.scale) && zplan.scale > 0 ? zplan.scale : 1;
+  const gapMax = options.gapMax ?? GAP_MAX, stretchKids = !!options.stretchChildren;
+  const blocks: TableBlock[] = [];
+  // docs/600 §8.6 P2-4: kids that are drawn (unplaced ones stay, unlike the timeline).
+  const visibleKids = (n: TreeNode) => (hidden.size ? n.children.filter((c) => !hidden.has(c.id)) : n.children);
   // docs/592 §1.3: plain cards are as wide as their head up to the slot; group headers and stacked cards fill the box.
-  const linesOf = (n: TreeNode, depth: number, kind: "card" | "stack" | "groupHead"): 1 | 2 => {
+  // docs/600 §8.2: a zoomed card is laid out in its zoomed coordinates, where the slot is slot / zoom wide; so a group
+  // head still fills its box on screen and the line count is the one the browser wraps to.
+  const widthOf = (n: TreeNode, depth: number, kind: "card" | "stack" | "groupHead", z = 1): number => {
+    if (!widths) return 0;
+    const input = inputOf(n);
+    const own = Math.ceil(collapsedHeadChrome(input, "table") + titleWidth(input.title) + TITLE_SLACK);
+    return kind !== "card" ? widths.group(depth) / z : Math.min(widths.slot(depth) / z, Math.max(220, own));
+  };
+  const linesOf = (n: TreeNode, depth: number, kind: "card" | "stack" | "groupHead", z = 1): 1 | 2 => {
     if (!widths) return 1;
     const input = inputOf(n), full = kind !== "card";
     const own = Math.ceil(collapsedHeadChrome(input, "table") + titleWidth(input.title) + TITLE_SLACK);
-    const w = full ? widths.group(depth) : Math.min(widths.slot(depth), Math.max(220, own));
+    const w = widthOf(n, depth, kind, z);
     // A group header has no border (worldline.module.css .groupHead): 2px more room than the chrome assumes.
     // Capped only when the slot (or the box) holds it below its own width; a card at its own width is one line.
     return collapsedTitleLines(input, kind === "groupHead" ? w + 2 : w, "table", full || own > w);
   };
   const k = Number.isFinite(scale) && scale > 0 ? scale : 0;
-  /** Returns the block start (card top, or group top for a parent). `atLeast` is the stretched start of a root. */
-  const block = (n: TreeNode, depth: number, segment: number, atLeast = -Infinity): number => {
+  /** Returns the block start (card top, or group top for a parent). `atLeast` is the stretched start of a block. */
+  const block = (n: TreeNode, depth: number, segment: number, atLeast = -Infinity, level = ""): number => {
     if (!first) y += CARD_GAP;
     first = false;
     if (atLeast > y) y = atLeast;
     const start = y;
     const left = depth * TABLE_INDENT;
+    const record: TableBlock = { id: n.id, level, stretch: atLeast, top: start, bottom: 0, pending: segment < 0 };
+    blocks.push(record);
     const push = (head: boolean, stacked = false) => {
       const open = expanded.has(n.id);
+      const point = !open && points.has(n.id);
       const kind = head ? "groupHead" : stacked ? "stack" : "card";
-      const lines = open ? 1 : linesOf(n, depth, kind);
+      const z = open || point ? 1 : zc;
+      const lines = open || point ? 1 : linesOf(n, depth, kind, z);
       const card: TableCard = {
         id: n.id,
         top: y,
-        height: open ? (heights[n.id] ?? estimateCardHeight(n.event) - (head ? 2 : 0)) : collapsedCardHeight(lines, kind) + (stacked ? STACK_PEEK : 0),
+        height: point ? POINT_HEIGHT : open ? (heights[n.id] ?? estimateCardHeight(n.event) - (head ? 2 : 0)) : (collapsedCardHeight(lines, kind) + (stacked ? STACK_PEEK : 0)) * z,
         left,
         depth,
         start: n.start,
         segment,
-        expanded: expanded.has(n.id),
+        expanded: open,
         importance: n.event.importance,
         precision: n.event.time.precision,
         kind: n.event.time.kind,
         groupHead: head,
-        head: y + cardHeadOffset(head, open, stacked),
+        head: y + (point ? POINT_HEIGHT / 2 : cardHeadOffset(head, open, stacked) * (open ? 1 : z)),
         stacked: stacked && !open,
         lines,
+        point,
+        zoom: z,
+        width: point ? 0 : widthOf(n, depth, kind, z),
       };
       cards.push(card);
       y += card.height;
     };
-    if (!n.children.length) {
+    const kids = visibleKids(n);
+    if (!n.children.length || (points.has(n.id) && !expanded.has(n.id))) {
       push(false);
+      record.bottom = y;
       return start;
     }
     // docs/592 R5: a folded parent is one stacked card (an expanded one keeps its header look), with no group box.
-    if (folded.has(n.id) && !expanded.has(n.id)) {
+    // docs/600 §8.6 P2-4: so is a parent whose children are all hidden.
+    if ((folded.has(n.id) || !kids.length) && !expanded.has(n.id)) {
       push(false, true);
+      record.bottom = y;
       return start;
     }
     const group: TableGroup = { id: n.id, top: y, bottom: 0, left, depth };
@@ -814,13 +871,20 @@ export function tableLayout(
     if (!folded.has(n.id)) {
       // The first child's block adds CARD_GAP itself, so the header is followed by GROUP_HEAD_GAP in total.
       y += GROUP_HEAD_GAP - CARD_GAP;
-      for (const c of n.children) block(c, depth + 1, segment);
+      // docs/600 §8.5: from the second child on, children stretch by time like roots (unplaced ones do not).
+      let prev: { start: number; t: number } | null = null;
+      for (const c of kids) {
+        const at = stretchKids && prev && c.start !== null ? prev.start + Math.min(gapMax, (c.start - prev.t) * k) : -Infinity;
+        const s0 = block(c, depth + 1, segment, at, n.id);
+        if (c.start !== null) prev = { start: s0, t: c.start };
+      }
       y += GROUP_PADDING;
     }
     group.bottom = y;
+    record.bottom = y;
     return start;
   };
-  const segs = railSegments(tree.roots, adapter);
+  const segs = railSegments(hidden.size ? tree.roots.filter((r) => !hidden.has(r.id)) : tree.roots, adapter);
   segs.forEach((s, j) => {
     if (j) {
       breaks.push({ kind: "gap", top: y, height: BREAK_HEIGHT, from: j - 1, to: j, gap: s.t0 - familyEndOf(segs[j - 1]) });
@@ -829,7 +893,7 @@ export function tableLayout(
     }
     let prev = 0;
     s.roots.forEach((r, i) => {
-      prev = block(r, 0, s.index, i ? prev + Math.min(GAP_MAX, (r.start! - s.roots[i - 1].start!) * k) : -Infinity);
+      prev = block(r, 0, s.index, i ? prev + Math.min(gapMax, (r.start! - s.roots[i - 1].start!) * k) : -Infinity);
     });
   });
   if (tree.pending.length) {
@@ -838,7 +902,7 @@ export function tableLayout(
       y += BREAK_HEIGHT;
       first = true;
     }
-    for (const p of tree.pending) block(p, 0, -1);
+    for (const p of tree.pending) if (!hidden.has(p.id)) block(p, 0, -1);
   }
   const byId = new Map(cards.map((c) => [c.id, c]));
   const segments: TableSegment[] = segs.map((s) => {
@@ -853,7 +917,7 @@ export function tableLayout(
     }
     return { index: s.index, t0: lo.t, t1: hi.t, y0: Math.min(lo.y, hi.y), y1: Math.max(lo.y, hi.y), heads };
   });
-  return { cards, byId, groups, segments, breaks, height: y };
+  return { blocks, cards, byId, groups, segments, breaks, height: y };
 }
 const EMPTY_SET: ReadonlySet<string> = new Set();
 function familyEndOf(s: RailSegment) {
@@ -2008,4 +2072,68 @@ export function zoomPlan(tree: EventTree, level: ZoomLevel, scale: number, keep:
     points: prev && sameSet(prev.points, points) ? prev.points : points,
     autoFolded: prev && sameSet(prev.autoFolded, autoFolded) ? prev.autoFolded : autoFolded,
   };
+}
+
+// ---------- docs/600: event-table zoom levels ----------
+/** docs/600 §1: the table's crowding d = median root gap × k (px per worldline hour); Infinity without a gap. */
+export function tableCrowding(gap: number | null, k: number): number {
+  return gap === null || !(k > 0) ? Infinity : gap * k;
+}
+/** docs/600 §8.3: the table stretch cap at crowding d: 240 up to d 160, growing with d to 1200. */
+export const OPEN_STRETCH_MAX = 1200;
+export function tableGapFor(d: number): number {
+  return Math.min(OPEN_STRETCH_MAX, Math.max(GAP_MAX, (GAP_MAX * d) / ZOOM_FULL));
+}
+/** docs/600 §9.2: true when, in the open layout, every block in the view range ends `gap` before the next block of
+ * its level starts by time (that block's stretched start in the same layout), so opening the cards in view pushes
+ * none of them. Blocks above the view may move (the anchor restore keeps the view in place: code review r2), so the
+ * check is relative to the open layout only; `closed` is kept for the signature. Ancestors are not compared with
+ * descendants (a group head keeps its height); a block with no time stretch (first of a segment, unplaced) and
+ * pending blocks are not limits. Null when the range holds no block. `range` is in layout y. */
+export function tableAutoOpenFits(closed: TableLayout, open: TableLayout, range: { top: number; bottom: number }, gap: number): boolean | null {
+  void closed;
+  const byLevel = new Map<string, TableBlock[]>();
+  for (const b of open.blocks) if (!b.pending) (byLevel.get(b.level) ?? byLevel.set(b.level, []).get(b.level)!).push(b);
+  let any = false;
+  for (const list of byLevel.values())
+    for (let i = 0; i < list.length; i++) {
+      const b = list[i];
+      if (b.bottom <= range.top || b.top >= range.bottom) continue;
+      any = true;
+      const next = list[i + 1];
+      if (!next || !Number.isFinite(next.stretch)) continue;
+      if (b.bottom + gap > next.stretch + 1e-9) return false;
+    }
+  return any ? true : null;
+}
+/** docs/600 §10.1: a table re-layout anchor: one card, or the pointer between two cards' heads at fraction f.
+ * `offset` is the anchor's screen y inside the scroller. */
+export interface TableAnchor { a: string; b?: string; f?: number; offset: number; /** a's start (§8.6 P2-1 fallback). */ t?: number | null }
+/** docs/600 §10.1: the scrollTop that puts the anchor back at `offset`, clamped to [0, max(0, maxScroll)]; null when
+ * `a` is not in the layout. A `b` in another segment or missing falls back to `a` alone. `top0` is the room above the
+ * table (TABLE_TOP). */
+export function projectAnchor(layout: TableLayout, anchor: TableAnchor, maxScroll: number, top0: number): number | null {
+  let a = layout.byId.get(anchor.a);
+  // docs/600 §8.6 P2-1: a hidden by the new level: the last drawn card that starts at or before a's time (the pointer
+  // then stays between it and b, when b is still drawn).
+  if (!a && anchor.t !== undefined && anchor.t !== null) {
+    const t = anchor.t;
+    for (const c of layout.cards) if (c.start !== null && c.start <= t && (!a || c.start >= a.start!)) a = c;
+  }
+  if (!a) return null;
+  const b = anchor.b ? layout.byId.get(anchor.b) : undefined;
+  const y = b && b.segment === a.segment && b.segment >= 0 && anchor.f !== undefined ? a.head + (b.head - a.head) * anchor.f : a.head;
+  return Math.min(Math.max(0, maxScroll), Math.max(0, y + top0 - anchor.offset));
+}
+/** docs/600 §11.1: a scroll event is the table's own anchor restore when it lands within 1px of the written value. */
+export function isProgrammaticScroll(written: number | null, current: number): boolean {
+  return written !== null && Math.abs(current - written) <= 1;
+}
+/** docs/600 §12.1: one auto-open decision. An exit latches; while latched only user input lets it enter again.
+ * `fits` null (nothing in view) keeps the state. */
+export function decideAutoOpen(s: { on: boolean; latched: boolean; fits: boolean | null; input: boolean }): { on: boolean; latched: boolean } {
+  const latched = s.latched && !s.input;
+  if (s.fits === null) return { on: s.on, latched };
+  if (s.on) return s.fits ? { on: true, latched } : { on: false, latched: true };
+  return s.fits && !latched ? { on: true, latched: false } : { on: false, latched };
 }

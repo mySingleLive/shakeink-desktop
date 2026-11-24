@@ -2,20 +2,46 @@
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   alignedRailMarks,
+  AUTO_OPEN_GAP,
+  AUTO_OPEN_KEEP,
   CATEGORY_VAR,
+  cardScale,
+  decideAutoOpen,
+  isProgrammaticScroll,
+  medianRootGap,
+  projectAnchor,
   railMarks,
+  tableAutoOpenFits,
   tableCardInput,
+  tableCrowding,
+  tableGapFor,
   tableLayout,
   tableWidths,
   descendants,
+  zoomBars,
+  zoomLevel,
+  zoomPlan,
   type AlignedRailMarks,
   type EventTree,
   type RailLevel,
+  type TableAnchor,
   type TableLayout,
   type TreeNode,
+  type ZoomLevel,
+  type ZoomPlan,
 } from "@/lib/planning/worldline-layout";
-import { EventCard, WorldlineCardContext } from "./EventCard";
+import { EventCard, WorldlineCardContext, type WorldlineCardContextValue } from "./EventCard";
+import { EventPoint } from "./EventPoint";
+import { TimelineZoomLevelsContext, TimelineZoomNoteContext } from "./EventTimeline";
 import s from "./worldline.module.css";
+
+const EMPTY_IDS: ReadonlySet<string> = new Set();
+/** docs/600 §11.1: auto-open is decided once input has been quiet this long. */
+export const DECIDE_IDLE_MS = 160;
+/** docs/600 §9.4: a second press on a point within this interval is its double click (EventTimeline POINT_DOUBLE_MS). */
+const POINT_DOUBLE_MS = 400;
+/** docs/600 §8.1: an auto-opened card collapses after the double-click interval (PlanningWorkspace COLLAPSE_DELAY_MS). */
+const COLLAPSE_DELAY_MS = 260;
 
 /** docs/577 §3 / docs/580 §5.1: the event table — a time rail and grouped cards in one scroller. Positions come from
  * the DOM-free height model (tableLayout); ResizeObserver only feeds measured heights of expanded cards. */
@@ -68,6 +94,54 @@ export function EventTable({
   const ctx = useContext(WorldlineCardContext)!;
   const [heights, setHeights] = useState<Record<string, number>>({});
   const open = useMemo(() => new Set([...expanded, ...(editing ? [editing] : [])]), [expanded, editing]);
+  // docs/600 §3.1: zoom levels from the table crowding d = median root gap × k, same rules as the timeline (docs/592–593).
+  const zoomOn = useContext(TimelineZoomLevelsContext);
+  const noteStore = useContext(TimelineZoomNoteContext);
+  const gap = useMemo(() => medianRootGap(tree), [tree]);
+  const d = tableCrowding(gap, scale);
+  const prevLevel = useRef<ZoomLevel>(0);
+  const prevPlan = useRef<ZoomPlan | undefined>(undefined);
+  const zLevel: ZoomLevel = zoomOn ? zoomLevel(d, prevLevel.current) : 0;
+  const [unfoldedRaw, setUnfolded] = useState<ReadonlySet<string>>(EMPTY_IDS);
+  const [showAllRaw, setShowAll] = useState<0 | 1 | 2>(0);
+  const maxImportance = useMemo(() => { let m = 0; for (const n of tree.byId.values()) if (n.start !== null && n.event.importance > m) m = n.event.importance; return m; }, [tree]);
+  const pointClass = zoomBars(zLevel, maxImportance).pointClass;
+  const unfolded = zLevel >= 3 ? unfoldedRaw : EMPTY_IDS, showAll = pointClass > 0 && showAllRaw === pointClass;
+  const keepCards = useMemo(() => new Set([...(selected ? [selected] : []), ...(hitId ? [hitId] : []), ...open]), [selected, hitId, open]);
+  const zScale = zoomOn ? cardScale(d, zLevel) : 1;
+  const plan = useMemo(
+    () => zoomPlan(tree, zLevel, zScale, { cards: keepCards, unfolded, showAll, folded }, prevPlan.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- prevPlan is a ref (set identity only)
+    [tree, zLevel, zScale, keepCards, unfolded, showAll, folded],
+  );
+  const viewFolded = useMemo(() => {
+    if (!plan.autoFolded.size && !unfolded.size) return folded;
+    const n = new Set([...folded, ...plan.autoFolded]);
+    for (const id of unfolded) n.delete(id);
+    return n;
+  }, [folded, plan.autoFolded, unfolded]);
+  const layoutPlan = useMemo(() => (zoomOn ? { points: plan.points, hidden: plan.hidden, scale: plan.scale } : undefined), [zoomOn, plan.points, plan.hidden, plan.scale]);
+  // docs/600 §8.3 / §8.5: with levels on, the stretch cap grows with d and children stretch by time too.
+  const gapMax = zoomOn ? tableGapFor(d) : undefined;
+  useLayoutEffect(() => {
+    prevLevel.current = zLevel;
+    prevPlan.current = plan;
+    if (zLevel < 3 && unfoldedRaw.size) setUnfolded(EMPTY_IDS);
+    if (showAllRaw && showAllRaw !== pointClass) setShowAll(0);
+  });
+  // docs/600 §9.3: the status-line note, owned by this table (the timeline has its own owner).
+  const noteOwner = useRef({}).current;
+  const toggleShowAll = useRef(() => {});
+  toggleShowAll.current = () => setShowAll((v) => (v ? 0 : pointClass));
+  useLayoutEffect(() => {
+    if (!noteStore) return;
+    noteStore.set(zoomOn && pointClass > 0 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, important: pointClass === 2, showAll } : null, noteOwner);
+  });
+  useLayoutEffect(() => {
+    if (!noteStore) return;
+    noteStore.register(noteOwner, { toggleShowAll: () => toggleShowAll.current() });
+    return () => noteStore.clear(noteOwner);
+  }, [noteStore, noteOwner]);
   const [panelWidth, setPanelWidth] = useState(0);
   // The rail narrows with the panel (worldline.module.css @container ≤ 640px); leads follow the same geometry.
   const narrow = panelWidth > 0 && panelWidth <= 640;
@@ -78,10 +152,34 @@ export function EventTable({
     const known = new Set(ctx.characters.map((c) => c.id));
     return (n: TreeNode) => tableCardInput(n, known, tree);
   }, [ctx.characters, tree]);
-  const layout: TableLayout = useMemo(
-    () => tableLayout(tree, heights, scale, ctx.adapter, { expanded: open, folded, widths, inputOf }),
-    [tree, heights, scale, ctx.adapter, open, folded, widths, inputOf],
+  const closedLayout: TableLayout = useMemo(
+    () => tableLayout(tree, heights, scale, ctx.adapter, { expanded: open, folded: viewFolded, widths, inputOf, plan: layoutPlan, gapMax, stretchChildren: zoomOn }),
+    [tree, heights, scale, ctx.adapter, open, viewFolded, widths, inputOf, layoutPlan, gapMax, zoomOn],
   );
+  // docs/600 §3.3 / §9.2: at level 0 a second, all-open layout (group heads, user-folded parents and the cards the
+  // user closed excepted) is laid out beside the closed one; it is shown while auto-open is on.
+  const [autoClosed, setAutoClosed] = useState<ReadonlySet<string>>(EMPTY_IDS);
+  const autoLevel = zoomOn && zLevel === 0;
+  const openAll = useMemo(() => {
+    if (!autoLevel) return null;
+    const n = new Set(open);
+    // Placed events only: the pending block is not compared by the fit check (code review P2-2).
+    for (const node of tree.byId.values()) {
+      if (autoClosed.has(node.id) || folded.has(node.id)) continue;
+      if (node.children.length && !folded.has(node.id)) continue;
+      if (node.start === null) continue;
+      n.add(node.id);
+    }
+    return n;
+  }, [autoLevel, tree, open, autoClosed, folded]);
+  const openLayout: TableLayout | null = useMemo(
+    () => (openAll ? tableLayout(tree, heights, scale, ctx.adapter, { expanded: openAll, folded: viewFolded, widths, inputOf, plan: layoutPlan, gapMax, stretchChildren: true }) : null),
+    [openAll, tree, heights, scale, ctx.adapter, viewFolded, widths, inputOf, layoutPlan, gapMax],
+  );
+  const [onRaw, setOn] = useState(false);
+  const on = autoLevel && onRaw && !!openLayout;
+  const layout: TableLayout = on ? openLayout! : closedLayout;
+  const shownOpen = on ? openAll! : open;
   const marks: AlignedRailMarks = useMemo(
     () =>
       railMode === "aligned"
@@ -127,13 +225,148 @@ export function EventTable({
     ro.observe(sc);
     return () => ro.disconnect();
   }, [scrollerRef, virtual]);
-  // One anchor for both height corrections and Ctrl + wheel: a card id and its screen offset to restore once the new
-  // layout is committed (§5.1 R3). While a wheel zoom is recent, the card under the pointer stays the anchor.
-  const anchor = useRef<{ id: string; top: number } | null>(null);
-  const zoomAnchor = useRef<{ id: string; until: number } | null>(null);
+  // One anchor for height corrections, Ctrl + wheel and auto-open switches (docs/600 §10.3): a TableAnchor restored by
+  // projectAnchor once the new layout is committed. While a wheel zoom is recent, the pointer's anchor stays.
+  const anchor = useRef<TableAnchor | null>(null);
+  const zoomAnchor = useRef<{ anchor: TableAnchor; until: number } | null>(null);
+  /** Screen offset of a card head inside the scroller (TableAnchor.offset). */
+  const headOffset = (l: TableLayout, id: string) => { const sc = scrollerRef.current, c = l.byId.get(id); return sc && c ? c.head + TABLE_TOP - sc.scrollTop : null; };
   const anchorNow = (id: string | null) => {
-    const sc = scrollerRef.current, c = id ? live.current.layout.byId.get(id) : undefined;
-    anchor.current = sc && c ? { id: c.id, top: c.top - sc.scrollTop } : null;
+    const off = id ? headOffset(live.current.layout, id) : null;
+    anchor.current = id && off !== null ? { a: id, offset: off } : null;
+  };
+  /** docs/600 §9.5: the anchor at a pointer y (scroller px): between the two card heads around it, or the nearest. */
+  const pointerAnchor = (l: TableLayout, clientY: number): TableAnchor | null => {
+    const sc = scrollerRef.current;
+    if (!sc || !l.cards.length) return null;
+    const off = clientY - sc.getBoundingClientRect().top, y = off + sc.scrollTop - TABLE_TOP;
+    let below = l.cards.findIndex((c) => c.head >= y);
+    if (below < 0) { const c = l.cards[l.cards.length - 1]; return { a: c.id, t: c.start, offset: off - (y - c.head) }; }
+    const b = l.cards[below];
+    if (below === 0) return { a: b.id, t: b.start, offset: off + (b.head - y) };
+    const a = l.cards[below - 1];
+    const f = b.head > a.head ? (y - a.head) / (b.head - a.head) : 0;
+    return { a: a.id, b: b.id, f, offset: off, t: a.start };
+  };
+  const maxScroll = (l: TableLayout) => { const sc = scrollerRef.current; return sc ? l.height + Math.max(80, 0.67 * sc.clientHeight) + TABLE_TOP - sc.clientHeight : 0; };
+  // docs/600 §11: auto-open is decided once input has been quiet for DECIDE_IDLE_MS, on the real scroll position.
+  const auto = useRef({ latched: false, input: false, timer: 0 as ReturnType<typeof setTimeout> | 0, written: null as number | null, flipAnchor: null as TableAnchor | null, prevOn: false });
+  const decideLive = useRef({ closedLayout, openLayout, on, autoLevel, selected, hitId });
+  decideLive.current = { closedLayout, openLayout, on, autoLevel, selected, hitId };
+  const decide = useRef(() => {});
+  decide.current = () => {
+    const sc = scrollerRef.current, L0 = decideLive.current;
+    if (!sc || !L0.autoLevel || !L0.openLayout) return;
+    const shown = L0.on ? L0.openLayout : L0.closedLayout;
+    const viewTop = sc.scrollTop - TABLE_TOP, h = sc.clientHeight;
+    let fits: boolean | null, pick: TableAnchor | null = null;
+    if (L0.on) fits = tableAutoOpenFits(L0.closedLayout, L0.openLayout, { top: viewTop, bottom: viewTop + h }, AUTO_OPEN_KEEP);
+    else {
+      // §12.2: the located / current hit card in view, then a recent wheel anchor, then the first visible card.
+      const inView = (id: string | null) => { const c = id ? shown.byId.get(id) : undefined; return c && c.top < viewTop + h && c.top + c.height > viewTop ? id : null; };
+      const target = inView(L0.hitId) ?? inView(L0.selected);
+      const z = zoomAnchor.current && zoomAnchor.current.until > performance.now() ? zoomAnchor.current.anchor : null;
+      const first = firstVisible(shown, sc.scrollTop);
+      const off = (id: string) => headOffset(shown, id) ?? 0;
+      pick = target ? { a: target, offset: off(target) } : z ? (z.b ? z : { ...z, offset: off(z.a) }) : first ? { a: first, offset: off(first) } : null;
+      const st = pick ? projectAnchor(L0.openLayout, pick, maxScroll(L0.openLayout), TABLE_TOP) : sc.scrollTop;
+      const top = (st ?? sc.scrollTop) - TABLE_TOP;
+      fits = tableAutoOpenFits(L0.closedLayout, L0.openLayout, { top: top - 8, bottom: top + h + 8 }, AUTO_OPEN_GAP);
+    }
+    const a = auto.current, next = decideAutoOpen({ on: L0.on, latched: a.latched, fits, input: a.input });
+    a.input = false;
+    a.latched = next.latched;
+    if (next.on !== L0.on) {
+      // §12.3 P3-o: the switch commit restores this anchor (the restore effect below).
+      const off = (id: string) => headOffset(shown, id) ?? 0;
+      const first = firstVisible(shown, sc.scrollTop);
+      a.flipAnchor = pick ?? (first ? { a: first, offset: off(first) } : null);
+      setOn(next.on);
+    }
+  };
+  const scheduleDecide = useRef((input: boolean) => {
+    const a = auto.current;
+    if (input) a.input = true;
+    if (a.timer) clearTimeout(a.timer);
+    a.timer = setTimeout(() => { a.timer = 0; decide.current(); }, DECIDE_IDLE_MS);
+  }).current;
+  useEffect(() => () => { if (auto.current.timer) clearTimeout(auto.current.timer); }, []);
+  // §11.1: leaving level 0 (or levels off) clears auto-open and the cards closed in it.
+  useLayoutEffect(() => {
+    if (autoLevel) return;
+    const a = auto.current;
+    if (a.timer) { clearTimeout(a.timer); a.timer = 0; }
+    a.latched = false;
+    if (onRaw) setOn(false);
+    if (autoClosed.size) setAutoClosed(EMPTY_IDS);
+  }, [autoLevel, onRaw, autoClosed]);
+  // §12.1: any zoom change (the wheel, the toolbar − / + and 复位) is user input; the first render is not
+  // (code review P2-1).
+  const lastScale = useRef(scale);
+  useLayoutEffect(() => {
+    if (lastScale.current === scale) return;
+    lastScale.current = scale;
+    scheduleDecide(true);
+  }, [scale, scheduleDecide]);
+  // A locate from the tree, the search or a deep link (PlanningWorkspace) is user input (§12.2).
+  useEffect(() => {
+    const sc = scrollerRef.current;
+    if (!sc) return;
+    const located = () => { zoomAnchor.current = null; auto.current.written = null; scheduleDecide(true); };
+    sc.addEventListener("worldline-locate", located);
+    return () => sc.removeEventListener("worldline-locate", located);
+  }, [scrollerRef, scheduleDecide]);
+
+  // docs/600 §3.1 / §8.6 P2-6: the fold button and the card toggle, both with stable identities (EventCard is memo).
+  const overLive = useRef({ zLevel, onFold, on, expanded, shownOpen, ctx });
+  overLive.current = { zLevel, onFold, on, expanded, shownOpen, ctx };
+  const foldClick = useRef((id: string) => {
+    if (overLive.current.zLevel < 3) return overLive.current.onFold(id);
+    setUnfolded((u) => { const n = new Set(u); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }).current;
+  // §8.1: a click on an auto-opened card closes it locally after the double-click interval; a double click edits.
+  const pendingAuto = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const onAutoToggle = useRef((id: string, detail: number) => {
+    const o = overLive.current, pend = pendingAuto.current;
+    // As PlanningWorkspace.toggle: a double click on the same card cancels its pending collapse; any other click
+    // carries it out first (code review P2-3).
+    if (pend) {
+      clearTimeout(pend.timer); pendingAuto.current = null;
+      if (!(pend.id === id && detail >= 2)) setAutoClosed((c) => new Set(c).add(pend.id));
+    }
+    const auto0 = o.on && o.shownOpen.has(id) && !o.expanded.has(id);
+    if (!auto0) return o.ctx.onToggle(id, detail);
+    if (detail >= 2) return o.ctx.onToggle(id, 2);
+    o.ctx.onSelectOnly(id);
+    pendingAuto.current = { id, timer: setTimeout(() => {
+      pendingAuto.current = null;
+      setAutoClosed((c) => new Set(c).add(id));
+    }, COLLAPSE_DELAY_MS) };
+  }).current;
+  useEffect(() => () => { if (pendingAuto.current) clearTimeout(pendingAuto.current.timer); }, []);
+  const cardCtx = useMemo<WorldlineCardContextValue>(() => ({ ...ctx, onToggle: onAutoToggle }), [ctx, onAutoToggle]);
+  // §9.4 / §10.2: a press on a point opens it (as a click on a collapsed card does); the click that follows is
+  // swallowed, and a second press within POINT_DOUBLE_MS near the first is its double click (it lands on the new card).
+  const lastPointPress = useRef<{ id: string; at: number; x: number; y: number } | null>(null);
+  const swallowClick = useRef(false);
+  const pointDown = (e: React.PointerEvent) => {
+    swallowClick.current = false;
+    if (e.button !== 0) return;
+    const last = lastPointPress.current, now = performance.now();
+    const repeat = !!last && now - last.at < POINT_DOUBLE_MS && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 5;
+    lastPointPress.current = null;
+    if (repeat) {
+      e.stopPropagation(); e.preventDefault();
+      swallowClick.current = true;
+      ctx.onToggle(last!.id, 2);
+      return;
+    }
+    const pt = (e.target as Element).closest<HTMLElement>("[data-event-point]")?.dataset.eventId;
+    if (!pt) return;
+    e.stopPropagation(); e.preventDefault();
+    swallowClick.current = true;
+    lastPointPress.current = { id: pt, at: now, x: e.clientX, y: e.clientY };
+    ctx.onToggle(pt, 1);
   };
 
   // Rendered cards: inside the window, or selected / search hit / being edited, so locate can always find them.
@@ -148,16 +381,17 @@ export function EventTable({
     rendered.add(c.id);
     const n = node(c.id)!;
     const isOpen = c.expanded;
-    return (
-      <div
-        key={c.id}
-        data-measure-id={isOpen ? c.id : undefined}
-        className={`${s.slot} ${isOpen ? s.slotOpen : ""} ${c.groupHead ? s.slotHead : ""} ${c.stacked ? s.slotStack : ""}`}
-        style={{ top, marginLeft: left }}
-      >
+    if (c.point)
+      return (
+        <div key={c.id} className={`${s.slot} ${s.slotPoint}`} style={{ top, marginLeft: left, "--ec": `var(${CATEGORY_VAR[n.event.category]})` } as React.CSSProperties}>
+          <EventPoint event={n.event} date={ctx.adapter.label(c.start ?? 0, 1, n.event.time.precision)} kids={descendants(n).length} hot={hovered(c.id)} dimmed={dimmed(c.id)} selected={selected === c.id} />
+        </div>
+      );
+    const z = c.zoom;
+    const cardEl = (
         <EventCard
           event={n.event}
-          expanded={expanded.has(c.id)}
+          expanded={shownOpen.has(c.id)}
           selected={selected === c.id}
           hot={hovered(c.id)}
           hit={hitId === c.id}
@@ -165,15 +399,24 @@ export function EventTable({
           editing={editing === c.id}
           childCount={n.children.length}
           descendantCount={descendants(n).length}
-          folded={folded.has(c.id)}
+          folded={viewFolded.has(c.id)}
           placed={c.start !== null}
           maxAvatars={4}
           variant="table"
           groupHead={c.groupHead}
           titleLines={c.lines}
           stacked={c.stacked}
-          onFold={onFold}
+          onFold={foldClick}
         />
+    );
+    return (
+      <div
+        key={c.id}
+        data-measure-id={isOpen ? c.id : undefined}
+        className={`${s.slot} ${isOpen ? s.slotOpen : ""} ${c.groupHead ? s.slotHead : ""} ${c.stacked ? s.slotStack : ""}`}
+        style={{ top, marginLeft: left }}
+      >
+        {z < 1 ? <div data-card-zoom={z} className={s.tableZoom} style={{ zoom: z, width: c.width || undefined }}>{cardEl}</div> : cardEl}
       </div>
     );
   }, (g, top, left, inner) => {
@@ -212,7 +455,8 @@ export function EventTable({
         for (const id of Object.keys(pending)) delete pending[id];
         if (!changed.length) return;
         const sc = scrollerRef.current, z = zoomAnchor.current;
-        anchorNow(z && z.until > performance.now() ? z.id : sc ? firstVisible(live.current.layout, sc.scrollTop) : null);
+        if (z && z.until > performance.now()) anchor.current = z.anchor.b ? z.anchor : { a: z.anchor.a, offset: headOffset(live.current.layout, z.anchor.a) ?? z.anchor.offset };
+        else anchorNow(sc ? firstVisible(live.current.layout, sc.scrollTop) : null);
         setHeights((prev) => {
           const next = { ...prev };
           for (const [id, h] of changed) next[id] = h;
@@ -225,12 +469,24 @@ export function EventTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout, openKey, scrollerRef]);
   useLayoutEffect(() => {
-    const sc = scrollerRef.current, a = anchor.current;
+    const sc = scrollerRef.current, au = auto.current;
+    // §12.3 P3-o: the commit that switches auto-open restores the anchor decide() picked (unless a wheel wrote one).
+    const flipped = on !== au.prevOn;
+    au.prevOn = on;
+    const a = anchor.current ?? (flipped ? au.flipAnchor : null);
     anchor.current = null;
-    if (!sc || !a) return;
-    const card = layout.byId.get(a.id);
-    if (card) sc.scrollTop = card.top - a.top;
+    if (flipped) au.flipAnchor = null;
+    if (sc && a) {
+      const st = projectAnchor(layout, a, maxScroll(layout), TABLE_TOP);
+      if (st !== null && Math.abs(st - sc.scrollTop) > 0.5) {
+        sc.scrollTop = st;
+        // §11.1 / P3-p: the scroll event this write fires is not user input.
+        au.written = sc.scrollTop;
+      }
+    }
     sync.current();
+    scheduleDecide(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout, scrollerRef]);
 
   // Ctrl + wheel zoom around the card under the pointer. React's wheel listener is passive, so a native one is needed
@@ -245,11 +501,13 @@ export function EventTable({
       // docs/586 §1: at a bound nothing changes, so no anchor is left behind for a later layout.
       if (e.deltaY > 0 ? !down : !up) return;
       const step = e.deltaY > 0 ? -Math.log(1.15) : Math.log(1.15);
-      const y = e.clientY - sc.getBoundingClientRect().top + sc.scrollTop - TABLE_TOP;
-      const under = l.cards.find((c) => c.top + c.height > y) ?? null;
-      zoomAnchor.current = under ? { id: under.id, until: performance.now() + 400 } : null;
-      anchorNow(under?.id ?? null);
-      onZoomRef.current(step, under ? { id: under.id, offset: under.top - sc.scrollTop } : null);
+      // docs/600 §9.5: the pointer between the two card heads around it stays put (a card may be far away at 1200px).
+      const pa = pointerAnchor(l, e.clientY);
+      zoomAnchor.current = pa ? { anchor: pa, until: performance.now() + 400 } : null;
+      anchor.current = pa;
+      auto.current.written = null;
+      scheduleDecide(true);
+      onZoomRef.current(step, pa ? { id: pa.a, offset: pa.offset } : null);
     };
     sc.addEventListener("wheel", wheel, { passive: false });
     return () => sc.removeEventListener("wheel", wheel);
@@ -283,6 +541,12 @@ export function EventTable({
       onScroll={(e) => {
         sync.current();
         onScrollTop(firstVisible(layout, e.currentTarget.scrollTop));
+        // docs/600 §11.1: the table's own anchor restore is not user input; everything else is.
+        const au = auto.current;
+        if (isProgrammaticScroll(au.written, e.currentTarget.scrollTop)) { au.written = null; return; }
+        au.written = null;
+        if (zoomAnchor.current && zoomAnchor.current.until > performance.now()) zoomAnchor.current = null;
+        scheduleDecide(true);
       }}
     >
       <div data-sticky-year="" className={s.stickyYear}>{sticky && <span>{sticky}</span>}</div>
@@ -299,7 +563,7 @@ export function EventTable({
       {/* docs/588 §2: room above the first card so the toggle never covers it at the top. */}
       <div aria-hidden style={{ height: TABLE_TOP }} />
       {/* Bottom room of at least 2/3 of the viewport, so locate can bring the last card to the upper third (WU-62). */}
-      <div data-event-table="" {...(virtual ? { "data-virtual": "" } : {})} style={{ position: "relative", height: `calc(${layout.height}px + max(80px, 67%))` }}>
+      <div data-event-table="" data-zoom-level={zLevel} data-crowding={Number.isFinite(d) ? d.toFixed(3) : "Infinity"} {...(on ? { "data-auto-open": "" } : {})} {...(virtual ? { "data-virtual": "" } : {})} style={{ position: "relative", height: `calc(${layout.height}px + max(80px, 67%))` }}>
         {emptyText && <p data-filter-empty="" className={s.emptyNote}>{emptyText}</p>}
         <div
           className={s.rail}
@@ -404,18 +668,22 @@ export function EventTable({
             );
           })}
         </div>
+        <WorldlineCardContext.Provider value={cardCtx}>
         <div
           ref={cardsRef}
           className={s.cards}
           style={{ height: layout.height }}
+          onPointerDownCapture={pointDown}
+          onClickCapture={(e) => { if (swallowClick.current) { swallowClick.current = false; e.stopPropagation(); } }}
           onPointerOver={(e) => {
-            const id = (e.target as Element).closest<HTMLElement>("[data-event-card]")?.dataset.eventId;
+            const id = (e.target as Element).closest<HTMLElement>("[data-event-card],[data-event-point]")?.dataset.eventId;
             hoverOn(id ? [id] : []);
           }}
           onPointerLeave={() => hoverOn([])}
         >
           {cardNodes}
         </div>
+        </WorldlineCardContext.Provider>
       </div>
     </div>
   );
