@@ -877,58 +877,6 @@
   border: 1px dashed var(--ink-blue);
   background: color-mix(in srgb, var(--ink-blue) 15%, transparent);
 }
-.worldEventEditor {
-  padding: 13px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 190px;
-}
-.eventCard > .worldEventEditor {
-  max-height: none;
-  overflow: visible;
-  width: 100%;
-}
-.eventTitleInput {
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  resize: none;
-  field-sizing: content;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 2px;
-  width: 100%;
-}
-.worldEventEditor .row {
-  align-items: flex-end;
-}
-.worldEventEditor .row > label {
-  display: grid;
-  gap: 3px;
-  font-size: 11px;
-  max-width: 100%;
-}
-.worldEventEditor .row input[type="number"] {
-  width: 92px;
-}
-.worldEventEditor .row select {
-  max-width: 100%;
-}
-.worldEventEditor .row > input {
-  flex: 1 1 100px;
-  width: 100px;
-}
-.worldEventEditor fieldset {
-  min-width: 0;
-  padding: 8px 0;
-  border: 0;
-  border-top: 1px solid var(--border);
-}
-.worldEventEditor .footer {
-  margin-top: 0;
-}
 .characterLane {
   position: absolute;
   left: 0;
@@ -1038,9 +986,6 @@
 }
 .eventCard:has(details[open]) {
   z-index: 9 !important;
-}
-.worldEventEditor > select {
-  align-self: flex-start;
 }
 .eventDrawer .detail > :global(.markdown-body) {
   height: auto;

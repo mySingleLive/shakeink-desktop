@@ -333,7 +333,7 @@ test("CW-14: a single click on an open card collapses it shortly after; a double
   await c.locator("h3").click()
   await expect(c).toHaveAttribute("aria-expanded", "true")
   await c.locator("h3").dblclick()
-  await expect(page.getByRole("button", { name: "保存事件", exact: true })).toBeVisible()
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toBeVisible()
   await expect(c).toHaveAttribute("aria-expanded", "true")
 }))
 

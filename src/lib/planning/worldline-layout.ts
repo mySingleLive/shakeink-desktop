@@ -1245,7 +1245,8 @@ export interface CollapsedCardInput {
 }
 /** Head sizes from worldline.module.css: .card border, .head padding/gap (:66), .fold (:84), .expand (:86), .dot (:69-71),
  * .avatars padding (:76) and 16px timeline avatars overlapping 5px (:77, :82), .kids padding + border (:83), summary (:87). */
-const HEAD = { border: 2, padLeft: 14, padRight: 6, gap: 9, fold: 20, expand: 24, menu: 24, avatarsPad: 4, avatar: 16, overlap: 5, badgePad: 16, arrow: 11, space: 3.5, digit: 6.2 };
+/** docs/599 §6.1: addKid is the head's 新建子事件 button (24px), on every card. */
+const HEAD = { border: 2, padLeft: 14, padRight: 6, gap: 9, fold: 20, expand: 24, menu: 24, addKid: 24, avatarsPad: 4, avatar: 16, overlap: 5, badgePad: 16, arrow: 11, space: 3.5, digit: 6.2 };
 const DOT = [6, 9, 12];
 /** docs/592 §8: the real font runs up to 2px wider than titleWidth (LOTM), so 4 rather than 2. */
 const TITLE_SLACK = 4;
@@ -1265,6 +1266,7 @@ export function collapsedHeadChrome(c: CollapsedCardInput, variant: "table" | "t
   parts.push(DOT[Math.min(3, Math.max(1, c.importance)) - 1]);
   if (c.avatars > 0) parts.push(HEAD.avatarsPad + avatar + (c.avatars - 1 + (c.more > 0 ? 1 : 0)) * (avatar - HEAD.overlap));
   if (c.kids !== null) parts.push(HEAD.badgePad + HEAD.arrow + HEAD.space + String(c.kids).length * HEAD.digit);
+  parts.push(HEAD.addKid);
   if (c.expandButton) parts.push(HEAD.expand);
   parts.push(HEAD.menu);
   return HEAD.border + HEAD.padLeft + HEAD.padRight + parts.reduce((a, b) => a + b, 0) + HEAD.gap * parts.length;

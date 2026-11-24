@@ -233,12 +233,15 @@ test("ZB-45: double click edits an auto-opened card and saving keeps it open aft
   const k = cardById(page, "r6")
   await revealTimelineCard(page, k)
   const v0 = await allOpen(page, 24)
-  const other = v0.ids.find(id => id !== "r6")!
+  // docs/599: the head gained a 24px 新建子事件 button; pick a card whose title is not under the tree splitter.
+  const lane0 = (await page.locator("[data-timeline-lane]").boundingBox())!
+  let other = v0.ids.find(id => id !== "r6")!
+  for (const id of v0.ids.filter(id => id !== "r6")) { const t = await cardById(page, id).locator("[data-card-title]").boundingBox(); if (t && t.x > lane0.x + 12) { other = id; break } }
   await cardById(page, other).locator("[data-card-title]").click(); await frames(page)
   assert.deepEqual((await inView(page)).openIds.sort(), v0.openIds.sort(), "a click selects only")
   await k.locator("[data-card-title]").dblclick()
   await page.getByLabel("事件标题").fill("改过的标题")
-  await page.getByRole("button", { name: "保存事件", exact: true }).click()
+  await page.getByRole("button", { name: "保存", exact: true }).click()
   await expect.poll(() => posts(page)).toBe(1)
   await zoomTo(page, 300, 430, "r6"); await frames(page)
   await expect(k).toHaveAttribute("aria-expanded", "true")

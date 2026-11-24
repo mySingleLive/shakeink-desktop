@@ -28,6 +28,13 @@ import {
 import { Slider } from "@base-ui/react/slider";
 import { BookOpen, ChevronRight, MoreHorizontal } from "lucide-react";
 import { MarkdownEditor } from "@/components/editor/MarkdownEditor";
+import { wholeUnit } from "@/lib/planning/event-time-strip";
+import { sameEvent } from "@/lib/planning/event-draft";
+import { registerWorldlineEscape, worldlineEscapeOwner, type WorldlineEscapeOwner } from "@/lib/desktop/worldline-escape";
+import { openEntityRef } from "@/components/chat/entity-refs";
+import type { EventEditorValue } from "./worldline/EventCardEditor";
+import { CharacterHoverCard, characterHover } from "./worldline/CharacterHover";
+import { stripDrag } from "./worldline/EventTimePicker";
 import {NovelImportRecord} from '@/components/desktop/NovelImportRecord';
 import { ReviewHistory } from "../ReviewHistory";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
@@ -137,6 +144,11 @@ function PlanningWorkspace({
     [selected, setSelected] = useState<string[]>([]),
     [draft, setDraft] = useState<NarrativeCard | null>(null),
     [eventDraft, setEventDraft] = useState<PlanningEvent | null>(null),
+    // docs/599 §2 / §12.5: the event the draft started from, and a child just made by 新建子事件 (R16).
+    [draftBase, setDraftBase] = useState<PlanningEvent | null>(null),
+    [freshChild, setFreshChild] = useState<{ id: string; createdVersion: number; undoTo: string | null } | null>(null),
+    [editorPicker, setEditorPicker] = useState<string | null>(null),
+    [editorNote, setEditorNote] = useState(""),
     [activePov, setActivePov] = useState<Record<string, string>>({}),
     [closed, setClosed] = useState<string[]>([]),
     [expandedChapters, setExpandedChapters] = useState<string[]>([]),
@@ -304,14 +316,17 @@ function PlanningWorkspace({
     wDimmed = useCallback((id: string) => wTerms.length > 0 && !wHitSet.has(id), [wTerms, wHitSet]),
     wFrozen = useMemo(() => new Set(activeWorld?.fork?.events.map((e) => e.id) ?? []), [activeWorld]),
     wCardContext = useMemo<WorldlineCardContextValue>(() => ({
-      data, adapter: wAdapter, readonly, hasDraft: !!eventDraft, characters: wCharacters, searchTerms: wTerms, frozen: wFrozen,
+      // docs/599: card actions are refused only for a read-only work; an in-flight save (the undo of a cancel) is
+      // waited on by afterCancel, so the buttons stay enabled and the click is not lost.
+      data, adapter: wAdapter, readonly: !!query.data?.readonly, novelId, characters: wCharacters, searchTerms: wTerms, frozen: wFrozen,
       onToggle: (id, detail) => actions.current.toggle(id, detail),
       onSelect: (id, detail, mods) => actions.current.select(id, detail, mods),
       onExpand: (id) => actions.current.expand(id),
       onMenu: (action, id) => actions.current.menu(action, id),
       onStartTimeDrag: (ev, id) => actions.current.drag(ev, id),
       renderRefs: (e) => actions.current.refs(e),
-    }), [data, wAdapter, readonly, eventDraft, wCharacters, wTerms, wFrozen]);
+      onOpenCharacter: (id, name) => openEntityRef({ kind: "character", id, name }, novelId),
+    }), [data, wAdapter, query.data?.readonly, novelId, wCharacters, wTerms, wFrozen]);
   // docs/586 §1: event-table scale k = fit × exp(e), e clamped to the bounds of the current tree and calendar.
   const tableView = useMemo(() => {
     const { fit, min, max } = wZoom;
@@ -356,6 +371,7 @@ function PlanningWorkspace({
     };
     const key = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (menus().length) e.preventDefault();
       for (const menu of menus()) {
         menu.removeAttribute("open");
         if (menu.contains(document.activeElement))
@@ -496,8 +512,16 @@ function PlanningWorkspace({
     if (mode !== "world") return;
     return registerDesktopCommandTarget({
       owner: worldPanel,
-      accepts: (target) => !!target && !!worldPanel.current?.contains(target),
-      commands: { "worldline.search": () => { worldSearch.current?.focus(); worldSearch.current?.select(); } },
+      // A press on the body (focus left a closed picker) resolves to the last pointer target (worldline-escape.ts).
+      accepts: (target) => (!!target && !!worldPanel.current?.contains(target)) || (!!escapeOwner.current && worldlineEscapeOwner(target)?.owner === escapeOwner.current),
+      commands: {
+        "worldline.search": () => { worldSearch.current?.focus(); worldSearch.current?.select(); },
+        // docs/599 §12.3 / §13.1: Escape layers of this panel; enabled only while this panel owns the press.
+        "worldline.escape": {
+          enabled: () => { const o = worldlineEscapeOwner(); return !!o && o.owner === escapeOwner.current; },
+          run: () => { const o = worldlineEscapeOwner(); if (o && o.owner === escapeOwner.current) o.owner.run(o.target); },
+        },
+      },
     });
   }, [mode]);
   useEffect(() => {
@@ -530,10 +554,15 @@ function PlanningWorkspace({
     // docs/584 R1: the first open centres the packed cards once the timeline knows their layout.
     viewport.current.requestCenter();
   }, [mode, worldId, eventParent, query.data]);
+  // docs/599 §4.4: units fitted to the event when an edit starts (the old editor always began in hours).
   useEffect(() => {
     setEndTimeMode(false);
-    setStartUnit(1);
-    setDurationUnit(1);
+    setEditorPicker(null);
+    const cal = activeWorld?.calendar;
+    if (!eventDraft || !cal) { setStartUnit(1); setDurationUnit(1); return; }
+    setStartUnit(wholeUnit(eventDraft.time.value, cal, 1));
+    setDurationUnit(eventDraft.duration ? wholeUnit(eventDraft.duration, cal, 1) : 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventDraft?.id]);
   function worldTimeLabel(
     value: number,
@@ -582,11 +611,17 @@ function PlanningWorkspace({
       setBusy(false);
     }
   }
+  /** docs/599 §12.5: the HTTP status of the last save (409 = a newer version). */
+  const lastSaveStatus = useRef(0);
+  // docs/599 code review P1-1/P1-2: a save chained after another (cancel → undo → next action) runs in a closure from
+  // before the first one, so busy and the expected version are read live, not from that render.
+  const busyRef = useRef(false);
   async function save(
     operations: PlanningOperation[],
     extra?: Record<string, unknown>,
   ) {
-    if (busy) return false;
+    if (busyRef.current) return false;
+    busyRef.current = true;
     setBusy(true);
     setSaveState("saving");
     setMessage("");
@@ -595,13 +630,14 @@ function PlanningWorkspace({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            expectedVersion: query.data?.version ?? 0,
+            expectedVersion: qc.getQueryData<{ version?: number }>(["planning", novelId])?.version ?? query.data?.version ?? 0,
             operationId: uid(),
             operations,
             ...extra,
           }),
         }),
         result = await r.json();
+      lastSaveStatus.current = r.status;
       if (!r.ok) throw Error(result.error);
       qc.setQueryData(["planning", novelId], { ...query.data, ...result });
       await Promise.all(
@@ -624,6 +660,7 @@ function PlanningWorkspace({
       setSaveState("failed");
       return false;
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -1621,446 +1658,6 @@ function PlanningWorkspace({
       </>
     );
   }
-  function renderEventEditor() {
-    if (!eventDraft) return null;
-    const d = eventDraft;
-    const calendar = activeWorld!.calendar;
-    const units = [{ label: timeUnit(calendar), value: 1 }];
-    if (calendar.kind !== "years" && calendar.hoursPerDay) {
-      units.push({ label: "天", value: calendar.hoursPerDay });
-      if (calendar.daysPerMonth) {
-        const month = calendar.hoursPerDay * calendar.daysPerMonth;
-        units.push({ label: "个月", value: month });
-        if (calendar.monthsPerYear)
-          units.push({ label: "年", value: month * calendar.monthsPerYear });
-      }
-    }
-    const updateTime = (time: PlanningEvent["time"]) => {
-      const oldEnd = resolveTime(data, d).end;
-      const nextStart = resolveTime(data, { ...d, time }).start;
-      setEventDraft({
-        ...d,
-        time,
-        duration:
-          endTimeMode && oldEnd !== null && nextStart !== null
-            ? oldEnd - nextStart
-            : d.duration,
-      });
-    };
-    return (
-      <div
-        ref={editor}
-        className={`${s.card} ${s.editor} ${s.editing} ${s.worldEventEditor}`}
-      >
-        <textarea
-          rows={1}
-          className={s.eventTitleInput}
-          aria-label="事件标题"
-          value={d.title}
-          onChange={(e) => setEventDraft({ ...d, title: e.target.value })}
-        />
-        {/* docs/580 §2 (M6): type and importance; frozen prehistory never reaches this editor (WU-71). */}
-        <div className={s.row}>
-          <label>
-            类型
-            <select
-              aria-label="事件类型"
-              value={d.category}
-              onChange={(e) =>
-                setEventDraft((v) => v && { ...v, category: e.target.value as PlanningEvent["category"] })
-              }
-            >
-              {EVENT_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <fieldset aria-label="重要程度">
-            {IMPORTANCE_LABELS.map((label, i) => (
-              <label key={label}>
-                <input
-                  type="radio"
-                  name={`importance-${d.id}`}
-                  checked={d.importance === i + 1}
-                  onChange={() => setEventDraft((v) => v && { ...v, importance: i + 1 })}
-                />
-                {label}
-              </label>
-            ))}
-          </fieldset>
-        </div>
-        <div className={s.row}>
-          <select
-            aria-label="开始时间类型"
-            value={
-              d.time.kind === "window" && d.time.label === "仅同日"
-                ? "day"
-                : d.time.kind
-            }
-            onChange={(e) =>
-              setEventDraft({
-                ...d,
-                time: {
-                  ...d.time,
-                  kind:
-                    e.target.value === "day"
-                      ? "window"
-                      : (e.target.value as typeof d.time.kind),
-                  precision: e.target.value === "day" ? "day" : "hour",
-                  label: e.target.value === "day" ? "仅同日" : "",
-                  end: ["window", "day"].includes(e.target.value)
-                    ? d.time.value + (activeWorld?.calendar.hoursPerDay ?? 1)
-                    : null,
-                },
-              })
-            }
-          >
-            <option value="exact">精确时间</option>
-            <option
-              value="day"
-              disabled={
-                activeWorld?.calendar.kind === "years" ||
-                !activeWorld?.calendar.hoursPerDay
-              }
-            >
-              仅同日（具体时刻未知）
-            </option>
-            <option value="window">时间窗口</option>
-            <option value="unknown">时间待定</option>
-          </select>
-          <select
-            aria-label="时间参考"
-            value={d.time.anchor || ""}
-            onChange={(e) =>
-              updateTime({ ...d.time, anchor: e.target.value || null })
-            }
-          >
-            <option value="">本线零点</option>
-            {worldEvents(data, d.line)
-              .filter((e) => e.id !== d.id)
-              .map((e) => (
-                <option value={e.id} key={e.id}>
-                  {e.title}
-                </option>
-              ))}
-          </select>
-          {d.time.anchor && (
-            <select
-              aria-label="参考边界"
-              value={d.time.boundary}
-              onChange={(e) =>
-                setEventDraft({
-                  ...d,
-                  time: {
-                    ...d.time,
-                    boundary: e.target.value as "start" | "end",
-                  },
-                })
-              }
-            >
-              <option value="start">开始</option>
-              <option value="end">结束</option>
-            </select>
-          )}
-          <label>
-            开始偏移
-            <input
-              aria-label="开始时间偏移"
-              type="number"
-              value={Number((d.time.value / startUnit).toPrecision(12))}
-              onChange={(e) =>
-                updateTime({
-                  ...d.time,
-                  value: Number(e.target.value) * startUnit,
-                })
-              }
-            />
-          </label>
-          <select
-            aria-label="开始时间单位"
-            value={startUnit}
-            onChange={(e) => setStartUnit(Number(e.target.value))}
-          >
-            {units.map((u) => (
-              <option key={u.label} value={u.value}>
-                {u.label}
-              </option>
-            ))}
-          </select>
-          {d.time.kind === "window" && (
-            <input
-              aria-label="窗口结束"
-              type="number"
-              value={d.time.end ?? 0}
-              onChange={(e) =>
-                setEventDraft({
-                  ...d,
-                  time: { ...d.time, end: Number(e.target.value) },
-                })
-              }
-            />
-          )}
-          <select
-            aria-label="事件持续类型"
-            value={
-              endTimeMode
-                ? "end"
-                : d.ongoing
-                  ? "ongoing"
-                  : d.duration === null
-                    ? "unknown"
-                    : d.duration === 0
-                      ? "point"
-                      : "duration"
-            }
-            onChange={(ev) => {
-              const type = ev.target.value;
-              setEndTimeMode(type === "end");
-              setEventDraft({
-                ...d,
-                ongoing: type === "ongoing",
-                duration: ["ongoing", "unknown"].includes(type)
-                  ? null
-                  : type === "point"
-                    ? 0
-                    : d.duration || 1,
-              });
-            }}
-          >
-            <option value="point">时点</option>
-            <option value="duration">持续</option>
-            <option value="end">结束于</option>
-            <option value="unknown">结束未定</option>
-            <option value="ongoing">持续中</option>
-          </select>
-          {endTimeMode ? (
-            <label>
-              结束时间点（{timeUnit(activeWorld!.calendar)}）
-              <input
-                aria-label="结束时间点"
-                type="number"
-                value={resolveTime(data, d).end ?? ""}
-                onChange={(ev) =>
-                  setEventDraft({
-                    ...d,
-                    duration:
-                      Number(ev.target.value) -
-                      (resolveTime(data, d).start ?? 0),
-                    ongoing: false,
-                  })
-                }
-              />
-            </label>
-          ) : (
-            d.duration !== null &&
-            d.duration !== 0 && (
-              <label>
-                持续时长
-                <input
-                  aria-label="事件时长"
-                  type="number"
-                  min="0"
-                  value={Number((d.duration / durationUnit).toPrecision(12))}
-                  onChange={(ev) =>
-                    setEventDraft({ ...d, duration: Number(ev.target.value) })
-                  }
-                />
-              </label>
-            )
-          )}
-        </div>
-        {!endTimeMode && d.duration !== null && d.duration > 0 && (
-          <select
-            aria-label="持续时间单位"
-            value={durationUnit}
-            onChange={(e) => setDurationUnit(Number(e.target.value))}
-          >
-            {units.map((u) => (
-              <option key={u.label} value={u.value}>
-                {u.label}
-              </option>
-            ))}
-          </select>
-        )}
-        <div className={s.proseEdit}>
-          <MarkdownEditor
-            value={d.fact}
-            onChange={(fact) => setEventDraft({ ...d, fact })}
-            placeholder="客观发生的事实"
-          />
-        </div>
-        <div className={s.pills}>
-          {d.people.map((id) => (
-            <button
-              key={id}
-              className={s.pill}
-              onClick={() =>
-                setEventDraft({
-                  ...d,
-                  people: d.people.filter((p) => p !== id),
-                })
-              }
-            >
-              {chip(id)} ×
-            </button>
-          ))}
-          <select
-            aria-label="添加参与角色"
-            value=""
-            onChange={(e) =>
-              e.target.value &&
-              setEventDraft({
-                ...d,
-                people: [...new Set([...d.people, e.target.value])],
-              })
-            }
-          >
-            <option value="">＋ 角色</option>
-            {query.data?.characters
-              .filter((c) => !d.people.includes(c.id))
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-          </select>
-        </div>
-        {d.changes.map((c, i) => (
-          <fieldset key={c.id}>
-            <legend>关键变化</legend>
-            <div className={s.row}>
-              <select
-                aria-label="变化角色"
-                value={c.character}
-                onChange={(e) =>
-                  setEventDraft({
-                    ...d,
-                    changes: d.changes.map((v, j) =>
-                      i === j ? { ...v, character: e.target.value } : v,
-                    ),
-                  })
-                }
-              >
-                {query.data?.characters.map((p) => (
-                  <option value={p.id} key={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              {(["dimension", "before", "after"] as const).map((field) => (
-                <input
-                  key={field}
-                  aria-label={
-                    { dimension: "维度", before: "变化前", after: "变化后" }[
-                      field
-                    ]
-                  }
-                  value={c[field]}
-                  onChange={(e) =>
-                    setEventDraft({
-                      ...d,
-                      changes: d.changes.map((v, j) =>
-                        i === j ? { ...v, [field]: e.target.value } : v,
-                      ),
-                    })
-                  }
-                />
-              ))}
-              <select
-                value={c.at}
-                aria-label="生效时机"
-                onChange={(e) =>
-                  setEventDraft({
-                    ...d,
-                    changes: d.changes.map((v, j) =>
-                      i === j
-                        ? { ...v, at: e.target.value as "start" | "end" }
-                        : v,
-                    ),
-                  })
-                }
-              >
-                <option value="start">开始时</option>
-                <option value="end">结束时</option>
-              </select>
-              <button
-                onClick={() =>
-                  setEventDraft({
-                    ...d,
-                    changes: d.changes.filter((_, j) => j !== i),
-                  })
-                }
-              >
-                移除
-              </button>
-            </div>
-          </fieldset>
-        ))}
-        <button
-          disabled={!query.data?.characters.length}
-          onClick={() =>
-            setEventDraft({
-              ...d,
-              changes: [
-                ...d.changes,
-                {
-                  id: uid(),
-                  character: query.data!.characters[0].id,
-                  dimension: "境界",
-                  before: "",
-                  after: "",
-                  at: "end",
-                },
-              ],
-            })
-          }
-        >
-          ＋ 关键变化
-        </button>
-        {eventReferences(d, true)}
-        {message && message !== "已保存" && (
-          <p role="alert" className={s.muted}>
-            {message}
-          </p>
-        )}
-        <div className={s.footer}>
-          <button
-            onClick={() => {
-              setEventDraft(null);
-              setMessage("");
-            }}
-          >
-            取消
-          </button>
-          <button
-            disabled={readonly}
-            onClick={async () => {
-              if (!d.title.trim()) {
-                setMessage("请填写事件名称。");
-                return;
-              }
-              if (d.duration !== null && d.duration < 0) {
-                setMessage("结束时间不能早于开始时间，请调整后再保存。");
-                return;
-              }
-              if (
-                d.time.kind === "window" &&
-                (d.time.end === null || d.time.end < d.time.value)
-              ) {
-                setMessage("时间窗口结束不能早于开始。");
-                return;
-              }
-              if (await put("events", d)) { setEventDraft(null); revealEvent(d); }
-            }}
-          >
-            保存事件
-          </button>
-        </div>
-      </div>
-    );
-  }
   function eventReferences(e: PlanningEvent, disabled = false) {
     return (
       <div className={s.refs}>
@@ -2114,6 +1711,11 @@ function PlanningWorkspace({
     /** Every event the preview shifts (moved + anchored to them, transitively). */
     follows?: ReadonlySet<string>;
   } | null>(null);
+  const cancelDragRef = useRef<() => void>(() => {});
+  /** A press on a title records a pending drag; it is a live drag only once it moved (a click or double click leaves a
+   * stale record in the event table, where no pointerup clears it). */
+  const dragLive = () => !!temporalDrag.current?.delta;
+  const cancelTemporalDrag = () => cancelDragRef.current();
   useEffect(() => {
     const cancel = () => {
       const origin = pan.current;
@@ -2122,8 +1724,10 @@ function PlanningWorkspace({
       temporalDrag.current = null;
       setTimePreview(null);
     };
+    cancelDragRef.current = cancel;
+    // docs/599 P2-I: a handled Escape is marked, so the edit layer below does not also run.
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cancel();
+      if (e.key === "Escape" && dragLive()) { cancel(); e.preventDefault(); }
     };
     window.addEventListener("blur", cancel);
     document.addEventListener("keydown", key);
@@ -2262,6 +1866,231 @@ function PlanningWorkspace({
     setSelection(new Set());
   }
   const findWorldEvent = (id: string) => worldAllEvents.find((e) => e.id === id);
+  // docs/599 P2-3: a stable fold callback, so typing in the editing card does not re-render every card (EventCard memo).
+  const toggleFold = useCallback((id: string) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; }), []);
+  // ---------- docs/599: in-place edit form — draft lifecycle ----------
+  const draftPlaced = (() => {
+    if (!eventDraft) return false;
+    try { return resolveTime(data, eventDraft).start !== null; } catch { return false; }
+  })();
+  const standaloneDraft = !!eventDraft && (!worldAllEvents.some((e) => e.id === eventDraft.id) || (wFiltered && !wShownIds.has(eventDraft.id)) || (!table && !draftPlaced));
+  const editingCardRef = useRef<HTMLElement | null>(null);
+  const cancelPending = useRef<Promise<void> | null>(null);
+  const selectTitleId = useRef<string | null>(null);
+  const draftRef = useRef(eventDraft);
+  draftRef.current = eventDraft;
+  // Listeners registered once read the live values through refs (cancel runs from window listeners).
+  const freshRef = useRef(freshChild), baseRef = useRef(draftBase), cancelRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  freshRef.current = freshChild;
+  baseRef.current = draftBase;
+  const startEdit = (e: PlanningEvent, opts: { fresh?: { createdVersion: number; undoTo: string | null }; selectTitle?: boolean } = {}) => {
+    setMessage("");
+    setEditorNote("");
+    setEventDraft(structuredClone(e));
+    setDraftBase(structuredClone(e));
+    setFreshChild(opts.fresh ? { id: e.id, ...opts.fresh } : null);
+    selectTitleId.current = opts.selectTitle ? e.id : null;
+  };
+  const clearEdit = () => {
+    setEventDraft(null); setDraftBase(null); setFreshChild(null); setEditorPicker(null); setEditorNote(""); setMessage("");
+    selectTitleId.current = null;
+  };
+  /** docs/599 §5.1 / §12.5 / §13.3: 取消 / Esc / click outside. The edit state clears at once; an untouched new child is
+   * then undone (restore to the version before it, or a delete if the work changed since). */
+  function cancelEventEdit() {
+    const d = draftRef.current;
+    if (!d) return Promise.resolve();
+    const fc = freshRef.current, base = baseRef.current;
+    const fresh = fc && fc.id === d.id && base && sameEvent(d, base) ? fc : null;
+    clearEdit();
+    if (!fresh) return Promise.resolve();
+    const parentId = d.parent;
+    const finish = (ok: boolean) => {
+      if (!ok) return;
+      setMessage("未修改的新子事件已移除");
+      const p = parentId ? findWorldEvent(parentId) : null;
+      if (p && !worldAllEvents.some((x) => x.parent === p.id && x.id !== d.id)) {
+        setFoldedEvents((v) => { if (!v.has(p.id)) return v; const n = new Set(v); n.delete(p.id); return n; });
+        requestAnimationFrame(() => flashCard(worldPanel.current, p.id));
+      }
+    };
+    const run = (async () => {
+      const del = () => save([{ kind: "delete", collection: "events", id: d.id }]);
+      let ok = false;
+      if (fresh.undoTo && qc.getQueryData<{ version?: number }>(["planning", novelId])?.version === fresh.createdVersion) {
+        ok = await save([], { action: "restore", snapshotId: fresh.undoTo });
+        if (!ok && lastSaveStatus.current === 409) {
+          const r = await query.refetch();
+          const still = r.data?.data.events.find((x) => x.id === d.id && x.line === d.line);
+          if (still && sameEvent(still, d)) ok = await del();
+        }
+      } else ok = await del();
+      finish(ok);
+    })().finally(() => { if (cancelPending.current === run) cancelPending.current = null; });
+    cancelPending.current = run;
+    return run;
+  }
+  cancelRef.current = cancelEventEdit;
+  /** Leave the current edit, wait for its undo, then act (§13.3 afterCancel; keyboard and pointer alike). */
+  async function afterCancel(action: () => void | Promise<unknown>) {
+    if (draftRef.current) cancelEventEdit();
+    if (cancelPending.current) await cancelPending.current;
+    await action();
+  }
+  async function saveEventDraft() {
+    if (cancelPending.current) await cancelPending.current;
+    const d = draftRef.current;
+    if (!d) return;
+    if (!d.title.trim()) { setMessage("请填写事件名称。"); return; }
+    if (d.duration !== null && d.duration < 0) { setMessage("结束时间不能早于开始时间，请调整后再保存。"); return; }
+    if (d.time.kind === "window" && (d.time.end === null || d.time.end < d.time.value)) { setMessage("时间窗口结束不能早于开始。"); return; }
+    if (await put("events", d)) { clearEdit(); revealEvent(d); }
+  }
+  /** docs/599 §6.2 / §12.4: 新建子事件 saves the child at once and opens it in edit with the title selected. A parent
+   * without a complete range gets an unplaced child (the domain refuses a placed one). */
+  async function createChild(parent: PlanningEvent) {
+    const r = resolveTime(data, parent);
+    const placed = r.start !== null && r.windowEnd === null && (r.end !== null || parent.duration === 0);
+    const child = eventSchema.parse({
+      id: uid(), line: worldId, parent: parent.id, title: "未命名事件",
+      time: { kind: placed ? "exact" : "unknown", anchor: parent.id, boundary: "start", value: 0 }, duration: 0,
+    });
+    if (!(await put("events", child))) return;
+    const after = qc.getQueryData<typeof query.data>(["planning", novelId]) ?? query.data;
+    const createdVersion = after?.version ?? 0;
+    const undoTo = after?.history.find((h) => h.version === createdVersion - 1)?.id ?? null;
+    setFoldedEvents((v) => { if (!v.has(parent.id)) return v; const n = new Set(v); n.delete(parent.id); return n; });
+    setOpenCards((v) => (v.has(parent.id) ? v : new Set(v).add(parent.id)));
+    revealEvent(child);
+    startEdit(child, { fresh: { createdVersion, undoTo }, selectTitle: true });
+    setMessage(`已在「${parent.title}」下新建子事件`);
+    if (!placed) setEditorNote("父事件时间范围未定，子事件暂为待定位；父事件时间确定后才能为子事件设定时间。");
+  }
+  const editorValue = useMemo<EventEditorValue | null>(() => {
+    if (!eventDraft || !activeWorld) return null;
+    return {
+      draft: eventDraft,
+      setDraft: (update) => setEventDraft((v) => (v ? update(v) : v)),
+      units: { start: startUnit, duration: durationUnit, endMode: endTimeMode },
+      setUnits: (p) => { if (p.start !== undefined) setStartUnit(p.start); if (p.duration !== undefined) setDurationUnit(p.duration); if (p.endMode !== undefined) setEndTimeMode(p.endMode); },
+      message: message && message !== "已保存" && !message.startsWith("已在「") && message !== "未修改的新子事件已移除" ? message : "",
+      note: editorNote,
+      busy,
+      anchors: worldAllEvents.filter((x) => x.id !== eventDraft.id).map((x) => ({ id: x.id, title: x.title })),
+      calendar: activeWorld.calendar,
+      data,
+      adapter: wAdapter,
+      characters: wCharacters,
+      picker: editorPicker,
+      setPicker: setEditorPicker,
+      cardRef: editingCardRef,
+      selectTitle: selectTitleId.current === eventDraft.id,
+      onSave: () => { void saveEventDraft(); },
+      onCancel: () => { void cancelEventEdit(); },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventDraft, activeWorld, startUnit, durationUnit, endTimeMode, message, editorNote, busy, worldAllEvents, data, wAdapter, wCharacters, editorPicker]);
+  // docs/599 acceptance 1: an open picker of the editing card closes on a press anywhere outside it (inside the card
+  // too); the edit stays unless the press is also outside the card (click-outside, §12.2). Its own trigger toggles it.
+  useEffect(() => {
+    if (!editorPicker) return;
+    const down = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      const card = editingCardRef.current;
+      if (!card || !t?.closest) return;
+      if (t.closest('[role="dialog"],[role="alertdialog"]')) return;
+      const pop = card.querySelector('[aria-haspopup="true"][aria-expanded="true"]')?.parentElement;
+      if (pop?.contains(t)) return;
+      setEditorPicker(null);
+    };
+    document.addEventListener("pointerdown", down, true);
+    return () => document.removeEventListener("pointerdown", down, true);
+  }, [editorPicker]);
+  // §13.1: focus moves into the card on entering edit (Esc then resolves to this panel even in the event table).
+  useEffect(() => {
+    if (!eventDraft?.id) return;
+    const frame = requestAnimationFrame(() => {
+      if (selectTitleId.current === eventDraft.id) return;
+      const el = editingCardRef.current;
+      if (el && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [eventDraft?.id]);
+  // ---------- docs/599 §12.2 / §13.2 / §13.4: click outside and Escape ----------
+  const escapeRef = useRef<(target: HTMLElement) => boolean>(() => false);
+  const escapeOwner = useRef<WorldlineEscapeOwner | null>(null);
+  /** Escape layers: drag → hover card → 「…」 menu → picker → search box with text → cancel edit. Returns handled. */
+  escapeRef.current = (target) => {
+    if (stripDrag.active()) { stripDrag.cancel(); return true; }
+    if (dragLive()) { cancelTemporalDrag(); return true; }
+    if (characterHover.isOpen()) { characterHover.close(); return true; }
+    const menus = worldPanel.current?.querySelectorAll<HTMLDetailsElement>("details[data-card-menu][open]") ?? [];
+    if (menus.length) { for (const m of menus) { m.removeAttribute("open"); if (m.contains(document.activeElement)) m.querySelector<HTMLElement>("summary")?.focus(); } return true; }
+    if (editorPicker) {
+      const host = editingCardRef.current?.querySelector<HTMLElement>('[aria-haspopup="true"][aria-expanded="true"]');
+      setEditorPicker(null);
+      host?.focus({ preventScroll: true });
+      return true;
+    }
+    const sb = target.closest<HTMLElement>("[data-worldline-search]");
+    if (sb && searchQuery) { setSearchQuery(""); return true; }
+    if (draftRef.current) { void cancelRef.current(); return true; }
+    return false;
+  };
+  const wantsEscape = (target: HTMLElement) =>
+    stripDrag.active() || dragLive() || characterHover.isOpen() || !!editorPicker || !!draftRef.current ||
+    !!worldPanel.current?.querySelector("details[data-card-menu][open]") ||
+    (!!target.closest("[data-worldline-search]") && !!searchQuery);
+  const wantsRef = useRef(wantsEscape);
+  wantsRef.current = wantsEscape;
+  useEffect(() => {
+    if (mode !== "world") return;
+    const owner = { panel: () => worldPanel.current, wants: (t: HTMLElement) => wantsRef.current(t), run: (t: HTMLElement) => { escapeRef.current(t); } };
+    escapeOwner.current = owner;
+    const removeOwner = registerWorldlineEscape(owner);
+    // Without the desktop Controller (and inside listboxes, which it skips), the page handles Escape itself.
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
+      if (document.querySelector('[role="dialog"],[role="alertdialog"]')) return;
+      const t = (e.target instanceof HTMLElement && e.target !== document.body ? e.target : null) ?? (worldPanel.current?.contains(document.activeElement) ? (document.activeElement as HTMLElement) : null);
+      const inPanel = t ? worldPanel.current?.contains(t) : !!draftRef.current;
+      if (!inPanel) return;
+      if (escapeRef.current(t ?? worldPanel.current!)) e.preventDefault();
+    };
+    window.addEventListener("keydown", key);
+    return () => { removeOwner(); window.removeEventListener("keydown", key); };
+  }, [mode]);
+  useEffect(() => {
+    if (mode !== "world") return;
+    let press: { inside: boolean; x: number; y: number } | null = null;
+    const inside = (t: EventTarget | null) => {
+      const el = t as Element | null;
+      if (!el?.closest) return false;
+      if (el.closest('[role="dialog"],[role="alertdialog"],[data-character-hover]')) return true;
+      return !!editingCardRef.current?.contains(el as Node);
+    };
+    // §13.9: a press on a scrollbar of a scrolling element is not a click outside.
+    const onScrollbar = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el || !(el instanceof HTMLElement)) return false;
+      const r = el.getBoundingClientRect();
+      return (el.scrollHeight > el.clientHeight && e.clientX - r.left >= el.clientWidth) || (el.scrollWidth > el.clientWidth && e.clientY - r.top >= el.clientHeight);
+    };
+    const down = (e: PointerEvent) => {
+      press = draftRef.current && e.button === 0 && !onScrollbar(e) ? { inside: inside(e.target), x: e.clientX, y: e.clientY } : null;
+    };
+    const up = (e: PointerEvent) => {
+      const p = press;
+      press = null;
+      if (!p || p.inside || e.button !== 0 || !draftRef.current) return;
+      if (Math.hypot(e.clientX - p.x, e.clientY - p.y) >= 4 || inside(e.target)) return;
+      void cancelRef.current();
+    };
+    document.addEventListener("pointerdown", down, true);
+    document.addEventListener("pointerup", up, true);
+    return () => { document.removeEventListener("pointerdown", down, true); document.removeEventListener("pointerup", up, true); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
   actions.current = {
     // docs/580 §7.3 (S1) / 581 WU-32: detail 1 toggles at once; detail 2 leaves the card open and opens the editor,
     // so the card is expanded while editing and stays expanded after save or cancel.
@@ -2277,10 +2106,11 @@ function PlanningWorkspace({
       if (detail >= 2) {
         setOpenCards((v) => (v.has(id) ? v : new Set(v).add(id)));
         const e = findWorldEvent(id);
-        if (!e || readonly || wFrozen.has(id)) return;
-        if (eventDraft) { setMessage("请先保存或取消当前事件编辑，输入已保留。"); return; }
-        setMessage("");
-        setEventDraft(structuredClone(e));
+        // docs/599 §14: a save in flight (the cancel's undo) does not refuse the edit; it opens once the undo is done.
+        if (!e || query.data?.readonly || wFrozen.has(id)) return;
+        if (draftRef.current?.id === id) return;
+        // docs/599 §13.3: a double click on another card leaves the current edit first (its undo, if any, finishes).
+        void afterCancel(() => { const cur = findWorldEvent(id); if (cur) startEdit(cur); });
         return;
       }
       if (openCardsRef.current.has(id) && pend?.id !== id) {
@@ -2342,12 +2172,11 @@ function PlanningWorkspace({
       if (action === "deleteSelection") { actions.current.deleteSelection(); return; }
       if (action === "quote") quotePlanning(e.title, `${worldId}/${e.id}`, "世界事件");
       else if (action === "detail") setDialog({ kind: "event-detail", id: e.id });
-      else if (action === "edit") { revealEvent(e); setEventDraft(structuredClone(e)); }
-      else if (action === "copy") void put("events", { ...e, id: uid(), title: `${e.title} · 副本` });
-      else if (action === "delete") setDialog({ kind: "delete-event", id: e.id });
+      else if (action === "edit") void afterCancel(() => { revealEvent(e); const cur = findWorldEvent(e.id); if (cur) startEdit(cur); });
+      else if (action === "copy") void afterCancel(() => put("events", { ...e, id: uid(), title: `${e.title} · 副本` }));
+      else if (action === "delete") void afterCancel(() => setDialog({ kind: "delete-event", id: e.id }));
       else if (action === "fork") setDialog({ kind: "fork", id: e.id });
-      else if (action === "newChild")
-        setEventDraft(eventSchema.parse({ id: uid(), line: worldId, parent: e.id, title: "未命名事件", time: { anchor: e.id, kind: "unknown" } }));
+      else if (action === "newChild") void afterCancel(() => { const cur = findWorldEvent(e.id); return cur ? createChild(cur) : undefined; });
       else if (action === "locateChildren") {
         // docs/591 code review 2: the first shown child (a hidden child would clear the filter).
         const first = wViewTree.byId.get(e.id)?.children[0];
@@ -2517,7 +2346,8 @@ function PlanningWorkspace({
     };
     return (
       <WorldlineCardContext.Provider value={wCardContext}><TimelineZoomNoteContext.Provider value={zoomNote.current}>
-      <EventEditorContext.Provider value={renderEventEditor}>
+      <EventEditorContext.Provider value={editorValue}>
+      {mode === "world" && <CharacterHoverCard novelId={novelId} onOpen={(id, name) => openEntityRef({ kind: "character", id, name }, novelId)} />}
       <div ref={worldPanel} data-worldline-root="" className={wl.root}>
         {/* docs/577 §1, §14: one-row toolbar; every action of the old three rows is in it or under 更多. */}
         <WorldlineToolbar
@@ -2628,8 +2458,8 @@ function PlanningWorkspace({
             <Button
               size="sm"
               className={wl.primary}
-              disabled={readonly || !!eventDraft || !worldId}
-              onClick={() => setEventDraft(eventSchema.parse({ id: uid(), line: worldId, parent: null, title: "未命名事件", time: { kind: "unknown" } }))}
+              disabled={readonly || !worldId}
+              onClick={() => void afterCancel(() => startEdit(eventSchema.parse({ id: uid(), line: worldId, parent: null, title: "未命名事件", time: { kind: "unknown" } }), { selectTitle: true }))}
             >
               ＋ 事件
             </Button>
@@ -2739,7 +2569,7 @@ function PlanningWorkspace({
                               )
                             }
                             onClick={() => {
-                              setEventDraft(structuredClone(e));
+                              startEdit(e);
                               setTable(true);
                               setWorldPopover(null);
                             }}
@@ -2751,9 +2581,26 @@ function PlanningWorkspace({
                     )}
               </section>
             )}
-            {eventDraft &&
-              (!worldEvents(data, worldId).some((e) => e.id === eventDraft.id) || (wFiltered && !wShownIds.has(eventDraft.id))) &&
-              renderEventEditor()}
+            {/* docs/599 §13.5: a draft with no place in the current view (new, filtered out, or unplaced on the timeline)
+                is edited as a standalone card of the same form above the view. */}
+            {eventDraft && standaloneDraft && (
+              <div data-standalone-editor="" className={wl.standalone}>
+                <EventCard
+                  event={eventDraft}
+                  expanded
+                  selected={false}
+                  hit={false}
+                  dimmed={false}
+                  editing
+                  childCount={0}
+                  descendantCount={0}
+                  folded={false}
+                  placed={false}
+                  maxAvatars={4}
+                  variant={table ? "table" : "timeline"}
+                />
+              </div>
+            )}
             {table ? (
               <>
                   <div data-worldline-panel="" data-command-scope="worldline" className={`${wl.workspace} ${treeOn ? "" : wl.treeOff}`} style={{ height: "calc(100vh - 260px)", minHeight: 420, ...(treeWidth === null ? {} : { "--tree-w": `${treeWidth}px` }) } as React.CSSProperties}>
@@ -2764,7 +2611,7 @@ function PlanningWorkspace({
                       current={currentRow}
                       inView={null}
                       dimmed={wDimmed}
-                      onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                      onFold={toggleFold}
                       onLocate={locateWorldEvent}
                     />
                     <TreeResizer width={treeWidth} onChange={setTreeWidth} />
@@ -2774,7 +2621,7 @@ function PlanningWorkspace({
                       expanded={openCards}
                       folded={foldedEvents}
                       selected={eventSelection}
-                      editing={eventDraft && worldAllEvents.some((e) => e.id === eventDraft.id) ? eventDraft.id : null}
+                      editing={eventDraft && !standaloneDraft ? eventDraft.id : null}
                       hitId={wHits[hitIndex] ?? null}
                       dimmed={wDimmed}
                       scale={tableView.k}
@@ -2784,7 +2631,7 @@ function PlanningWorkspace({
                       railMode={tableRail}
                       onRailMode={setTableRail}
                       periods={allPeriods.map((p) => ({ id: p.id, start: p.start ?? 0, end: p.end }))}
-                      onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                      onFold={toggleFold}
                       onZoom={(step) => setTableZoom((e) => tableView.clamp(tableView.clamp(e) + step))}
                       onScrollTop={setCurrentRow}
                       scrollerRef={tableScroller}
@@ -2800,7 +2647,7 @@ function PlanningWorkspace({
                   selected={eventSelection}
                   current={currentRow}
                   dimmed={wDimmed}
-                  onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                  onFold={toggleFold}
                   onLocate={locateWorldEvent}
                 />
                 <TreeResizer width={treeWidth} onChange={setTreeWidth} />
@@ -2811,7 +2658,7 @@ function PlanningWorkspace({
                   expanded={openCards}
                   folded={foldedEvents}
                   selected={eventSelection}
-                  editing={eventDraft && worldAllEvents.some((e) => e.id === eventDraft.id) ? eventDraft.id : null}
+                  editing={eventDraft && !standaloneDraft ? eventDraft.id : null}
                   hitId={wHits[hitIndex] ?? null}
                   dimmed={wDimmed}
                   pinned={pinnedCard}
@@ -2866,7 +2713,7 @@ function PlanningWorkspace({
                       ),
                     })),
                   }))}
-                  onFold={(id) => setFoldedEvents((v) => { const n = new Set(v); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                  onFold={toggleFold}
                   selection={shownSelection}
                   onBoxSelect={(ids, additive) => actions.current.boxSelect(ids, additive)}
                   onClearSelection={() => actions.current.clearSelection()}

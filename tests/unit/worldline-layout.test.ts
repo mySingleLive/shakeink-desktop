@@ -1342,3 +1342,13 @@ test('AO-06: frames, tracks and bars do not count; a long bar under a lone card 
  assert.ok(step.elements.some(e=>e.kind==='bar'))
  assert.equal(L.autoOpenFits(step.elements,tree,{...view,w:1500},L.AUTO_OPEN_GAP),true)
 })
+
+/* docs/599 §6.1 / §15.11 (WL-addKid): every card head has a 24px 新建子事件 button (+ a 9px gap), so collapsed widths
+ * grow by 33px. Absolute values, so the change is proven (difference-based tests stay green either way). */
+test('WL-addKid: the collapsed head counts the 新建子事件 button', () => {
+  const c = (title: string, o: Partial<L.CollapsedCardInput> = {}): L.CollapsedCardInput => ({ title, depth: 0, importance: 1, avatars: 0, more: 0, kids: null, expandButton: true, ...o })
+  assert.equal(L.collapsedHeadChrome(c('')), 136)
+  assert.equal(L.collapsedCardWidth(c('王立大学')), 192)
+  assert.equal(L.collapsedHeadChrome(c('', { expandButton: false }), 'table'), 103)
+  assert.equal(L.collapsedCardWidth(c('一'.repeat(40))), L.ROOT_CARD_WIDTH)
+})

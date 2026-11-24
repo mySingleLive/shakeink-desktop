@@ -210,7 +210,7 @@ test("WU-71: frozen prehistory events cannot be dragged or double-click edited; 
   await tab(page, "时间线")
   const c = tlCard(page, "旧城失火")
   await c.locator("h3").dblclick()
-  await expect(page.getByRole("button", { name: "保存事件", exact: true })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCount(0)
   await c.locator("summary").click()
   for (const n of ["编辑", "复制", "删除"]) await expect(page.getByRole("button", { name: n, exact: true })).toBeDisabled()
   const h = (await c.locator("h3").boundingBox())!
@@ -276,7 +276,9 @@ test("E-WU90 narrow panel: at the 470px content width beside chat, table cards k
   await page.getByRole("tree", { name: "事件目录" }).getByRole("treeitem", { name: /^星图指向南方群岛 / }).click()
   await expect(page.getByRole("button", { name: "显示或隐藏事件目录" })).toHaveAttribute("aria-pressed", "false")
   await page.locator("[data-event-table] [data-event-card][data-selected] h3").dblclick()
-  await page.getByRole("radio", { name: "关键" }).check()
+  // docs/599: importance is chosen in the card's 重要程度 picker.
+  await page.getByRole("button", { name: "重要程度" }).click()
+  await page.getByRole("radio", { name: "关键" }).click()
   await tab(page, "时间线")
   assert.ok(await page.locator("[data-timeline-plane] [data-event-card]").count() > 0)
   const mm = (await page.getByRole("slider", { name: /全局缩略/ }).boundingBox())!, lane = (await page.locator("[data-timeline-lane]").boundingBox())!

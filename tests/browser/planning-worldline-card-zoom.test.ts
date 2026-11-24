@@ -257,10 +257,10 @@ test("ZB-10: a double click on a point (root, and a child inside an open family)
     await revealTimelineCard(page, p)
     const b = (await p.boundingBox())!
     await page.mouse.dblclick(b.x + 4, b.y + b.height / 2)
-    await expect(page.getByRole("button", { name: "保存事件", exact: true })).toHaveCount(1)
+    await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCount(1)
     await expect(page.getByText("请先保存或取消当前事件编辑")).toHaveCount(0)
     await page.getByRole("button", { name: "取消", exact: true }).first().click()
-    await expect(page.getByRole("button", { name: "保存事件", exact: true })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "保存", exact: true })).toHaveCount(0)
   }
 }, Z))
 

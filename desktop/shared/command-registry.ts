@@ -9,7 +9,8 @@ export function platformCommands(platform: DesktopPlatform): DesktopCommand[] {
   return catalog.commands.filter(command => command.platform !== "mac" || platform === "darwin").map(command => {
     const key = platform === "darwin" ? command.mac : command.win
     const defaults=command.id==="ai.mentionConfirm" ? ["Tab","Enter"] : command.id==="ai.mentionClose" ? ["Escape"] : key ? [key] : []
-    const contexts=command.id.startsWith("ai.mention")&&command.id!=="ai.mention" ? {mention:true} : ["ai.send","ai.newline","ai.stop"].includes(command.id) ? {mention:false} : undefined
+    // docs/599 §12.3: worldline.escape and ai.stop share Escape; enabled() keeps them apart at run time (worldline-escape.ts).
+    const contexts:Record<string,boolean>|undefined=command.id.startsWith("ai.mention")&&command.id!=="ai.mention" ? {mention:true} : command.id==="ai.stop" ? {mention:false,worldlineEdit:false} : command.id==="worldline.escape" ? {worldlineEdit:true} : ["ai.send","ai.newline"].includes(command.id) ? {mention:false} : undefined
     return { id:command.id, label:command.label, group:command.group, scope:command.scope as ShortcutScope, locked:command.locked, defaults, ...(contexts ? {contexts} : {}) }
   })
 }

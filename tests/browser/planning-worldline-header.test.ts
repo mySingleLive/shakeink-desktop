@@ -19,7 +19,7 @@ const editTitle = async (page: import("playwright-core").Page, title: string) =>
   await page.getByRole("tab", { name: "事件表" }).click()
   await page.locator('article[aria-label="渡口相遇"] h3').dblclick()
   await page.getByLabel("事件标题").fill(title)
-  await page.getByRole("button", { name: "保存事件", exact: true }).click()
+  await page.getByRole("button", { name: "保存", exact: true }).click()
 }
 
 test("WU-39d: the header shows 已保存 after a save and 保存失败 after a failure, independent of other notices", () => withWorldline(browser, view(), async page => {
@@ -29,7 +29,7 @@ test("WU-39d: the header shows 已保存 after a save and 保存失败 after a f
   await page.getByRole("tab", { name: "事件表" }).click()
   await page.locator('article[aria-label="渡口重逢"] h3').dblclick()
   await page.getByLabel("事件标题").fill("渡口离别")
-  await page.getByRole("button", { name: "保存事件", exact: true }).click()
+  await page.getByRole("button", { name: "保存", exact: true }).click()
   await expect(header(page).locator("[data-save-state]")).toHaveText("保存失败")
 }))
 test("WU-39d: a read-only work shows a 只读 badge", () => withWorldline(browser, view({ readonly: true }), async page => {

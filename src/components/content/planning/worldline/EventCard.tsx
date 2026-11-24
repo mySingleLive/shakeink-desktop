@@ -1,6 +1,8 @@
 "use client";
 import { createContext, memo, useContext, useLayoutEffect, useRef, type ReactNode } from "react";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
+import { EventCardEditor, EditorTitle, type EventEditorValue } from "./EventCardEditor";
+import { characterHover } from "./CharacterHover";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { resolveTime, type PlanningData, type PlanningEvent } from "@/lib/planning/domain";
 import { CATEGORY_VAR, type CalendarAdapter } from "@/lib/planning/worldline-layout";
@@ -14,7 +16,8 @@ export interface WorldlineCardContextValue {
   data: PlanningData;
   adapter: CalendarAdapter;
   readonly: boolean;
-  hasDraft: boolean;
+  /** docs/599 §7: person pills open the character tab. */
+  novelId: string;
   characters: readonly { id: string; name: string; avatarUrl: string | null }[];
   searchTerms: readonly string[];
   frozen: ReadonlySet<string>;
@@ -27,14 +30,13 @@ export interface WorldlineCardContextValue {
   onMenu(action: "quote" | "detail" | "edit" | "locateChildren" | "newChild" | "copy" | "delete" | "fork" | "quoteSelection" | "deleteSelection", id: string): void;
   onStartTimeDrag(event: React.PointerEvent, id: string): void;
   renderRefs(event: PlanningEvent): ReactNode;
+  /** docs/599 R9: a person pill on an open (not editing) card opens that character's detail tab. */
+  onOpenCharacter(id: string, name: string): void;
 }
 export const WorldlineCardContext = createContext<WorldlineCardContextValue | null>(null);
-/** docs/580 §7.1 (P3): the in-place editor lives in its own context; only the editing card subscribes. */
-export const EventEditorContext = createContext<(() => ReactNode) | null>(null);
-function EventEditorSlot() {
-  const render = useContext(EventEditorContext);
-  return <>{render?.()}</>;
-}
+/** docs/580 §7.1 (P3) / docs/599 §2, §12.7: the in-place editor's draft lives in its own context; only the editing card
+ * (EditingEventCard) subscribes, so typing never re-renders the other cards. */
+export const EventEditorContext = createContext<EventEditorValue | null>(null);
 
 /** Wraps search hits in <mark> without changing the source text (§7.5 S7). */
 export function Highlight({ text, terms }: { text: string; terms: readonly string[] }) {
@@ -135,6 +137,15 @@ export interface EventCardProps {
  * structure so the existing CM tests and outside-click/Escape handling keep working (581 §7). */
 export const EventCard = memo(function EventCard(p: EventCardProps) {
   renderProbe("EventCard");
+  return p.editing ? <EditingEventCard {...p} /> : <CardView {...p} editor={null} />;
+});
+/** docs/599 §12.7: the editing card reads the draft from EventEditorContext and draws it (dot, colour, title). */
+function EditingEventCard(p: EventCardProps) {
+  const editor = useContext(EventEditorContext);
+  if (!editor || editor.draft.id !== p.event.id) return <CardView {...p} editing={false} editor={null} />;
+  return <CardView {...p} event={editor.draft} savedTitle={p.event.title} editor={editor} />;
+}
+function CardView(p: EventCardProps & { editor: EventEditorValue | null; savedTitle?: string }) {
   const ctx = useContext(WorldlineCardContext)!;
   const e = p.event;
   const lines = p.expanded || p.editing ? 1 : (p.titleLines ?? 1);
@@ -157,9 +168,10 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
       {...(p.selected ? { "data-selected": "" } : {})}
       {...(p.hit ? { "data-hit": "" } : {})}
       {...(p.hot ? { "data-hot": "" } : {})}
-      aria-label={e.title}
+      aria-label={p.savedTitle ?? e.title}
       aria-expanded={p.expanded || p.editing}
-      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hot ? s.hot : ""} ${p.hit ? s.hit : ""} ${p.groupHead ? s.groupHead : ""} ${stacked ? s.stack : ""}`}
+      {...(p.editor ? { "data-editing": "", tabIndex: -1, ref: p.editor.cardRef } : {})}
+      className={`${s.card} ${p.expanded || p.editing ? s.open : ""} ${p.editor ? s.editing : ""} ${p.dimmed ? s.dim : ""} ${p.selected ? s.selected : ""} ${p.hot ? s.hot : ""} ${p.hit ? s.hit : ""} ${p.groupHead ? s.groupHead : ""} ${stacked ? s.stack : ""}`}
       style={{ "--ec": `var(${CATEGORY_VAR[e.category]})` } as React.CSSProperties}
       onPointerDownCapture={(ev) => { press.current = { x: ev.clientX, y: ev.clientY }; }}
       onClick={(ev) => {
@@ -192,10 +204,10 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
           data-card-title=""
           data-lines={lines}
           className={s.title}
-          title={e.title}
-          onPointerDown={(ev) => ev.button === 0 && !frozen && !ctx.readonly && ctx.onStartTimeDrag(ev, e.id)}
+          title={p.editor ? undefined : e.title}
+          onPointerDown={(ev) => !p.editor && ev.button === 0 && !frozen && !ctx.readonly && ctx.onStartTimeDrag(ev, e.id)}
         >
-          <Highlight text={e.title} terms={ctx.searchTerms} />
+          {p.editor ? <EditorTitle editor={p.editor} /> : <Highlight text={e.title} terms={ctx.searchTerms} />}
         </h3>
         {!p.expanded && !p.editing && shown.length > 0 && (
           <span className={s.ln}><span data-avatars="" className={s.avatars} title={people.map((c) => c.name).join("、")}>
@@ -210,10 +222,24 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             {p.expanded ? `${p.childCount} 个子事件` : `▸ ${p.descendantCount}`}
           </span></span>
         )}
+        {/* docs/599 R14 / §6.1: 新建子事件 on every card; the editing card's own button is disabled. */}
+        <span className={s.ln}><button
+          type="button"
+          data-add-child=""
+          className={s.addKid}
+          aria-label="新建子事件"
+          title={p.editor ? "先保存或取消当前编辑" : "新建子事件"}
+          disabled={ctx.readonly || frozen || !!p.editor}
+          onClick={() => ctx.onMenu("newChild", e.id)}
+        >
+          {/* A CSS-mask icon, not an SVG element: one node per card (CP-07: 885 cards mount on a zoom step). */}
+          <i className={s.addKidIcon} aria-hidden />
+        </button></span>
         {p.variant === "timeline" && (
           <span className={s.ln}><button
             type="button"
             data-card-expand=""
+            disabled={!!p.editor}
             className={s.expand}
             aria-label={`${p.expanded ? "收起" : "展开"}${e.title}`}
             aria-expanded={p.expanded}
@@ -232,18 +258,18 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
             <button onClick={() => ctx.onMenu("quote", e.id)}>引用到对话</button>
             {(p.selectionSize ?? 0) >= 2 && <button onClick={() => ctx.onMenu("quoteSelection", e.id)}>引用所选 {p.selectionSize} 个事件到对话</button>}
             <button onClick={() => ctx.onMenu("detail", e.id)}>详情</button>
-            <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("edit", e.id)}>编辑</button>
+            <button disabled={ctx.readonly || frozen || !!p.editor} onClick={() => ctx.onMenu("edit", e.id)}>编辑</button>
             {p.childCount > 0 && <button onClick={() => ctx.onMenu("locateChildren", e.id)}>定位子事件</button>}
-            <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("newChild", e.id)}>新建子事件</button>
-            <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("copy", e.id)}>复制</button>
-            <button disabled={ctx.readonly || frozen || ctx.hasDraft} onClick={() => ctx.onMenu("delete", e.id)}>删除</button>
-            {(p.selectionSize ?? 0) >= 2 && <button disabled={ctx.readonly || ctx.hasDraft || frozen} onClick={() => ctx.onMenu("deleteSelection", e.id)}>删除所选 {p.selectionSize} 个事件</button>}
+            <button disabled={ctx.readonly || frozen || !!p.editor} onClick={() => ctx.onMenu("newChild", e.id)}>新建子事件</button>
+            <button disabled={ctx.readonly || frozen || !!p.editor} onClick={() => ctx.onMenu("copy", e.id)}>复制</button>
+            <button disabled={ctx.readonly || frozen || !!p.editor || p.childCount > 0} title={p.childCount > 0 ? "先删除子事件" : undefined} onClick={() => ctx.onMenu("delete", e.id)}>删除</button>
+            {(p.selectionSize ?? 0) >= 2 && <button disabled={ctx.readonly || frozen || !!p.editor} onClick={() => ctx.onMenu("deleteSelection", e.id)}>删除所选 {p.selectionSize} 个事件</button>}
             <button disabled={ctx.readonly} onClick={() => ctx.onMenu("fork", e.id)}>从此分叉</button>
           </div>
         </details></span>
       </div>
-      {p.editing ? (
-        <EventEditorSlot />
+      {p.editor ? (
+        <EventCardEditor editor={p.editor} variant={p.variant} renderRefs={() => ctx.renderRefs(e)} />
       ) : (
         p.expanded && (
           <div className={s.body}>
@@ -256,12 +282,21 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
               <MarkdownPreview source={e.fact} />
             </div>
             {people.length > 0 && (
-              <div className={s.people}>
+              <div data-people="" className={s.people}>
                 {people.map((c) => (
-                  <span key={c.id} className={s.who}>
+                  <button
+                    type="button"
+                    key={c.id}
+                    data-character-pill={c.id}
+                    className={`${s.who} ${s.whoLink}`}
+                    aria-label={`打开角色 ${c.name}`}
+                    onClick={() => { characterHover.close(); ctx.onOpenCharacter(c.id, c.name); }}
+                    onPointerEnter={(ev) => characterHover.enter(c.id, ev.currentTarget)}
+                    onPointerLeave={() => characterHover.leave()}
+                  >
                     <i>{c.avatarUrl ? <img src={c.avatarUrl} alt="" /> : c.name.slice(0, 1)}</i>
                     {c.name}
-                  </span>
+                  </button>
                 ))}
               </div>
             )}
@@ -280,12 +315,12 @@ export const EventCard = memo(function EventCard(p: EventCardProps) {
   );
   // docs/592 R5: two layers peek out below the stacked card (the wrapper's ::before / ::after, isolation keeps them under it).
   return stacked ? <div data-stack-wrap="" className={s.stackWrap} style={{ "--ec": `var(${CATEGORY_VAR[e.category]})` } as React.CSSProperties}>{card}</div> : card;
-});
+}
 
 /** Card time row, same text as the old card (WT-55, EC-73): the start cut to the event precision, the source time words,
  * then 时点 / window / duration. The span no longer reads the window (§7.1 R4): day or coarser precision uses 48 hours
  * (date only), hour precision 1 hour (keeps the minute). */
-function timeText(e: PlanningEvent, ctx: WorldlineCardContextValue) {
+export function timeText(e: PlanningEvent, ctx: Pick<WorldlineCardContextValue, "data" | "adapter" | "frozen">) {
   let t: ReturnType<typeof resolveTime>;
   try { t = resolveTime(ctx.data, e); } catch { return "待定位"; }
   const unit = ctx.adapter.calendar.kind === "years" ? "年" : "小时";

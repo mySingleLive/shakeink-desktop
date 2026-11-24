@@ -22,3 +22,14 @@ test("mention selection and send/stop are distinct contexts, while same-context 
  assert.equal(bindingConflicts(commands,{},"ai.send","Enter",0).length,0)
  assert(bindingConflicts(commands,{},"ai.clear","Enter").some(row=>row.command.id==="ai.send"))
 })
+
+// docs/599 §12.3 / §15.13 (CE-76): worldline.escape shares Escape with ai.stop in a distinct context; the input / markdown /
+// mention Escape commands still conflict with it, as they do with ai.stop.
+test("CE-76: worldline.escape and ai.stop are distinct contexts; other Escape commands conflict",()=>{
+ const commands=platformCommands("darwin")
+ const row=commands.find(command=>command.id==="worldline.escape")!
+ assert.equal(row.scope,"global");assert.deepEqual(row.defaults,["Escape"]);assert.deepEqual(row.contexts,{worldlineEdit:true})
+ const ids=bindingConflicts(commands,{},"worldline.escape","Escape",0).map(r=>r.command.id)
+ assert(!ids.includes("ai.stop"),ids.join())
+ for(const id of ["input.cancel","md.selectionCancel","ai.mentionClose"])assert(ids.includes(id),id)
+})

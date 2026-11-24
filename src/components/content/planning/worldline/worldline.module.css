@@ -180,8 +180,8 @@
 .fact { line-height: 1.75; }
 /* MarkdownPreview is a document page (centred 720px column, px-11 pb-24 pt-8, 14–15px / 1.9–2.05). Inside a card the
  * body follows the time row flush and spans the card, at the design's 13px / 1.75 with 8px between paragraphs. */
-.fact > :global(.markdown-body) { height: auto; overflow: visible; font-size: 13px; line-height: 1.75; color: color-mix(in srgb, var(--foreground) 88%, var(--muted-foreground)); }
-.fact > :global(.markdown-body) > div { max-width: none; margin: 0; padding: 0; }
+.fact > :global(.markdown-body), .edFactView > :global(.markdown-body) { height: auto; overflow: visible; font-size: 13px; line-height: 1.75; color: color-mix(in srgb, var(--foreground) 88%, var(--muted-foreground)); }
+.fact > :global(.markdown-body) > div, .edFactView > :global(.markdown-body) > div { max-width: none; margin: 0; padding: 0; }
 .fact :global(.markdown-body) p { margin: 0 0 8px; }
 .fact :global(.markdown-body) > div > :first-child { margin-top: 0; }
 .fact :global(.markdown-body) > div > :last-child { margin-bottom: 0; }
@@ -426,3 +426,188 @@
 .zoomNote { display: inline-flex; align-items: center; gap: 6px; padding: 1px 4px 1px 9px; border-radius: 11px; border: 1px dashed var(--input); }
 .zoomNote button { height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--input); color: var(--foreground); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .tpoint, .tpoint > time, .stamp { transition: none; } }
+
+/* ---------- docs/599: in-place edit form (design/worldline-card-edit, approved 2026-11-22) ---------- */
+/* R4: entering edit must not change the card's size. Every editable box cancels its own padding with a negative margin
+ * and keeps the open card's line height; ×, row-end buttons, pickers and the save bar sit out of the flow. */
+.card.editing { border-color: color-mix(in srgb, var(--ec) 60%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec) 12%, transparent), var(--shadow-2); outline: none; }
+.tcard:has([data-editing]), .slot:has([data-editing]) { z-index: 10; }
+.title .edTitle { display: block; width: calc(100% + 8px); margin: -2px -4px; padding: 2px 4px; border: 0; border-radius: 5px; outline: none; resize: none; field-sizing: content; overflow: hidden;
+  background: transparent; font: inherit; line-height: inherit; color: inherit; transition: background-color 0.12s, box-shadow 0.12s; }
+.edTitle::placeholder { color: var(--muted-foreground); font-weight: 400; }
+.edTitle:hover, .edTitle:focus { background: var(--hover-wash); }
+.edTitle:focus { box-shadow: inset 0 -1.5px 0 var(--ec); }
+/* 新建子事件 in the head: (0,2,0) beats `.workspace button` (0,1,1). Collapsed cards show it muted. */
+.head .addKid { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted-foreground); outline: none; transition: opacity 0.12s, background-color 0.12s; }
+.addKidIcon { display: block; width: 15px; height: 15px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3v12'/%3E%3Cpath d='M18 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'/%3E%3Cpath d='M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'/%3E%3Cpath d='M15 6a9 9 0 0 0-9 9'/%3E%3Cpath d='M18 15v6'/%3E%3Cpath d='M21 18h-6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3v12'/%3E%3Cpath d='M18 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'/%3E%3Cpath d='M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'/%3E%3Cpath d='M15 6a9 9 0 0 0-9 9'/%3E%3Cpath d='M18 15v6'/%3E%3Cpath d='M21 18h-6'/%3E%3C/svg%3E") center / contain no-repeat; }
+.head .addKid:hover:not(:disabled) { background: var(--hover-wash); color: var(--foreground); }
+.head .addKid:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.head .addKid:disabled { opacity: 0.35; cursor: default; }
+.card:not(.open) > .head .addKid { margin-block: -3px; opacity: 0.55; }
+.card:not(.open):hover > .head .addKid:not(:disabled), .card:not(.open) > .head .addKid:focus-visible { opacity: 1; }
+.head .expand:disabled { opacity: 0.35; cursor: default; }
+/* Person pills of the open card are buttons that open the character (R9). */
+.people button.who { margin: 0; background: transparent; color: inherit; font: inherit; font-size: 12px; cursor: pointer; transition: border-color 0.12s, background-color 0.12s; }
+.people button.whoLink:hover { border-color: color-mix(in srgb, var(--ec) 55%, var(--border)); background: var(--hover-wash); }
+.people button.whoLink:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+/* Meta row pickers keep their text; a 9px caret or a dotted underline says they open a picker. */
+.edPickHost { position: relative; display: inline-flex; }
+.meta .edPick { display: inline-flex; align-items: center; gap: 3px; margin: 0; border: 0; cursor: pointer; font: inherit; font-size: 12px; line-height: inherit; }
+.meta .edPick.tag { padding: 0 5px 0 8px; font-weight: 600; }
+.meta .edPick.tag:hover, .meta .edPick.tag[aria-expanded="true"] { background: color-mix(in srgb, var(--ec) 24%, transparent); }
+.meta .edPick.edPlain, .meta .edPick.edWhen { padding: 0 2px; margin: 0 -2px; border-radius: 4px; background: transparent; color: inherit; }
+/* The open card draws the time in a <small>; the button wraps the same <small> so the size is identical (R3). */
+.meta .edPick.edWhen { color: var(--foreground); text-decoration: underline dotted color-mix(in srgb, var(--foreground) 40%, transparent); text-underline-offset: 3px; font-variant-numeric: tabular-nums; }
+.meta .edPick.edPlain:hover, .meta .edPick.edWhen:hover, .meta .edPick.edPlain[aria-expanded="true"], .meta .edPick.edWhen[aria-expanded="true"] { background: var(--hover-wash); color: var(--foreground); }
+.meta .edPick:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.edCaret { width: 9px; height: 9px; opacity: 0.55; flex: none; }
+/* docs/599 real-target r2 (R4): the edit row adds two carets and the ＋; it never wraps. Only the time shrinks, with an
+ * ellipsis (full text in its title and the picker preview). Its picker is the host's sibling of the button, so it is not clipped. */
+.edBody > .meta { flex-wrap: nowrap; }
+.edBody > .meta > * { flex: none; }
+.edBody > .meta > .edPickHost.edWhenHost { flex: 0 1 auto; min-width: 0; }
+.meta .edWhenHost > .edPick.edWhen { min-width: 0; overflow: hidden; }
+.meta .edWhenHost > .edPick.edWhen > .when { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.meta .edAddMeta { display: inline-grid; place-items: center; width: 18px; height: 18px; margin: 0; padding: 0; border-radius: 50%; border: 1px dashed var(--input); background: transparent; color: var(--muted-foreground); }
+.meta .edAddMeta:hover, .meta .edAddMeta[aria-expanded="true"] { color: var(--foreground); border-color: var(--muted-foreground); background: var(--hover-wash); }
+/* Body: the rendered body at rest; click / Enter turns the same box into the paragraph editor. */
+.edFactView { margin: -4px -6px; padding: 4px 6px; border-radius: 6px; cursor: text; outline: none; transition: background-color 0.12s; }
+.edFactView:hover, .edFactView:focus-visible { background: var(--hover-wash); }
+.edParagraphs { margin: -4px -6px; padding: 4px 6px; border-radius: 6px; outline: none; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.75;
+  color: color-mix(in srgb, var(--foreground) 88%, var(--muted-foreground)); background: var(--hover-wash); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ec) 40%, transparent); }
+.edParagraphs p { margin: 0 0 8px; }
+.edParagraphs p:last-child { margin-bottom: 0; }
+.edParagraphs[data-empty]::before { content: "客观发生的事实"; position: absolute; color: var(--muted-foreground); pointer-events: none; }
+.fact:has(.edParagraphs) { position: relative; }
+/* People: same pills; × floats on the corner; a 24px dashed ＋ pill after the last one (R5). */
+.edWho { position: relative; padding: 0; }
+.edWho .edWhoBtn { display: inline-flex; align-items: center; gap: 6px; height: 22px; margin: 0; padding: 0 10px 0 2px; border: 0; border-radius: 12px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.edWho .edWhoBtn i { display: grid; place-items: center; width: 18px; height: 18px; overflow: hidden; border-radius: 50%; font-style: normal; font-size: 10px; color: var(--primary-foreground); background: color-mix(in srgb, var(--ec) 65%, var(--foreground)); }
+.edWho:hover, .edWho:has([aria-expanded="true"]) { border-color: color-mix(in srgb, var(--ec) 55%, var(--border)); background: var(--hover-wash); }
+.edWho .edX { position: absolute; z-index: 1; top: -6px; right: -6px; display: grid; place-items: center; width: 15px; height: 15px; margin: 0; padding: 0; border-radius: 50%;
+  border: 1px solid var(--input); background: var(--popover); color: var(--muted-foreground); opacity: 0; transition: opacity 0.12s; }
+.edWho:hover .edX, .edWho:focus-within .edX { opacity: 1; }
+.edWho .edX:hover { color: var(--foreground); border-color: var(--muted-foreground); }
+.people .edAddWho { justify-content: center; width: 24px; margin: 0; padding: 0; border-style: dashed; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.people .edAddWho:hover, .people .edAddWho[aria-expanded="true"] { color: var(--foreground); border-color: var(--muted-foreground); background: var(--hover-wash); }
+/* Key changes: same grey row; inline inputs on the 18px line; timing and × float on the row end; the last row has ＋ (R7). */
+.edChange { position: relative; }
+.edChange .edChangeWho { margin: 0 -3px; padding: 0 3px; border: 0; border-radius: 4px; background: transparent; color: var(--foreground); font: inherit; font-weight: 700; line-height: 18px; cursor: pointer; }
+.edChange .edChangeWho:hover, .edChange .edChangeWho[aria-expanded="true"] { background: var(--hover-wash); }
+.change .edInline { min-width: 2em; field-sizing: content; height: 18px; margin: 0 -3px; padding: 0 3px; border: 0; border-radius: 4px; outline: none; background: transparent; color: inherit; font: inherit; line-height: 18px; }
+.edInline::placeholder { color: color-mix(in srgb, var(--muted-foreground) 60%, transparent); }
+.edInline:hover, .edInline:focus { background: var(--hover-wash); }
+.edInline:focus { box-shadow: inset 0 -1.5px 0 var(--ec); }
+.edTail { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 2px; padding-left: 12px; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--muted) 12px); transition: opacity 0.12s; }
+.edChange:hover .edTail, .edChange:focus-within .edTail { opacity: 1; pointer-events: auto; }
+.edChange .edTail button { display: inline-flex; align-items: center; height: 20px; margin: 0; padding: 0 6px; border: 0; border-radius: 5px; background: transparent; color: var(--muted-foreground); font-size: 11px; }
+.edChange .edTail button:hover { background: var(--hover-wash); color: var(--foreground); }
+.edChangeLast { padding-right: 36px; }
+.edChangeLast .edTail { right: 32px; }
+.edChange .edAddChange { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 20px; height: 20px; margin: 0; padding: 0;
+  border-radius: 50%; border: 1px dashed color-mix(in srgb, var(--muted-foreground) 55%, transparent); background: transparent; color: var(--muted-foreground); }
+.edChange .edAddChange:hover { color: var(--foreground); border-color: var(--muted-foreground); background: var(--hover-wash); }
+/* Save bar: hangs under the card's bottom-right edge, out of the flow (R4). Pickers (z 40) sit above it (z 31). */
+.edSaveBar { position: absolute; z-index: 31; top: calc(100% + 6px); right: -1px; display: flex; align-items: center; gap: 6px; padding: 4px; border-radius: 9px;
+  background: var(--popover); border: 1px solid color-mix(in srgb, var(--ec) 45%, var(--border)); box-shadow: var(--shadow-2); }
+.edMsg, .edNoteMsg { max-width: 260px; padding: 0 6px 0 8px; font-size: 12px; line-height: 1.4; }
+.edMsg { color: var(--event-conflict); }
+.edNoteMsg { color: var(--muted-foreground); }
+.edSaveBar .edGhost, .edSaveBar .edPrimary { height: 26px; margin: 0; padding: 0 12px; border: 0; border-radius: 6px; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.edSaveBar .edGhost { background: transparent; color: var(--muted-foreground); }
+.edSaveBar .edGhost:hover { background: var(--hover-wash); color: var(--foreground); }
+.edSaveBar .edPrimary { background: var(--primary); color: var(--primary-foreground); }
+.edSaveBar .edPrimary:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 85%, transparent); }
+.edSaveBar .edPrimary:disabled { opacity: 0.55; }
+/* Pickers: inside the card (they zoom with it, and count as inside for click-outside). */
+.edPop { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 140px; padding: 4px; border-radius: 10px; border: 1px solid var(--border); background: var(--popover);
+  box-shadow: var(--shadow-2); color: var(--foreground); font-size: 13px; font-weight: 400; line-height: 1.5; text-decoration: none; white-space: nowrap; cursor: default; }
+.edPopWide { min-width: 190px; }
+.edPop .edItem { display: flex; align-items: center; gap: 8px; width: 100%; height: 28px; margin: 0; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; text-align: left; }
+.edPop .edItem:hover:not(:disabled), .edPop .edItem[aria-selected="true"], .edPop .edItem[aria-checked="true"] { background: var(--muted); }
+.edPop .edItem:disabled { opacity: 0.45; cursor: default; }
+.edSwatch { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.edCheck { margin-left: auto; opacity: 0.7; }
+.edNote { margin-left: auto; font-size: 11px; color: var(--muted-foreground); }
+.edDotBox { display: grid; place-items: center; width: 14px; flex: none; }
+.edPop .edSearch { display: block; width: 100%; height: 28px; margin: 0 0 4px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--input); background: transparent; outline: none; color: inherit; font-size: 12.5px; }
+.edPop .edSearch:focus { border-color: var(--ring); }
+.edAvatar { display: grid; place-items: center; flex: none; width: 18px; height: 18px; overflow: hidden; border-radius: 50%; font-size: 10px; color: var(--primary-foreground); background: color-mix(in srgb, var(--ec) 65%, var(--foreground)); }
+.edAvatar img { width: 100%; height: 100%; object-fit: cover; }
+.edCap { padding: 4px 10px 2px; font-size: 11px; color: var(--muted-foreground); }
+.edSep { height: 1px; margin: 4px 2px; background: var(--border); }
+.edEmpty { padding: 6px 10px; font-size: 12px; color: var(--muted-foreground); }
+/* Time picker (§4). */
+.timePop { left: -8px; width: 380px; max-width: calc(100vw - 40px); padding: 0; overflow: hidden; white-space: normal; }
+.timePreview { padding: 12px 14px 10px; background: color-mix(in srgb, var(--ec) 8%, var(--popover)); border-bottom: 1px solid var(--border); }
+.timePreviewRow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.timePreviewRow b { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.timePreviewRow small { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted-foreground); }
+.timeSec { padding: 12px 14px 4px; }
+.timeSec + .timeSec { border-top: 1px solid var(--border); }
+.timeHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.timeHead b { font-size: 12px; font-weight: 600; }
+.edSeg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 8px; background: var(--muted); }
+.timePop .edSeg button { height: 22px; margin: 0; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
+.timePop .edSeg button:hover:not(:disabled) { color: var(--foreground); }
+.timePop .edSeg button[aria-checked="true"] { background: var(--background); color: var(--foreground); box-shadow: 0 0 0 1px var(--input); }
+.timePop .edSeg button:disabled { opacity: 0.4; }
+.edSay { display: flex; flex-wrap: nowrap; align-items: center; gap: 5px; min-height: 28px; margin-bottom: 8px; font-size: 12.5px; white-space: nowrap; color: var(--muted-foreground); }
+.edHint { margin: -2px 0 10px; font-size: 11.5px; color: var(--muted-foreground); }
+.timePop .edField { height: 28px; min-width: 0; margin: 0; padding: 0 22px 0 8px; border-radius: 6px; border: 1px solid var(--input); background-color: transparent; color: var(--foreground); font-size: 12.5px; outline: none; }
+.timePop .edField:focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 40%, transparent); }
+.timePop .edAnchor { max-width: 118px; }
+.timePop .edToggle { height: 28px; margin: 0; padding: 0 8px; border-radius: 6px; border: 1px solid var(--input); background: transparent; color: var(--foreground); font-size: 12.5px; }
+.timePop .edToggle:hover { background: var(--muted); }
+.timePop .edLink { margin: 0; padding: 0; border: 0; background: transparent; font-size: 11.5px; color: var(--muted-foreground); text-decoration: underline dotted; text-underline-offset: 3px; }
+.timePop .edLink:hover { color: var(--foreground); }
+.edCheckRow { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12.5px; cursor: pointer; }
+.timePop .edCheckRow input { accent-color: var(--primary); }
+.timeFoot { display: flex; justify-content: flex-end; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border); }
+.timePop .timeFoot button.timeCancel { background: transparent; color: var(--muted-foreground); }
+.timePop .timeFoot button.timeCancel:hover { background: var(--hover-wash); color: var(--foreground); }
+.timePop .timeFoot button { height: 26px; margin: 0; padding: 0 14px; border: 0; border-radius: 6px; background: var(--muted); font-size: 12px; }
+.timePop .timeFoot button:hover { background: var(--input); }
+/* Draggable strip (§4.3). */
+.strip { position: relative; height: 36px; margin-top: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.stripAxis { position: absolute; left: 0; right: 0; top: 9px; height: 2px; border-radius: 1px; background: var(--border); }
+.stripBar { position: absolute; top: 7px; height: 6px; border-radius: 3px; background: var(--ec); }
+.stripFade { background: linear-gradient(90deg, var(--ec), transparent); }
+.stripArrow::after { content: ""; position: absolute; right: -6px; top: -3px; border: 6px solid transparent; border-left-color: var(--ec); border-right: 0; }
+.stripWin { position: absolute; top: 3px; height: 14px; border-radius: 7px; border: 1.5px dashed var(--ec); background: color-mix(in srgb, var(--ec) 14%, transparent); }
+.stripMove { cursor: grab; }
+.stripDrag, .stripDrag .stripMove { cursor: grabbing; }
+.stripDot { position: absolute; z-index: 2; top: 4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--ec); box-shadow: 0 0 0 2px var(--popover); cursor: ew-resize; outline: none; transition: transform 0.1s, box-shadow 0.1s; }
+.stripDot::before { content: ""; position: absolute; inset: -8px; }
+.stripDot:hover, .stripDot:focus-visible, .stripOn { transform: scale(1.25); box-shadow: 0 0 0 2px var(--popover), 0 0 0 5px color-mix(in srgb, var(--ec) 32%, transparent); }
+.stripLabel { position: absolute; top: 21px; font-size: 10.5px; line-height: 14px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.stripL { left: 0; } .stripR { right: 0; }
+.stripTip { z-index: 3; transform: translateX(-50%); padding: 0 6px; border-radius: 5px; color: #fff; background: var(--ec); }
+.stripQ { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--muted-foreground); }
+/* Number stepper (§4.4): native spin buttons hidden; a slim ▴▾ column inside the right edge, digits never under it. */
+.stepper { position: relative; display: inline-flex; align-items: stretch; height: 28px; border-radius: 6px; border: 1px solid var(--input); transition: border-color 0.12s, box-shadow 0.12s; }
+.stepper:hover { border-color: color-mix(in srgb, var(--muted-foreground) 55%, var(--input)); }
+.stepper:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 40%, transparent); }
+.timePop .stepper > input { width: 58px; min-width: 0; height: 100%; margin: 0; padding: 0 22px 0 8px; border: 0; outline: none; background: transparent; color: var(--foreground); font-size: 12.5px;
+  font-variant-numeric: tabular-nums; text-align: right; appearance: textfield; -moz-appearance: textfield; }
+.timePop .stepper > input::-webkit-inner-spin-button, .timePop .stepper > input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepperSpin { position: absolute; top: 3px; right: 3px; bottom: 3px; display: flex; flex-direction: column; width: 15px; border-radius: 4px; overflow: hidden; opacity: 0.5; transition: opacity 0.12s; }
+.stepper:hover .stepperSpin, .stepper:focus-within .stepperSpin { opacity: 1; }
+.stepper .stepperSpin button { flex: 1; display: grid; place-items: center; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted-foreground); }
+.stepper .stepperSpin button:hover:not(:disabled) { background: var(--muted); color: var(--foreground); }
+.stepper .stepperSpin button:disabled { opacity: 0.35; }
+/* Character hover card (R18). */
+.charHover { position: fixed; z-index: 3000; display: flex; flex-direction: column; gap: 8px; width: 264px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--popover); box-shadow: var(--shadow-2); font-size: 12px; }
+.charHoverTop { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.charHoverAvatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; overflow: hidden; border-radius: 50%; font-size: 14px; font-weight: 600; color: var(--primary-foreground); background: color-mix(in srgb, var(--event-relation) 65%, var(--foreground)); }
+.charHoverAvatar img { width: 100%; height: 100%; object-fit: cover; }
+.charHoverText { min-width: 0; }
+.charHoverName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--foreground); }
+.charHoverRole { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted-foreground); }
+.charHoverBlurb { margin: 0; font-size: 12px; line-height: 1.6; color: color-mix(in srgb, var(--foreground) 85%, transparent); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.charHover .charHoverOpen { width: fit-content; margin: 0; padding: 0; border: 0; background: transparent; font-size: 11.5px; color: var(--primary); }
+.charHoverOpen:hover { text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .edTitle, .edWho .edX, .edTail, .stripDot, .stepper, .stepperSpin, .head .addKid { transition: none; } }
+/* docs/599 §13.5: a draft with no place in the view, edited above it (420px, same form). The save bar needs room below. */
+.standalone { position: relative; z-index: 20; width: min(420px, 100%); margin: 0 0 48px; }

@@ -5603,6 +5603,69 @@
       "只读 Monaco、世界线搜索框只在浏览器夹具验证；E9（对话框屏障）只在浏览器夹具验证",
       "已知风险（未处理）：markdown 渲染不做 sanitize（src/lib/markdown.ts:22），CSP unsafe-inline；本次未新增 IPC"
     ]
+  },
+  {
+   "id": "WL-599",
+   "requirement": "世界线事件卡片编辑形态：编辑形态即展开形态的同一张卡，各信息原位可改；进入编辑尺寸不变；添加角色、保存、新增角色转变、点击外部取消、角色胶囊点击 / 编辑替换、时间浮层（开始 / 结束、填空句、拖动时间轴、步进框）、父子事件同一编辑形态与新建子事件、未改动的新子事件取消即删除、Esc 取消、角色胶囊悬停简介（用户 2026-11-22，设计稿 design/worldline-card-edit 经 10 轮审核通过；R1–R18）",
+   "source": [
+    "docs/599-worldline-card-edit-research.md",
+    "docs/599-worldline-card-edit-plan.md",
+    "docs/599-worldline-card-edit-plan-review.md",
+    "docs/599-worldline-card-edit-test-review.md",
+    "docs/599-worldline-card-edit-code-review.md",
+    "docs/599-worldline-card-edit-code-review-r4.md"
+   ],
+   "implementation": [
+    "src/components/content/planning/worldline/EventCardEditor.tsx",
+    "src/components/content/planning/worldline/EventTimePicker.tsx",
+    "src/components/content/planning/worldline/ParagraphEditor.tsx",
+    "src/components/content/planning/worldline/CharacterHover.tsx",
+    "src/components/content/planning/worldline/popover-fit.ts",
+    "src/components/content/planning/worldline/EventCard.tsx",
+    "src/components/content/planning/worldline/EventTimeline.tsx",
+    "src/components/content/planning/worldline/worldline.module.css",
+    "src/components/content/planning/PlanningWorkspace.tsx（reuse，docs/577–598 同例）",
+    "src/components/content/planning/planning.module.css（reuse）",
+    "src/components/layout/ChatPanel.tsx（reuse：ai.stop 与 worldline.escape 互斥）",
+    "src/lib/planning/event-draft.ts",
+    "src/lib/planning/event-time-strip.ts",
+    "src/lib/desktop/worldline-escape.ts",
+    "desktop/shared/commands.json、command-registry.ts、command-catalogs.generated.json（worldline.escape）"
+   ],
+   "testIds": [
+    "CE-01..86、TP-01..11（tests/browser/planning-worldline-card-edit.test.ts，63 项）",
+    "ETS-*（tests/unit/event-time-strip.test.ts）",
+    "既有 planning-worldline-* 用例按 docs/599 §15.11 改（夹具 characters / 初始历史行）",
+    "599-r3、599-esc-r2（真实目标 edit-599.mjs、esc-599.mjs）"
+   ],
+   "verificationKind": "WORLDLINE_CARD_EDIT_TARGETED",
+   "status": "implemented-targeted-verified-real-target-met-macos",
+   "requirementEvidence": {
+    "R1-R3 原位编辑、同布局": "真实目标 599-r3 R3 saved fields / put back（标题、类型、重要度、时间偏移、角色增改换）+ 浏览器夹具 CE-10/13/14/15/73",
+    "R4 尺寸不变": "真实目标 599-r3（两视图 195→195）+ esc-r2 R4 sweep（最长时间文字 40 张，0 失败，其中 20 张展开行本已换行、编辑行一行）+ 浏览器夹具 CE-01/02/04/05/85",
+    "R5-R7 ＋、保存、新增角色转变": "浏览器夹具 CE-13/14/15/72/75；真实目标 599-r3 经元信息“添加”与“添加参与角色”加角色",
+    "R8 点击外部取消": "真实目标 599-r3 R16（点击外部）+ 浏览器夹具 CE-20/22a-e/23/26/27/29",
+    "R9/R10 胶囊点击打开角色 / 编辑替换": "真实目标 599-r3 R9 pill opens character tab、更换角色 + 浏览器夹具 CE-13/40",
+    "时间浮层（第 4–6 轮）": "真实目标 599-r3 开始时间偏移 +1 保存并改回 + 浏览器夹具 TP-01..11、CE-82",
+    "R13-R15 父子事件、新建子事件、删光子事件": "真实目标 599-r3 R14 child created + 浏览器夹具 CE-30/30b/35/36/37",
+    "R16 未改动的新子事件取消即删除": "真实目标 599-r3 R16（restore，历史“恢复规划版本：6”，数据与新建前相同）；delete / 409 分支仅浏览器夹具 CE-33/33b",
+    "R17 Esc 取消": "真实目标 esc-r2（sendInputEvent，焦点在标题 / 正文 / 按钮，两视图 6/6）+ 浏览器夹具 CE-21/60/61/65/66/67/68；生成中、组字中 Esc 仅浏览器夹具 CE-12",
+    "R18 胶囊悬停简介": "真实目标 599-r3 R18 hover card + 浏览器夹具 CE-41/42/43/44/47/49/51/53/80",
+    "C1 已通过功能不变": "浏览器 planning-*.test.ts 全量：只剩 CM-02/03/06/10（HEAD 基线）、ZB-20（HEAD 同样失败 p95 25ms）、CP-07 / WU-40b（负载相关，单独各跑两次通过）"
+   },
+   "evidence": [
+    "tsc 通过；npm run build 通过（~/shakeink-test-roots/worldline-ui-583-evidence/599/build-2.txt）",
+    "npm test：失败项与第 1 次全量（unit-1.txt）同集合减去 NI-LB07；其中 EC-budget、NI-C02 在 HEAD 工作树 /private/tmp/shakeink-599-base（链接 src/generated）同样失败；其余与 docs/598 基线 final-names 相同（unit-3.txt）",
+    "浏览器 tests/browser/planning-*.test.ts 全量（browser-3.txt）：失败 CM-02/03/06/10（基线）、ZB-20（HEAD 同样失败）、CP-07、WU-40b（单独重跑通过）；planning-worldline-card-edit 单独 63/63",
+    "真实目标（构建版、隔离根 ~/shakeink-test-roots/worldline-ui-599 由 worldline-ui-583 复制并移走租约收据、作品 LOTM-587-wg-r1、无模型调用）：599/r3 PASS 12/12，599/esc-r2 PASS（Esc 6/6、R4 sweep 40/40、版本不变）；该作品原无角色，驱动经 API 新建虚构角色 测试角色甲/乙/丙（记录于 result.json）",
+    "真实目标发现并修复：时间线展开行一行、编辑行（两个 caret + ＋）换行，约 138/1061 个事件进入编辑长 26px（599/meta-widths.json、r4-diag.json）；改为编辑行不换行、时间文字省略（用户选择），CE-85 去掉修复后失败；窄事件表弹层越界（代码审核 r4 P2-2），useFitPopover，CE-86 去掉修复后失败"
+   ],
+   "verificationLimits": [
+    "R16 的 delete / 409 回退、生成中 Esc、组字中 Esc、剪贴板粘贴只有浏览器夹具证据（离线无模型无法在真实目标复现外部修改与生成）",
+    "R4 sweep 跳过 10 张：7 张在该缩放下未画出、3 张时间线标题被其他卡片遮挡无法双击",
+    "测试用例审核列出的 CE-03/06/11c/24/28/31e/38/45/46/48/50b/52 与 CE-66 的标题拖动、框选、小地图拖动未写，未执行，不计为通过",
+    "Windows 未在真实目标验证"
+   ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",
