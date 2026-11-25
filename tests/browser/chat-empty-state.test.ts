@@ -40,6 +40,8 @@ globalThis.mountChatEmpty=(options={})=>{
  window.desktop=Object.freeze({
   readClipboardText:async()=>{bridgeCalls.push('readClipboardText');return ''},
   writeClipboardText:async text=>{bridgeCalls.push(['writeClipboardText',text])},
+  command:async id=>{bridgeCalls.push(['command',id])},
+  novelImport:async action=>{bridgeCalls.push(['novelImport',action.type]);return {view:null}},
  });
  useDesktopStore.setState({bootstrap,saving:0,error:null});useTabsStore.setState({tabs:[],activeTabId:null});useCardSelection.setState({selection:null});
  useChatStore.setState({accountId:null,recoveryStatus:'restoring',recoveryNotice:null,storageNotice:null,conversationId:null,requestedConversationId:null,
@@ -764,4 +766,22 @@ test("CES-12 stale answer closes the panel, keeps the filled answer and labels t
   assert.equal(await page.getByText("提问已失效", { exact: true }).count(), 1, "the card must not claim generation was interrupted")
   assert.equal(await page.getByText("生成中断", { exact: true }).count(), 0)
   assert.equal(await page.getByRole("button", { name: "作为新消息重发" }).count(), 0)
+}))
+
+test("CES-13 novel picker exposes 打开作品 / 导入作品 that reuse the native file.open command and the sidebar import entry", () => scenario({}, async page => {
+  const picker = page.getByRole("button", { name: "选择要创作的小说" })
+  const state = await page.evaluate(() => (window as any).f.state())
+  await picker.click()
+  await page.getByRole("menuitem", { name: "导入作品" }).waitFor()
+  const items = await page.getByRole("menuitem").allInnerTexts()
+  assert.deepEqual(items.map(text => text.trim()).slice(0, 3), ["新建作品", "打开作品", "导入作品"])
+  await page.getByRole("menuitem", { name: "打开作品" }).click()
+  await picker.click()
+  await page.getByRole("menuitem", { name: "导入作品" }).click()
+  await page.waitForFunction(() => (window as any).f.bridgeCalls.length >= 2)
+  assert.deepEqual(await page.evaluate(() => (window as any).f.bridgeCalls), [["command", "file.open"], ["novelImport", "choose"]])
+  const after = await page.evaluate(() => (window as any).f.state())
+  assert.equal(after.draftNovelId, state.draftNovelId, "opening/importing must not change the conversation association")
+  assert.equal(after.pendingNovelTitle, state.pendingNovelTitle)
+  assert.deepEqual(await posts(page), [])
 }))

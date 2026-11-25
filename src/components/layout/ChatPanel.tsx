@@ -11,6 +11,7 @@ import { ComposerHistory } from "@/lib/desktop/composer-history"
 import {composerBindingHint} from "@/lib/desktop/composer-shortcuts"
 import {desktopCommandCatalog} from "@/lib/desktop/command-runtime"
 import {consumeDesktopComposerPaste} from "@/lib/desktop/native-text-edits"
+import {requestNovelImport} from "@/lib/desktop/novel-import"
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
@@ -30,6 +31,8 @@ import {
   ClipboardList,
   Cog,
   Copy,
+  FileInput,
+  FolderOpen,
   Hash,
   ImageIcon,
   ListTodo,
@@ -1526,6 +1529,11 @@ export function ChatPanel({
     if (!conversationId) resetConversation(null, useChatStore.getState().draft)
   }
 
+  /** 引导页「打开作品」：与系统菜单同一主进程命令（目录对话框 → 加入导航栏 → works.refresh） */
+  const handleOpenWork = () => {
+    void window.desktop?.command("file.open").catch((error: unknown) => toast.error(error instanceof Error ? error.message : "打开作品失败"))
+  }
+
   /** 引导页「新建作品」：挂起兜底书名（首条消息发送时才落库，与创建向导同一延迟建书链路） */
   const handleCreateHeroNovel = () => {
     // 关联钉为 null（产品 B1：防 draftNovelId/composerNovelId 残留错发旧书）
@@ -1979,6 +1987,15 @@ export function ChatPanel({
                         {pendingNovelTitle && <Check className="size-3.5 text-primary" />}
                       </DropdownMenuItem>
                     )}
+                    {/* 打开/导入作品：与系统菜单 file.open、侧栏「导入作品」走同一入口，不改变当前会话关联 */}
+                    <DropdownMenuItem onClick={handleOpenWork}>
+                      <FolderOpen className="size-3.5 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">打开作品</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void requestNovelImport()}>
+                      <FileInput className="size-3.5 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">导入作品</span>
+                    </DropdownMenuItem>
                     {filteredHeroNovels.length === 0 && (
                       <div className="px-2 py-1.5 text-xs text-muted-foreground">
                         没有匹配的小说
