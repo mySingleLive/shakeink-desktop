@@ -57,7 +57,7 @@ globalThis.mountChatEmpty=(options={})=>{
  window.fetch=async(input,init={})=>{
   const path=String(input),method=init.method||'GET',body=init.body?JSON.parse(init.body):null;calls.push({path,method,body});
   if(path==='/api/models'&&method==='GET')return json({models,defaultModelId});
-  if(path==='/api/novels'&&method==='GET')return json({novels:[],unavailableWorks:[]});
+  if(path==='/api/novels'&&method==='GET')return json({novels:options.novels||[],unavailableWorks:[]});
   if(path==='/api/novels'&&method==='POST')return json({novel:{id:'fixture-created-work',title:body.title}},201);
   if(path==='/api/chat/conversations'&&method==='GET')return json({conversations:[]});
   if(path.startsWith('/api/templates/wizard')&&method==='GET')return wizardError?json({error:'合成本地模板读取失败'},500):json({templates:[],revision:1});
@@ -768,13 +768,30 @@ test("CES-12 stale answer closes the panel, keeps the filled answer and labels t
   assert.equal(await page.getByRole("button", { name: "作为新消息重发" }).count(), 0)
 }))
 
+test("CES-13b novel picker 创建作品 opens the creation wizard and a separator splits actions from real works", () => scenario({ novels: [{ id: "ces13b-a", title: "合成作品甲" }, { id: "ces13b-b", title: "合成作品乙" }] }, async page => {
+  const picker = page.getByRole("button", { name: "选择要创作的小说" })
+  await picker.click()
+  await page.getByRole("menuitem", { name: "《合成作品甲》" }).waitFor()
+  const items = (await page.getByRole("menuitem").allInnerTexts()).map(text => text.trim())
+  assert.deepEqual(items, ["创建作品", "打开作品", "导入作品", "《合成作品甲》", "《合成作品乙》", "不关联小说（仅闲聊）", "待创建作品"])
+  const order = await page.getByRole("menu").evaluate(menu => [...menu.querySelectorAll('[role="menuitem"],[role="separator"]')].map(el => el.getAttribute("role") === "separator" ? "|" : el.textContent!.trim()))
+  assert.deepEqual(order, ["创建作品", "打开作品", "导入作品", "|", "《合成作品甲》", "《合成作品乙》", "|", "不关联小说（仅闲聊）", "待创建作品"])
+  await page.getByRole("menuitem", { name: "创建作品", exact: true }).click()
+  await page.getByRole("dialog").waitFor()
+  const state = await page.evaluate(() => (window as any).f.state())
+  assert.equal(state.pendingNovelTitle, null, "opening the wizard must not stage a pending work")
+  await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click(); await page.getByRole("dialog").waitFor({ state: "hidden" })
+  assert.deepEqual(await posts(page), [])
+}))
+
 test("CES-13 novel picker exposes 打开作品 / 导入作品 that reuse the native file.open command and the sidebar import entry", () => scenario({}, async page => {
   const picker = page.getByRole("button", { name: "选择要创作的小说" })
   const state = await page.evaluate(() => (window as any).f.state())
   await picker.click()
   await page.getByRole("menuitem", { name: "导入作品" }).waitFor()
   const items = await page.getByRole("menuitem").allInnerTexts()
-  assert.deepEqual(items.map(text => text.trim()).slice(0, 3), ["新建作品", "打开作品", "导入作品"])
+  assert.deepEqual(items.map(text => text.trim()), ["创建作品", "打开作品", "导入作品", "不关联小说（仅闲聊）", "待创建作品"])
+  assert.equal(await page.getByRole("menu").getByRole("separator").count(), 1, "no work items: only the separator above 不关联小说")
   await page.getByRole("menuitem", { name: "打开作品" }).click()
   await picker.click()
   await page.getByRole("menuitem", { name: "导入作品" }).click()
