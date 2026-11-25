@@ -600,7 +600,8 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "removed-unused",
+      "reason": "Removed 2026-11-25 (docs/604): unreachable; outline and chapter-outline render through OutlineProjectionPanel (src/components/content/registry.tsx)."
     },
     {
       "source": "src/components/content/CharacterImagePanel.tsx",
@@ -777,7 +778,8 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "removed-unused",
+      "reason": "Removed 2026-11-25 (docs/604): unreachable; outline and chapter-outline render through OutlineProjectionPanel (src/components/content/registry.tsx)."
     },
     {
       "source": "src/components/content/PlaceholderPanel.tsx",
@@ -786,7 +788,8 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "removed-unused",
+      "reason": "Removed 2026-11-25 (docs/604): unreachable; the desktop panel registry uses no placeholder panel."
     },
     {
       "source": "src/components/content/ReviewCard.tsx",
@@ -1505,7 +1508,8 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "removed-unused",
+      "reason": "Removed 2026-11-25 (docs/604): unreachable; desktop theme selection lives in Settings."
     },
     {
       "source": "src/components/ui/avatar.tsx",
@@ -1577,7 +1581,8 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "removed-unused",
+      "reason": "Removed 2026-11-25 (docs/604): unreachable shadcn primitive with no consumer."
     },
     {
       "source": "src/components/ui/input.tsx",
@@ -1649,7 +1654,8 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "removed-unused",
+      "reason": "Removed 2026-11-25 (docs/604): unreachable shadcn primitive with no consumer."
     },
     {
       "source": "src/components/ui/tabs.tsx",
