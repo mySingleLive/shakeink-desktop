@@ -393,21 +393,56 @@ export function children(
     .filter((c) => c.line === line && c.parent === parent)
     .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 }
+/**
+ * docs/607: one line's cards grouped by parent, each group in `children` order. Built per call in
+ * O(n log n): applyPlanningOperations edits cards in place and calls these mid-operation, so a
+ * cache keyed on `data` would go stale. Grouping keeps array order and the sort is stable, so each
+ * group equals `children(data, line, parent)`.
+ */
+type ChildIndex = Map<string | null, NarrativeCard[]>;
+function childIndex(data: PlanningData, line: string): ChildIndex {
+  const index: ChildIndex = new Map();
+  for (const c of data.cards) {
+    if (c.line !== line) continue;
+    const group = index.get(c.parent);
+    if (group) group.push(c);
+    else index.set(c.parent, [c]);
+  }
+  for (const group of index.values())
+    group.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  return index;
+}
+function orderedFrom(
+  index: ChildIndex,
+  parent: string | null,
+  seen: Set<string>,
+  out: NarrativeCard[],
+): NarrativeCard[] {
+  for (const c of index.get(parent) ?? []) {
+    check(!seen.has(c.id), "叙事卡片形成循环");
+    check(seen.size < 10000, "叙事结构过大");
+    seen.add(c.id);
+    out.push(c);
+    orderedFrom(index, c.id, seen, out);
+  }
+  return out;
+}
 export function orderedCards(
   data: PlanningData,
   line: string,
   parent: string | null = null,
   seen = new Set<string>(),
 ): NarrativeCard[] {
-  return children(data, line, parent).flatMap((c) => {
-    check(!seen.has(c.id), "叙事卡片形成循环");
-    check(seen.size < 10000, "叙事结构过大");
-    seen.add(c.id);
-    return [c, ...orderedCards(data, line, c.id, seen)];
-  });
+  return orderedFrom(childIndex(data, line), parent, seen, []);
 }
-export function cardChapter(
-  data: PlanningData,
+/** First card per id, as `data.cards.find` returns it. */
+function cardsById(data: PlanningData): Map<string, NarrativeCard> {
+  const byId = new Map<string, NarrativeCard>();
+  for (const c of data.cards) if (!byId.has(c.id)) byId.set(c.id, c);
+  return byId;
+}
+function chapterOf(
+  byId: Map<string, NarrativeCard>,
   card: NarrativeCard,
 ): string | null {
   const seen = new Set<string>();
@@ -416,17 +451,26 @@ export function cardChapter(
     check(!seen.has(current.id), "叙事卡片形成循环");
     seen.add(current.id);
     if (current.chapter) return current.chapter;
-    current = data.cards.find((c) => c.id === current!.parent);
+    current = current.parent === null ? undefined : byId.get(current.parent);
   }
   return null;
+}
+export function cardChapter(
+  data: PlanningData,
+  card: NarrativeCard,
+): string | null {
+  if (card.chapter) return card.chapter;
+  return chapterOf(cardsById(data), card);
+}
+function readingFrom(index: ChildIndex, ordered: NarrativeCard[]) {
+  return ordered.filter((c) => c.narrateSummary || !index.get(c.id)?.length);
 }
 export function readingCards(
   data: PlanningData,
   line: string,
 ): NarrativeCard[] {
-  return orderedCards(data, line).filter(
-    (c) => c.narrateSummary || !children(data, line, c.id).length,
-  );
+  const index = childIndex(data, line);
+  return readingFrom(index, orderedFrom(index, null, new Set(), []));
 }
 export function validatePlanning(input: unknown): PlanningData {
   const data = planningSchema.parse(input),
@@ -639,9 +683,12 @@ export function validatePlanning(input: unknown): PlanningData {
 export function chapterProjection(data: PlanningData, chapterId: string) {
   const chapter = data.chapters.find((c) => c.id === chapterId);
   check(chapter, "章节规划不存在");
-  const cards = readingCards(data, chapter.line).filter(
-    (c) => cardChapter(data, c) === chapterId,
-  );
+  // docs/607: one index and id table per projection (was quadratic per call).
+  const index = childIndex(data, chapter.line),
+    byId = cardsById(data),
+    ordered = orderedFrom(index, null, new Set(), []),
+    inChapter = (c: NarrativeCard) => chapterOf(byId, c) === chapterId;
+  const cards = readingFrom(index, ordered).filter(inChapter);
   const outline = cards
     .map(
       (c) =>
@@ -651,9 +698,7 @@ export function chapterProjection(data: PlanningData, chapterId: string) {
   return {
     chapter,
     cards,
-    allCards: orderedCards(data, chapter.line).filter(
-      (c) => cardChapter(data, c) === chapterId,
-    ),
+    allCards: ordered.filter(inChapter),
     outline: `本章字数范围：${chapter.wordMin}—${chapter.wordBudget} 字（上限不可超过${chapter.wordBudget}字）。\n\n${outline}${cards.some(c => c.tellings.some(t => t.materialRefs.length)) ? `\n\n本章资料用途（伏笔只写本次线索，不自行揭晓档案真相）：\n${cards.flatMap(c => c.tellings.flatMap(t => t.materialRefs.map(r => `${c.title} / ${t.narrator} · ${MATERIAL_LABELS[r.kind]} · ${MATERIAL_ROLE_LABELS[r.role]}：${r.note}`))).join("\n")}` : ""}`,
     allocated: cards.reduce((n, c) => n + (c.wordBudget ?? 0), 0),
   };
