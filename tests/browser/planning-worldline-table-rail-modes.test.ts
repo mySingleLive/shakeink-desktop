@@ -128,18 +128,30 @@ test("RM-B2b: F885 (virtualized) stays aligned in the middle of the table", () =
   assertAligned(await alignment(page), "F885 middle")
 }))
 
-test("RM-B3: switching modes keeps the scroll and card positions; zoom reads % aligned and the level linear; mode survives a view switch", () => withWorldline(browser, f60(), async page => {
+/** docs/601 Q7 / EGB-05: the first card in view and its screen top (the two modes no longer share a layout). */
+const firstInView = (page: Page) => page.evaluate(() => {
+  const sc = document.querySelector("[data-table-scroller]")!.getBoundingClientRect()
+  // The app's anchor (EventTable firstVisible): the first card or point whose bottom is more than 8px into the view.
+  return [...document.querySelectorAll<HTMLElement>("[data-event-table] [data-event-card], [data-event-table] [data-event-point]")].map(e => { const r = e.getBoundingClientRect(); return { id: e.dataset.eventId!, top: r.top, bottom: r.bottom } }).filter(c => c.bottom > sc.top + 8).sort((a, b) => a.top - b.top)[0]
+})
+test("RM-B3 (docs/601 Q7): switching modes keeps the first card in view in place, high and low in the table; zoom reads % aligned and the level linear; mode survives a view switch", () => withWorldline(browser, f60(), async page => {
   await table(page)
-  await setScroll(page, 600)
-  const snap = () => page.evaluate(() => ({ top: document.querySelector("[data-table-scroller]")!.scrollTop, cards: [...document.querySelectorAll<HTMLElement>("[data-event-table] [data-event-card]")].slice(0, 30).map(c => [c.dataset.eventId, Math.round(c.getBoundingClientRect().top)]) }))
-  const before = await snap()
   const zoom = page.locator("[data-zoom-value]")
   await expect(zoom).toHaveText("100%")
-  await mode(page, "等距").click(); await settle(page)
-  assert.deepEqual(await snap(), before)
-  assert.match(await zoom.innerText(), /^(年|月|日|上下午|时分|按事件)$/)
+  for (const at of [0.2, 0.7]) {
+    await mode(page, "等距").click(); await settle(page)
+    await scroller(page).evaluate((e, at) => { e.scrollTop = (e.scrollHeight - e.clientHeight) * at }, at); await settle(page)
+    const a = await firstInView(page)
+    await mode(page, "对齐").click(); await settle(page)
+    const b = await page.locator(`[data-event-table] :is([data-event-card], [data-event-point])[data-event-id="${a.id}"]`).first().boundingBox()
+    assert.ok(b && Math.abs(b.y - a.top) <= 1, `linear → aligned at ${at}: ${a.id} ${a.top} → ${b?.y}`)
+    const c = await firstInView(page)
+    await mode(page, "等距").click(); await settle(page)
+    assert.match(await zoom.innerText(), /^(年|月|日|上下午|时分|按事件)$/)
+    const d = await page.locator(`[data-event-table] :is([data-event-card], [data-event-point])[data-event-id="${c.id}"]`).first().boundingBox()
+    assert.ok(d && Math.abs(d.y - c.top) <= 1, `aligned → linear at ${at}: ${c.id} ${c.top} → ${d?.y}`)
+  }
   await mode(page, "对齐").click(); await settle(page)
-  assert.deepEqual(await snap(), before)
   await page.getByRole("button", { name: "放大" }).click()
   await expect(zoom).toHaveText("125%")
   const box = await scroller(page).boundingBox()

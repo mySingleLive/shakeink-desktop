@@ -213,6 +213,10 @@
 .railTick { position: absolute; left: 150px; width: 8px; height: 1px; background: var(--input); }
 .railTickLabel { position: absolute; right: 66px; transform: translateY(-50%); font-size: 10px; color: var(--muted-foreground); }
 .railBreak { position: absolute; left: 0; width: 210px; display: flex; align-items: center; justify-content: flex-end; padding-right: 66px; font-size: 11px; font-style: italic; color: var(--muted-foreground); }
+/* docs/601 §8.2: aligned mode, the break is one 16px text line inside a widened card gap (layout top and height). */
+/* A text wider than the rail (narrow panel) is clipped with a fade on the left, never an ellipsis (WU-35). */
+.railBreak.railBreakTight { display: block; box-sizing: border-box; line-height: 16px; white-space: nowrap; overflow: hidden; text-align: right; direction: rtl;
+  mask-image: linear-gradient(90deg, transparent, #000 14px); -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px); }
 .railPeriod { position: absolute; left: 172px; width: 3px; border-radius: 2px; background: var(--chart-2); opacity: 0.7; }
 .lead { fill: none; stroke: color-mix(in srgb, var(--ec) 35%, var(--border)); stroke-width: 1; transition: stroke 0.15s; }
 .lead.hot { stroke: var(--ec); stroke-width: 1.6; filter: drop-shadow(0 0 3px var(--ec)); }

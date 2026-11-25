@@ -42,8 +42,29 @@ async function zoomToLevel(page: Page, to: number, dir: 1 | -1, max = 80) {
   for (let i = 0; i < max; i++) { if ((await level(page)) === to) return i; await step(page, dir) }
   throw Error(`level ${to} not reached (at ${await level(page)}, d ${await crowd(page)})`)
 }
-/** Waits for the idle decision (160 ms) and the measurement frame after it. */
+/** docs/602 S5: the first step that opens every card (data-auto-open). */
+async function zoomToAllOpen(page: Page, max = 60) {
+  for (let i = 0; i < max; i++) { if ((await table(page).getAttribute("data-auto-open")) !== null) return; await step(page, 1) }
+  throw Error("all-open not reached")
+}
+/** docs/601: time stretch and auto-open are linear-mode (等距) only; the aligned default lays cards out with equal gaps. */
+async function openLinear(page: Page) {
+  await openTable(page)
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: "等距", exact: true }).click()
+  await frames(page)
+}
+/** Waits for measured heights of opened cards (docs/602 removed the 160 ms idle decision; the wait is kept long). */
 const settle = async (page: Page) => { await page.waitForTimeout(220); await frames(page, 3); await page.waitForTimeout(220); await frames(page, 2) }
+/** docs/602 S1: every collapsed card sits in a zoom box at the table's card scale (data-card-scale). */
+async function cardsAtScale(page: Page) {
+  const r = await page.evaluate(() => {
+    const t = document.querySelector<HTMLElement>("[data-event-table]")!, want = t.dataset.cardScale
+    const boxes = [...t.querySelectorAll<HTMLElement>("[data-card-zoom]")]
+    return { want, n: boxes.length, bad: boxes.filter(b => b.dataset.cardZoom !== want).length }
+  })
+  assert.ok(r.n > 0 && r.bad === 0, `zoom boxes at ${r.want}: ${JSON.stringify(r)}`)
+  return Number(r.want)
+}
 const openCount = (page: Page) => page.locator('[data-event-table] [data-event-card][aria-expanded="true"]').count()
 
 test("TZB-01: a plain wheel scrolls only; Ctrl + wheel walks the levels: zoom, points, stacks, 一般 gone, 重要 points, only 关键", () => W(zoomView(24), async page => {
@@ -55,9 +76,9 @@ test("TZB-01: a plain wheel scrolls only; Ctrl + wheel walks the levels: zoom, p
   assert.equal(await crowd(page), d0, "a plain wheel does not zoom")
   assert.ok((await sc.evaluate(e => e.scrollTop)) > top0, "a plain wheel scrolls")
   await sc.evaluate(e => { e.scrollTop = 0 })
-  // Level 1: collapsed cards zoomed below 1.
+  // Level 1: docs/602 S1, collapsed cards are drawn at the table's card scale.
   await zoomToLevel(page, 1, d0 >= 40 ? -1 : 1)
-  assert.ok(Number(await page.locator("[data-event-table] [data-card-zoom]").first().getAttribute("data-card-zoom")) < 1 || (await crowd(page)) >= 160)
+  await cardsAtScale(page)
   await zoomToLevel(page, 2, -1)
   assert.ok((await page.locator("[data-event-table] [data-event-point]").count()) > 0, "level 2: 一般 are points")
   await expect(tpoint(page, "r0")).toHaveCount(1)
@@ -96,9 +117,11 @@ test("TZB-02: hysteresis: points stay until d ≥ 46 on the way up; stacks stay 
   }
   assert.ok((await crowd(page)) >= 45.999)
   await expect(page.locator("[data-event-table] [data-event-point]")).toHaveCount(0)
-  // One step back down into [40, 46): the points do not return.
+  // docs/602: one step back down: the drawn level stays 1 while d is in [40, 46) (hysteresis), so the step carries on
+  // (no change in that band) and lands where the points come back, below 40.
   await step(page, -1)
-  if ((await crowd(page)) >= 40.001) await expect(page.locator("[data-event-table] [data-event-point]")).toHaveCount(0)
+  assert.ok((await crowd(page)) < 40 + 1e-6 || (await level(page)) === 1, `d ${await crowd(page)} level ${await level(page)}`)
+  if ((await level(page)) === 1) await expect(page.locator("[data-event-table] [data-event-point]")).toHaveCount(0)
 }))
 
 test("TZB-03: at level ≥ 3 a stacked card's fold button opens only that family, in the table only", () => W(zoomView(24), async page => {
@@ -151,16 +174,16 @@ test("TZB-05 / TZB-05b: the zoom note shows in the table; its count is the table
 }))
 
 test("TZB-06 / TZB-06b: at level 0 with room every card in view opens; a click closes one locally, a double click edits", () => W(zoomView(24, { leavesOnly: true }), async page => {
-  await openTable(page)
-  await zoomToLevel(page, 0, 1)
+  await openLinear(page)
+  await zoomToAllOpen(page)
   await settle(page)
   const n = await openCount(page)
   assert.ok(n >= 3, `auto-opened ${n}`)
   await expect(table(page)).toHaveAttribute("data-auto-open", "")
-  // Tops follow time only: neighbours are min(gapFor(d), Δt·k) apart.
+  // Tops follow time where the stretch passes the open card: neighbours are max(open height + 6, min(gapFor(d), Δt·k)).
   const d = await crowd(page), gapFor = Math.min(1200, Math.max(240, 240 * d / 160)), want = Math.min(gapFor, d)
   const t0 = (await tcard(page, "r0").boundingBox())!, t1 = (await tcard(page, "r1").boundingBox())!
-  assert.ok(Math.abs(t1.y - t0.y - want) <= 1, `${t1.y - t0.y} vs ${want}`)
+  assert.ok(Math.abs(t1.y - t0.y - Math.max(want, t0.height + 6)) <= 1, `${t1.y - t0.y} vs max(${want}, ${t0.height} + 6)`)
   // A single click on an auto-opened card: still open at 200 ms, closed after; primary selected.
   const c = tcard(page, "r1"); await c.scrollIntoViewIfNeeded(); await settle(page)
   await expect(c).toHaveAttribute("aria-expanded", "true")
@@ -182,18 +205,6 @@ test("TZB-06 / TZB-06b: at level 0 with room every card in view opens; a click c
   assert.equal(await posts(page), 0)
 }))
 
-test("TZB-07: two events at the same time in view never auto-open; away from them the view opens", () => W(zoomView(24, { leavesOnly: true, sameTime: [12, 13] }), async page => {
-  await openTable(page)
-  await zoomToLevel(page, 0, 1)
-  for (let i = 0; i < 30; i++) await step(page, 1)
-  await tcard(page, "r12").scrollIntoViewIfNeeded(); await settle(page)
-  assert.equal(await openCount(page), 0)
-  await tcard(page, "r2").scrollIntoViewIfNeeded()
-  await page.locator("[data-table-scroller]").evaluate(e => { e.scrollTop = Math.max(0, e.scrollTop - e.clientHeight / 3) })
-  await settle(page)
-  assert.ok((await openCount(page)) > 0, "the far end of the table opens")
-}))
-
 test("TZB-10 (guard): with zoom levels off the table has no level, no point, no auto-open", () => W(zoomView(24, { leavesOnly: true }), async page => {
   await openTable(page)
   assert.equal(await level(page), 0)
@@ -205,51 +216,24 @@ test("TZB-10 (guard): with zoom levels off the table has no level, no point, no 
   assert.equal(await openCount(page), 0)
 }, {}))
 
-test("TZB-12: with levels on the closed root spacing is min(d, gapFor(d)), past 240 from d 160", () => W(zoomView(24, { leavesOnly: true }), async page => {
-  await openTable(page)
-  // Close every card the auto-open opens, so the tops are the closed layout's: a pending collapse via 全部收起 is not
-  // available for auto-open, so read the spacing right after each step (before the 160 ms decision).
+test("TZB-12: with levels on the root spacing is min(d, gapFor(d)), past 240 from d 160 (all open there, docs/602 S5)", () => W(zoomView(24, { leavesOnly: true }), async page => {
+  await openLinear(page)
+  // docs/602: all cards open from one step past the size maximum (d ≈ 106 here); the open cards (≤ 110px, no body)
+  // are shorter than the stretch, so root starts still follow time.
   for (let i = 0; i < 60 && (await crowd(page)) < 400; i++) await step(page, 1)
   const d = await crowd(page)
-  await expect(table(page)).not.toHaveAttribute("data-auto-open", "")
+  await expect(table(page)).toHaveAttribute("data-auto-open", "")
   const a = (await tcard(page, "r0").boundingBox())!, b = (await tcard(page, "r1").boundingBox())!
   const want = Math.min(d, Math.min(1200, Math.max(240, 240 * d / 160)))
   assert.ok(want > 240 && Math.abs(b.y - a.y - want) <= 1, `gap ${b.y - a.y} vs ${want} at d ${d}`)
 }))
 
 test("TZB-12b: levels off: the spacing caps at 240 (docs/586)", () => W(zoomView(24, { leavesOnly: true }), async page => {
-  await openTable(page)
+  await openLinear(page)
   for (let i = 0; i < 40; i++) await step(page, 1)
   const a = (await tcard(page, "r0").boundingBox())!, b = (await tcard(page, "r1").boundingBox())!
   assert.ok(Math.abs(b.y - a.y - 240) <= 1, `${b.y - a.y}`)
 }, {}))
-
-test("TZB-13: near the fit boundary, input-free time changes auto-open at most once; scrolling does not flip it each frame", () => W(zoomView(24, { leavesOnly: true, sameTime: [12, 13] }), async page => {
-  await openTable(page)
-  await zoomToLevel(page, 0, 1)
-  for (let i = 0; i < 30; i++) await step(page, 1)
-  await settle(page)
-  const errors: string[] = []
-  page.on("console", m => { if (/Maximum update depth/.test(m.text())) errors.push(m.text()) })
-  await page.evaluate(() => {
-    (globalThis as any).flips = 0
-    new MutationObserver(l => { for (const m of l) if (m.attributeName === "data-auto-open") (globalThis as any).flips++ }).observe(document.querySelector("[data-event-table]")!, { attributes: true })
-  })
-  // Scroll towards r12 in 30 ms steps for ~1 s: nothing flips while scrolling.
-  const sc = page.locator("[data-table-scroller]")
-  const target = await tcard(page, "r12").evaluate(e => (e.closest("[data-table-scroller]") as HTMLElement).scrollTop + e.getBoundingClientRect().top - (e.closest("[data-table-scroller]") as HTMLElement).getBoundingClientRect().top)
-  const from = await sc.evaluate(e => e.scrollTop)
-  for (let i = 1; i <= 30; i++) { await sc.evaluate((e, y) => { e.scrollTop = y }, from + (target - from) * i / 30); await page.waitForTimeout(30) }
-  const during = await page.evaluate(() => (globalThis as any).flips as number)
-  await page.waitForTimeout(1000); await frames(page)
-  const after = await page.evaluate(() => (globalThis as any).flips as number)
-  assert.ok(during <= 1, `flips while scrolling ${during}`)
-  assert.ok(after <= 2, `flips after stopping ${after}`)
-  const settled = after
-  await page.waitForTimeout(1000)
-  assert.equal(await page.evaluate(() => (globalThis as any).flips as number), settled, "stable without input")
-  assert.deepEqual(errors, [])
-}))
 
 test("TZB-16: hidden events have no rail dot, label or lead", () => W(zoomView(24), async page => {
   await openTable(page)
@@ -271,9 +255,12 @@ test("TZB-18: the toolbar − / + change the level; 复位 returns d to the rese
   const d0 = await crowd(page)
   await page.getByRole("button", { name: "缩小" }).click(); await frames(page)
   assert.equal(await level(page), 2)
-  for (let i = 0; i < 12 && (await level(page)) !== 0; i++) { await page.getByRole("button", { name: "放大" }).click(); await frames(page) }
-  assert.equal(await level(page), 0)
-  // From above, 复位 lands on d 40 exactly: level 1 (entering from 0). From below it stays 2 (hysteresis, < 46).
+  // docs/602 S7: aligned, + stops at all-open (level 1 here; levels 0 and 1 look the same).
+  for (let i = 0; i < 12 && !(await page.getByRole("button", { name: "放大" }).isDisabled()); i++) { await page.getByRole("button", { name: "放大" }).click(); await frames(page) }
+  await expect(page.getByRole("button", { name: "放大" })).toBeDisabled()
+  await expect(table(page)).toHaveAttribute("data-auto-open", "")
+  assert.ok((await level(page)) <= 1)
+  // From above, 复位 lands on d 40 exactly: level 1 (entering from 1). From below it stays 2 (hysteresis, < 46).
   await page.getByRole("button", { name: "复位" }).click(); await frames(page)
   assert.ok(Math.abs((await crowd(page)) - d0) < 0.01)
   assert.equal(await level(page), 1)
@@ -296,26 +283,28 @@ test("TZB-20: an edited card at level 2 is not zoomed; its type picker stays ins
   assert.ok(pop.x >= sc.x - 0.5 && pop.x + pop.width <= sc.x + sc.width + 0.5)
 }))
 
-test("TZB-11: zoomed group heads keep their header look and height; stacked cards fill the box; card heights match the layout", () => W(zoomView(24), async page => {
+test("TZB-11 (docs/602 S1): at levels 1–3 cards are at the card scale; group heads 36 × s, children 4 below; collapsed cards 34 × s; stacks fill the box", () => W(zoomView(24), async page => {
   await openTable(page)
-  await zoomToLevel(page, 2, -1)
-  const z = Number(await page.locator("[data-event-table] [data-card-zoom]").first().getAttribute("data-card-zoom"))
-  assert.ok(z < 1, `zoomed (${z})`)
+  for (const to of [1, 2, 3]) {
+    await zoomToLevel(page, to, -1)
+    await cardsAtScale(page)
+  }
+  await zoomToLevel(page, 2, 1)
+  const s = await cardsAtScale(page)
   const g = page.locator("[data-event-group]").first()
-  // The first child block may be a point (一般 at level 2): the next drawn row after the head.
   const head = g.locator("[data-event-card]").first(), kid = g.locator(":scope > div").nth(1)
   const gb = (await g.boundingBox())!, hb = (await head.boundingBox())!, kb = (await kid.boundingBox())!
   assert.ok(Math.abs(hb.x - gb.x) <= 1 && Math.abs(hb.width - gb.width) <= 1, `head ${JSON.stringify(hb)} in ${JSON.stringify(gb)}`)
-  // The header rule (no border, type edge) applies inside the zoom box: 36 × zoom high, the child 4px below.
-  const css = await head.evaluate(e => { const c = getComputedStyle(e); return { b: c.borderTopWidth, r: c.borderTopRightRadius, sh: c.boxShadow } })
+  const css = await head.evaluate(e => { const c = getComputedStyle(e); return { b: c.borderTopWidth, sh: c.boxShadow } })
   assert.equal(css.b, "0px", "group head has no border")
   assert.ok(/inset/.test(css.sh), `type edge shadow (${css.sh})`)
-  assert.ok(Math.abs(hb.height - 36 * z) <= 1, `head ${hb.height} vs ${36 * z}`)
+  assert.ok(Math.abs(hb.height - 36 * s) <= 1, `head ${hb.height} at ${s}`)
   assert.ok(Math.abs(kb.y - (hb.y + hb.height) - 4) <= 1, `child gap ${kb.y - hb.y - hb.height}`)
-  // A collapsed plain card: 34 × zoom (one line).
-  const one = page.locator('[data-event-table] [data-card-zoom] > [data-event-card]:not([data-stacked])[data-lines="1"], [data-event-table] [data-card-zoom] > [data-event-card]:not([data-stacked]):not([data-lines])').first()
-  if (await one.count()) { const b = (await one.boundingBox())!; assert.ok(Math.abs(b.height - 34 * z) <= 1, `card ${b.height} vs ${34 * z}`) }
-  // Stacked cards at level 3 fill the box width like unzoomed ones.
+  // A collapsed plain card with a one-line title (data-lines sits on the title).
+  const one = page.locator('[data-event-table] [data-event-card]:not([data-stacked]):not([aria-expanded="true"]):has([data-lines="1"])').filter({ hasNot: page.locator("[data-event-group]") })
+  const hs = await one.evaluateAll(es => es.filter(e => !e.closest("[data-event-group]") || e.closest("[data-event-group]")!.querySelector("[data-event-card]") !== e).map(e => e.getBoundingClientRect().height))
+  assert.ok(hs.length > 0)
+  for (const h of hs) assert.ok(Math.abs(h - 34 * s) <= 1, `card ${h} at ${s}`)
   await zoomToLevel(page, 3, -1)
   const st = page.locator("[data-event-table] [data-event-card][data-stacked]").first()
   const slot = st.locator("xpath=ancestor::div[contains(@class,'slot')][1]")
@@ -325,6 +314,9 @@ test("TZB-11: zoomed group heads keep their header look and height; stacked card
 
 test("TZB-19 (F885, production bundle): a zoom step commits in under 100 ms at p95, across levels and at level 0", () => W(f885(), async page => {
   await openTable(page)
+  // docs/601: with equal gaps the pointer lands on a card, and its first hover re-render (not a zoom step) would be
+  // timed with the first wheel step; rest the pointer there first.
+  { const r = (await page.locator("[data-table-scroller]").boundingBox())!; await page.mouse.move(r.x + r.width * 0.6, r.y + r.height / 3); await page.waitForTimeout(600) }
   const sample = async (dir: 1 | -1, n: number) => {
     const out: number[] = []
     for (let i = 0; i < n; i++) {
@@ -349,35 +341,33 @@ test("TZB-19 (F885, production bundle): a zoom step commits in under 100 ms at p
 
 void ZOOM_GAP
 
-test("TZB-06b (negative): with auto-open on, a manually opened card closes normally and leaves openCards", () => W(zoomView(24, { leavesOnly: true }), async page => {
-  await openTable(page)
+test("TZB-06b (negative): with all open, a manually opened card closes normally and leaves openCards", () => W(zoomView(24, { leavesOnly: true }), async page => {
+  await openLinear(page)
   // Open r1 by hand at the reset (no auto-open there), then zoom in to auto-open.
   const c = tcard(page, "r1")
   await c.locator("[data-card-title]").click(); await page.waitForTimeout(350)
   await expect(c).toHaveAttribute("aria-expanded", "true")
-  await zoomToLevel(page, 0, 1); await settle(page)
+  await zoomToAllOpen(page); await settle(page)
   await expect(table(page)).toHaveAttribute("data-auto-open", "")
   await c.scrollIntoViewIfNeeded(); await settle(page)
   const hb = (await c.locator("[data-card-title]").boundingBox())!
   await page.mouse.click(hb.x + 10, hb.y + hb.height / 2); await page.waitForTimeout(450)
-  // It left openCards: zooming back out (auto-open off) shows it closed, unlike a card closed only locally.
-  for (let i = 0; i < 20 && (await level(page)) === 0; i++) await step(page, -1)
+  // It left openCards: zooming back out of all-open shows it closed, unlike a card closed only locally.
+  for (let i = 0; i < 20 && (await table(page).getAttribute("data-auto-open")) !== null; i++) await step(page, -1)
   await settle(page)
   await expect(c).toHaveAttribute("aria-expanded", "false")
 }))
 
-test("TZB-06c: in a family the children open and stretch by time; the group head stays closed and nothing below moves", () => W(zoomView(24), async page => {
-  await openTable(page)
+test("TZB-06c (docs/602 S5): in a family the group head and its children all open; the children stay in time order inside the box", () => W(zoomView(24), async page => {
+  await openLinear(page)
   for (let i = 0; i < 70 && (await crowd(page)) < 2600; i++) await step(page, 1)
-  await tcard(page, "r2").scrollIntoViewIfNeeded()
-  await page.locator("[data-table-scroller]").evaluate(e => { e.scrollTop = Math.max(0, e.scrollTop - 40) })
-  const before = await Promise.all(["r2c0", "r2c1", "r2c2", "r3"].map(async id => (await tcard(page, id).boundingBox())!.y))
-  await settle(page)
+  await tcard(page, "r2").scrollIntoViewIfNeeded(); await settle(page)
   await expect(table(page)).toHaveAttribute("data-auto-open", "")
-  await expect(tcard(page, "r2")).toHaveAttribute("aria-expanded", "false")
-  for (const id of ["r2c0", "r2c1", "r2c2"]) await expect(tcard(page, id)).toHaveAttribute("aria-expanded", "true")
-  const after = await Promise.all(["r2c0", "r2c1", "r2c2", "r3"].map(async id => (await tcard(page, id).boundingBox())!.y))
-  after.forEach((y, i) => assert.ok(Math.abs(y - before[i]) <= 2, `block ${i} moved ${y - before[i]}`))
+  for (const id of ["r2", "r2c0", "r2c1", "r2c2"]) await expect(tcard(page, id)).toHaveAttribute("aria-expanded", "true")
+  const ys = await Promise.all(["r2", "r2c0", "r2c1", "r2c2"].map(async id => (await tcard(page, id).boundingBox())!))
+  for (let i = 1; i < ys.length; i++) assert.ok(ys[i].y >= ys[i - 1].y + ys[i - 1].height + 3, `${i}: ${ys[i].y} after ${ys[i - 1].y + ys[i - 1].height}`)
+  const box = (await page.locator('[data-event-group]:has([data-event-card][data-event-id="r2c2"])').first().boundingBox())!
+  assert.ok(ys[3].y + ys[3].height <= box.y + box.height + 0.5, "the last child is inside the box")
 }))
 
 test("TZB-08: aligned rail dots sit on zoomed card heads and on point lines (±0.5px); labels never overlap", () => W(zoomView(24), async page => {
@@ -412,25 +402,8 @@ test("TZB-09: a zoom step renders PlanningWorkspace once; an open card's body no
   assert.equal(await posts(page), 0)
 }, { ...Z, profiling: true }))
 
-test("TZB-13e: after an exit (latched), a locate from the event directory is user input and opens again where there is room", () => W(zoomView(24, { leavesOnly: true, sameTime: [12, 13] }), async page => {
-  await openTable(page)
-  await zoomToLevel(page, 0, 1)
-  for (let i = 0; i < 30; i++) await step(page, 1)
-  await tcard(page, "r2").scrollIntoViewIfNeeded(); await settle(page)
-  await expect(table(page)).toHaveAttribute("data-auto-open", "")
-  // Scroll onto the same-time pair: exit.
-  await tcard(page, "r12").scrollIntoViewIfNeeded(); await settle(page)
-  await expect(table(page)).not.toHaveAttribute("data-auto-open", "")
-  // Locate r3 from the tree: enters again.
-  await page.getByRole("tree", { name: "事件目录" }).locator('[data-tree-id="r3"], [data-event-id="r3"]').first().click()
-  await settle(page)
-  await expect(table(page)).toHaveAttribute("data-auto-open", "")
-  const b = (await tcard(page, "r3").boundingBox())!, sc = (await page.locator("[data-table-scroller]").boundingBox())!
-  assert.ok(b.y >= sc.y && b.y < sc.y + sc.height, "the located card stays in view")
-}))
-
 test("TZB-14: a wheel over a point that the next level hides keeps the pointer between its drawn neighbours", () => W(zoomView(24), async page => {
-  await openTable(page)
+  await openLinear(page)
   await zoomToLevel(page, 3, -1)
   // Room above (the 一般 rows above r21 leave at level 4, so the content above shrinks): scroll down first, so the
   // anchor restore is not clamped at the top.
@@ -477,9 +450,10 @@ test("TZB-21: hovering a table point lights its rail dot; no timeline-only marks
   await expect(page.getByRole("tooltip")).toHaveCount(0)
 }))
 
-test("TZB-06d: a click on a second auto-opened card within 260 ms still closes the first", () => W(zoomView(24, { leavesOnly: true }), async page => {
-  await openTable(page)
-  await zoomToLevel(page, 0, 1); await settle(page)
+for (const linear of [true, false])
+  test(`TZB-06d (${linear ? "linear" : "aligned"}): a click on a second auto-opened card within 260 ms still closes the first`, () => W(zoomView(24, { leavesOnly: true }), async page => {
+  await (linear ? openLinear(page) : openTable(page))
+  await zoomToAllOpen(page); await settle(page)
   const a = tcard(page, "r1"), b = tcard(page, "r2")
   await a.scrollIntoViewIfNeeded(); await settle(page)
   await expect(a).toHaveAttribute("aria-expanded", "true"); await expect(b).toHaveAttribute("aria-expanded", "true")
@@ -489,29 +463,11 @@ test("TZB-06d: a click on a second auto-opened card within 260 ms still closes t
   await expect.poll(() => a.getAttribute("aria-expanded"), { timeout: 2000 }).toBe("false")
 }))
 
-test("TZB-06e: after an exit (latched) at level 0, a toolbar + that stays at level 0 is user input and reopens", () => W(zoomView(24, { leavesOnly: true, fact: { 1: "长".repeat(2400) } }), async page => {
-  await openTable(page)
-  // r1's long body needs ~500px open: at the first level-0 steps it does not fit, so the view near r1 stays closed.
-  await zoomToLevel(page, 0, 1)
-  for (let i = 0; i < 4; i++) await step(page, 1)
-  // Open far from r1 first, then scroll onto r1: the keep check fails there, auto-open exits and latches.
-  await tcard(page, "r16").scrollIntoViewIfNeeded(); await settle(page)
-  await expect(table(page)).toHaveAttribute("data-auto-open", "")
-  await page.locator("[data-table-scroller]").evaluate(e => { e.scrollTop = 0 }); await settle(page)
-  await expect(table(page)).not.toHaveAttribute("data-auto-open", "")
-  // + steps (toolbar only, ×1.25 each) until the gap holds r1: no wheel and no scroll after the last scroll above.
-  for (let i = 0; i < 12 && (await table(page).getAttribute("data-auto-open")) === null; i++) {
-    await page.getByRole("button", { name: "放大" }).click(); await settle(page)
-    assert.equal(await level(page), 0, "stays at level 0")
-  }
-  await expect(table(page)).toHaveAttribute("data-auto-open", "")
-}))
-
 test("TZB-17b: at level 0 with room, pending (unplaced) cards are not auto-opened", () => W(zoomView(24, { leavesOnly: true, pending: 2 }), async page => {
-  await openTable(page)
-  await zoomToLevel(page, 0, 1)
-  for (let i = 0; i < 20; i++) await step(page, 1)
+  await openLinear(page)
+  await zoomToAllOpen(page)
   await settle(page)
+  await expect(table(page)).toHaveAttribute("data-auto-open", "")
   await tcard(page, "u0").scrollIntoViewIfNeeded(); await settle(page)
   await expect(tcard(page, "u0")).toHaveAttribute("aria-expanded", "false")
   await expect(tcard(page, "u1")).toHaveAttribute("aria-expanded", "false")

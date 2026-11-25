@@ -667,6 +667,8 @@ export interface TableLayout {
   segments: TableSegment[];
   breaks: TableBreak[];
   height: number;
+  /** docs/601: laid out with equalGaps (aligned rail mode). */
+  equal: boolean;
 }
 export interface TableOptions {
   expanded?: ReadonlySet<string>;
@@ -681,7 +683,18 @@ export interface TableOptions {
   gapMax?: number;
   /** docs/600 §8.5: stretch the children of a family by time too (from the second child on). */
   stretchChildren?: boolean;
+  /** docs/601 §2 / §8.2: aligned mode. No time stretch: same-level blocks are CARD_GAP apart; a break is a 16px text
+   * line inside a widened gap, and a gap that holds a year badge or a break text widens just enough for it. */
+  equalGaps?: boolean;
 }
+/** docs/601 §8.2: card head distance that holds a rail mark (year badge or break text) between two date labels. */
+export const RAIL_MARK_SPAN = 40;
+/** docs/601 §8.2: card head distance across a segment break on a calendar with years: the break text at +20 and the
+ * next segment's year badge at −20. */
+export const RAIL_BREAK_SPAN = 62;
+/** docs/601 §8.2: the break text line (equalGaps): its middle sits RAIL_BREAK_TEXT below the last head. */
+const RAIL_BREAK_TEXT = 20,
+  RAIL_BREAK_LINE = 16;
 export interface TableWidths {
   slot(depth: number): number;
   group(depth: number): number;
@@ -791,23 +804,36 @@ export function tableLayout(
   // docs/600 §2: the zoom plan. Hidden events (and their subtrees) leave the layout; points are one 18px line.
   const zplan = options.plan, hidden = zplan?.hidden ?? EMPTY_SET, points = zplan?.points ?? EMPTY_SET;
   const zc = zplan && Number.isFinite(zplan.scale) && zplan.scale > 0 ? zplan.scale : 1;
-  const gapMax = options.gapMax ?? GAP_MAX, stretchKids = !!options.stretchChildren;
+  const equal = !!options.equalGaps;
+  const gapMax = options.gapMax ?? GAP_MAX, stretchKids = !equal && !!options.stretchChildren;
   const blocks: TableBlock[] = [];
+  // docs/601 §8.2: the aligned rail's year changes, replayed while laying out (alignedRailMarks' rule), and the
+  // minimum head of the next card (a year badge or a break text above it).
+  let lastHead: number | null = null,
+    lastAnyHead: number | null = null,
+    minHead = -Infinity,
+    openBreak: { b: TableBreak; mid: boolean } | null = null;
+  let railSeg = -2,
+    segMax = -Infinity,
+    segYear: string | null = null;
   // docs/600 §8.6 P2-4: kids that are drawn (unplaced ones stay, unlike the timeline).
   const visibleKids = (n: TreeNode) => (hidden.size ? n.children.filter((c) => !hidden.has(c.id)) : n.children);
   // docs/592 §1.3: plain cards are as wide as their head up to the slot; group headers and stacked cards fill the box.
   // docs/600 §8.2: a zoomed card is laid out in its zoomed coordinates, where the slot is slot / zoom wide; so a group
   // head still fills its box on screen and the line count is the one the browser wraps to.
+  // docs/602 §9.7 / §11.2: with a zoom plan the card is drawn at 1–1.2×, where glyph rounding runs wider; 3px more
+  // room (real target 602-r8: +2 left 1px overflows at 1.2).
+  const slack = TITLE_SLACK + (zplan ? 3 : 0);
   const widthOf = (n: TreeNode, depth: number, kind: "card" | "stack" | "groupHead", z = 1): number => {
     if (!widths) return 0;
     const input = inputOf(n);
-    const own = Math.ceil(collapsedHeadChrome(input, "table") + titleWidth(input.title) + TITLE_SLACK);
+    const own = Math.ceil(collapsedHeadChrome(input, "table") + titleWidth(input.title) + slack);
     return kind !== "card" ? widths.group(depth) / z : Math.min(widths.slot(depth) / z, Math.max(220, own));
   };
   const linesOf = (n: TreeNode, depth: number, kind: "card" | "stack" | "groupHead", z = 1): 1 | 2 => {
     if (!widths) return 1;
     const input = inputOf(n), full = kind !== "card";
-    const own = Math.ceil(collapsedHeadChrome(input, "table") + titleWidth(input.title) + TITLE_SLACK);
+    const own = Math.ceil(collapsedHeadChrome(input, "table") + titleWidth(input.title) + slack);
     const w = widthOf(n, depth, kind, z);
     // A group header has no border (worldline.module.css .groupHead): 2px more room than the chrome assumes.
     // Capped only when the slot (or the box) holds it below its own width; a card at its own width is one line.
@@ -819,16 +845,46 @@ export function tableLayout(
     if (!first) y += CARD_GAP;
     first = false;
     if (atLeast > y) y = atLeast;
-    const start = y;
+    let start = y;
     const left = depth * TABLE_INDENT;
     const record: TableBlock = { id: n.id, level, stretch: atLeast, top: start, bottom: 0, pending: segment < 0 };
     blocks.push(record);
-    const push = (head: boolean, stacked = false) => {
+    // docs/601 §8.2: each block pushes exactly one card for n first, so a widened gap moves the block's top.
+    const widen = (headAt: number, group: TableGroup | null): number => {
+      if (!equal) return 0;
+      let need = minHead;
+      const placed = n.start !== null && segment >= 0;
+      if (placed && segment !== railSeg) { railSeg = segment; segMax = -Infinity; segYear = null; }
+      if (placed && adapter.hasYears && n.event.time.precision !== "era") {
+        if (!(n.start! < segMax)) {
+          const yt = adapter.yearText(n.start!);
+          if (segYear === null) segYear = yt;
+          else if (yt !== segYear) { segYear = yt; if (lastHead !== null) need = Math.max(need, lastHead + RAIL_MARK_SPAN); }
+        }
+      }
+      if (placed) segMax = Math.max(segMax, n.start!);
+      const shift = Math.max(0, need - headAt);
+      minHead = -Infinity;
+      if (shift) {
+        y += shift;
+        start += shift;
+        record.top = start;
+        if (group) group.top = start;
+      }
+      if (openBreak) {
+        // A middle break (no year badge) centres between the two heads; otherwise addBreak already placed it.
+        if (openBreak.mid) { const at = headAt + shift, from = lastHead ?? lastAnyHead ?? at; openBreak.b.top = (from + at) / 2 - RAIL_BREAK_LINE / 2; }
+        openBreak = null;
+      }
+      return shift;
+    };
+    const push = (head: boolean, stacked = false, group: TableGroup | null = null) => {
       const open = expanded.has(n.id);
       const point = !open && points.has(n.id);
       const kind = head ? "groupHead" : stacked ? "stack" : "card";
       const z = open || point ? 1 : zc;
       const lines = open || point ? 1 : linesOf(n, depth, kind, z);
+      widen(y + (point ? POINT_HEIGHT / 2 : cardHeadOffset(head, open, stacked) * (open ? 1 : z)), group);
       const card: TableCard = {
         id: n.id,
         top: y,
@@ -850,6 +906,8 @@ export function tableLayout(
         width: point ? 0 : widthOf(n, depth, kind, z),
       };
       cards.push(card);
+      lastAnyHead = card.head;
+      if (n.start !== null && segment >= 0) lastHead = card.head;
       y += card.height;
     };
     const kids = visibleKids(n);
@@ -867,14 +925,14 @@ export function tableLayout(
     }
     const group: TableGroup = { id: n.id, top: y, bottom: 0, left, depth };
     groups.push(group);
-    push(true);
+    push(true, false, group);
     if (!folded.has(n.id)) {
       // The first child's block adds CARD_GAP itself, so the header is followed by GROUP_HEAD_GAP in total.
       y += GROUP_HEAD_GAP - CARD_GAP;
       // docs/600 §8.5: from the second child on, children stretch by time like roots (unplaced ones do not).
       let prev: { start: number; t: number } | null = null;
       for (const c of kids) {
-        const at = stretchKids && prev && c.start !== null ? prev.start + Math.min(gapMax, (c.start - prev.t) * k) : -Infinity;
+        const at = !equal && stretchKids && prev && c.start !== null ? prev.start + Math.min(gapMax, (c.start - prev.t) * k) : -Infinity;
         const s0 = block(c, depth + 1, segment, at, n.id);
         if (c.start !== null) prev = { start: s0, t: c.start };
       }
@@ -885,21 +943,38 @@ export function tableLayout(
     return start;
   };
   const segs = railSegments(hidden.size ? tree.roots.filter((r) => !hidden.has(r.id)) : tree.roots, adapter);
+  /** docs/601 §8.2: an equalGaps break is a text line placed by the next card (widen); the gap starts at CARD_GAP. */
+  const addBreak = (b: TableBreak, span: number, mid: boolean) => {
+    breaks.push(b);
+    if (!equal) {
+      y += BREAK_HEIGHT;
+      return;
+    }
+    b.height = RAIL_BREAK_LINE;
+    const from = lastHead ?? lastAnyHead;
+    // docs/601 code review P2: below the last head, or below the block above when it is taller than its head row (an
+    // expanded card, a family ending in unplaced children), so the text never sits beside a card body.
+    // y is the block bottom; a collapsed card's head is 17 above it, so its usual text line (head + 20) is bottom + 3.
+    const lowest = y + RAIL_BREAK_TEXT - CARD_HEAD;
+    const text = from === null ? null : Math.max(from + RAIL_BREAK_TEXT, lowest);
+    b.top = (text ?? y) - RAIL_BREAK_LINE / 2;
+    y += CARD_GAP;
+    if (text !== null) minHead = text + (span - RAIL_BREAK_TEXT);
+    openBreak = { b, mid: mid && text === from! + RAIL_BREAK_TEXT };
+  };
   segs.forEach((s, j) => {
     if (j) {
-      breaks.push({ kind: "gap", top: y, height: BREAK_HEIGHT, from: j - 1, to: j, gap: s.t0 - familyEndOf(segs[j - 1]) });
-      y += BREAK_HEIGHT;
+      addBreak({ kind: "gap", top: y, height: BREAK_HEIGHT, from: j - 1, to: j, gap: s.t0 - familyEndOf(segs[j - 1]) }, adapter.hasYears ? RAIL_BREAK_SPAN : RAIL_MARK_SPAN, !adapter.hasYears);
       first = true;
     }
     let prev = 0;
     s.roots.forEach((r, i) => {
-      prev = block(r, 0, s.index, i ? prev + Math.min(gapMax, (r.start! - s.roots[i - 1].start!) * k) : -Infinity);
+      prev = block(r, 0, s.index, i && !equal ? prev + Math.min(gapMax, (r.start! - s.roots[i - 1].start!) * k) : -Infinity);
     });
   });
   if (tree.pending.length) {
     if (cards.length) {
-      breaks.push({ kind: "pending", top: y, height: BREAK_HEIGHT, from: -1, to: -1, gap: 0 });
-      y += BREAK_HEIGHT;
+      addBreak({ kind: "pending", top: y, height: BREAK_HEIGHT, from: -1, to: -1, gap: 0 }, RAIL_MARK_SPAN, true);
       first = true;
     }
     for (const p of tree.pending) if (!hidden.has(p.id)) block(p, 0, -1);
@@ -917,7 +992,7 @@ export function tableLayout(
     }
     return { index: s.index, t0: lo.t, t1: hi.t, y0: Math.min(lo.y, hi.y), y1: Math.max(lo.y, hi.y), heads };
   });
-  return { blocks, cards, byId, groups, segments, breaks, height: y };
+  return { blocks, cards, byId, groups, segments, breaks, height: y, equal };
 }
 const EMPTY_SET: ReadonlySet<string> = new Set();
 function familyEndOf(s: RailSegment) {
@@ -1178,11 +1253,22 @@ export function alignedRailMarks(
     if (!compact) return full;
     return yearShown ? full.replace(/^(约?)\d+月(\d+日 \d)/u, "$1$2") : full.replace(/^(约?\d+年\d+月)\d+日.*$/u, "$1");
   };
+  // docs/601 §8.3: on an equalGaps layout segments sit close, so a line end stops 4px short of halfway to the next
+  // segment, and a later segment's year badge sits RAIL_BREAK_TEXT above its first head (the break text is below the
+  // previous head).
+  const segHeads = layout.segments.map((s) => s.heads.map((h) => layout.byId.get(h.id)!)).filter((c) => c.length);
+  let segAt = -1;
   for (const s of layout.segments) {
     const cards = s.heads.map((h) => layout.byId.get(h.id)!);
     if (!cards.length) continue;
-    const top = cards[0].head - SEGMENT_BADGE_OFFSET;
-    lines.push({ segment: s.index, top, height: cards[cards.length - 1].head - cards[0].head + 2 * SEGMENT_BADGE_OFFSET });
+    segAt++;
+    const prevSeg = layout.equal && segAt > 0 ? segHeads[segAt - 1] : null, nextSeg = layout.equal ? segHeads[segAt + 1] : undefined;
+    const up = prevSeg ? Math.min(SEGMENT_BADGE_OFFSET, (cards[0].head - prevSeg[prevSeg.length - 1].head) / 2 - 4) : SEGMENT_BADGE_OFFSET;
+    const last = cards[cards.length - 1].head;
+    const down = nextSeg ? Math.min(SEGMENT_BADGE_OFFSET, (nextSeg[0].head - last) / 2 - 4) : SEGMENT_BADGE_OFFSET;
+    const top = cards[0].head - up;
+    lines.push({ segment: s.index, top, height: last - top + down });
+    const badgeTop = prevSeg ? cards[0].head - RAIL_BREAK_TEXT : cards[0].head - SEGMENT_BADGE_OFFSET;
     let max = -Infinity,
       year: string | null = null,
       run: RailBack | null = null;
@@ -1196,7 +1282,7 @@ export function alignedRailMarks(
       : undefined;
     if (firstYear) {
       year = adapter.yearText(firstYear.start!);
-      badges.push({ kind: "year", y: top, t: firstYear.start!, text: year, segment: s.index });
+      badges.push({ kind: "year", y: badgeTop, t: firstYear.start!, text: year, segment: s.index });
     }
     cards.forEach((c, i) => {
       const t = c.start!,
@@ -2084,28 +2170,191 @@ export const OPEN_STRETCH_MAX = 1200;
 export function tableGapFor(d: number): number {
   return Math.min(OPEN_STRETCH_MAX, Math.max(GAP_MAX, (GAP_MAX * d) / ZOOM_FULL));
 }
-/** docs/600 §9.2: true when, in the open layout, every block in the view range ends `gap` before the next block of
- * its level starts by time (that block's stretched start in the same layout), so opening the cards in view pushes
- * none of them. Blocks above the view may move (the anchor restore keeps the view in place: code review r2), so the
- * check is relative to the open layout only; `closed` is kept for the signature. Ancestors are not compared with
- * descendants (a group head keeps its height); a block with no time stretch (first of a segment, unplaced) and
- * pending blocks are not limits. Null when the range holds no block. `range` is in layout y. */
-export function tableAutoOpenFits(closed: TableLayout, open: TableLayout, range: { top: number; bottom: number }, gap: number): boolean | null {
-  void closed;
-  const byLevel = new Map<string, TableBlock[]>();
-  for (const b of open.blocks) if (!b.pending) (byLevel.get(b.level) ?? byLevel.set(b.level, []).get(b.level)!).push(b);
-  let any = false;
-  for (const list of byLevel.values())
-    for (let i = 0; i < list.length; i++) {
-      const b = list[i];
-      if (b.bottom <= range.top || b.top >= range.bottom) continue;
-      any = true;
-      const next = list[i + 1];
-      if (!next || !Number.isFinite(next.stretch)) continue;
-      if (b.bottom + gap > next.stretch + 1e-9) return false;
-    }
-  return any ? true : null;
+// ---------- docs/602: event-table zoom stops (card scale, both ends stop, all open) ----------
+/** docs/602 §1: one Ctrl + wheel step and one toolbar − / + step of the event table, in log scale. */
+export const TABLE_WHEEL_STEP = Math.log(1.15);
+export const TABLE_BUTTON_STEP = Math.log(1.25);
+/** docs/602 S1: collapsed card scale 1 (today's size) … 1.2, 1.1 at the reset, over E = 6 wheel steps each way. */
+export const TABLE_CARD_SCALE_RESET = 1.1;
+export const TABLE_CARD_SCALE_MAX = 1.2;
+export const TABLE_CARD_SCALE_SPAN = 6 * TABLE_WHEEL_STEP;
+/** docs/602 S1: the collapsed card scale at zoom e (ln of k / fit), 3 decimals. */
+export function tableCardScale(e: number): number {
+  const s = TABLE_CARD_SCALE_RESET + ((TABLE_CARD_SCALE_MAX - TABLE_CARD_SCALE_RESET) * e) / TABLE_CARD_SCALE_SPAN;
+  const c = Math.min(TABLE_CARD_SCALE_MAX, Math.max(1, Number.isFinite(s) ? s : e > 0 ? TABLE_CARD_SCALE_MAX : 1));
+  return Math.round(c * 1000 + 1e-9) / 1000;
 }
+/** docs/602 §2: what decides whether a table zoom step changes anything on screen. */
+export interface TableZoomModel {
+  fit: number;
+  lo: number;
+  hi: number;
+  gap: number | null;
+  levels: boolean;
+  /** S5 / §9.3: all cards open at e ≥ eOpen (Infinity when the table cannot zoom in). */
+  eOpen: number;
+  maxImportance: number;
+  /** §12.1: per zoom level, the class of what zoomPlan draws (levels with the same class look the same). */
+  levelClass: readonly number[];
+  /** §12.1: per level class, the stretch pairs (PAIR_STRIDE numbers each) between the events drawn there. */
+  pairs: readonly Float64Array[];
+  /** Rail label levels that draw the same texts for this tree share a class (a level finer than every record changes
+   * nothing on screen). */
+  labelClass: ReadonlyMap<RailLevel, number>;
+  adapter: CalendarAdapter;
+}
+export interface TableZoomView {
+  level: ZoomLevel;
+  scale: number;
+  open: boolean;
+}
+/** What the table draws at a zoom level (zoomPlan's hidden, points and auto-folding, with the user's folds and the
+ * kept cards); `tableZoomModel` takes it from EventTable's own inputs. */
+export interface TableZoomKeep {
+  /** Parents the user folded (foldedEvents). */
+  folded: ReadonlySet<string>;
+  /** Selected, search hit, edited and open events (EventTable keepCards before all-open). */
+  cards: ReadonlySet<string>;
+}
+/** Each pair is PAIR_STRIDE numbers: Δt, then the block above it: 1 when it is a point, 1 when it is a stack (a parent
+ * whose children are not drawn), 1 when it is a group head (children drawn), and its estimated open height
+ * (docs/602 §11.1: the block's smallest drawn height bounds the stretch that moves anything). */
+const PAIR_STRIDE = 5;
+/** docs/602 §12.1 (code review P1-1, P2-1, P2-2): the stretch pairs tableLayout uses at one zoom plan: adjacent drawn
+ * roots in each rail segment of the drawn roots, and adjacent placed drawn children inside a drawn family. */
+function stretchPairs(tree: EventTree, adapter: CalendarAdapter, plan: ZoomPlan, folded: ReadonlySet<string>): Float64Array {
+  const out: number[] = [];
+  const fold = (n: TreeNode) => folded.has(n.id) || plan.autoFolded.has(n.id);
+  const drawnKids = (n: TreeNode) => (plan.points.has(n.id) || fold(n) ? [] : n.children.filter((c) => !plan.hidden.has(c.id)));
+  const push = (dt: number, prev: TreeNode) => {
+    if (!(dt > 0)) return;
+    const point = plan.points.has(prev.id), kids = point ? [] : drawnKids(prev);
+    const stack = !point && prev.children.length > 0 && !kids.length;
+    out.push(dt, point ? 1 : 0, stack ? 1 : 0, kids.length ? 1 : 0, estimateCardHeight({ ...prev.event, people: prev.event.people ?? [], changes: prev.event.changes ?? [] }));
+  };
+  const roots = tree.roots.filter((r) => !plan.hidden.has(r.id));
+  for (const s of railSegments(roots, adapter))
+    for (let i = 1; i < s.roots.length; i++) push(s.roots[i].start! - s.roots[i - 1].start!, s.roots[i - 1]);
+  const walk = (n: TreeNode) => {
+    let prev: TreeNode | null = null;
+    for (const c of drawnKids(n)) {
+      if (c.start !== null) {
+        if (prev) push(c.start - prev.start!, prev);
+        prev = c;
+      }
+      walk(c);
+    }
+  };
+  for (const r of roots) walk(r);
+  return Float64Array.from(out);
+}
+/** docs/602 §2 / §12.1: the zoom model of one tree and one set of folds and kept cards: bounds (from tableZoomBounds),
+ * the open point, what each level draws and the stretch pairs there. */
+/** docs/602 §12.1: rail label classes of a tree (tableZoomModel's `labelClass`); depends on the tree only, so a caller
+ * can keep it across selection and fold changes. */
+export function tableLabelClasses(tree: EventTree, adapter: CalendarAdapter): ReadonlyMap<RailLevel, number> {
+  const labelClass = new Map<RailLevel, number>(), seen = new Map<string, number>();
+  const placed = [...tree.byId.values()].filter((n) => n.start !== null);
+  for (const level of ["minute", "half", "day", "month", "year"] as const) {
+    const key = placed.map((n) => adapter.railText(n.start!, level, n.event.time)).join("\u0001");
+    if (!seen.has(key)) seen.set(key, seen.size);
+    labelClass.set(level, seen.get(key)!);
+  }
+  return labelClass;
+}
+export function tableZoomModel(tree: EventTree, adapter: CalendarAdapter, bounds: TableZoomBounds, levels: boolean, keep: TableZoomKeep = { folded: new Set(), cards: new Set() }, options: { linear?: boolean; labelClass?: ReadonlyMap<RailLevel, number> } = {}): TableZoomModel {
+  const { fit, min, max } = bounds;
+  const lo = fit > 0 ? Math.log(min / fit) : 0,
+    hi = fit > 0 ? Math.log(max / fit) : 0;
+  const gap = medianRootGap(tree);
+  let maxImportance = 0;
+  for (const n of tree.byId.values()) if (n.start !== null && n.event.importance > maxImportance) maxImportance = n.event.importance;
+  // eL1: where the level first drops to ≤ 1 on the way up (d ≥ ZOOM_POINTS × hysteresis).
+  const eL1 = gap && fit > 0 ? Math.log((ZOOM_POINTS * ZOOM_HYSTERESIS) / (gap * fit)) : -Infinity;
+  const eOpen = levels && hi > 1e-9 ? Math.min(Math.max(TABLE_CARD_SCALE_SPAN, eL1) + TABLE_WHEEL_STEP, hi) : Infinity;
+  // Each level's plan as EventTable builds it (no unfolded families: a user unfold only adds a stop, the safe side).
+  const keepPlan: ZoomKeep = { cards: keep.cards, unfolded: new Set(), showAll: false, folded: keep.folded };
+  const levelClass: number[] = [], pairs: Float64Array[] = [], seenPlan = new Map<string, number>();
+  // Levels off: tableZoomStep is plain clamped steps and never reads the plans (no work on every edit or selection).
+  if (!levels) return { fit, lo, hi, gap, levels, eOpen, maxImportance, levelClass: [0, 0, 0, 0, 0, 0, 0], pairs: [new Float64Array()], labelClass: new Map(), adapter };
+  for (let level = 0; level <= 6; level++) {
+    const p = zoomPlan(tree, level as ZoomLevel, 1, keepPlan);
+    // A parent the user folded is drawn the same whether the zoom also folds it.
+    const auto = [...p.autoFolded].filter((id) => !keep.folded.has(id));
+    const key = [[...p.hidden], [...p.points], auto].map((s) => s.sort().join(",")).join("|");
+    let c = seenPlan.get(key);
+    if (c === undefined) {
+      c = seenPlan.size;
+      seenPlan.set(key, c);
+      pairs.push(options.linear === false ? new Float64Array() : stretchPairs(tree, adapter, p, keep.folded));
+    }
+    levelClass.push(c);
+  }
+  const labelClass = options.labelClass ?? (options.linear === false ? new Map<RailLevel, number>() : tableLabelClasses(tree, adapter));
+  return { fit, lo, hi, gap, levels, eOpen, maxImportance, levelClass, pairs, labelClass, adapter };
+}
+const clampE = (m: TableZoomModel, e: number) => Math.min(m.hi, Math.max(m.lo, Number.isFinite(e) ? e : 0));
+/** docs/602 §2: the level drawn at e when the last drawn level was `prev` (zoomLevel's hysteresis). */
+export function tableZoomLevelAt(m: TableZoomModel, e: number, prev: ZoomLevel): ZoomLevel {
+  return m.levels ? zoomLevel(tableCrowding(m.gap, m.fit * Math.exp(clampE(m, e))), prev) : 0;
+}
+/** docs/602 §2: card scale and all-open at e, for a level already resolved (tableZoomLevelAt). */
+export function tableZoomView(m: TableZoomModel, e: number, level: ZoomLevel): TableZoomView {
+  const x = clampE(m, e);
+  return { level: m.levels ? level : 0, scale: m.levels ? tableCardScale(x) : 1, open: m.levels && x >= m.eOpen - 1e-9 };
+}
+/** docs/602 §11.1: the smallest height the block above a pair can have at this view (a point, a collapsed card, stack
+ * or group at scale s, an open card); a stretch up to it + CARD_GAP moves nothing (tableLayout's `atLeast > y`). */
+function minBlock(point: boolean, stack: boolean, group: boolean, s: number, open: boolean, openH: number): number {
+  // The estimate is not the measured height: 3/4 of it keeps a measured card that is shorter than estimated from
+  // hiding a real change (a dead step is the lesser error).
+  if (open) return Math.max(CARD_HEIGHT, openH * 0.75);
+  if (point) return POINT_HEIGHT;
+  if (stack) return (STACK_HEAD_HEIGHT + STACK_PEEK) * s;
+  if (group) return GROUP_HEAD_HEIGHT * s + GROUP_PADDING;
+  return CARD_HEIGHT * s;
+}
+/** docs/602 §2: what is on screen at e: scale, all-open, the level class, and in linear mode the rail label class and
+ * every pair's visible stretch (0 when within the block above it, else rounded to 0.5px). */
+interface TableLook { scale: number; open: boolean; cls: number; rail: number; k: number; cap: number }
+function tableLookAt(m: TableZoomModel, mode: "aligned" | "linear", e: number, level: ZoomLevel): TableLook {
+  const v = tableZoomView(m, e, level), cls = m.levelClass[v.level] ?? 0;
+  if (mode !== "linear") return { scale: v.scale, open: v.open, cls, rail: -1, k: 0, cap: 0 };
+  const k = m.fit * Math.exp(clampE(m, e)), rl = railLevel(k, m.adapter);
+  return { scale: v.scale, open: v.open, cls, rail: rl ? (m.labelClass.get(rl) ?? -2) : -1, k, cap: m.levels ? tableGapFor(tableCrowding(m.gap, k)) : GAP_MAX };
+}
+const pairStretch = (pairs: Float64Array, i: number, l: TableLook) => {
+  const x = Math.min(l.cap, pairs[i] * l.k), lb = minBlock(pairs[i + 1] === 1, pairs[i + 2] === 1, pairs[i + 3] === 1, l.scale, l.open, pairs[i + 4]) + CARD_GAP;
+  return x <= lb ? 0 : Math.round(x * 2);
+};
+/** Two positions look the same (code review P3-2 follow-up: numbers, stopping at the first difference). */
+function sameLook(m: TableZoomModel, a: TableLook, b: TableLook): boolean {
+  if (Math.abs(a.scale - b.scale) > 1e-9 || a.open !== b.open || a.cls !== b.cls || a.rail !== b.rail) return false;
+  if (a.k === 0 && b.k === 0) return true;
+  const pairs = m.pairs[a.cls] ?? m.pairs[0];
+  for (let i = 0; i < pairs.length; i += PAIR_STRIDE) if (pairStretch(pairs, i, a) !== pairStretch(pairs, i, b)) return false;
+  return true;
+}
+/** docs/602 S3 / S4: one zoom step of `size` in direction `dir` from e (level = the drawn level). A step that would
+ * change nothing keeps going to the next change; null when nothing changes up to the bound. Levels off: e + step,
+ * clamped (docs/601). */
+export function tableZoomStep(m: TableZoomModel, mode: "aligned" | "linear", at: { e: number; level: ZoomLevel }, dir: 1 | -1, size: number): number | null {
+  const e0 = clampE(m, at.e);
+  if (!m.levels) {
+    const e = clampE(m, e0 + dir * size);
+    return Math.abs(e - e0) > 1e-9 ? e : null;
+  }
+  const start = tableLookAt(m, mode, e0, tableZoomLevelAt(m, e0, at.level));
+  let e = e0;
+  for (let i = 0; i < 2000; i++) {
+    const next = clampE(m, e + dir * size);
+    if (Math.abs(next - e) <= 1e-12) return null;
+    e = next;
+    if (!sameLook(m, start, tableLookAt(m, mode, e, tableZoomLevelAt(m, e, at.level)))) return e;
+  }
+  return null;
+}
+
 /** docs/600 §10.1: a table re-layout anchor: one card, or the pointer between two cards' heads at fraction f.
  * `offset` is the anchor's screen y inside the scroller. */
 export interface TableAnchor { a: string; b?: string; f?: number; offset: number; /** a's start (§8.6 P2-1 fallback). */ t?: number | null }
@@ -2128,12 +2377,4 @@ export function projectAnchor(layout: TableLayout, anchor: TableAnchor, maxScrol
 /** docs/600 §11.1: a scroll event is the table's own anchor restore when it lands within 1px of the written value. */
 export function isProgrammaticScroll(written: number | null, current: number): boolean {
   return written !== null && Math.abs(current - written) <= 1;
-}
-/** docs/600 §12.1: one auto-open decision. An exit latches; while latched only user input lets it enter again.
- * `fits` null (nothing in view) keeps the state. */
-export function decideAutoOpen(s: { on: boolean; latched: boolean; fits: boolean | null; input: boolean }): { on: boolean; latched: boolean } {
-  const latched = s.latched && !s.input;
-  if (s.fits === null) return { on: s.on, latched };
-  if (s.on) return s.fits ? { on: true, latched } : { on: false, latched: true };
-  return s.fits && !latched ? { on: true, latched: false } : { on: false, latched };
 }

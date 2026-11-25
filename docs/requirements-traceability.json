@@ -5692,6 +5692,7 @@
       "600-r3（真实目标 table-zoom-600.mjs）"
     ],
     "verificationKind": "WORLDLINE_TABLE_ZOOM_TARGETED",
+    "supersededBy": "WL-602（2026-11-25）：T6“有空间时自动展开”被“卡片到最大后再放大一步全部展开（两种模式）”取代；T2 收起卡缩小在事件表中由 1.0–1.2× 微调取代。原证据保留，记录的是 docs/600 当时的行为。",
     "status": "implemented-targeted-verified-real-target-met-macos",
     "requirementEvidence": {
       "T1 Ctrl + 滚轮缩放、普通滚轮滚动": "真实目标 600-r3 plain wheel scrolls + 每步记录 data-crowding；浏览器夹具 TZB-01、TZB-18",
@@ -5716,6 +5717,99 @@
       "GAP / KEEP 回差边界只在单元层验证（浏览器夹具未构造刚好放得下的边界）",
       "真实目标窄工具栏下“复位”按钮隐藏，复位改用 − 按钮验证；滚动为脚本写 scrollTop（模拟用户滚动）",
       "Windows 未在真实目标验证"
+    ]
+  },
+  {
+    "id": "WL-601",
+    "requirement": "世界线事件表视图：默认缩放下事件卡片和字体太小、卡片间空隙太大；去掉无意义的空隙，卡片之间的空隙相等（用户 2026-11-24；确认：对齐模式在任何缩放级别都按固定间距排列、等距模式继续按时间拉伸、对齐模式不再自动展开；保留“相隔 N 年”文字，放进卡片间距；事件表收起卡片在所有级别保持原尺寸；年份徽章 / 相隔文字只在出现处加宽到刚好放下）",
+    "source": [
+      "docs/601-worldline-table-equal-gaps-plan.md",
+      "docs/601-worldline-table-equal-gaps-plan-review.md",
+      "docs/601-worldline-table-equal-gaps-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts（tableLayout equalGaps、RAIL_MARK_SPAN / RAIL_BREAK_SPAN、TableLayout.equal、alignedRailMarks 段线端与段首徽章、tableAutoOpenFits 拒绝 equal 布局）",
+      "src/components/content/planning/worldline/EventTable.tsx（收起卡 zScale 1、对齐模式 equalGaps / layoutK 0 / 不自动展开、模式切换锚点、用户滚动清除滚轮锚点）",
+      "src/components/content/planning/worldline/worldline.module.css（.railBreakTight）"
+    ],
+    "testIds": [
+      "EG-01..10（tests/unit/worldline-table-equal-gaps.test.ts）",
+      "EGB-01..04、06..11（tests/browser/planning-worldline-table-equal-gaps.test.ts）",
+      "TZB-06*/07/12/12b/13/13e/14/17b 改为等距模式；TZB-01/11 改为无缩放包层；TZB-19 计时前先悬停（tests/browser/planning-worldline-table-zoom.test.ts）",
+      "RM-B3 改为第一张可见卡片不动（tests/browser/planning-worldline-table-rail-modes.test.ts）；ZB-37/38 事件表检查改在等距模式（planning-worldline-auto-open.test.ts）",
+      "601-r2（真实目标 table-equal-601.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TABLE_EQUAL_GAPS_TARGETED",
+    "supersededBy": "WL-602（2026-11-25）：Q1“收起卡在所有级别原尺寸”改为 1.0–1.2× 随缩放微调（1.0 为原尺寸）；Q6“对齐模式不自动展开”改为对齐与等距都在上限处全部展开。原证据保留，记录的是 docs/601 当时的行为。",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "Q1 卡片原尺寸": "真实目标 601-r2 复位（级别 2）、放大 12 步（级别 1）、级别 4 均无 data-card-zoom，标题 13px 与未缩放相同；浏览器 EGB-02、TZB-01/11",
+      "Q2 对齐模式等间距": "真实目标 601-r2 三个缩放各 8 个滚动位置，同层相邻块间距全部为 6px；浏览器 EGB-01/08/09，单元 EG-01/02/06",
+      "Q3/Q4 相隔文字保留且只在出现处加宽": "真实目标 601-r2 含标记的间距 6–33px（≤ 40），时间轴文字两两不相交 0/24；浏览器 EGB-03/09，单元 EG-03/03b/05/07/09/10",
+      "Q6 对齐不自动展开、等距照旧": "真实目标 601-r2 各位置无 data-auto-open；浏览器 EGB-04/06，TZB-06* 在等距下通过",
+      "Q7 模式切换第一张可见卡片不动": "真实目标 601-r2 表格 30% / 75% 处往返偏差 ≤ 0.07px；浏览器 RM-B3、EGB-11",
+      "C1 等距与时间线不变": "TZ-02 布局快照通过；浏览器全量与 052627a 失败集合比较见 evidence"
+    },
+    "evidence": [
+      "tsc、npm run build 通过（~/shakeink-test-roots/worldline-ui-583-evidence/601/build-601.log）",
+      "单元：worldline-table-equal-gaps + worldline-table-zoom + worldline-layout 125/125",
+      "npm test 全量（~/shakeink-test-roots/worldline-ui-583-evidence/601/unit-601.log）：5157 项 42 失败，与 052627a（unit-head-052627a.log，133 失败）对比均为基线失败；ROOT11-07、NI-LB07 单独重跑通过（负载超时，与本改动无关）",
+      "浏览器 planning-*.test.ts 全量（~/shakeink-test-roots/worldline-ui-583-evidence/601/browser-601.log）：324 项，失败 CM-02/03/06/10 与 052627a 相同；WU-35（断档文字 text-overflow 省略号）已改为渐隐裁切，planning-worldline-table / equal-gaps / rail-modes 重跑 36/36 通过",
+      "真实目标（构建版、隔离根 ~/shakeink-test-roots/worldline-ui-599、作品 LOTM-587-wg-r1、无模型调用）：~/shakeink-test-roots/worldline-ui-583-evidence/601/r2 PASS 20/20；复位级别 2，可见卡片 8–14 张、时间点 5–14 个；作品版本不变",
+      "红检：关闭 equal（EGB-01/03/04/08/09 失败）、恢复 cardScale（EGB-02 失败）、去掉模式锚点（RM-B3 失败）、去掉滚动清锚点（EGB-10/11 失败）"
+    ],
+    "verificationLimits": [
+      "对齐模式卡片位置不再反映时间间隔，间隔由日期标签、年份徽章与相隔文字表达",
+      "对齐模式不自动展开；需要时手动展开或切到等距",
+      "复位级别 2 时一般事件仍是一行时间点（11px），未改",
+      "全为纪元精度的段没有段首徽章，仍留 62px 卡头距"
+    ]
+  },
+  {
+    "id": "WL-602",
+    "requirement": "世界线事件表视图：缩放时若没有触发卡片展开 / 收起 / 折叠，看不出变化，需修改（用户 2026-11-24；确认：卡片与字体随缩放微调，当前尺寸为最小、1.2× 为最大、复位 1.1×，两种模式，展开 / 编辑卡不缩放；设计稿审核后修改：缩到最小或放到最大后不再累计、反向第一步立即生效；放大到一定程度所有卡片自动展开——卡片最大后再放大一步，两种模式，等距模式展开后继续拉开间距直到不再变化；缩小时跳过无变化的步。用户 2026-11-24 UI 审核通过）",
+    "source": [
+      "docs/602-worldline-table-card-scale-research.md",
+      "design/worldline-table-card-scale/index.html",
+      "docs/602-worldline-table-card-scale-plan.md",
+      "docs/602-worldline-table-card-scale-plan-review.md",
+      "docs/602-worldline-table-card-scale-test-review.md",
+      "docs/602-worldline-table-card-scale-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts（tableCardScale、tableZoomModel / tableLabelClasses / tableZoomLevelAt / tableZoomView / tableZoomStep：按每级 zoomPlan（含用户折叠与保留卡）求外观与拉伸对，跳过无变化步；tableLayout 有缩放计划时估宽余量 +3；删除 tableAutoOpenFits / decideAutoOpen）",
+      "src/components/content/planning/PlanningWorkspace.tsx（缩放级别与回差由上次画出的级别求得；滚轮 / 工具栏按有效步前进，两端置灰；EventTable 新 props zoomLevel / cardScale / allOpen）",
+      "src/components/content/planning/worldline/EventTable.tsx（收起卡包层 zoom = 卡片尺寸；全部展开集合；删除放得下才展开的判定与锁存；尺寸 / 全部展开步保持视图；首行只在变化时上报）"
+    ],
+    "testIds": [
+      "TS-01..14（tests/unit/worldline-table-card-scale.test.ts；TS-14 用 zoomPlan + tableLayout 真实布局逐步比较）",
+      "TSB-01..18、04b、15b（tests/browser/planning-worldline-table-card-scale.test.ts，内存夹具，非真实目标）",
+      "改写：TZB-01/02/06*/11/12/17b/18，删除 TZB-06e/07/13/13e（planning-worldline-table-zoom.test.ts）；EGB-02/04/07/08（planning-worldline-table-equal-gaps.test.ts）；删除单元 TZ-07/10、TZ-14、EG-08",
+      "602-r13（真实目标 card-scale-602.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TABLE_CARD_SCALE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "卡片尺寸 1.0–1.2×、复位 1.1×": "真实目标 602-r13：复位 data-card-scale 1.1、标题行 19.8px（18 × 1.1）；6 步到 1.2、6 步到 1.0；包层 zoom 与尺寸全程一致；浏览器 TSB-01/05/06、单元 TS-01/12",
+      "每步都有变化": "真实目标 602-r13：对齐放大 7 步、缩小 9 步、等距放大 55 步，整表（卡片数、时间点、层叠、展开、表高）与视图逐步比较死步均为 0；单元 TS-04/14（真实布局）；浏览器 TSB-02/03/04/04b/10",
+      "两端停止、反向立即生效": "真实目标 602-r13 三个方向到头后再滚 10 步无变化（读数也不变），反向第一步变化；快速 10 次缩小 = 10 个有效步；浏览器 TSB-02/03/04、单元 TS-04/08",
+      "全部展开": "真实目标 602-r13：对齐 +7 步（266%）全部展开即上限，前一步 1.2× 收起；等距第 7 步全部展开、继续到第 55 步；用户折叠的父事件展开、子事件不出现；浏览器 TSB-07/08/16、EGB-04",
+      "视图与性能": "真实目标 602-r13：全部展开那一步 90 ms；全部展开下滚动 20 屏帧对 p95 34 ms、参照卡片偏差 ≤ 0.2px；浏览器 TSB-09/14/15/15b（F885 夹具）",
+      "标题不截断": "真实目标 602-r13 2600px 窗口全表：1.1 / 1.2 无比 1.0 多出的截断（1.0 也为 0）；浏览器 TSB-05",
+      "C1 分级关不变、时间线不变": "单元 TS-09、TZ-02 布局快照；浏览器 TSB-12（步数 = docs/601）、TZB-10"
+    },
+    "evidence": [
+      "~/shakeink-test-roots/worldline-ui-583-evidence/602/r13/result.json 与截图（reset-40、reset-one-open、all-open、all-open-folded、max-size、floor、linear-top、wide-reset）；r1–r10 为修复过程记录",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/602/build.log、build-head.txt（构建后、运行期间未再构建）",
+      "单元全量（npm test）：当前 5169 项 42 失败，干净 HEAD 052627a 5092 项 134 失败，当前的失败全部也在 HEAD 中出现，无新增（/tmp 对比）",
+      "浏览器 planning-worldline-* 与 planning-card-menu 全量（~/shakeink-test-roots/worldline-ui-583-evidence/602/browser-602.log）：337 通过、4 失败（CM-02/03/06/10），与干净 HEAD 052627a 的失败集合相同（browser-head-052627a.log），无新增；CP-07（时间线长任务计数）在 HEAD 5 次中 4 次超过 2，属基线不稳定，本次全量通过"
+    ],
+    "verificationLimits": [
+      "浏览器用例为内存夹具，不作为真实目标通过依据；真实目标只在 macOS 构建版、隔离根 worldline-ui-599（LOTM-587-wg-r1，无模型）执行。",
+      "等距模式全部展开后，展开卡实测高于估计时可能多停一步（审核 P3-1，方向为多停不漏变）。",
+      "被跳过的缩放位置不能停留；跳步时读数一次变化多步。复位已是上限或 fit = 0 的世界线不会全部展开。",
+      "全部展开时工具栏“全部展开 / 全部收起”仍按手动展开集合判断。",
+      "窄面板中展开卡长标题换行后压在卡头下方内容上（docs/602 §11.5，既有样式，未在本次修改，待用户决定）。"
     ]
   }
   ],

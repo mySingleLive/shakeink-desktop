@@ -13,6 +13,7 @@ import {
   useContext,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -76,7 +77,7 @@ import { registerDesktopCommandTarget } from "@/lib/desktop/command-runtime";
 import { EventTreeNav, TreeResizer } from "./worldline/EventTree";
 import { WorldlineLegend, WorldlineToolbar } from "./worldline/WorldlineToolbar";
 import wl from "./worldline/worldline.module.css";
-import { adapterFor, descendants, eventTree, filterEvents, matchEvent, searchTerms as toSearchTerms, railLevel, shiftSelection, tableZoomBounds, type RailLevel } from "@/lib/planning/worldline-layout";
+import { adapterFor, descendants, eventTree, filterEvents, matchEvent, searchTerms as toSearchTerms, railLevel, shiftSelection, tableLabelClasses, tableZoomBounds, tableZoomLevelAt, tableZoomModel, tableZoomStep, tableZoomView, TABLE_BUTTON_STEP, TABLE_WHEEL_STEP, type RailLevel, type ZoomLevel } from "@/lib/planning/worldline-layout";
 import { materialRefSchema, MATERIAL_LABELS, MATERIAL_ROLE_LABELS, type MaterialRef } from "@/lib/material-reference";
 import { useDesktopStore } from "@/stores/desktop";
 
@@ -99,6 +100,8 @@ async function read(novelId: string): Promise<View> {
 const uid = () => crypto.randomUUID();
 const EMPTY_CHARACTERS: { id: string; name: string; avatarUrl: string | null }[] = [];
 /** docs/586 §4: the event-table zoom value shows the rail level. */
+/** docs/602: the zoom model's folds and kept cards when it is not used (timeline view, zoom levels off). */
+const EMPTY_TABLE_KEEP = { folded: new Set<string>() as ReadonlySet<string>, cards: new Set<string>() as ReadonlySet<string> };
 const RAIL_LEVEL_NAME: Readonly<Record<RailLevel, string>> = { year: "年", month: "月", day: "日", half: "上下午", minute: "时分" };
 /** docs/577 §9: importance 1–3 as shown to the author. */
 const IMPORTANCE_LABELS = ["一般", "重要", "关键"] as const;
@@ -333,15 +336,47 @@ function PlanningWorkspace({
       onOpenCharacter: (id, name) => openEntityRef({ kind: "character", id, name }, novelId),
     }), [data, wAdapter, query.data?.readonly, novelId, wCharacters, wTerms, wFrozen]);
   // docs/586 §1: event-table scale k = fit × exp(e), e clamped to the bounds of the current tree and calendar.
+  // docs/602 §3 / §9.2: the zoom level (hysteresis from the last drawn level), the collapsed card scale and all-open
+  // come from the zoom model; − / + and the wheel move to the next position that changes something (tableZoomStep).
+  // docs/602 §12.1: the model sees what EventTable draws at each level: the user's folds and the kept cards (selected,
+  // search hit, edited, open). Only the table view needs it (code review P3-2): elsewhere a levels-off model.
+  const tableModelOn = table && zoomLevelsOn;
+  const tableHit = tableModelOn ? (wHits[hitIndex] ?? null) : null, tableEditing = tableModelOn ? (eventDraft?.id ?? null) : null;
+  const tableKeep = useMemo(() => {
+    if (!tableModelOn) return EMPTY_TABLE_KEEP;
+    const cards = new Set(openCards);
+    for (const id of [eventSelection, tableHit, tableEditing]) if (id) cards.add(id);
+    return { folded: foldedEvents, cards };
+  }, [tableModelOn, openCards, eventSelection, tableHit, tableEditing, foldedEvents]);
+  const tableLinear = table && zoomLevelsOn && tableRail === "linear";
+  const wLabelClass = useMemo(() => (tableLinear ? tableLabelClasses(wViewTree, wAdapter) : undefined), [tableLinear, wViewTree, wAdapter]);
+  const wTableModel = useMemo(
+    () => tableZoomModel(wViewTree, wAdapter, wZoom, tableModelOn, tableKeep, { linear: tableLinear, labelClass: wLabelClass }),
+    [wViewTree, wAdapter, wZoom, zoomLevelsOn, table, tableKeep, tableLinear, wLabelClass],
+  );
+  const drawnTableLevel = useRef<ZoomLevel>(0);
   const tableView = useMemo(() => {
-    const { fit, min, max } = wZoom;
-    const lo = fit > 0 ? Math.log(min / fit) : 0,
-      hi = fit > 0 ? Math.log(max / fit) : 0;
-    const clamp = (e: number) => Math.min(hi, Math.max(lo, Number.isFinite(e) ? e : 0));
+    const m = wTableModel;
+    const clamp = (e: number) => Math.min(m.hi, Math.max(m.lo, Number.isFinite(e) ? e : 0));
     const e = clamp(tableZoom),
-      k = fit * Math.exp(e);
-    return { clamp, e, k, level: railLevel(k, wAdapter), canIn: e < hi - 1e-9, canOut: e > lo + 1e-9 };
-  }, [wZoom, wAdapter, tableZoom]);
+      k = m.fit * Math.exp(e);
+    const zl = tableZoomLevelAt(m, e, drawnTableLevel.current), v = tableZoomView(m, e, zl);
+    const at = { e, level: zl };
+    // Only the event table needs the step lookups (code review P3-1).
+    const canIn = !table || tableZoomStep(m, tableRail, at, 1, TABLE_WHEEL_STEP) !== null,
+      canOut = !table || tableZoomStep(m, tableRail, at, -1, TABLE_WHEEL_STEP) !== null;
+    return { clamp, e, k, level: railLevel(k, wAdapter), zoomLevel: zl, cardScale: v.scale, allOpen: v.open, canIn, canOut };
+  }, [wTableModel, wAdapter, tableZoom, tableRail, table]);
+  useLayoutEffect(() => { drawnTableLevel.current = tableView.zoomLevel; });
+  // Two wheel events before a render both step: each one from the e the previous one left (functional update).
+  const tableStepLive = useRef({ m: wTableModel, rail: tableRail });
+  tableStepLive.current = { m: wTableModel, rail: tableRail };
+  const stepTable = (dir: 1 | -1, size: number) =>
+    setTableZoom((prev) => {
+      const { m, rail } = tableStepLive.current;
+      const e = Math.min(m.hi, Math.max(m.lo, Number.isFinite(prev) ? prev : 0));
+      return tableZoomStep(m, rail, { e, level: tableZoomLevelAt(m, e, drawnTableLevel.current) }, dir, size) ?? prev;
+    });
   // Card callbacks are stable (actions ref), so they read the latest selection here.
   selectionRef.current = selection;
   useEffect(() => {
@@ -2418,7 +2453,7 @@ function PlanningWorkspace({
           canZoomIn={tableView.canIn}
           canZoomOut={tableView.canOut}
           onZoom={(dir) => {
-            if (table) setTableZoom((e) => (dir === 0 ? 0 : tableView.clamp(tableView.clamp(e) + dir * Math.log(1.25))));
+            if (table) { if (dir === 0) setTableZoom(0); else stepTable(dir > 0 ? 1 : -1, TABLE_BUTTON_STEP); }
             else if (dir === 0) resetTimeline();
             else setWindowRange((v) => ({ ...v, ...zoomAt(v.start, v.span, dir > 0 ? 1 / 1.5 : 1.5, 0.5) }));
           }}
@@ -2639,7 +2674,10 @@ function PlanningWorkspace({
                       onRailMode={setTableRail}
                       periods={allPeriods.map((p) => ({ id: p.id, start: p.start ?? 0, end: p.end }))}
                       onFold={toggleFold}
-                      onZoom={(step) => setTableZoom((e) => tableView.clamp(tableView.clamp(e) + step))}
+                      onZoom={(step) => stepTable(step > 0 ? 1 : -1, Math.abs(step))}
+                      zoomLevel={tableView.zoomLevel}
+                      cardScale={tableView.cardScale}
+                      allOpen={tableView.allOpen}
                       onScrollTop={setCurrentRow}
                       scrollerRef={tableScroller}
                     />

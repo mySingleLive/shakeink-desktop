@@ -91,34 +91,6 @@ test("TZ-09: stretchChildren spaces children by time; the first child follows th
   assert.equal(top(off, "c2") - top(off, "c1"), L.CARD_HEIGHT + L.CARD_GAP)
 })
 
-test("TZ-07/10: tableAutoOpenFits compares block tops of the closed and the open layout; group heads never open", () => {
-  const ev = [{ id: "a", at: 0 }, { id: "b", at: 200 }, { id: "c", at: 400 }]
-  const t = treeOf(plan(ev))
-  const opts = { gapMax: 1200, stretchChildren: true }
-  const closed = L.tableLayout(t, {}, 1, A, opts)
-  const mk = (h: number) => L.tableLayout(t, { a: h, b: h, c: h }, 1, A, { ...opts, expanded: new Set(["a", "b", "c"]) })
-  const view = { top: 0, bottom: 1000 }
-  // Block a is 200 apart from b: an open height of 200 − 24 fits, one more px does not.
-  assert.equal(L.tableAutoOpenFits(closed, mk(176), view, 24), true)
-  assert.equal(L.tableAutoOpenFits(closed, mk(177), view, 24), false)
-  assert.equal(L.tableAutoOpenFits(closed, mk(188), view, 12), true, "keep gap")
-  assert.equal(L.tableAutoOpenFits(closed, mk(177), { top: 5000, bottom: 6000 }, 24), null, "no block in view")
-  // A family whose span pushes the next root while closed never fits.
-  const fam = treeOf(plan([{ id: "p", at: 0, dur: 400 }, { id: "k1", at: 10, parent: "p" }, { id: "k2", at: 150, parent: "p" }, { id: "q", at: 100 }]))
-  const fc = L.tableLayout(fam, {}, 1, A, opts), fo = L.tableLayout(fam, { k1: 40, k2: 40, q: 40 }, 1, A, { ...opts, expanded: new Set(["k1", "k2", "q"]) })
-  assert.equal(L.tableAutoOpenFits(fc, fo, view, 24), false)
-  // A tall card above the view pushes the later blocks in the open layout; the blocks in view still fit (code review
-  // r2: the check is relative to the open layout).
-  const tall = treeOf(plan([{ id: "a", at: 0 }, { id: "b", at: 200 }, { id: "c", at: 400 }, { id: "e", at: 600 }]))
-  const tc = L.tableLayout(tall, {}, 1, A, opts), to = L.tableLayout(tall, { a: 900, b: 100, c: 100, e: 100 }, 1, A, { ...opts, expanded: new Set(["a", "b", "c", "e"]) })
-  const cTop = to.byId.get("c")!.top
-  assert.equal(L.tableAutoOpenFits(tc, to, { top: cTop - 10, bottom: cTop + 150 }, 24), true)
-  assert.equal(L.tableAutoOpenFits(tc, to, { top: 0, bottom: 300 }, 24), false, "a itself does not fit")
-  // Pending blocks are not compared.
-  const pend = treeOf(plan([{ id: "a", at: 0 }, { id: "z", at: null }]))
-  assert.equal(L.tableAutoOpenFits(L.tableLayout(pend, {}, 1, A, opts), L.tableLayout(pend, { a: 100, z: 100 }, 1, A, { ...opts, expanded: new Set(["a", "z"]) }), view, 24), true)
-})
-
 test("TZ-11: projectAnchor restores a card or the interpolated pointer and clamps to the scroll range", () => {
   const t = treeOf(plan([{ id: "a", at: 0 }, { id: "b", at: 200 }, { id: "z", at: null }]))
   const lay = L.tableLayout(t, {}, 1, A)
@@ -149,11 +121,3 @@ test("TZ-13: isProgrammaticScroll matches a written scrollTop within 1px", () =>
   assert.equal(L.isProgrammaticScroll(100, 102), false)
 })
 
-test("TZ-14: decideAutoOpen latches after an exit; only user input clears it", () => {
-  assert.deepEqual(L.decideAutoOpen({ on: true, latched: false, fits: false, input: false }), { on: false, latched: true })
-  assert.deepEqual(L.decideAutoOpen({ on: false, latched: true, fits: true, input: false }), { on: false, latched: true })
-  assert.deepEqual(L.decideAutoOpen({ on: false, latched: true, fits: true, input: true }), { on: true, latched: false })
-  assert.deepEqual(L.decideAutoOpen({ on: false, latched: false, fits: true, input: false }), { on: true, latched: false })
-  assert.deepEqual(L.decideAutoOpen({ on: true, latched: false, fits: null, input: false }), { on: true, latched: false })
-  assert.deepEqual(L.decideAutoOpen({ on: false, latched: true, fits: false, input: true }), { on: false, latched: false })
-})

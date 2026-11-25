@@ -76,7 +76,9 @@ test("ZB-37: leaves: closed below d 430; at 445 ≤ d < 460 every card in view o
   await zoomTo(page, 445, 460, "r6"); await frames(page)
   await allOpen(page, 24)
   // docs/600: the table auto-opens by its own crowding; at its reset (level 1) nothing opens, and openCards is untouched.
+  // docs/601: the aligned table never auto-opens, so the check runs in linear mode (等距), where it could.
   await tab(page, "事件表"); await frames(page)
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: "等距", exact: true }).click(); await frames(page)
   await expect(page.locator('[data-event-card][aria-expanded="true"]')).toHaveCount(0)
   await tab(page, "时间线"); await frames(page, 4)
   await allOpen(page, 24)
@@ -147,6 +149,7 @@ test("ZB-40: collapsing an auto-opened card keeps it closed (top unchanged) thro
   await allOpen(page, 24)
   // docs/600: the table's own level (reset 1) does not auto-open r6; the timeline's closed set does not leak into it.
   await tab(page, "事件表"); await frames(page)
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: "等距", exact: true }).click(); await frames(page)
   await expect(page.locator('[data-event-card][data-event-id="r6"]')).toHaveAttribute("aria-expanded", "false")
 }, Z))
 

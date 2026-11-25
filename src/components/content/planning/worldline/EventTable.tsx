@@ -2,16 +2,11 @@
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   alignedRailMarks,
-  AUTO_OPEN_GAP,
-  AUTO_OPEN_KEEP,
   CATEGORY_VAR,
-  cardScale,
-  decideAutoOpen,
   isProgrammaticScroll,
   medianRootGap,
   projectAnchor,
   railMarks,
-  tableAutoOpenFits,
   tableCardInput,
   tableCrowding,
   tableGapFor,
@@ -19,7 +14,6 @@ import {
   tableWidths,
   descendants,
   zoomBars,
-  zoomLevel,
   zoomPlan,
   type AlignedRailMarks,
   type EventTree,
@@ -36,8 +30,6 @@ import { TimelineZoomLevelsContext, TimelineZoomNoteContext } from "./EventTimel
 import s from "./worldline.module.css";
 
 const EMPTY_IDS: ReadonlySet<string> = new Set();
-/** docs/600 §11.1: auto-open is decided once input has been quiet this long. */
-export const DECIDE_IDLE_MS = 160;
 /** docs/600 §9.4: a second press on a point within this interval is its double click (EventTimeline POINT_DOUBLE_MS). */
 const POINT_DOUBLE_MS = 400;
 /** docs/600 §8.1: an auto-opened card collapses after the double-click interval (PlanningWorkspace COLLAPSE_DELAY_MS). */
@@ -65,6 +57,9 @@ export function EventTable({
   onScrollTop,
   scrollerRef,
   emptyText,
+  zoomLevel: zLevelIn = 0,
+  cardScale = 1,
+  allOpen = false,
 }: {
   tree: EventTree;
   expanded: ReadonlySet<string>;
@@ -90,6 +85,10 @@ export function EventTable({
   scrollerRef: React.RefObject<HTMLDivElement | null>;
   /** docs/591: shown over the table when the legend filter leaves no event. */
   emptyText?: string;
+  /** docs/602 §3: the zoom level (PlanningWorkspace keeps the hysteresis), the collapsed card scale and all-open. */
+  zoomLevel?: ZoomLevel;
+  cardScale?: number;
+  allOpen?: boolean;
 }) {
   const ctx = useContext(WorldlineCardContext)!;
   const [heights, setHeights] = useState<Record<string, number>>({});
@@ -99,16 +98,27 @@ export function EventTable({
   const noteStore = useContext(TimelineZoomNoteContext);
   const gap = useMemo(() => medianRootGap(tree), [tree]);
   const d = tableCrowding(gap, scale);
-  const prevLevel = useRef<ZoomLevel>(0);
   const prevPlan = useRef<ZoomPlan | undefined>(undefined);
-  const zLevel: ZoomLevel = zoomOn ? zoomLevel(d, prevLevel.current) : 0;
+  const zLevel: ZoomLevel = zoomOn ? zLevelIn : 0;
   const [unfoldedRaw, setUnfolded] = useState<ReadonlySet<string>>(EMPTY_IDS);
   const [showAllRaw, setShowAll] = useState<0 | 1 | 2>(0);
   const maxImportance = useMemo(() => { let m = 0; for (const n of tree.byId.values()) if (n.start !== null && n.event.importance > m) m = n.event.importance; return m; }, [tree]);
   const pointClass = zoomBars(zLevel, maxImportance).pointClass;
   const unfolded = zLevel >= 3 ? unfoldedRaw : EMPTY_IDS, showAll = pointClass > 0 && showAllRaw === pointClass;
-  const keepCards = useMemo(() => new Set([...(selected ? [selected] : []), ...(hitId ? [hitId] : []), ...open]), [selected, hitId, open]);
-  const zScale = zoomOn ? cardScale(d, zLevel) : 1;
+  // docs/602 S1: collapsed cards scale 1–1.2 with the zoom (docs/601 Q1 kept them at 1); the timeline has its own.
+  const zScale = zoomOn ? cardScale : 1;
+  // docs/602 S5: all placed events open (minus the ones closed by a click while open).
+  const on = zoomOn && allOpen;
+  const [autoClosed, setAutoClosed] = useState<ReadonlySet<string>>(EMPTY_IDS);
+  const openAll = useMemo(() => {
+    if (!on) return null;
+    const n = new Set(open);
+    for (const node of tree.byId.values()) if (node.start !== null && !autoClosed.has(node.id)) n.add(node.id);
+    return n;
+  }, [on, tree, open, autoClosed]);
+  const shownOpen = openAll ?? open;
+  // §9.3: while all open, every open card is kept a card (points and hidden events at the top of a dense work too).
+  const keepCards = useMemo(() => new Set([...(selected ? [selected] : []), ...(hitId ? [hitId] : []), ...shownOpen]), [selected, hitId, shownOpen]);
   const plan = useMemo(
     () => zoomPlan(tree, zLevel, zScale, { cards: keepCards, unfolded, showAll, folded }, prevPlan.current),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- prevPlan is a ref (set identity only)
@@ -122,9 +132,12 @@ export function EventTable({
   }, [folded, plan.autoFolded, unfolded]);
   const layoutPlan = useMemo(() => (zoomOn ? { points: plan.points, hidden: plan.hidden, scale: plan.scale } : undefined), [zoomOn, plan.points, plan.hidden, plan.scale]);
   // docs/600 §8.3 / §8.5: with levels on, the stretch cap grows with d and children stretch by time too.
-  const gapMax = zoomOn ? tableGapFor(d) : undefined;
+  // docs/601 Q2: the aligned rail lays cards out with equal gaps (no time stretch, no auto-open).
+  const equal = railMode === "aligned";
+  const gapMax = zoomOn && !equal ? tableGapFor(d) : undefined;
+  // docs/601: k only drives the time stretch, so an equal layout ignores it and keeps its identity across wheel steps.
+  const layoutK = equal ? 0 : scale;
   useLayoutEffect(() => {
-    prevLevel.current = zLevel;
     prevPlan.current = plan;
     if (zLevel < 3 && unfoldedRaw.size) setUnfolded(EMPTY_IDS);
     if (showAllRaw && showAllRaw !== pointClass) setShowAll(0);
@@ -152,34 +165,10 @@ export function EventTable({
     const known = new Set(ctx.characters.map((c) => c.id));
     return (n: TreeNode) => tableCardInput(n, known, tree);
   }, [ctx.characters, tree]);
-  const closedLayout: TableLayout = useMemo(
-    () => tableLayout(tree, heights, scale, ctx.adapter, { expanded: open, folded: viewFolded, widths, inputOf, plan: layoutPlan, gapMax, stretchChildren: zoomOn }),
-    [tree, heights, scale, ctx.adapter, open, viewFolded, widths, inputOf, layoutPlan, gapMax, zoomOn],
+  const layout: TableLayout = useMemo(
+    () => tableLayout(tree, heights, layoutK, ctx.adapter, { expanded: shownOpen, folded: viewFolded, widths, inputOf, plan: layoutPlan, gapMax, stretchChildren: zoomOn, equalGaps: equal }),
+    [tree, heights, layoutK, ctx.adapter, shownOpen, viewFolded, widths, inputOf, layoutPlan, gapMax, zoomOn, equal],
   );
-  // docs/600 §3.3 / §9.2: at level 0 a second, all-open layout (group heads, user-folded parents and the cards the
-  // user closed excepted) is laid out beside the closed one; it is shown while auto-open is on.
-  const [autoClosed, setAutoClosed] = useState<ReadonlySet<string>>(EMPTY_IDS);
-  const autoLevel = zoomOn && zLevel === 0;
-  const openAll = useMemo(() => {
-    if (!autoLevel) return null;
-    const n = new Set(open);
-    // Placed events only: the pending block is not compared by the fit check (code review P2-2).
-    for (const node of tree.byId.values()) {
-      if (autoClosed.has(node.id) || folded.has(node.id)) continue;
-      if (node.children.length && !folded.has(node.id)) continue;
-      if (node.start === null) continue;
-      n.add(node.id);
-    }
-    return n;
-  }, [autoLevel, tree, open, autoClosed, folded]);
-  const openLayout: TableLayout | null = useMemo(
-    () => (openAll ? tableLayout(tree, heights, scale, ctx.adapter, { expanded: openAll, folded: viewFolded, widths, inputOf, plan: layoutPlan, gapMax, stretchChildren: true }) : null),
-    [openAll, tree, heights, scale, ctx.adapter, viewFolded, widths, inputOf, layoutPlan, gapMax],
-  );
-  const [onRaw, setOn] = useState(false);
-  const on = autoLevel && onRaw && !!openLayout;
-  const layout: TableLayout = on ? openLayout! : closedLayout;
-  const shownOpen = on ? openAll! : open;
   const marks: AlignedRailMarks = useMemo(
     () =>
       railMode === "aligned"
@@ -225,7 +214,7 @@ export function EventTable({
     ro.observe(sc);
     return () => ro.disconnect();
   }, [scrollerRef, virtual]);
-  // One anchor for height corrections, Ctrl + wheel and auto-open switches (docs/600 §10.3): a TableAnchor restored by
+  // One anchor for height corrections, Ctrl + wheel and docs/602 zoom stops (docs/600 §10.3): a TableAnchor restored by
   // projectAnchor once the new layout is committed. While a wheel zoom is recent, the pointer's anchor stays.
   const anchor = useRef<TableAnchor | null>(null);
   const zoomAnchor = useRef<{ anchor: TableAnchor; until: number } | null>(null);
@@ -249,73 +238,21 @@ export function EventTable({
     return { a: a.id, b: b.id, f, offset: off, t: a.start };
   };
   const maxScroll = (l: TableLayout) => { const sc = scrollerRef.current; return sc ? l.height + Math.max(80, 0.67 * sc.clientHeight) + TABLE_TOP - sc.clientHeight : 0; };
-  // docs/600 §11: auto-open is decided once input has been quiet for DECIDE_IDLE_MS, on the real scroll position.
-  const auto = useRef({ latched: false, input: false, timer: 0 as ReturnType<typeof setTimeout> | 0, written: null as number | null, flipAnchor: null as TableAnchor | null, prevOn: false });
-  const decideLive = useRef({ closedLayout, openLayout, on, autoLevel, selected, hitId });
-  decideLive.current = { closedLayout, openLayout, on, autoLevel, selected, hitId };
-  const decide = useRef(() => {});
-  decide.current = () => {
-    const sc = scrollerRef.current, L0 = decideLive.current;
-    if (!sc || !L0.autoLevel || !L0.openLayout) return;
-    const shown = L0.on ? L0.openLayout : L0.closedLayout;
-    const viewTop = sc.scrollTop - TABLE_TOP, h = sc.clientHeight;
-    let fits: boolean | null, pick: TableAnchor | null = null;
-    if (L0.on) fits = tableAutoOpenFits(L0.closedLayout, L0.openLayout, { top: viewTop, bottom: viewTop + h }, AUTO_OPEN_KEEP);
-    else {
-      // §12.2: the located / current hit card in view, then a recent wheel anchor, then the first visible card.
-      const inView = (id: string | null) => { const c = id ? shown.byId.get(id) : undefined; return c && c.top < viewTop + h && c.top + c.height > viewTop ? id : null; };
-      const target = inView(L0.hitId) ?? inView(L0.selected);
-      const z = zoomAnchor.current && zoomAnchor.current.until > performance.now() ? zoomAnchor.current.anchor : null;
-      const first = firstVisible(shown, sc.scrollTop);
-      const off = (id: string) => headOffset(shown, id) ?? 0;
-      pick = target ? { a: target, offset: off(target) } : z ? (z.b ? z : { ...z, offset: off(z.a) }) : first ? { a: first, offset: off(first) } : null;
-      const st = pick ? projectAnchor(L0.openLayout, pick, maxScroll(L0.openLayout), TABLE_TOP) : sc.scrollTop;
-      const top = (st ?? sc.scrollTop) - TABLE_TOP;
-      fits = tableAutoOpenFits(L0.closedLayout, L0.openLayout, { top: top - 8, bottom: top + h + 8 }, AUTO_OPEN_GAP);
-    }
-    const a = auto.current, next = decideAutoOpen({ on: L0.on, latched: a.latched, fits, input: a.input });
-    a.input = false;
-    a.latched = next.latched;
-    if (next.on !== L0.on) {
-      // §12.3 P3-o: the switch commit restores this anchor (the restore effect below).
-      const off = (id: string) => headOffset(shown, id) ?? 0;
-      const first = firstVisible(shown, sc.scrollTop);
-      a.flipAnchor = pick ?? (first ? { a: first, offset: off(first) } : null);
-      setOn(next.on);
-    }
-  };
-  const scheduleDecide = useRef((input: boolean) => {
-    const a = auto.current;
-    if (input) a.input = true;
-    if (a.timer) clearTimeout(a.timer);
-    a.timer = setTimeout(() => { a.timer = 0; decide.current(); }, DECIDE_IDLE_MS);
-  }).current;
-  useEffect(() => () => { if (auto.current.timer) clearTimeout(auto.current.timer); }, []);
-  // §11.1: leaving level 0 (or levels off) clears auto-open and the cards closed in it.
+  // docs/600 §11.1: the table's own scroll writes (anchor restores) are not user scrolls (docs/602 §9.5: the
+  // fit-based auto-open decision is gone, this is all that is left of it).
+  const auto = useRef({ written: null as number | null });
+  // docs/602 S6: leaving all-open clears the cards closed by a click in it.
   useLayoutEffect(() => {
-    if (autoLevel) return;
-    const a = auto.current;
-    if (a.timer) { clearTimeout(a.timer); a.timer = 0; }
-    a.latched = false;
-    if (onRaw) setOn(false);
-    if (autoClosed.size) setAutoClosed(EMPTY_IDS);
-  }, [autoLevel, onRaw, autoClosed]);
-  // §12.1: any zoom change (the wheel, the toolbar − / + and 复位) is user input; the first render is not
-  // (code review P2-1).
-  const lastScale = useRef(scale);
-  useLayoutEffect(() => {
-    if (lastScale.current === scale) return;
-    lastScale.current = scale;
-    scheduleDecide(true);
-  }, [scale, scheduleDecide]);
-  // A locate from the tree, the search or a deep link (PlanningWorkspace) is user input (§12.2).
+    if (!on && autoClosed.size) setAutoClosed(EMPTY_IDS);
+  }, [on, autoClosed]);
+  // A locate from the tree, the search or a deep link (PlanningWorkspace) drops a recent wheel anchor (docs/602 §9.5).
   useEffect(() => {
     const sc = scrollerRef.current;
     if (!sc) return;
-    const located = () => { zoomAnchor.current = null; auto.current.written = null; scheduleDecide(true); };
+    const located = () => { zoomAnchor.current = null; auto.current.written = null; };
     sc.addEventListener("worldline-locate", located);
     return () => sc.removeEventListener("worldline-locate", located);
-  }, [scrollerRef, scheduleDecide]);
+  }, [scrollerRef]);
 
   // docs/600 §3.1 / §8.6 P2-6: the fold button and the card toggle, both with stable identities (EventCard is memo).
   const overLive = useRef({ zLevel, onFold, on, expanded, shownOpen, ctx });
@@ -416,7 +353,9 @@ export function EventTable({
         className={`${s.slot} ${isOpen ? s.slotOpen : ""} ${c.groupHead ? s.slotHead : ""} ${c.stacked ? s.slotStack : ""}`}
         style={{ top, marginLeft: left }}
       >
-        {z < 1 ? <div data-card-zoom={z} className={s.tableZoom} style={{ zoom: z, width: c.width || undefined }}>{cardEl}</div> : cardEl}
+        {/* docs/602 §9.7: with zoom levels on a collapsed card always sits in the zoom box (also at 1), so crossing
+         * scale 1 does not remount it; open cards and the levels-off table have none. */}
+        {zoomOn && !isOpen ? <div data-card-zoom={z} className={s.tableZoom} style={{ zoom: z, width: c.width || undefined }}>{cardEl}</div> : cardEl}
       </div>
     );
   }, (g, top, left, inner) => {
@@ -468,14 +407,27 @@ export function EventTable({
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout, openKey, scrollerRef]);
+  // docs/601 §8.4 (Q7): the first visible card and its screen offset, recorded on every scroll and after every
+  // layout commit while the old layout is still in place; a rail mode switch restores it.
+  const modeAnchor = useRef<{ mode: RailMode; anchor: TableAnchor | null }>({ mode: railMode, anchor: null });
+  const recordModeAnchor = () => {
+    const sc = scrollerRef.current, l = live.current.layout;
+    const id = sc ? firstVisible(l, sc.scrollTop) : null, off = id ? headOffset(l, id) : null;
+    modeAnchor.current = { mode: railMode, anchor: id && off !== null ? { a: id, offset: off } : null };
+  };
+  // docs/602 S8 / §9.4: a zoom step that changes the card scale or all-open keeps the first card in view (the wheel's
+  // pointer anchor wins). The key is compared in the layout commit and rewritten after every commit, so a step that
+  // leaves the layout alone is not replayed by a later, unrelated commit.
+  // The top row last reported to onScrollTop (docs/602 §11.3: report changes only).
+  const lastRow = useRef<string | null | undefined>(undefined);
+  const zoomKey = `${zScale}|${on ? 1 : 0}`;
+  const lastZoomKey = useRef(zoomKey);
   useLayoutEffect(() => {
     const sc = scrollerRef.current, au = auto.current;
-    // §12.3 P3-o: the commit that switches auto-open restores the anchor decide() picked (unless a wheel wrote one).
-    const flipped = on !== au.prevOn;
-    au.prevOn = on;
-    const a = anchor.current ?? (flipped ? au.flipAnchor : null);
+    const modeSwitch = modeAnchor.current.mode !== railMode ? modeAnchor.current.anchor : null;
+    const zoomed = lastZoomKey.current !== zoomKey ? modeAnchor.current.anchor : null;
+    const a = anchor.current ?? modeSwitch ?? zoomed;
     anchor.current = null;
-    if (flipped) au.flipAnchor = null;
     if (sc && a) {
       const st = projectAnchor(layout, a, maxScroll(layout), TABLE_TOP);
       if (st !== null && Math.abs(st - sc.scrollTop) > 0.5) {
@@ -485,9 +437,10 @@ export function EventTable({
       }
     }
     sync.current();
-    scheduleDecide(false);
+    recordModeAnchor();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout, scrollerRef]);
+  useLayoutEffect(() => { lastZoomKey.current = zoomKey; });
 
   // Ctrl + wheel zoom around the card under the pointer. React's wheel listener is passive, so a native one is needed
   // to stop the page zoom and the scroll.
@@ -506,7 +459,6 @@ export function EventTable({
       zoomAnchor.current = pa ? { anchor: pa, until: performance.now() + 400 } : null;
       anchor.current = pa;
       auto.current.written = null;
-      scheduleDecide(true);
       onZoomRef.current(step, pa ? { id: pa.a, offset: pa.offset } : null);
     };
     sc.addEventListener("wheel", wheel, { passive: false });
@@ -540,13 +492,19 @@ export function EventTable({
       title="Ctrl + 滚轮缩放时间轴"
       onScroll={(e) => {
         sync.current();
-        onScrollTop(firstVisible(layout, e.currentTarget.scrollTop));
+        recordModeAnchor();
+        // docs/602: an anchor restore after a card-scale step fires a scroll with the same top row; report changes only,
+        // so a zoom step renders PlanningWorkspace once (TZB-09).
+        const row = firstVisible(layout, e.currentTarget.scrollTop);
+        if (row !== lastRow.current) { lastRow.current = row; onScrollTop(row); }
         // docs/600 §11.1: the table's own anchor restore is not user input; everything else is.
         const au = auto.current;
         if (isProgrammaticScroll(au.written, e.currentTarget.scrollTop)) { au.written = null; return; }
         au.written = null;
         if (zoomAnchor.current && zoomAnchor.current.until > performance.now()) zoomAnchor.current = null;
-        scheduleDecide(true);
+        // docs/601 code review P1-1: a user scroll drops a wheel anchor no layout commit consumed (aligned mode keeps
+        // its layout across wheel steps within a level), so a later commit does not jump back to it.
+        anchor.current = null;
       }}
     >
       <div data-sticky-year="" className={s.stickyYear}>{sticky && <span>{sticky}</span>}</div>
@@ -563,7 +521,7 @@ export function EventTable({
       {/* docs/588 §2: room above the first card so the toggle never covers it at the top. */}
       <div aria-hidden style={{ height: TABLE_TOP }} />
       {/* Bottom room of at least 2/3 of the viewport, so locate can bring the last card to the upper third (WU-62). */}
-      <div data-event-table="" data-zoom-level={zLevel} data-crowding={Number.isFinite(d) ? d.toFixed(3) : "Infinity"} {...(on ? { "data-auto-open": "" } : {})} {...(virtual ? { "data-virtual": "" } : {})} style={{ position: "relative", height: `calc(${layout.height}px + max(80px, 67%))` }}>
+      <div data-event-table="" data-zoom-level={zLevel} {...(zoomOn ? { "data-card-scale": zScale } : {})} data-crowding={Number.isFinite(d) ? d.toFixed(3) : "Infinity"} {...(on ? { "data-auto-open": "" } : {})} {...(virtual ? { "data-virtual": "" } : {})} style={{ position: "relative", height: `calc(${layout.height}px + max(80px, 67%))` }}>
         {emptyText && <p data-filter-empty="" className={s.emptyNote}>{emptyText}</p>}
         <div
           className={s.rail}
@@ -594,7 +552,7 @@ export function EventTable({
             <div key={`b${i}`} data-rail-badge={b.kind} className={s.railBadge} style={{ top: b.y }}>{b.text}</div>
           ))}
           {layout.breaks.map((b, i) => (
-            <div key={`k${i}`} data-rail-break={b.kind} className={s.railBreak} style={{ top: b.top, height: b.height }}>
+            <div key={`k${i}`} data-rail-break={b.kind} className={`${s.railBreak} ${layout.equal ? s.railBreakTight : ""}`} style={{ top: b.top, height: b.height }}>
               {b.kind === "gap" ? `相隔 ${gapText(b.gap, ctx.adapter)}` : "时间待定位"}
             </div>
           ))}

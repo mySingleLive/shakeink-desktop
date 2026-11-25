@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>docs/602 设计稿 · 事件表缩放：卡片尺寸、两端停止、自动全部展开</title>
+<style>
+/* Theme values copied from src/app/globals.css (.ink 玄墨 / .paper 宣纸). */
+.ink{--background:#0d0b0a;--foreground:#ece7e1;--card:#141110;--primary:#e07a5f;--muted:#181413;--muted-foreground:#9a918a;--border:rgba(255,248,240,.09);--input:rgba(255,248,240,.13);
+ --event-conflict:#e8735f;--event-scheme:#d9ab5b;--event-reveal:#67b6cc;--event-relation:#cf8bbd;--event-growth:#8cc48a;--event-change:#a08cf0;--event-other:#8d837c}
+.paper{--background:#f4edda;--foreground:#2b251b;--card:#faf5e8;--primary:#b03524;--muted:#eae1c8;--muted-foreground:#7d7157;--border:#d8cba6;--input:#cfc29b;
+ --event-conflict:#bf4633;--event-scheme:#8f6721;--event-reveal:#29788e;--event-relation:#a2538d;--event-growth:#3f7b3d;--event-change:#6f5bd0;--event-other:#776d66}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--background);color:var(--foreground);font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:disabled{opacity:.35;cursor:default}
+/* Review bar: not part of the product. */
+.review{position:sticky;top:0;z-index:20;display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-height:40px;padding:6px 18px;background:#000;color:#bbb;font-size:12px}
+.review b{color:#fff}.review button{padding:3px 10px;border:1px solid #444;border-radius:6px}
+.review button[aria-pressed=true]{background:#fff;color:#000}.review .note{margin-left:auto;color:#888}
+.page{padding:14px 24px 40px}
+h1{margin:0 0 8px;font-size:20px;font-weight:600;letter-spacing:.04em}
+h2{margin:26px 0 8px;font-size:14px;font-weight:600}
+p.d{margin:0 0 10px;color:var(--muted-foreground);font-size:12px;max-width:980px}
+/* ---------- toolbar (WorldlineToolbar zoom group, unchanged look) ---------- */
+.bar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.zoom{display:inline-flex;align-items:center;height:28px;padding:0 3px;border-radius:9px;border:1px solid var(--input);background:var(--muted)}
+.zoom button{width:24px;height:22px;border-radius:6px;font-size:15px;color:var(--muted-foreground)}
+.zoom button:not(:disabled):hover{background:var(--background);color:var(--foreground)}
+.zoom .value{min-width:54px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}
+.zoom .reset{width:auto;padding:0 7px;font-size:12px}
+.status{color:var(--muted-foreground);font-size:12px}
+/* ---------- table (worldline.module.css, unchanged except the NEW scale box) ---------- */
+.table{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--background)}
+.rail{position:absolute;left:0;top:0;bottom:0;width:210px}
+.railLine{position:absolute;left:158px;top:8px;bottom:8px;width:2px;margin-left:-1px;background:linear-gradient(transparent,var(--input) 18px,var(--input) calc(100% - 18px),transparent)}
+.railDot{position:absolute;left:158px;width:13px;height:13px;border-radius:50%;background:var(--ec);border:2px solid var(--background);box-shadow:0 0 0 1.5px var(--ec);transform:translate(-50%,-50%);transition:top .12s}
+.railDot.d1{width:9px;height:9px}
+.railLabel{position:absolute;right:66px;transform:translateY(-50%);white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted-foreground);padding:1px 7px;transition:top .12s}
+.railBadge{position:absolute;left:158px;transform:translate(-50%,-50%);padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;color:var(--primary);background:var(--background);border:1px solid color-mix(in srgb,var(--primary) 45%,var(--input));transition:top .12s}
+.cards{position:relative;margin-left:210px;padding:0 24px 0 12px}
+.slot{position:absolute;left:12px;right:24px;max-width:880px;transition:top .12s}
+.card{--ec:var(--event-other);position:relative;border-radius:9px;border:1px solid var(--border);background:linear-gradient(90deg,color-mix(in srgb,var(--ec) 13%,var(--card)),var(--card) 46%)}
+.card::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--ec)}
+.slot>.card,.slot>.scale>.card{width:fit-content;min-width:220px;max-width:100%}
+.head{display:flex;align-items:flex-start;gap:9px;padding:7px 6px 7px 14px;min-width:0}
+.ln{flex:none;display:flex;align-items:center;height:18px}
+.dot{flex:none;border-radius:50%;background:var(--ec)}.dot.i1{width:6px;height:6px}.dot.i2{width:9px;height:9px}
+.title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;line-height:18px;height:18px;font-size:13px}
+.avatars{display:inline-flex;padding-left:4px}.avatars i{display:grid;place-items:center;width:18px;height:18px;margin-left:-5px;border-radius:50%;font-style:normal;font-size:10px;font-weight:600;color:var(--background);background:color-mix(in srgb,var(--ec) 70%,var(--foreground));border:1.5px solid var(--card)}
+.avatars i:first-child{margin-left:0}
+.kids{padding:0 7px;border-radius:8px;border:1px solid var(--border);color:var(--muted-foreground);font-size:11px;line-height:16px}
+.more{width:24px;height:24px;margin:-3px 0;display:grid;place-items:center;color:var(--muted-foreground)}
+.groupBox{position:absolute;left:12px;right:24px;max-width:940px;border-radius:12px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ec) 22%,var(--border)),inset 3px 0 0 var(--ec);background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 7%,transparent),transparent 80%);transition:top .12s,height .12s}
+.groupBox>.slot.head0{left:0;right:0;max-width:none;top:0}
+.groupBox .card.gh{width:100%;min-width:0;border:0;border-radius:12px 12px 0 0;box-shadow:inset 3px 0 0 var(--ec),inset 0 -1px 0 var(--border);background:color-mix(in srgb,var(--ec) 12%,var(--card))}
+.groupBox .card.gh::before{display:none}
+.card.gh>.head{padding-top:9px;padding-bottom:9px}.card.gh .title{font-weight:600}
+.slot.open>.card{width:auto;background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 11%,var(--card)),var(--card) 70px);box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
+.slot.open .head{padding-top:12px;padding-bottom:12px}.slot.open .title{font-weight:600;font-size:14px;white-space:normal;height:auto}
+.slot.open .fact{padding:0 16px 14px 30px;font-size:13px;line-height:1.75;color:color-mix(in srgb,var(--foreground) 88%,var(--muted-foreground))}
+/* NEW docs/602: the collapsed card scale box. CSS zoom s ∈ [1, 1.2]; the layout already counts in scaled px. */
+.scale{position:relative;width:fit-content;max-width:none}
+.slot>.scale>.card{width:fit-content;min-width:220px;max-width:none}
+.head0>.scale>.card{width:100%}
+/* Comparison strip */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.trio .cap{margin:0 0 6px;font-size:12px;color:var(--muted-foreground)}
+.trio .cap b{color:var(--foreground);font-weight:600}
+.chart{display:block;width:100%;max-width:980px;height:auto}
+.chart text{font-size:11px;fill:var(--muted-foreground)}
+</style>
+</head>
+<body class="ink">
+<div class="review">
+  <b>审核栏（不属于产品）</b>
+  主题 <button data-theme="ink" aria-pressed="true">玄墨</button><button data-theme="paper" aria-pressed="false">宣纸</button>
+  模式 <button data-mode="aligned" aria-pressed="true">对齐</button><button data-mode="linear" aria-pressed="false">等距</button>
+
+  <span class="note">示例数据仅用于设计稿；表内可 Ctrl/⌘ + 滚轮，或用 − / + / 复位；“设计说明”一行不属于产品</span>
+</div>
+<div class="page">
+  <h1>docs/602 · 事件表缩放：卡片尺寸、两端停止、自动全部展开</h1>
+  <p class="d">每一个缩放步都有可见变化：收起卡片（含父事件头、层叠卡）在 1.0× – 1.2× 之间随缩放变大变小（复位 1.1×）；卡片已最小时，再缩小直接跳到下一处分级变化（父事件折叠 → 一般隐藏 → 重要转时间点 → 重要隐藏），中间无变化的步被跳过；放大反向逐级回来。卡片到最大后再放大一步，所有事件卡片自动展开（含父事件头）。两端到头后滚轮继续滚动不累计，反方向第一步立即生效，− / + 按钮置灰。</p>
+
+  <h2>① 可操作视图（读数与产品相同，为 exp(e) × 100%）</h2>
+  <div class="bar">
+    <span class="zoom"><button id="zo" title="缩小">−</button><span class="value" id="zv">100%</span><button id="zi" title="放大">+</button><button class="reset" id="zr">复位</button></span>
+    <span class="status" id="st"></span>
+  </div>
+  <div class="table" id="tb"><div class="rail" id="rail"></div><div class="cards" id="cards"></div></div>
+
+  <h2>② 档位表（真实数据 LOTM：复位 d = 21.657，级别 2；横向为滚轮从复位起的步数）</h2>
+  <p class="d">“跳过”指该方向上被合并的无变化步；放大时退出某级需 d ≥ 阈值 × 1.15（现有回差），所以放大与缩小停的位置略有不同。等距模式在全部展开后继续放大仍会拉开卡片间距，直到间距不再增长才停止。</p>
+  <div id="ladder"></div>
+</div>
+<script>
+const SMIN=1,SMAX=1.2,SRESET=1.1,WHEEL=Math.log(1.15),BTN=Math.log(1.25),E=6*WHEEL;
+const D0=21.657, FLOOR_E=Math.ceil(Math.log(0.12/D0)/Math.log(1.15)-1e-9)*Math.log(1.15); // the floor snaps onto the wheel-step grid
+const T=[160,40,10,2.5,0.6,0.15], HYS=1.15;
+const scaleOf=e=>Math.round(Math.min(SMAX,Math.max(SMIN,SRESET+0.1*e/E))*1000)/1000;
+const levelOf=(e,prev)=>{const d=D0*Math.exp(e),at=k=>T.filter(t=>d<t*k).length,down=at(1);return down>=prev?down:Math.max(down,Math.min(prev,at(HYS)));};
+// The open point: one wheel step past the size max and level ≤ 1 (aligned cap); linear widens 4 more steps (illustrative).
+const eL1=Math.ceil(Math.log(40*HYS/D0)/WHEEL-1e-9)*WHEEL, E_OPEN=Math.max(E,eL1)+WHEEL;
+let mode='aligned', e=0, lv=2, skipped=0, manual=false;
+const hiOf=()=>mode==='aligned'?E_OPEN:E_OPEN+4*WHEEL;
+const stateOf=(x,prev)=>{const L=levelOf(x,prev);return {s:scaleOf(x),L,open:x>=E_OPEN-1e-9,gap:mode==='linear'?Math.min(x,hiOf()):0};};
+const same=(a,b)=>a.s===b.s&&a.L===b.L&&a.open===b.open&&a.gap===b.gap;
+// docs/602: a step that would change nothing keeps going in its direction to the next change; at a bound it stays.
+function step(dir,size){
+ const cur=stateOf(e,lv); let x=e, n=0, L=lv;
+ for(let i=0;i<400;i++){
+  const nx=Math.min(hiOf(),Math.max(FLOOR_E,x+dir*size)); if(Math.abs(nx-x)<1e-12) break;
+  x=nx; n++; const st=stateOf(x,L); L=st.L;
+  if(!same(st,cur)) { e=x; lv=L; skipped=n-1; return; }
+ }
+ skipped=0; // nothing left to change in this direction: stay put
+}
+const C={conflict:'--event-conflict',scheme:'--event-scheme',reveal:'--event-reveal',relation:'--event-relation',growth:'--event-growth',other:'--event-other'};
+const EV=[
+ {y:'第一年',d:'3月2日',t:'渡口初遇，旧识重逢',c:'relation',i:2,p:2,f:'两人在渡口偶遇，对方认出了他少年时的佩剑。'},
+ {y:'第一年',d:'4月18日',t:'城南货栈起火',c:'conflict',i:1,f:'火势蔓延半条街，商会损失惨重。'},
+ {y:'第一年',d:'6月9日',t:'夜访藏书楼，取得残卷',c:'reveal',i:3,p:1,f:'残卷记载了失传的阵法，也牵出守楼人的身份。',kids:[
+   {d:'6月9日',t:'守楼人设下的三道考验',c:'reveal',i:2,f:'第三道考验要求说出师门旧号。'},
+   {d:'6月11日',t:'残卷上的暗记',c:'reveal',i:1,f:'暗记与商会账册的印记相同。'},
+   {d:'6月20日',t:'向师兄求证暗记来历',c:'scheme',i:2,p:1,f:'师兄避而不答，只让他别再追查。'}]},
+ {y:'第一年',d:'9月1日',t:'商会换届，暗中站队',c:'scheme',i:2,p:3,f:'新会长上任，三方势力各自拉拢。'},
+ {y:'第二年',d:'1月15日',t:'第一次独立完成委托',c:'growth',i:2,p:1,f:'护送货物出城，途中化解一次截杀。'},
+ {y:'第二年',d:'2月3日',t:'旧伤复发',c:'other',i:1,f:'左臂旧伤在雨夜发作，休养半月。'},
+ {y:'第二年',d:'5月27日',t:'与商会正面冲突',c:'conflict',i:3,p:2,f:'账册之事败露，双方在码头对峙。'},
+];
+const av=n=>n?`<span class="ln"><span class="avatars">${['甲','乙','丙'].slice(0,n).map(x=>`<i>${x}</i>`).join('')}</span></span>`:'';
+const head=(ev,kids,bold)=>`<div class="head"${bold?' style="padding-top:9px;padding-bottom:9px"':''}><span class="ln"><span class="dot i${ev.i}"></span></span><span class="title"${bold?' style="font-weight:600"':''}>${ev.t}</span>${av(ev.p||0)}${kids?`<span class="ln"><span class="kids">${kids}</span></span>`:''}<span class="ln"><span class="more">⋯</span></span></div>`;
+const openCard=(ev,kids)=>`<div class="card open" style="--ec:var(${C[ev.c]})"><div class="head" style="padding-top:12px;padding-bottom:12px"><span class="ln"><span class="dot i${ev.i}"></span></span><span class="title" style="font-weight:600;font-size:14px">${ev.t}</span>${av(ev.p||0)}${kids?`<span class="ln"><span class="kids">${kids}</span></span>`:''}<span class="ln"><span class="more">⋯</span></span></div><div class="fact">${ev.f}</div></div>`;
+const OPEN_H=92;
+const POINT=`display:flex;align-items:center;gap:5px;height:18px;font-size:11px;color:var(--muted-foreground);white-space:nowrap`;
+// Per level (docs/593 zoomBars, max importance 3): hide below `hide`, a time point below `bar`.
+const bars=L=>({hide:L>=6?3:L>=4?2:0,bar:L>=5?3:L>=2?2:0});
+const linGap=x=>mode==='linear'?Math.round(Math.min(160,Math.max(0,8*(x/WHEEL+10)))):0;
+function build(st){
+ const {s,L,open}=st, b=bars(L), extra=linGap(e);
+ const rows=[], groups=[]; let y=30, first=true, lastHead=null, year=null;
+ const gap=()=>{ if(!first) y+=6; first=false; };
+ const widen=(ev,ho)=>{ if(ev.y&&year!==null&&ev.y!==year&&lastHead!==null&&y+ho<lastHead+40) y=lastHead+40-ho; if(ev.y) year=ev.y; };
+ const shown=ev=>ev.i>=b.hide||(ev.kids||[]).some(shown);
+ const isCard=ev=>ev.i>=b.bar||(ev.kids||[]).some(isCard);
+ const put=(ev,depth,root)=>{
+  if(!shown(ev)) return;
+  gap(); if(root&&rows.length&&extra) y+=extra;
+  if(!isCard(ev)){ widen(ev,9); rows.push({kind:'point',ev,top:y,head:y+9,depth}); lastHead=y+9; y+=18; return; }
+  const kids=(ev.kids||[]).filter(shown);
+  if(kids.length&&L<3){
+   const ho=open?21:18*s; widen(ev,ho); const g={ev,top:y,depth}; groups.push(g);
+   rows.push({kind:open?'ghOpen':'gh',ev,top:y,head:y+ho,g,n:ev.kids.length}); lastHead=y+ho; y+=open?OPEN_H:36*s;
+   y+=4-6; kids.forEach(k=>put(k,depth+1,false)); y+=10; g.bottom=y; return;
+  }
+  if(open){ widen(ev,22); rows.push({kind:'open',ev,top:y,head:y+22,depth,n:ev.kids?.length}); lastHead=y+22; y+=OPEN_H; return; }
+  const stacked=kids.length>0, h=(stacked?48:34)*s, ho=(stacked?20:17)*s;
+  widen(ev,ho); rows.push({kind:stacked?'stack':'card',ev,top:y,head:y+ho,depth,n:ev.kids?.length}); lastHead=y+ho; y+=h;
+ };
+ EV.forEach(ev=>put(ev,0,true));
+ return {rows,groups,height:y+16};
+}
+function render(host,rail,st){
+ const Lo=build(st), s=st.s; host.innerHTML=''; rail.innerHTML='<div class="railLine"></div>';
+ host.parentElement.style.height=Lo.height+'px';
+ let year=null, prev=null;
+ const boxOf=new Map();
+ for(const g of Lo.groups){ const box=document.createElement('div'); box.className='groupBox'; box.style.cssText=`top:${g.top}px;height:${g.bottom-g.top}px;margin-left:${g.depth*28}px;--ec:var(${C[g.ev.c]})`; host.appendChild(box); boxOf.set(g.ev,box); }
+ for(const r of Lo.rows){
+  const ec=`var(${C[r.ev.c]})`, left=(r.depth||0)*28;
+  if(r.ev.y&&r.ev.y!==year){ const by=year===null?r.head-22:(prev.head+r.head)/2; rail.insertAdjacentHTML('beforeend',`<span class="railBadge" style="top:${by}px">${r.ev.y}</span>`); year=r.ev.y; }
+  rail.insertAdjacentHTML('beforeend',`<span class="railDot d${r.ev.i}" style="top:${r.head}px;--ec:${ec}"></span><span class="railLabel" style="top:${r.head}px">约${r.ev.d}</span>`);
+  prev=r;
+  let html;
+  if(r.kind==='point') html=`<div class="slot" style="top:${r.top}px;margin-left:${left}px;--ec:${ec}"><div style="${POINT}"><span class="dot i1" style="margin:0 3px"></span><time>约${r.ev.d}</time><span>${r.ev.t.slice(0,7)}</span></div></div>`;
+  else if(r.kind==='gh'||r.kind==='ghOpen'){ const box=boxOf.get(r.ev); box.insertAdjacentHTML('beforeend', r.kind==='gh'
+     ? `<div class="slot head0"><div class="scale" style="zoom:${s};width:100%"><div class="card gh" style="--ec:${ec}">${head(r.ev,r.n,true)}</div></div></div>`
+     : `<div class="slot head0 open">${openCard(r.ev,r.n).replace('class="card open"','class="card gh open"')}</div>`); continue; }
+  else if(r.kind==='open') html=`<div class="slot open" style="top:${r.top}px;margin-left:${left}px">${openCard(r.ev,r.n)}</div>`;
+  else if(r.kind==='stack') html=`<div class="slot" style="top:${r.top}px;margin-left:${left}px"><div class="scale" style="zoom:${s}"><div class="card" style="--ec:${ec};border-radius:12px;margin-bottom:8px;background:linear-gradient(90deg,color-mix(in srgb,${ec} 22%,var(--card)),color-mix(in srgb,${ec} 7%,var(--card)));box-shadow:0 4px 0 -1px color-mix(in srgb,${ec} 18%,var(--card)),0 8px 0 -2px color-mix(in srgb,${ec} 9%,var(--card))">${head(r.ev,r.n,true)}</div></div></div>`;
+  else html=`<div class="slot" style="top:${r.top}px;margin-left:${left}px"><div class="scale" style="zoom:${s}"><div class="card" style="--ec:${ec}">${head(r.ev)}</div></div></div>`;
+  host.insertAdjacentHTML('beforeend',html);
+ }
+}
+const LEVEL_TEXT=['原样','原样','一般 → 时间点','父事件折叠','一般隐藏','重要 → 时间点','重要隐藏'];
+const $=id=>document.getElementById(id);
+function update(){
+ const st=stateOf(e,lv); lv=st.L;
+ $('zv').textContent=Math.round(Math.exp(e)*100)+'%';
+ const canIn=nextChange(+1), canOut=nextChange(-1);
+ $('zi').disabled=!canIn; $('zo').disabled=!canOut;
+ const stp=Math.round(e/WHEEL);
+ $('st').textContent=`设计说明：滚轮步 ${stp>0?'+':''}${stp} · 卡片 ${st.s.toFixed(3)}× · 标题 ${(13*st.s).toFixed(1)}px · 级别 ${st.L}（${LEVEL_TEXT[st.L]}）${st.open?' · 全部展开':''}${skipped?` · 本步跳过 ${skipped} 个无变化步`:''}${!canIn?' · 已到放大上限':''}${!canOut?' · 已到缩小下限':''}`;
+ render($('cards'),$('rail'),st);
+}
+// Whether a step in this direction would change anything (the − / + buttons grey out when not).
+function nextChange(dir){ const se=e,sl=lv,sk=skipped; step(dir,WHEEL); const moved=e!==se; e=se; lv=sl; skipped=sk; return moved; }
+function go(dir,size){ step(dir,size); update(); }
+$('zi').onclick=()=>go(1,BTN); $('zo').onclick=()=>go(-1,BTN);
+$('zr').onclick=()=>{ e=0; lv=2; skipped=0; update(); };
+$('tb').addEventListener('wheel',ev=>{ if(!(ev.ctrlKey||ev.metaKey)) return; ev.preventDefault(); go(ev.deltaY>0?-1:1,WHEEL); },{passive:false});
+document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>{document.body.className=b.dataset.theme;document.querySelectorAll('[data-theme]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-pressed',x===b));e=Math.min(e,hiOf());update();ladder();});
+// ② ladder: every stop from the floor up, then from the top down (wheel steps, the current mode).
+function ladder(){
+ const keep=[e,lv,skipped], rec=[];
+ const snap=dir=>{ const st=stateOf(e,lv); rec.push({dir,stp:Math.round(e/WHEEL),pct:Math.round(Math.exp(e)*100),s:st.s,L:st.L,open:st.open,skip:skipped}); };
+ e=0; lv=2; for(let i=0;i<200;i++){ const se=e; step(-1,WHEEL); if(e===se) break; } skipped=0; snap('↑');
+ for(let i=0;i<200;i++){ const se=e; step(1,WHEEL); if(e===se) break; snap('↑'); }
+ for(let i=0;i<200;i++){ const se=e; step(-1,WHEEL); if(e===se) break; snap('↓'); }
+ [e,lv,skipped]=keep;
+ const cell='padding:3px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap';
+ const tr=r=>`<tr><td style="${cell}">${r.dir}</td><td style="${cell}">${r.stp>0?'+':''}${r.stp}</td><td style="${cell}">${r.pct}%</td><td style="${cell}">${r.s.toFixed(3)}×</td><td style="${cell}">${r.L} ${LEVEL_TEXT[r.L]}</td><td style="${cell}">${r.open?'全部展开':''}</td><td style="${cell};color:var(--muted-foreground)">${r.skip?`跳过 ${r.skip} 步`:''}</td></tr>`;
+ const up=rec.filter(r=>r.dir==='↑'), dn=rec.filter(r=>r.dir==='↓');
+ const tbl=(list,cap)=>`<div><p class="d" style="margin:0 0 4px"><b style="color:var(--foreground)">${cap}</b>（${list.length} 档）</p><table style="border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums"><tr>${['','步','读数','卡片','级别','展开',''].map(h=>`<th style="${cell};color:var(--muted-foreground);font-weight:500">${h}</th>`).join('')}</tr>${list.map(tr).join('')}</table></div>`;
+ $('ladder').innerHTML=`<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">${tbl(up,'从缩小下限一路放大')}${tbl(dn,'从放大上限一路缩小')}</div>`;
+}
+update(); ladder();
+</script>
+</body>
+</html>
