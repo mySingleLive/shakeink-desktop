@@ -44,7 +44,7 @@ export class WorkspaceDraftSource {
     if (ids.size !== tabs.length || value.activeTabId !== null && !ids.has(value.activeTabId)) throw new Error("INVALID_WORKSPACE_DRAFT")
     const layout = value.layout === null ? null : workspaceLayoutSchema.parse(value.layout)
     this.pending = structuredClone(layout); this.last = structuredClone(layout)
-    useTabsStore.setState({ tabs: structuredClone(tabs), activeTabId: value.activeTabId, subTabs: structuredClone(value.subTabs), panelFocus: null })
+    useTabsStore.setState({ tabs: structuredClone(tabs), activeTabId: value.activeTabId, previousTabIds: [], subTabs: structuredClone(value.subTabs), panelFocus: null })
     this.applyPending(); this.changed()
   }
   subscribe(listener: () => void) {

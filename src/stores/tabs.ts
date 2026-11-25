@@ -206,6 +206,8 @@ interface TabsState {
   /** 打开/激活 tab 的单调计数：重复点击已激活 tab 时 activeTabId 不变，
       靠它让布局层感知「用户又点了一次」，从而重新展开已隐藏的内容区 */
   activationNonce: number
+  /** 当前 tab 之前浏览过的 tab，按时间从旧到新去重记录；不包含当前项且不跨工作区恢复。 */
+  previousTabIds: string[]
   /** 跨面板聚焦请求：打开 tab 后让目标面板选中指定设定（对话实体芯片/改动卡片用），被消费前一直保留；concept 为设定内的子概念名（滚动定位并高亮） */
   panelFocus: PanelFocus | null
   /** 面板内的子视图状态（如角色面板的子 Tab），按 tab.id 记忆：
@@ -216,7 +218,7 @@ interface TabsState {
   openTab: (tab: Tab) => void
   /** 可等待的导航开启；取消或源/目标失效时不改变当前激活。 */
   openTabForNavigation: (tab: Tab, signal: AbortSignal) => Promise<boolean>
-  /** 关闭 tab：若关闭的是激活 tab，则激活相邻（优先左侧）tab */
+  /** 关闭 tab：若关闭的是激活 tab，则回到上一个浏览的 tab；无历史时激活相邻（优先左侧）tab */
   closeTab: (id: string) => void
   activateTab: (id: string) => void
   /** Reorder open tabs without leaving a scene or changing panel identity. */
@@ -266,13 +268,25 @@ function awaitNavigationGuard(guard: () => Promise<void>, signal: AbortSignal): 
     } catch (error) { signal.removeEventListener("abort", abort); reject(error) }
   })
 }
-function activation(state: TabsState, id: string) {
-  return state.tabs.some(tab => tab.id === id) ? { activeTabId: id, activationNonce: state.activationNonce + 1 } : state
+function activation(state: TabsState, id: string, tabs = state.tabs) {
+  if (!tabs.some(tab => tab.id === id)) return state
+  const openIds = new Set(tabs.map(tab => tab.id))
+  const previousTabIds = state.previousTabIds.filter(tabId => tabId !== id && tabId !== state.activeTabId && openIds.has(tabId))
+  if (state.activeTabId && state.activeTabId !== id && openIds.has(state.activeTabId)) previousTabIds.push(state.activeTabId)
+  return { activeTabId: id, activationNonce: state.activationNonce + 1, previousTabIds }
+}
+function closedActivation(state: TabsState, tabs: Tab[], fallback: string | null, shouldResolveActivation: boolean) {
+  const openIds = new Set(tabs.map(tab => tab.id))
+  const previousTabIds = state.previousTabIds.filter(tabId => tabId !== state.activeTabId && openIds.has(tabId))
+  if (!shouldResolveActivation) return { activeTabId: state.activeTabId, previousTabIds }
+  const activeTabId = previousTabIds.at(-1) ?? fallback
+  return { activeTabId, previousTabIds: previousTabIds.filter(tabId => tabId !== activeTabId) }
 }
 export const useTabsStore = create<TabsState>((set, get) => ({
   tabs: [],
   activeTabId: null,
   activationNonce: 0,
+  previousTabIds: [],
   panelFocus: null,
   subTabs: {},
 
@@ -281,14 +295,8 @@ export const useTabsStore = create<TabsState>((set, get) => ({
 
   openTab: (tab) =>
     afterSceneLeave(() => set((state) => {
-      if (state.tabs.some((t) => t.id === tab.id)) {
-        return { activeTabId: tab.id, activationNonce: state.activationNonce + 1 }
-      }
-      return {
-        tabs: [...state.tabs, tab],
-        activeTabId: tab.id,
-        activationNonce: state.activationNonce + 1,
-      }
+      const tabs = state.tabs.some((t) => t.id === tab.id) ? state.tabs : [...state.tabs, tab]
+      return { tabs, ...activation(state, tab.id, tabs) }
     }), tab.id),
 
   openTabForNavigation: async (tab, signal) => {
@@ -298,11 +306,10 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     if (guard && !await awaitNavigationGuard(guard, signal)) return false
     const current = get()
     if (signal.aborted || current.activeTabId !== before.activeTabId || current.activationNonce !== before.activationNonce || current.tabs.find(item => item.id === tab.id) !== target) return false
-    set(state => ({
-      tabs: target ? state.tabs : [...state.tabs, tab],
-      activeTabId: tab.id,
-      activationNonce: state.activationNonce + 1,
-    }))
+    set(state => {
+      const tabs = target ? state.tabs : [...state.tabs, tab]
+      return { tabs, ...activation(state, tab.id, tabs) }
+    })
     return true
   },
 
@@ -311,13 +318,10 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       const index = state.tabs.findIndex((t) => t.id === id)
       if (index === -1) return state
       const tabs = state.tabs.filter((t) => t.id !== id)
-      let activeTabId = state.activeTabId
-      if (activeTabId === id) {
-        activeTabId = tabs[index - 1]?.id ?? tabs[index]?.id ?? null
-      }
+      const fallback = tabs[index - 1]?.id ?? tabs[index]?.id ?? null
       const subTabs = { ...state.subTabs }
       delete subTabs[id]
-      return { tabs, activeTabId, subTabs }
+      return { tabs, ...closedActivation(state, tabs, fallback, state.activeTabId === id), subTabs }
     }), id !== get().activeTabId ? get().activeTabId ?? undefined : undefined),
 
   activateTab: (id) =>
@@ -351,20 +355,16 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     set((state) => {
       const removed = new Set(state.tabs.filter((t) => t.novelId === novelId).map((t) => t.id))
       const tabs = state.tabs.filter((t) => t.novelId !== novelId)
-      const activeTabId =
-        state.activeTabId && tabs.some((t) => t.id === state.activeTabId)
-          ? state.activeTabId
-          : (tabs[tabs.length - 1]?.id ?? null)
       const subTabs = Object.fromEntries(
         Object.entries(state.subTabs).filter(([id]) => !removed.has(id))
       )
-      return { tabs, activeTabId, subTabs }
+      return { tabs, ...closedActivation(state, tabs, tabs.at(-1)?.id ?? null, !state.activeTabId || !tabs.some(tab => tab.id === state.activeTabId)), subTabs }
     }),
 
   closeSceneTabs: (novelId, sceneId) => set(state => {
     const removed = new Set(state.tabs.filter(t => t.novelId === novelId && t.refId === sceneId && (t.type === "scene" || t.type === "scene-image")).map(t => t.id))
     const tabs = state.tabs.filter(t => !removed.has(t.id))
-    return {tabs, activeTabId: state.activeTabId && removed.has(state.activeTabId) ? tabs.at(-1)?.id ?? null : state.activeTabId, subTabs: Object.fromEntries(Object.entries(state.subTabs).filter(([key]) => !removed.has(key)))}
+    return {tabs, ...closedActivation(state, tabs, tabs.at(-1)?.id ?? null, !!state.activeTabId && removed.has(state.activeTabId)), subTabs: Object.fromEntries(Object.entries(state.subTabs).filter(([key]) => !removed.has(key)))}
   }),
 
   renameNovelTab: (novelId, title) =>
@@ -380,11 +380,8 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       if (!state.tabs.some((t) => t.id === tabId)) return state
       const index = state.tabs.findIndex((t) => t.id === tabId)
       const tabs = state.tabs.filter((t) => t.id !== tabId)
-      let activeTabId = state.activeTabId
-      if (activeTabId === tabId) {
-        activeTabId = tabs[index - 1]?.id ?? tabs[index]?.id ?? null
-      }
-      return { tabs, activeTabId }
+      const fallback = tabs[index - 1]?.id ?? tabs[index]?.id ?? null
+      return { tabs, ...closedActivation(state, tabs, fallback, state.activeTabId === tabId) }
     }),
 
   renameWorldTab: (worldId, title) =>

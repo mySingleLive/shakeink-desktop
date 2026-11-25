@@ -1801,6 +1801,42 @@
     "scopedAcceptancePassed": true,
     "fullAcceptancePassed": false
   },
+  "contentTabCloseHistory": {
+    "date": "2026-11-25",
+    "requirement": "右侧内容面板关闭 Tab 后按实际浏览顺序倒序回到上一个浏览的 Tab，与视觉排序无关",
+    "status": "scoped-verified",
+    "implementation": [
+      "src/stores/tabs.ts",
+      "src/lib/desktop/workspace-draft-source.ts"
+    ],
+    "historyLifetime": "current workspace session only; WorkspaceDraft v1 remains unchanged and restore clears previousTabIds",
+    "tests": [
+      "tests/unit/content-tabs-history.test.ts",
+      "tests/unit/content-tabs-reorder.test.ts",
+      "tests/unit/navigation-tabs.test.ts",
+      "tests/unit/navigation-component.test.ts",
+      "tests/unit/sidebar-navigation-guard.test.ts",
+      "tests/browser/content-tabs.test.ts",
+      "tests/helpers/content-tabs-fixture.ts",
+      "scripts/verify-content-tabs.mjs"
+    ],
+    "independentReviews": {
+      "technicalPlan": "passed after defining a deduplicated previous-tab stack and atomic guard commits",
+      "testPlan": "passed after adding restore, guard, repeated activation and bulk-delete boundaries",
+      "codeReview": "passed after preserving closeAllTabsOfNovel null/missing-active fallback"
+    },
+    "verification": {
+      "focusedUnit": "34/34 passed",
+      "contentTabsBrowser": "15/15 passed",
+      "typecheck": "passed",
+      "fullUnitIntegration": "5187 tests: 5143 passed, 44 failed; all 44 failures are outside the changed ContentTabs/navigation test files",
+      "productionBuild": "passed: npm run build",
+      "actualMacOSElectron": "passed with production build, isolated real 20-tab workspace, offline renderer and zero models: A→B→C→B, close B→C, middle-close C→A; no page errors",
+      "actualWindowsElectron": "not executed on macOS; existing Windows-only script updated"
+    },
+    "fullSuitePassed": false,
+    "fullAcceptancePassed": false
+  },
   "requirements": [
     {
       "id": "B01",

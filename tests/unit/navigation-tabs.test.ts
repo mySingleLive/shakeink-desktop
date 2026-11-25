@@ -4,12 +4,13 @@ import { useTabsStore, type Tab } from "../../src/stores/tabs"
 import { registerSceneLeaveGuard, useSceneUiStore } from "../../src/stores/scene-ui"
 const tab = (id: string): Tab => ({ id, novelId: "novel", type: "theme", title: id })
 function deferred() { let resolve!: () => void; const promise = new Promise<void>(r => { resolve = r }); return { promise, resolve } }
-function setup() { useTabsStore.setState({ tabs: [tab("a"), tab("b")], activeTabId: "a", activationNonce: 0, panelFocus: null, subTabs: {} }) }
+function setup() { useTabsStore.setState({ tabs: [tab("a"), tab("b")], activeTabId: "a", activationNonce: 0, previousTabIds: [], panelFocus: null, subTabs: {} }) }
 test("navigation reuses normal activation and preserves content subviews/draft storage", async () => {
   setup(); useTabsStore.getState().setSubTab("a", "preview")
   const drafts = useSceneUiStore.getState().drafts
   assert.equal(await useTabsStore.getState().activateTabForNavigation("b", new AbortController().signal), true)
   assert.equal(useTabsStore.getState().activeTabId, "b"); assert.equal(useTabsStore.getState().activationNonce, 1)
+  assert.deepEqual(useTabsStore.getState().previousTabIds, ["a"])
   assert.equal(useTabsStore.getState().subTabs.a, "preview"); assert.equal(useSceneUiStore.getState().drafts, drafts)
 })
 test("scene leave guard is awaited once before committing", async () => {
@@ -29,6 +30,7 @@ test("aborted or closed target after flush never activates", async () => {
       if (mode === "cancel") controller.abort()
       else useTabsStore.setState(state => ({ tabs: state.tabs.filter(t => t.id !== "b") }))
       gate.resolve(); assert.equal(await move, false); assert.equal(useTabsStore.getState().activeTabId, "a")
+      assert.deepEqual(useTabsStore.getState().previousTabIds, [])
     } finally { release() }
   }
 })

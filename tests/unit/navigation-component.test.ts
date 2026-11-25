@@ -31,7 +31,7 @@ function controlledWindow() {
 }
 const tab = (id: string): Tab => ({ id, type: "theme", novelId: "novel", title: id })
 function setup() {
-  useTabsStore.setState({ tabs: [tab("a"), tab("b")], activeTabId: "a", activationNonce: 0 })
+  useTabsStore.setState({ tabs: [tab("a"), tab("b")], activeTabId: "a", activationNonce: 0, previousTabIds: [] })
   useChatStore.setState({ accountId: "author", conversationId: "chat-a", draftId: "draft-a", recoveryStatus: "ready", chatFocusNonce: 0 })
 }
 async function settle() { for (let n = 0; n < 8; n++) await Promise.resolve() }
