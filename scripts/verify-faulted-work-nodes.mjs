@@ -96,7 +96,8 @@ try {
   check('right-click opens stale-lease menu', JSON.stringify(await items()) === JSON.stringify(['修复作品锁', '重新加载作品', '删除']), (await items()).join(','))
   await settle(); await page.screenshot({ path: join(evidence, 'real-ink-context-menu.png') }); await closeMenu()
   await row('雨灯纪事').click({ button: 'right' }); await openMenu().waitFor()
-  check('healthy right-click menu unchanged', JSON.stringify(await items()) === JSON.stringify(['重命名', '删除']), (await items()).join(','))
+  // docs/609 added 编辑, create and export items to the healthy-work menu.
+  check('healthy right-click menu', JSON.stringify(await items()) === JSON.stringify(['重命名', '编辑', '创建角色', '创建物品', '创建场景', '创建情景', '创建世界', '创建伏笔', '导出大纲', '导出正文', '删除']), (await items()).join(','))
   await settle(); await page.screenshot({ path: join(evidence, 'real-ink-healthy-context-menu.png') }); await closeMenu()
   check('no native menu for navigation rows', (await app.evaluate(() => globalThis.nativeMenus)) === 0)
 
@@ -110,7 +111,8 @@ try {
     await row(title).click(); await openMenu().waitFor(); await openMenu().getByRole('menuitem', { name: '删除', exact: true }).click()
     const dialog = page.getByRole('dialog'); await dialog.waitFor()
     if (key === 'stale') { await settle(); await page.screenshot({ path: join(evidence, 'real-ink-delete-stale-dialog.png') }) }
-    await dialog.getByRole('button', { name: '确认删除', exact: true }).click()
+    // docs/608: the delete dialog's keep-files button is now 删除 (was 确认删除).
+    await dialog.getByRole('button', { name: '删除', exact: true }).click()
     await dialog.waitFor({ state: 'detached', timeout: 20000 })
     await row(title).waitFor({ state: 'detached', timeout: 20000 })
     check(`deleted ${key} work from the list`, true)

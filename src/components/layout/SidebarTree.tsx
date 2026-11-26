@@ -11,7 +11,7 @@ import type { UnavailableWork } from "@desktop/shared/work-list"
 import {requestNovelImport} from '@/lib/desktop/novel-import'
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
   BookOpen,
@@ -49,6 +49,11 @@ import {
   RefreshCw,
   Settings,
   Settings2,
+  SquarePen,
+  Download,
+  UserPlus,
+  PackagePlus,
+  MapPinPlus,
   Trash2,
   UserRound,
   Users,
@@ -98,6 +103,7 @@ import {
   buildTabId,
   getTabIcon,
   useTabsStore,
+  type Tab,
   type TabType,
 } from "@/stores/tabs"
 import type { CharacterRoleType, SettingType } from "@/generated/prisma/enums"
@@ -114,7 +120,12 @@ import { firstSentence } from "../chat/use-entity-index"
 import { CHAPTER_STATUS_ICONS } from "../content/chapter-status"
 import { CroppedImage } from "../content/CroppedImage"
 import { CreateNovelDialog } from "./CreateNovelDialog"
-import { OutlineTreeMenu } from "./OutlineTreeMenu"
+import { OutlineTreeMenu, useCollectionExport } from "./OutlineTreeMenu"
+import { ManuscriptExportItems } from "../content/ManuscriptExportItems"
+import { apiGet, apiSend } from "../content/api"
+import { nextForeshadowTitle } from "@/lib/foreshadow-title"
+import { useSceneUiStore } from "@/stores/scene-ui"
+import type { ForeshadowDTO } from "@/lib/services/foreshadow"
 import {
   CharactersHeaderHoverCard,
   HOVER_SHOW_MS,
@@ -1471,12 +1482,15 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
   const scroll = useNavigationScroll(view, scope, scrollRef)
   const [scenarioSession, setScenarioSession] = useState<ScenarioLibrarySession | null>(null)
   const scenarioSequence = useRef(0)
-  const openScenario = (novel: NovelSummary, initialMode: "library" | "create", launcher: HTMLElement) => setScenarioSession({ id: ++scenarioSequence.current, novel, initialMode, launcher })
+  const openScenario = (novel: NovelSummary, initialMode: "library" | "create", launcher: HTMLElement | null) => setScenarioSession({ id: ++scenarioSequence.current, novel, initialMode, launcher })
   const chooseView = (next: NavigationView) => { scroll.capture(); setTransientEpoch(value => value + 1); setView(next) }
   const toggleGroup = (id: string) => setCollapsedByView(previous => ({ ...previous, [view]: { ...previous[view], [id]: !previous[view]?.[id] } }))
+  const workExport = useCollectionExport()
+  const cancelWorkExport = workExport.cancel
   useLayoutEffect(() => {
+    cancelWorkExport()
     setView("works"); setExpandedByView({}); setCollapsedByView({}); setScenarioSession(null); setDialog(null); setCreateOpen(false); setTransientEpoch(value => value + 1)
-  }, [scope])
+  }, [scope, cancelWorkExport])
   const [dialog, setDialog] = useState<DialogState>(null)
   const [titleInput, setTitleInput] = useState("")
   /** 创建作品两步向导（书名 + 创作切入方式） */
@@ -1530,6 +1544,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     onMutate: () => setRemoveError(null),
     onSuccess: (outcome, { work }) => {
       if (outcome === "kept") toast.warning(DELETE_OUTCOME_TOAST[outcome]); else toast.success(DELETE_OUTCOME_TOAST[outcome])
+      cancelWorkExport(work.novelId)
       closeAllTabsOfNovel(work.novelId)
       const chat = useChatStore.getState()
       if (chat.draftNovelId === work.novelId) chat.requestNewConversation()
@@ -1879,7 +1894,71 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
 
   </>
 
-  /** The exact original healthy-work menu, shared by … and right-click. */
+  // docs/609 作品菜单创建项：与各面板自带的新建按钮相同的请求、刷新与提示。
+  const createCharacterMutation = useMutation({
+    mutationKey: ["work-menu-create", "character"],
+    mutationFn: ({ novelId }: { novelId: string }) =>
+      apiSend<{ character: { id: string; name: string } }>(`/api/novels/${novelId}/characters`, "POST", { name: "新角色", roleType: "PROTAGONIST" }, "创建角色失败"),
+    onSuccess: ({ character }, { novelId }) => {
+      queryClient.invalidateQueries({ queryKey: ["characters", novelId] })
+      queryClient.invalidateQueries({ queryKey: ["novels"] })
+      queryClient.invalidateQueries({ queryKey: ["novels", novelId] })
+      openTab({ id: buildTabId("character", novelId, { refId: character.id }), type: "character", novelId, refId: character.id, title: character.name })
+      toast.success(`已创建角色「${character.name}」，点击编辑资料`)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+  const createItemMutation = useMutation({
+    mutationKey: ["work-menu-create", "item"],
+    mutationFn: ({ novelId }: { novelId: string }) =>
+      apiSend<{ item: { id: string; name: string } }>(`/api/novels/${novelId}/items`, "POST", { name: "新物品" }, "创建物品失败"),
+    onSuccess: ({ item }, { novelId }) => {
+      queryClient.invalidateQueries({ queryKey: ["items", novelId] })
+      openTab({ id: buildTabId("item", novelId, { refId: item.id }), type: "item", novelId, refId: item.id, title: item.name })
+      toast.success(`已创建物品「${item.name}」，点击编辑资料`)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+  /** Opens a tab through the scene leave guard; true only when it actually became active. */
+  const navigateTo = async (tab: Tab) => {
+    try { return await useTabsStore.getState().openTabForNavigation(tab, new AbortController().signal) }
+    catch (error) { toast.error(error instanceof Error ? error.message : "草稿尚未保存，请重试或明确放弃"); return false }
+  }
+  const createForeshadowMutation = useMutation({
+    mutationKey: ["work-menu-create", "foreshadow"],
+    mutationFn: async ({ novelId }: { novelId: string }) => {
+      const { foreshadows } = await queryClient.ensureQueryData({
+        queryKey: ["foreshadows", novelId],
+        queryFn: () => apiGet<{ foreshadows: ForeshadowDTO[] }>(`/api/novels/${novelId}/foreshadows`, "加载伏笔失败"),
+      })
+      return apiSend<{ foreshadow: ForeshadowDTO }>(`/api/novels/${novelId}/foreshadows`, "POST", { title: nextForeshadowTitle(foreshadows.map(f => f.title)) }, "新建伏笔失败")
+    },
+    onSuccess: async ({ foreshadow }, { novelId }) => {
+      void queryClient.invalidateQueries({ queryKey: ["foreshadows", novelId] })
+      toast.success(`已创建伏笔「${foreshadow.title}」`)
+      const tab: Tab = { id: buildTabId("foreshadow", novelId), type: "foreshadow", novelId, title: "伏笔" }
+      if (await navigateTo(tab)) useTabsStore.getState().requestPanelFocus(tab.id, "", undefined, foreshadow.id)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+  const createScene = async (novel: NovelSummary) => {
+    const tab: Tab = { id: buildTabId("scenes", novel.id), type: "scenes", novelId: novel.id, title: "场景" }
+    if (!await navigateTo(tab)) return
+    // Like openAllScenes, show the whole scene list, but only once the tab really opened.
+    const account = useChatStore.getState().accountId
+    useSceneUiStore.getState().setPref(`${account}:${novel.id}:workspace`, { scope: null, search: "" })
+    useSceneUiStore.getState().requestAction(novel.id, null, "create")
+  }
+  // useMutation only tracks its latest call; read every pending create so each work keeps its own disabled item.
+  const pendingCreates = useMutationState({
+    filters: { mutationKey: ["work-menu-create"], status: "pending" },
+    select: mutation => `${String(mutation.options.mutationKey?.[1])}:${(mutation.state.variables as { novelId?: string } | undefined)?.novelId}`,
+  })
+  const creating = (kind: "character" | "item" | "foreshadow", novelId: string) => pendingCreates.includes(`${kind}:${novelId}`)
+  /** The work row that opened the menu, so dialogs return focus to it. */
+  const workRowOf = (novelId: string) => document.querySelector<HTMLElement>(`[data-work-row="${CSS.escape(novelId)}"] .tree-row`)
+
+  /** Healthy-work menu, shared by … and right-click (docs/609 adds 编辑, create and export items). */
   const novelMenuItems = (novel: NovelSummary) => <>
     <DropdownMenuItem
       onClick={() => openTitleDialog({ type: "rename", novel })}
@@ -1887,6 +1966,41 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       <Pencil />
       重命名
     </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => openSimpleTab("theme", novel, "主题")}>
+      <SquarePen />
+      编辑
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem disabled={creating("character", novel.id)} onClick={() => createCharacterMutation.mutate({ novelId: novel.id })}>
+      <UserPlus />
+      创建角色
+    </DropdownMenuItem>
+    <DropdownMenuItem disabled={creating("item", novel.id)} onClick={() => createItemMutation.mutate({ novelId: novel.id })}>
+      <PackagePlus />
+      创建物品
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => { void createScene(novel) }}>
+      <MapPinPlus />
+      创建场景
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => openScenario(novel, "create", workRowOf(novel.id))}>
+      <FlaskConical />
+      创建情景
+    </DropdownMenuItem>
+    <DropdownMenuItem disabled={createWorldMutation.isPending && createWorldMutation.variables?.novel.id === novel.id} onClick={() => openTitleDialog({ type: "world-create", novel })}>
+      <Globe />
+      创建世界
+    </DropdownMenuItem>
+    <DropdownMenuItem disabled={creating("foreshadow", novel.id)} onClick={() => createForeshadowMutation.mutate({ novelId: novel.id })}>
+      <Flag />
+      创建伏笔
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    {(["outline", "content"] as const).map(kind => <DropdownMenuSub key={kind}>
+      <DropdownMenuSubTrigger>{kind === "content" ? <Download /> : <ListTree />}{kind === "content" ? "导出正文" : "导出大纲"}</DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-48"><ManuscriptExportItems disabled={workExport.exporting} onExport={format => { void workExport.exportCollection(novel, format, kind) }} /></DropdownMenuSubContent>
+    </DropdownMenuSub>)}
+    <DropdownMenuSeparator />
     <DropdownMenuItem
       variant="destructive"
       onClick={() => openDeleteWork({ novelId: novel.id, title: novel.title })}
@@ -1963,7 +2077,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
               {view === "settings" ? <>{renderSettings(novel, 1)}{renderSettingExtras(novel)}</> : view === "characters" ? <CharacterSubtree novel={novel} expanded={expanded} toggle={toggle} flat /> : view === "content" ? <OutlineSubtree novel={novel} kind="content" expanded={expanded} toggle={toggle} depth={1} pruneExpanded={pruneExpanded} /> : <ConversationsNode novel={novel} expanded={expanded} toggle={toggle} flat />}
             </NavigationWorkGroup>
             return (
-              <div key={`${scope}:${novel.id}`}>
+              <div key={`${scope}:${novel.id}`} data-work-row={novel.id}>
                 <RowContextMenu items={novelMenuItems(novel)}>
                 <TreeNode
                   icon={novelExpanded ? FolderOpen : FolderClosed}

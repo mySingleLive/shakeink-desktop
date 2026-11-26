@@ -52,7 +52,8 @@ async function scenario(options: Record<string, unknown>, run: (page: Page) => P
     await page.route('**/*', route => route.abort()); await page.setContent('<div id="app"></div>')
     // about:blank is not a secure context; the real app runs in one with crypto.randomUUID.
     await page.evaluate(() => { if (!crypto.randomUUID) (crypto as any).randomUUID = () => '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (Number(c) ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16)) })
-    await page.addStyleTag({ content: await styles }); await page.addScriptTag({ content: await bundle })
+    // Like DashboardShell (h-dvh overflow-hidden): the page itself never scrolls, so menus are placed inside the window.
+    await page.addStyleTag({ content: await styles }); await page.addStyleTag({ content: 'html,body{height:100%;overflow:hidden;margin:0} #app{height:100vh;overflow:auto}' }); await page.addScriptTag({ content: await bundle })
     await page.evaluate(options => (window as any).mountWorksFixture(options), options)
     // v8 replaces the former heading with the real semantic navigation Tabs.
     await page.getByRole('tablist', { name: '导航分类', exact: true }).waitFor()
@@ -64,6 +65,14 @@ const W = 'b3bd663e-0b87-480c-b6ad-6eaa1488d6cb'
 const node = (page: Page, title = '待恢复作品') => page.locator('.tree-row', { hasText: title })
 const menu = (page: Page) => page.getByRole('menu')
 const item = (page: Page, name: string) => page.getByRole('menuitem', { name, exact: true })
+// docs/609: the healthy work menu (… and right-click are identical).
+const WORK_MENU = ['重命名', '编辑', '创建角色', '创建物品', '创建场景', '创建情景', '创建世界', '创建伏笔', '导出大纲', '导出正文', '删除']
+const WORK_MENU_SHAPE = { separatorsAfter: ['编辑', '创建伏笔', '导出正文'], submenus: ['导出大纲', '导出正文'] }
+/** Which item precedes each separator, and which items open a submenu. */
+const menuShape = (page: Page) => page.getByRole('menu').evaluate(menu => ({
+  separatorsAfter: [...menu.querySelectorAll('[role="separator"]')].map(sep => { let el = sep.previousElementSibling; while (el && el.getAttribute('role') !== 'menuitem') el = el.previousElementSibling; return el?.textContent?.trim() ?? '' }),
+  submenus: [...menu.querySelectorAll('[role="menuitem"][aria-haspopup="menu"]')].map(el => el.textContent?.trim() ?? ''),
+}))
 const items = async (page: Page) => (await page.getByRole('menuitem').allInnerTexts()).map(text => text.trim())
 async function openMenu(page: Page, title = '待恢复作品') { await node(page, title).click(); await menu(page).waitFor() }
 async function closeMenu(page: Page) { await page.keyboard.press('Escape'); await menu(page).waitFor({ state: 'detached' }) }
@@ -340,10 +349,12 @@ test('WN-55: other navigation views use the same icon, menu and one-line explana
 test("WN-56': a healthy work keeps its menu; right-click opens the same items and left click still opens the work", () => scenario({ healthy: true }, async page => {
   const healthy = node(page, '可用作品'); await healthy.waitFor()
   await healthy.hover(); await healthy.getByRole('button', { name: '小说操作', exact: true }).click(); await menu(page).waitFor()
-  const dots = await items(page); assert.deepEqual(dots, ['重命名', '删除'])
-  assert.equal(await menu(page).locator('[data-slot="dropdown-menu-separator"]').count(), 0)
+  const dots = await items(page); assert.deepEqual(dots, WORK_MENU)
+  assert.deepEqual(await menuShape(page), WORK_MENU_SHAPE)
   await closeMenu(page)
   await healthy.click({ button: 'right' }); await menu(page).waitFor(); assert.deepEqual(await items(page), dots)
+  assert.deepEqual(await menuShape(page), WORK_MENU_SHAPE)
+  assert.ok(await menu(page).evaluate(el => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight }), 'right-click menu inside the window')
   await item(page, '重命名').click(); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape'); await page.getByRole('dialog').waitFor({ state: 'detached' })
   await healthy.click(); assert.equal(await menu(page).count(), 0)
   assert.equal(await page.getByRole('tab', { name: '可用作品', exact: true }).count(), 1)

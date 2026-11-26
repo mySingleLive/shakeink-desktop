@@ -5897,6 +5897,56 @@
       "残留目录（部分删除失败）若没有创建预留，只在本次应用运行期间受保护，重启后不再受保护（代码评审中2 复审）。",
       "删除后的一次侧栏级联计数请求（GET /api/novels/:id/cascade）可能在列表刷新前返回“作品未关联到本地目录”，只在主进程日志中出现，界面无提示。"
     ]
+  },
+  {
+    "id": "WM-609",
+    "requirement": "作品菜单（… 与右键相同）在「重命名」之下、「删除」之上加入：「编辑」（打开该作品的主题面板）；创建类「创建角色」「创建物品」「创建场景」「创建情景」「创建世界」「创建伏笔」（行为与各面板自带的新建按钮相同）；导出类「导出大纲」「导出正文」，各带子菜单 TXT/Markdown/Word/PDF，导出整书（用户 2026-11-26）",
+    "source": [
+      "docs/609-work-menu-items-plan.md",
+      "docs/609-work-menu-items-plan-review.md",
+      "docs/609-work-menu-items-cases.md",
+      "docs/609-work-menu-items-cases-review.md",
+      "docs/609-work-menu-items-code-review.md"
+    ],
+    "implementation": [
+      "src/components/layout/SidebarTree.tsx（novelMenuItems 新增项；创建角色/物品/伏笔 mutation，进行中禁用对应项；创建场景/伏笔先 openTabForNavigation 成功再写场景请求/面板聚焦；创建情景焦点回到作品行；顶层 useCollectionExport，删除成功与数据目录变化时取消）",
+      "src/components/layout/OutlineTreeMenu.tsx（导出逻辑抽成 useCollectionExport，正文树菜单行为不变）",
+      "src/lib/foreshadow-title.ts（nextForeshadowTitle，伏笔面板与菜单共用）",
+      "src/stores/scene-ui.ts（action.sceneId 允许 null，表示创建根场景）"
+    ],
+    "testIds": [
+      "tests/unit/work-menu-items.test.ts WMU-01",
+      "tests/unit/sidebar-help-menu.test.ts SH-04（查找起点改为设置项之后）",
+      "tests/browser/works-loading.test.ts WN-56'（菜单项、分隔栏、子菜单触发器），内存夹具，非真实目标",
+      "tests/browser/work-menu-items.test.ts WM-01..12、05b（真实场景/伏笔面板），内存夹具，非真实目标",
+      "tests/browser/file-export.test.ts EXB16-05b/05c/05d、WME-01..06（sidebar/volume 模式，主进程导出服务写真实隔离目录）",
+      "scripts/verify-work-menu-items.mjs WMR-00..05、01b（真实目标）",
+      "scripts/verify-faulted-work-nodes.mjs 健康作品右键菜单期望改为新 11 项"
+    ],
+    "verificationKind": "WORK_MENU_ITEMS_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "菜单结构": "真实目标 WMR-01：… 与右键菜单都为 11 项且完整位于窗口内（wmr-01-dots-menu.png、wmr-01-context-menu.png）；WMR-01b：最小窗口高度 580 下位于窗口底部的作品行，两种菜单都在窗口内，真实点击删除（wmr-01-context-menu-bottom.png）；浏览器 WN-56'",
+      "编辑": "真实目标 WMR-02；浏览器 WM-01",
+      "创建角色/物品/伏笔": "真实目标 WMR-03 读回记录；浏览器 WM-02..05、09a–d、10、10b、11",
+      "创建场景/世界/情景": "真实目标 WMR-04（wmr-04-scenario-dialog.png）；浏览器 WM-06a–f、07a/b、08",
+      "导出大纲/正文": "真实目标 WMR-05：… 导出正文 md、右键导出大纲 txt，文件内容分别含各自终点标记（wmr-05-dots-export-submenu.png、wmr-05-context-export-submenu.png）；浏览器 WM-12、WME-01..06、EXB16-05/05b/05c"
+    },
+    "evidence": [
+      "docs/609-work-menu-items-evidence/real-target-report.json 及截图",
+      "/private/tmp/shakeink-menu-609/build.log、build-head.txt、run.log、faulted-run.log（构建后、运行期间未再构建）",
+      "单元+集成全量：5216 项 44 失败；单独复跑唯一不在 HEAD 失败集合中的 BDC07，工作区与 HEAD 均通过（并行运行时的偶发失败）",
+      "浏览器：work-menu-items 21/21、file-export 18/18、works-loading 33/33、sidebar-navigation 全部通过；sidebar-surfaces SS-03 在 HEAD 同样失败"
+    ],
+    "verificationLimits": [
+      "浏览器用例为内存夹具，不作为真实目标通过依据；真实目标只在 macOS 构建版、隔离 SHAKEINK_TEST_ROOT（零模型）执行，作品与章节由 scripts/seed-work-menu-items.ts 写入隔离目录（大纲在应用内是叙事线投影，不能经大纲接口写入），只替换原生保存对话框。",
+      "期望随 609 改变、不计为新通过：WN-56'、SH-04、verify-faulted-work-nodes.mjs 健康作品菜单。verify-faulted-work-nodes.mjs 另把删除按钮名从“确认删除”改为“删除”（608 改名后该脚本未同步）。",
+      "works-loading 夹具页面改为与真实外壳一样不滚动（原夹具页面可滚动，11 项右键菜单会越出视口）；真实窗口由 WMR-01/01b 确认。",
+      "桌面保存全局只允许一个任务：作品菜单导出等待保存对话框时，正文树菜单导出提示“已有文件正在保存，请稍后重试”（现有行为，WME-03）。",
+      "伏笔 tab 中当前条目有未保存修改时，从菜单创建伏笔会选中新条目并丢弃这些修改，与面板 + 相同。",
+      "侧栏 CharacterSubtree 在角色接口返回非预期形状时会无限重新请求（既有问题，本次未改，仅在夹具中给出正确回复）。",
+      "伏笔取名用缓存的伏笔列表（与面板 + 相同），缓存过期时可能与其他来源新建的伏笔重名（代码审核低4，接受）；场景/伏笔导航的取消信号不随数据目录切换中止（代码审核低5，接受，导航在活动 tab 变化时已自行放弃）。"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

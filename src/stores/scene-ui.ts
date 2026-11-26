@@ -12,8 +12,9 @@ interface State {
  prefs: Record<string, Pref>; drafts: Record<string, SceneDraft>; imageDrafts: Record<string, {prompt: string; modelId: string; revision?: number}>;
  imageRequests: Record<string, SceneImageRequest>; submissions: Record<string, SceneSubmission>; commitErrors: Record<string, string>;
  setImageRequest: (key: string, request: SceneImageRequest | null) => void; setSubmission: (key: string, submission: SceneSubmission | null) => void; setCommitError: (key: string, message: string | null) => void;
- action: {novelId: string; sceneId: string; type: "create" | "move" | "delete"} | null;
- requestAction: (novelId: string, sceneId: string, type: "create" | "move" | "delete") => void; clearAction: () => void;
+ /** sceneId null = create a root scene (docs/609 work menu). */
+ action: {novelId: string; sceneId: string | null; type: "create" | "move" | "delete"} | null;
+ requestAction: (novelId: string, sceneId: string | null, type: "create" | "move" | "delete") => void; clearAction: () => void;
  reference: {novelId: string; chip: ChipData; nonce: number} | null;
  setPref: (key: string, patch: Pref) => void; setDraft: (key: string, draft: SceneDraft | null) => void;
  setImageDraft: (key: string, value: {prompt: string; modelId: string; revision?: number}) => void;

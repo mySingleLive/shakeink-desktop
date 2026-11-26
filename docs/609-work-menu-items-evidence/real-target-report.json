@@ -1,0 +1,90 @@
+{
+ "scope": "macOS arm64 built Electron, isolated SHAKEINK_TEST_ROOT, zero models",
+ "finishedAt": "2026-11-26T09:56:03.760Z",
+ "results": [
+  {
+   "id": "WMR-00 isolated root and zero models",
+   "ok": true,
+   "models": 0
+  },
+  {
+   "id": "WMR-01 … and right-click menus list the 609 items in order and fit the window",
+   "ok": true,
+   "dots": [
+    "重命名",
+    "编辑",
+    "创建角色",
+    "创建物品",
+    "创建场景",
+    "创建情景",
+    "创建世界",
+    "创建伏笔",
+    "导出大纲",
+    "导出正文",
+    "删除"
+   ],
+   "ctx": [
+    "重命名",
+    "编辑",
+    "创建角色",
+    "创建物品",
+    "创建场景",
+    "创建情景",
+    "创建世界",
+    "创建伏笔",
+    "导出大纲",
+    "导出正文",
+    "删除"
+   ],
+   "dotsFit": true,
+   "ctxFit": true
+  },
+  {
+   "id": "WMR-01b at the minimum height a bottom work row gets … and right-click menus that fit, and 删除 clicks for real",
+   "ok": true,
+   "winH": 580,
+   "rowBottom": 496,
+   "lastTitle": "菜单验收作品",
+   "fits": [
+    true,
+    true
+   ]
+  },
+  {
+   "id": "WMR-02 编辑 opens the 主题 tab",
+   "ok": true,
+   "active": "主题"
+  },
+  {
+   "id": "WMR-03 创建角色/物品/伏笔 write records and open their tabs",
+   "ok": true,
+   "chars": [
+    "新角色"
+   ],
+   "things": [
+    "新物品"
+   ],
+   "flags": [
+    "未命名伏笔 1"
+   ]
+  },
+  {
+   "id": "WMR-04 创建场景/世界 write records; 创建情景 opens its dialog",
+   "ok": true,
+   "scenes": [
+    "验收场景"
+   ],
+   "worlds": [
+    "验收世界"
+   ]
+  },
+  {
+   "id": "WMR-05 whole-book exports from … (正文 md) and right-click (大纲 txt) hold the right text",
+   "ok": true,
+   "files": [
+    "菜单验收作品 · 大纲.txt",
+    "菜单验收作品 · 正文.md"
+   ]
+  }
+ ]
+}

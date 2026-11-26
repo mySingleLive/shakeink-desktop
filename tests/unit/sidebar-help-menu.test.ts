@@ -23,7 +23,7 @@ test('SH-03: main process routes help.guide to the guide URL over the trusted ch
 })
 test('SH-04: sidebar account menu wires settings, the help submenu and feedback in order to their commands',async()=>{
  const source=await read('src/components/layout/SidebarTree.tsx')
- const settings=source.indexOf('command("app.settings")'),sub=source.indexOf('<DropdownMenuSub>'),feedback=source.indexOf('command("help.feedback")')
+ const settings=source.indexOf('command("app.settings")'),sub=source.indexOf('<DropdownMenuSub>',settings),feedback=source.indexOf('command("help.feedback")')
  assert.ok(settings>0&&sub>settings&&feedback>sub,'账号菜单顺序应为 设置 → 帮助子菜单 → 问题反馈')
  assert.ok(source.includes('<DropdownMenuSubTrigger>')&&source.includes('<DropdownMenuSubContent>'))
  const section=source.slice(sub,feedback)
