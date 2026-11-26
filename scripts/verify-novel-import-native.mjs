@@ -53,9 +53,10 @@ async function importOne(mode,index){
  const done=(await current()).view;assert.equal(done.phase,'completed');receipts.push(done.publication)
  const data=await page.evaluate(async id=>({outline:await(await fetch(`/api/novels/${id}/outline`)).json(),record:await(await fetch(`/api/novels/${id}/import-record?material=body-original`)).json()}),done.publication.novelId)
  if(!data.record.page)throw Error('Import record read failed: '+JSON.stringify(data.record));assert.equal(data.record.page.text,body);if(mode==='folder'){const original=data.record.record.materials.find(m=>m.kind==='outline');assert.ok(original);const text=await page.evaluate(async({id,material})=>(await(await fetch(`/api/novels/${id}/import-record?material=${material}`)).json()).page.text,{id:done.publication.novelId,material:original.id});assert.equal(text,outline)}
- const chapters=data.outline.volumes.flatMap(v=>v.chapters);let prose=''
- for(const chapter of chapters){const value=await page.evaluate(async({id,ch})=>(await(await fetch(`/api/novels/${id}/chapters/${ch}`)).json()),{id:done.publication.novelId,ch:chapter.id});if(value.chapter?.content!==undefined)prose+=value.chapter.content;else throw Error('Native chapter read route did not return content')}
- assert.equal(prose,body)
+ const chapters=data.outline.volumes.flatMap(v=>v.chapters),prose=[]
+ for(const chapter of chapters){const value=await page.evaluate(async({id,ch})=>(await(await fetch(`/api/novels/${id}/chapters/${ch}`)).json()),{id:done.publication.novelId,ch:chapter.id});if(value.chapter?.content!==undefined)prose.push(value.chapter.content);else throw Error('Native chapter read route did not return content')}
+ // docs/610: stored chapter bodies drop the heading line and use blank-line paragraphs; the record keeps the source.
+ assert.deepEqual(prose,['陆青十七岁。  他握着信。🖋️','原文的空白全部保留。'])
  await page.screenshot({path:join(output,`native-${mode}-complete.png`)})
  await page.getByRole('button',{name:'打开作品',exact:true}).click();await page.getByRole('button',{name:'查看导入记录',exact:true}).waitFor();checks.push(mode+' real tables, exact prose, record and original overview mounted')
 }

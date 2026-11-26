@@ -5947,6 +5947,35 @@
       "侧栏 CharacterSubtree 在角色接口返回非预期形状时会无限重新请求（既有问题，本次未改，仅在夹具中给出正确回复）。",
       "伏笔取名用缓存的伏笔列表（与面板 + 相同），缓存过期时可能与其他来源新建的伏笔重名（代码审核低4，接受）；场景/伏笔导航的取消信号不随数据目录切换中止（代码审核低5，接受，导航在活动 tab 变化时已自行放弃）。"
     ]
+  },
+  {
+    "id": "IP-610",
+    "requirement": "导入作品保存时，章节正文去除开头的卷名、章节名行，并修复没有换行挤在一起的问题（按缩进/句末标点/短行/行内全角缩进分段，段落以空行分隔）；导入会话与导入记录保留原文（用户 2026-11-27，《诡秘之主》第一卷实测）",
+    "source": [
+      "docs/610-import-prose-format-plan.md",
+      "docs/610-import-prose-format-plan-review.md",
+      "docs/610-import-prose-format-cases.md",
+      "docs/610-import-prose-format-cases-review.md",
+      "docs/610-import-prose-format-code-review.md"
+    ],
+    "implementation": [
+      "desktop/core/novel-import-prose.ts（formatImportChapterProse、importContentAnchor）",
+      "desktop/service/novel-import-publish.ts（章节 content/wordCount 用排版后正文；伏笔 CHAPTER_CONTENT 锚点映射到排版后偏移，落在标题内的退为整章引用）"
+    ],
+    "testIds": [
+      "tests/unit/novel-import-prose.test.ts IPF-01..25",
+      "tests/integration/novel-import-{publish,semantic-publish,pdf-publish,verify-publish,wizard-publish}.test.ts（期望改为排版后正文并含写死字符串；NIW-S06 改用 legacySceneFixture 后经真实发布验证锚点重映射）",
+      "tests/unit/lotm-local-import-audit.test.ts（freezeRows 与发布一致）",
+      "scripts/verify-import-prose-format.mjs IPF-R0..R8（真实目标，尚未执行）"
+    ],
+    "verificationKind": "IMPORT_PROSE_FORMAT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-pending",
+    "requirementEvidence": {
+      "去除卷名章节名": "离线对《诡秘之主》第一卷 213 章运行 formatImportChapterProse（生产切章 detectImportChapterCuts）：0 章以卷名/章名开头",
+      "分段": "同一离线运行：213/213 章段落数等于原文去标题后的非空行数；去空白后全文一致",
+      "真实目标": "未执行：scripts/verify-import-prose-format.mjs 尚未运行；用户正在已构建应用中手动验收",
+      "已知存量失败": "lotm-import-audit 11 项（仍有章节缺少细纲）与 lotm-local-import-audit FROZEN_CHAPTER_ORACLE_MISMATCH 在 HEAD 上同样失败，与本次无关"
+    }
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

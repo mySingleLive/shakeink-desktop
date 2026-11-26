@@ -6,6 +6,7 @@ import {isDeepStrictEqual} from 'node:util'
 import {IMPORT_TARGETS,type ImportArtifact,type ImportSession} from '../desktop/shared/novel-import'
 import {validateImportSemanticArtifact,stripImportKnowledgeAnnotations,IMPORT_WORLD_SETTING_TYPES,IMPORT_RELIABILITIES,type ImportSemanticArtifact,type ImportNativeProjection,type ImportNarrativeReference,type ImportMappingWarning} from '../desktop/core/novel-import-semantics'
 import {validatePlanning} from '../src/lib/planning/domain'
+import {formatImportChapterProse} from '../desktop/core/novel-import-prose'
 import type {LevelNode} from '../src/components/content/setting-content'
 
 export interface RealNovelSemanticAssertion {name:string;passed:boolean}
@@ -160,7 +161,7 @@ export function realNovelSemanticAssertions(session:SemanticSession,rows:RealNov
  check('semantic-narrative-persisted-reliability-explicit-and-matched',explicitReliability)
  let planning:ReturnType<typeof validatePlanning>
  try{if(rows.planning.length!==1)throw Error();planning=validatePlanning(rows.planning[0].data);check('semantic-planning-native-document-valid',true)}catch{check('semantic-planning-native-document-valid',false);return assertions}
- check('semantic-narrative-chapter-id-mapping-uses-exact-ordered-session',rows.chapters.length===session.chapters.length&&unique(rows.chapters.map(chapter=>chapter.id))&&rows.chapters.every((chapter,index)=>chapter.title===session.chapters[index].title&&chapter.content===session.chapters[index].content))
+ check('semantic-narrative-chapter-id-mapping-uses-exact-ordered-session',rows.chapters.length===session.chapters.length&&unique(rows.chapters.map(chapter=>chapter.id))&&rows.chapters.every((chapter,index)=>chapter.title===session.chapters[index].title&&chapter.content===formatImportChapterProse(session.chapters[index].content,{title:session.chapters[index].title,...(session.chapters[index].volume!==undefined?{volume:session.chapters[index].volume}:{})}).text))
  const character=(reference:string|undefined):string|null|undefined=>{
   if(reference===undefined)return null
   if(characterMap.has(reference))return characterMap.get(reference)

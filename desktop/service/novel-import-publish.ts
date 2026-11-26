@@ -30,6 +30,7 @@ import {anchorContext} from '../../src/lib/comment-anchor'
 import type {ImportNativeProfile} from '../core/novel-import-semantics'
 import type {PlannedTouch} from '../core/novel-import-foreshadow'
 import {LOCAL_AUTHOR_ID} from './context'
+import {formatImportChapterProse,importContentAnchor,type ImportFormattedProse} from '../core/novel-import-prose'
 import type {Workspaces,WorkImportInitializer} from './workspaces'
 import type {ImportPublishInput,ImportArtifact,ImportReceipt,ImportSession} from '../shared/novel-import'
 import type {WizardCandidate} from '../shared/novel-import-wizard'
@@ -47,6 +48,8 @@ const continuation=(name:string,index:number)=>index?name.slice(0,280)+' · 续�
 /** docs/542/544 publish gate: inferred prose is cleaned of knowledge notes. A block that is not a well-formed note
  * (e.g. unclosed) is kept as written rather than blocking the whole save. */
 function clean(text:string){return stripImportKnowledgeAnnotations(text)}
+/** docs/610: the stored chapter body drops leading heading lines and becomes blank-line paragraphs; the session keeps the source. */
+function formattedChapters(s:ImportSession):ImportFormattedProse[]{return s.chapters.map(c=>formatImportChapterProse(c.content,{title:c.title,...(c.volume!==undefined?{volume:c.volume}:{})}))}
 function cleanDeep<T>(value:T):T{return (typeof value==='string'?clean(value):Array.isArray(value)?value.map(cleanDeep):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,cleanDeep(v)])):value) as T}
 function assertPlan(input:ImportPublishInput){
  const s=input.session
@@ -124,6 +127,7 @@ export async function publishNovelImport(works:Workspaces,input:ImportPublishInp
    const themePosition=[...profiles.values()].find((p):p is Extract<typeof p,{kind:'theme'}>=>p.kind==='theme')?.value
    // docs/545 §7: copied source themes stay verbatim and first; only the inferred themes are cut by the fallback.
    const themeText=importThemeSynopsis(byKind('theme').filter(a=>a.id!==IMPORT_THEME_PROFILE_ID).map(a=>({origin:a.origin,text:nativeText(a)})))
+   const prose=formattedChapters(s)
    const chapterCharacters=s.chapters.reduce((n,c)=>n+Array.from(c.content).length,0)
    if(byKind('theme').length||s.chapters.length)await tx.theme.update({where:{novelId},data:{
     // Each inferred theme is already cleaned by nativeText; copied source themes stay verbatim (docs/543 review M2).
@@ -148,7 +152,7 @@ export async function publishNovelImport(works:Workspaces,input:ImportPublishInp
     // inferred. The complete source outline stays on the first volume.
     const summary=groupIndex===0?outline:'',volume=await tx.volume.create({data:{novelId,index:groupIndex+1,title:('name'in group?group.name:undefined)??'导入内容',summary}})
     data.volumes.push(volumeSchema.parse({id:volume.id,line:'import-reading-line',title:volume.title,summary:summary.length<=100000?summary:'原始大纲全文见导入记录',order:groupIndex}))
-    for(let i=group.start;i<group.end;i++){const c=s.chapters[i];const row=await tx.chapter.create({data:{volumeId:volume.id,index:i-group.start+1,title:c.title,content:c.content,outline:chapterOutline(i),wordCount:Array.from(c.content).length,status:'WRITTEN'}});data.chapters.push(chapterSchema.parse({id:row.id,line:'import-reading-line',volume:volume.id,title:row.title,order:i,wordBudget:Math.min(200000,Math.max(1,row.wordCount))}));if(c.outline)data.cards.push(cardSchema.parse({id:'import-chapter-card-'+row.id,line:'import-reading-line',chapter:row.id,title:c.title,order:i,tellings:[{id:'import-telling-'+row.id,intent:chapterOutline(i),source:'导入大纲'}]}))}
+    for(let i=group.start;i<group.end;i++){const c=s.chapters[i];const body=prose[i].text,row=await tx.chapter.create({data:{volumeId:volume.id,index:i-group.start+1,title:c.title,content:body,outline:chapterOutline(i),wordCount:Array.from(body).length,status:'WRITTEN'}});data.chapters.push(chapterSchema.parse({id:row.id,line:'import-reading-line',volume:volume.id,title:row.title,order:i,wordBudget:Math.min(200000,Math.max(1,row.wordCount))}));if(c.outline)data.cards.push(cardSchema.parse({id:'import-chapter-card-'+row.id,line:'import-reading-line',chapter:row.id,title:c.title,order:i,tellings:[{id:'import-telling-'+row.id,intent:chapterOutline(i),source:'导入大纲'}]}))}
    }
    const eventMap=new Map(byKind('worldline').map(a=>[a.id,{id:'import-event-'+a.id,line:'import-world-'+(a.facts.lineId||a.id)}]))
    const list=(value:string|undefined):unknown[]=>{if(!value)return [];const parsed:unknown=JSON.parse(value);if(!Array.isArray(parsed))throw Error('导入实体引用格式无效');return parsed}
@@ -180,7 +184,7 @@ export async function publishNovelImport(works:Workspaces,input:ImportPublishInp
     const refs=list(f.refs).map(value=>{if(!value||typeof value!=='object'||!('eventId' in value)||typeof value.eventId!=='string')throw Error('叙事线事件引用格式无效');const event=eventMap.get(value.eventId);if(!event)throw Error('叙事线事件引用不存在');const ref=value as Record<string,string>;return {line:event.line,event:event.id,reveal:'',...(mapping?{source:'导入语义关系：'+(ref.kind??'happen'),reliability:ref.reliability,character:ref.character?characterIds.get(ref.character)!:null}:{source:a.origin==='source'?'导入原设定':'根据正文分析'})}})
     for(const [part,text] of chunks(nativeText(a),100000).entries()){const intent=text;data.cards.push(cardSchema.parse({id:'import-narrative-'+a.id+'-'+part,line:'import-reading-line',chapter:index===undefined?null:actualChapters[index].id,title:continuation(a.name,part),order:(index??actualChapters.length)*1000000+order*1000+part,tellings:[{id:'import-narrative-telling-'+a.id+'-'+part,character:narrator,narrator:f.narrator||'待定',intent,refs:refs.map(ref=>({...ref,reveal:intent})),source:a.origin==='source'?'导入原设定':'根据正文分析',...(mapping?{reliability:f.reliability}:{})}]}))}
    }
-   if(s.wizardVersion===1)await publishWizardLinks(tx,{novelId,session:s,data,chapterRows:data.chapters.map(c=>{const v=data.volumes.find(v=>v.id===c.volume),k=data.chapters.filter(x=>x.volume===c.volume).indexOf(c);return {id:c.id,volume:c.volume??'',title:c.title,label:`第${(v?.order??0)+1}卷 ${v?.title??''} · 第${k+1}章 ${c.title}`.slice(0,100)}}),characterIds,sceneIds,itemIds,foreshadowIds,profiles,images:input.images??[],stored:storedImages})
+   if(s.wizardVersion===1)await publishWizardLinks(tx,{novelId,session:s,prose,data,chapterRows:data.chapters.map(c=>{const v=data.volumes.find(v=>v.id===c.volume),k=data.chapters.filter(x=>x.volume===c.volume).indexOf(c);return {id:c.id,volume:c.volume??'',title:c.title,label:`第${(v?.order??0)+1}卷 ${v?.title??''} · 第${k+1}章 ${c.title}`.slice(0,100)}}),characterIds,sceneIds,itemIds,foreshadowIds,profiles,images:input.images??[],stored:storedImages})
    await tx.planningDocument.update({where:{novelId},data:{data:json(validatePlanning(data))}})
    if(s.chapters.length)await tx.novel.update({where:{id:novelId},data:{currentStage:'WRITING'}})
    await tx.contentVersion.create({data:{targetType:'NOVEL_IMPORT',targetId:novelId,version:1,snapshot:json(record),reason:'导入作品'}})
@@ -211,7 +215,7 @@ export async function readNovelImportRecord(novelId:string,options:{material?:st
 
 type Tx=Prisma.TransactionClient
 /** Wizard-only links written inside the publish transaction once chapters exist. */
-async function publishWizardLinks(tx:Tx,o:{novelId:string;session:ImportSession;data:ReturnType<typeof emptyPlanning>;chapterRows:{id:string;volume:string;title:string;label:string}[];characterIds:Map<string,string>;sceneIds:Map<string,string>;itemIds:Map<string,string>;foreshadowIds:Map<string,string>;profiles:Map<string,ImportNativeProfile>;images:NonNullable<ImportPublishInput['images']>;stored:Map<string,{id:string;filename:string;url:string}>}){
+async function publishWizardLinks(tx:Tx,o:{novelId:string;session:ImportSession;prose:ImportFormattedProse[];data:ReturnType<typeof emptyPlanning>;chapterRows:{id:string;volume:string;title:string;label:string}[];characterIds:Map<string,string>;sceneIds:Map<string,string>;itemIds:Map<string,string>;foreshadowIds:Map<string,string>;profiles:Map<string,ImportNativeProfile>;images:NonNullable<ImportPublishInput['images']>;stored:Map<string,{id:string;filename:string;url:string}>}){
  const s=o.session,w=s.wizard!,chapters=o.chapterRows
  // Arc stages reference chapters, which exist only now.
  for(const [artifactId,characterId] of o.characterIds){const p=o.profiles.get(artifactId);if(p?.kind!=='character'||!p.value.arcStages.length)continue
@@ -220,9 +224,10 @@ async function publishWizardLinks(tx:Tx,o:{novelId:string;session:ImportSession;
  // Foreshadow touches and references; planning links follow the plan made at step 20.
  const touchRows:Prisma.ForeshadowTouchCreateManyInput[]=[],referenceRows:Prisma.ForeshadowReferenceCreateManyInput[]=[]
  for(const a of s.artifacts.filter(a=>a.kind==='foreshadow'&&a.schema===2)){const id=o.foreshadowIds.get(a.id);if(!id)continue
-  for(const t of JSON.parse(a.facts.touches??'[]') as PlannedTouch[]){const chapter=chapters[t.chapterIndex],content=s.chapters[t.chapterIndex];if(!chapter||!content)continue
+  for(const t of JSON.parse(a.facts.touches??'[]') as PlannedTouch[]){const chapter=chapters[t.chapterIndex],content=s.chapters[t.chapterIndex],body=o.prose[t.chapterIndex];if(!chapter||!content||!body)continue
    const touch={id:randomUUID()};touchRows.push({id:touch.id,foreshadowId:id,novelId:o.novelId,kind:t.kind,summary:stripImportKnowledgeAnnotations(t.summary),chapterId:chapter.id})
-   const contentAnchor={quote:t.content.quote,...anchorContext(content.content,t.content.start,t.content.end),startOffset:t.content.start,endOffset:t.content.end}
+   // docs/610: source offsets are mapped into the formatted body; a quote lost with the heading becomes a whole-chapter reference.
+   const contentAnchor=importContentAnchor(body,t.content.start,t.content.end)
    const identity=(type:string,anchor:{quote:string|null;prefix?:string|null;suffix?:string|null;startOffset?:number|null})=>`${type}:${chapter.id}:${anchor.quote===null?'whole':createHash('sha256').update(JSON.stringify([anchor.quote,anchor.prefix,anchor.suffix,anchor.startOffset])).digest('hex')}`
    referenceRows.push({novelId:o.novelId,touchId:touch.id,targetType:'CHAPTER_CONTENT',targetId:chapter.id,identityKey:identity('CHAPTER_CONTENT',contentAnchor),...contentAnchor})
    const outline=content.outline??'',at=t.outline.quote?outline.indexOf(t.outline.quote):-1
