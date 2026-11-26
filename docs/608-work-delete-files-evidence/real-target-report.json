@@ -1,0 +1,56 @@
+{
+ "scope": "macOS arm64 built Electron, isolated SHAKEINK_TEST_ROOT, zero models",
+ "finishedAt": "2026-11-26T07:07:41.095Z",
+ "results": [
+  {
+   "id": "WDR-03 dialog shows title, question, real folder path and three buttons",
+   "ok": true,
+   "buttons": [
+    "取消",
+    "删除",
+    "删除，不保留文件"
+   ]
+  },
+  {
+   "id": "WDR-01 否 removes the work from the list and leaves its folder unchanged",
+   "ok": true,
+   "entries": [
+    "assets",
+    "database",
+    "shakeink-work.json",
+    "作者笔记.md"
+   ],
+   "list": {
+    "novels": [],
+    "unavailable": []
+   }
+  },
+  {
+   "id": "WDR-01b the kept folder is added back with 打开作品",
+   "ok": true,
+   "list": {
+    "novels": [
+     "保留文件作品"
+    ],
+    "unavailable": []
+   }
+  },
+  {
+   "id": "WDR-02 是 permanently deletes the folder; sibling folders are untouched",
+   "ok": true,
+   "parent": [
+    "保留文件作品",
+    "同级目录"
+   ]
+  },
+  {
+   "id": "WDR-04 an unavailable work: 是 reports the folder was not found and the moved folder is intact",
+   "ok": true,
+   "moved": [
+    "assets",
+    "database",
+    "shakeink-work.json"
+   ]
+  }
+ ]
+}

@@ -3,7 +3,7 @@ import { openAllScenes } from "@/components/content/scene/SceneWorkspace"
 import { worldDisplayName } from "@/lib/world-schema"
 import { worldForest } from "@/lib/world-tree"
 import { useDesktopCommands } from "@/lib/desktop/use-command-target"
-import { useNovelList } from "@/lib/novel-list"
+import { useNovelList, type NovelList } from "@/lib/novel-list"
 import { FaultedWorkMenuItems, faultInfo, repairStatus, useWorkLeaseRepair, type WorkLeaseRepair } from "@/components/desktop/UnavailableWorks"
 import { FaultedWorkIcon, type FaultTone } from "@/components/desktop/FaultedWorkIcon"
 import { ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu"
@@ -409,13 +409,25 @@ function FaultedWorkGroup({ work, view, collapsed, onToggle, actions }: { work: 
   </NavigationWorkGroup>
 }
 
+/** docs/608: one delete dialog for healthy and unavailable works. The folder path is read on open and
+ * kept only in this dialog's state (never in the query cache). */
+interface DeleteWorkTarget { novelId: string; workId?: string; title: string }
+type WorkLocation = { state: "loading" } | { state: "ready"; workId: string; path: string } | { state: "failed" }
+type DeleteFilesOutcome = "kept-by-choice" | "removed" | "missing" | "kept" | "not-found"
+const DELETE_OUTCOME_TOAST: Record<DeleteFilesOutcome, string> = {
+  "kept-by-choice": "作品已从列表中删除",
+  "not-found": "作品已从列表中删除",
+  removed: "作品及其文件已删除",
+  missing: "作品已删除，未找到作品目录，没有删除任何文件",
+  kept: "作品已删除，部分文件未能删除，请手动删除作品目录",
+}
+
 type DialogState =
   | { type: "rename"; novel: NovelSummary }
-  | { type: "delete"; novel: NovelSummary }
   | { type: "world-create"; novel: NovelSummary; parentWorld?: WorldRecord }
   | { type: "world-rename"; novel: NovelSummary; world: WorldRecord }
   | { type: "world-delete"; novel: NovelSummary; world: WorldRecord }
-  | { type: "remove-faulted"; work: UnavailableWork }
+  | { type: "delete-work"; work: DeleteWorkTarget }
   | null
 
 const CHARACTER_ROLE_ORDER: CharacterRoleType[] = [
@@ -1499,24 +1511,36 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     queryClient.invalidateQueries({ queryKey: ["novels"] })
   const leaseRepair = useWorkLeaseRepair(scope)
   const [removeError, setRemoveError] = useState<string | null>(null)
+  const [workLocation, setWorkLocation] = useState<WorkLocation>({ state: "loading" })
+  const locationRequest = useRef(0)
   // isPending updates after render; a ref keeps two synchronous confirms single-flight.
   const removeFlight = useRef(false)
-  const removeFaultedMutation = useMutation({
-    mutationFn: async (work: UnavailableWork) => {
+  const removeWorkMutation = useMutation({
+    mutationFn: async ({ workId, deleteFiles, path }: { work: DeleteWorkTarget; workId: string; deleteFiles: boolean; path?: string }): Promise<DeleteFilesOutcome> => {
       const generic = "暂时无法删除作品，原数据已保留，请重试。"
       let res: Response
-      try { res = await fetch(`/api/works/${work.workId}`, { method: "DELETE" }) } catch { throw new Error(generic) }
-      if (res.ok) return
-      const data = await res.json().catch(() => null) as { error?: string; code?: string } | null
-      if (res.status === 404 && data?.code === "WORK_NOT_FOUND") return
+      try {
+        res = await fetch(`/api/works/${workId}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(deleteFiles ? { deleteFiles, path } : { deleteFiles }) })
+      } catch { throw new Error(generic) }
+      const data = await res.json().catch(() => null) as { error?: string; code?: string; files?: DeleteFilesOutcome } | null
+      if (res.ok) return data?.files && Object.hasOwn(DELETE_OUTCOME_TOAST, data.files) ? data.files : deleteFiles ? "kept" : "kept-by-choice"
+      if (res.status === 404 && data?.code === "WORK_NOT_FOUND") return "not-found"
       throw new Error(res.status >= 500 || !data?.error ? `${generic}关联对话可能已删除，请重试完成移除。` : data.error)
     },
     onMutate: () => setRemoveError(null),
-    onSuccess: (_data, work) => {
-      toast.success("作品已从列表中删除")
+    onSuccess: (outcome, { work }) => {
+      if (outcome === "kept") toast.warning(DELETE_OUTCOME_TOAST[outcome]); else toast.success(DELETE_OUTCOME_TOAST[outcome])
       closeAllTabsOfNovel(work.novelId)
       const chat = useChatStore.getState()
       if (chat.draftNovelId === work.novelId) chat.requestNewConversation()
+      // The work has left the catalog: drop its row first so its panels unmount, then its own queries,
+      // which would otherwise refetch into "作品未关联到本地目录" until the list reloads.
+      queryClient.setQueryData<NovelList>(["novels"], current => current && {
+        novels: current.novels.filter(novel => novel.id !== work.novelId),
+        unavailableWorks: current.unavailableWorks.filter(row => row.novelId !== work.novelId),
+      })
+      void queryClient.cancelQueries({ predicate: query => query.queryKey.includes(work.novelId) })
+      queryClient.removeQueries({ predicate: query => query.queryKey.includes(work.novelId) })
       invalidateNovels()
       void queryClient.invalidateQueries({ queryKey: ["chat-conversations"] })
       setDialog(null)
@@ -1524,14 +1548,27 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     onError: (err) => setRemoveError(err.message),
     onSettled: () => { removeFlight.current = false },
   })
-  const confirmRemove = (work: UnavailableWork) => {
-    if (removeFlight.current) return
-    removeFlight.current = true
-    removeFaultedMutation.mutate(work)
+  const openDeleteWork = (work: DeleteWorkTarget) => {
+    setRemoveError(null); setWorkLocation({ state: "loading" }); setDialog({ type: "delete-work", work })
+    const request = ++locationRequest.current
+    const query = work.workId ? `workId=${encodeURIComponent(work.workId)}` : `novelId=${encodeURIComponent(work.novelId)}`
+    void fetch(`/api/works/location?${query}`).then(async res => {
+      const data = await res.json().catch(() => null) as { workId?: unknown; path?: unknown } | null
+      if (!res.ok || typeof data?.workId !== "string" || typeof data.path !== "string") throw new Error("location")
+      return { state: "ready" as const, workId: data.workId, path: data.path }
+    }).catch(() => ({ state: "failed" as const })).then(next => { if (locationRequest.current === request) setWorkLocation(next) })
   }
+  const confirmRemove = (work: DeleteWorkTarget, deleteFiles: boolean) => {
+    if (removeFlight.current) return
+    const workId = workLocation.state === "ready" ? workLocation.workId : work.workId
+    if (!workId || deleteFiles && workLocation.state !== "ready") return
+    removeFlight.current = true
+    removeWorkMutation.mutate({ work, workId, deleteFiles, path: workLocation.state === "ready" ? workLocation.path : undefined })
+  }
+  const closeDeleteWork = () => { locationRequest.current++; setWorkLocation({ state: "loading" }); setDialog(null) }
   const faultedActions: FaultedWorkActions = {
-    repair: leaseRepair, reloading: isFetching, removing: removeFaultedMutation.isPending,
-    reload: () => void refetch(), remove: work => { setRemoveError(null); setDialog({ type: "remove-faulted", work }) },
+    repair: leaseRepair, reloading: isFetching, removing: removeWorkMutation.isPending,
+    reload: () => void refetch(), remove: work => openDeleteWork({ novelId: work.novelId, workId: work.workId, title: work.title }),
   }
 
   const renameMutation = useMutation({
@@ -1553,19 +1590,6 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     onError: (err) => toast.error(err.message),
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/novels/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error(await readError(res, "删除失败"))
-    },
-    onSuccess: (_data, id) => {
-      toast.success("小说已删除")
-      closeAllTabsOfNovel(id)
-      invalidateNovels()
-      setDialog(null)
-    },
-    onError: (err) => toast.error(err.message),
-  })
 
   const invalidateWorlds = (novelId: string) =>
     queryClient.invalidateQueries({ queryKey: ["worlds", novelId] })
@@ -1865,7 +1889,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     </DropdownMenuItem>
     <DropdownMenuItem
       variant="destructive"
-      onClick={() => setDialog({ type: "delete", novel })}
+      onClick={() => openDeleteWork({ novelId: novel.id, title: novel.title })}
     >
       <Trash2 />
       删除
@@ -2223,20 +2247,16 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       </Dialog>
 
       <Dialog
-        open={dialog?.type === "delete" || dialog?.type === "world-delete"}
+        open={dialog?.type === "world-delete"}
         onOpenChange={(open) => {
           if (!open) setDialog(null)
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {dialog?.type === "world-delete" ? "删除世界" : "删除小说"}
-            </DialogTitle>
+            <DialogTitle>删除世界</DialogTitle>
             <DialogDescription>
-              {dialog?.type === "world-delete"
-                ? `确定要删除世界「${dialog.world.name}」吗？其下的子世界与全部设定将一并删除，该操作不可撤销。`
-                : `确定要删除《${dialog?.type === "delete" ? dialog.novel.title : ""}》吗？删除后将不再显示在列表中。`}
+              {dialog?.type === "world-delete" && `确定要删除世界「${dialog.world.name}」吗？其下的子世界与全部设定将一并删除，该操作不可撤销。`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2245,47 +2265,54 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
             </Button>
             <Button
               variant="destructive"
-              disabled={deleteMutation.isPending || deleteWorldMutation.isPending}
+              disabled={deleteWorldMutation.isPending}
               onClick={() => {
-                if (dialog?.type === "delete") deleteMutation.mutate(dialog.novel.id)
                 if (dialog?.type === "world-delete") {
                   deleteWorldMutation.mutate({ novel: dialog.novel, world: dialog.world })
                 }
               }}
             >
-              {(deleteMutation.isPending || deleteWorldMutation.isPending) && (
-                <Loader2 className="animate-spin" />
-              )}
+              {deleteWorldMutation.isPending && <Loader2 className="animate-spin" />}
               确认删除
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog
-        open={dialog?.type === "remove-faulted"}
-        onOpenChange={(open) => { if (!open && !removeFaultedMutation.isPending) setDialog(null) }}
+        open={dialog?.type === "delete-work"}
+        onOpenChange={(open) => { if (!open && !removeWorkMutation.isPending) closeDeleteWork() }}
       >
-        <DialogContent showCloseButton={!removeFaultedMutation.isPending}>
+        <DialogContent showCloseButton={!removeWorkMutation.isPending}>
           <DialogHeader>
-            <DialogTitle>删除作品</DialogTitle>
-            <DialogDescription>
-              {dialog?.type === "remove-faulted" ? `确定要从作品列表中删除《${dialog.work.title}》吗？与该作品关联的对话将一并删除。` : ""}
-            </DialogDescription>
+            <DialogTitle>{dialog?.type === "delete-work" ? `删除《${dialog.work.title}》` : ""}</DialogTitle>
+            <DialogDescription>是否同时删除磁盘上的作品文件？</DialogDescription>
           </DialogHeader>
-          {dialog?.type === "remove-faulted" && <div className="space-y-2 text-sm text-muted-foreground">
-            <p>作品目录中的文件不会被改动。{dialog.work.reason === "stale-lease" ? "" : "目录恢复后，可通过“打开作品目录”重新加入。"}</p>
-            {dialog.work.reason === "stale-lease" && <p className="flex gap-2 rounded-md bg-warning/10 px-2.5 py-2 text-foreground"><TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />该作品只是留有异常退出的写入锁，建议先使用“修复作品锁”。删除后如需重新加入，需要先手动移除作品目录中的锁文件夹。</p>}
+          {dialog?.type === "delete-work" && <div className="space-y-2 text-sm text-muted-foreground">
+            {workLocation.state === "ready"
+              ? <p data-work-location className="select-text break-all rounded-md bg-muted px-2.5 py-1.5 font-mono text-xs text-foreground">{workLocation.path}</p>
+              : workLocation.state === "loading"
+                ? <p className="text-xs">正在读取作品目录…</p>
+                : <p className="flex items-center gap-2 text-xs">无法读取作品目录位置<Button variant="link" size="sm" className="h-auto p-0 text-xs" disabled={removeWorkMutation.isPending} onClick={() => openDeleteWork(dialog.work)}>重试</Button></p>}
+            <p>选「删除」只从玄印写作中删除，文件保留。</p>
             {removeError && <p role="alert" className="text-xs text-destructive">{removeError}</p>}
           </div>}
           <DialogFooter>
-            <Button variant="outline" disabled={removeFaultedMutation.isPending} onClick={() => setDialog(null)}>取消</Button>
+            <Button variant="outline" disabled={removeWorkMutation.isPending} onClick={closeDeleteWork}>取消</Button>
+            <Button
+              variant="outline"
+              disabled={removeWorkMutation.isPending || dialog?.type === "delete-work" && !dialog.work.workId && workLocation.state !== "ready"}
+              onClick={() => { if (dialog?.type === "delete-work") confirmRemove(dialog.work, false) }}
+            >
+              {removeWorkMutation.isPending && removeWorkMutation.variables?.deleteFiles === false && <Loader2 className="animate-spin" />}
+              删除
+            </Button>
             <Button
               variant="destructive"
-              disabled={removeFaultedMutation.isPending}
-              onClick={() => { if (dialog?.type === "remove-faulted") confirmRemove(dialog.work) }}
+              disabled={removeWorkMutation.isPending || workLocation.state !== "ready"}
+              onClick={() => { if (dialog?.type === "delete-work") confirmRemove(dialog.work, true) }}
             >
-              {removeFaultedMutation.isPending && <Loader2 className="animate-spin" />}
-              {removeFaultedMutation.isPending ? "正在删除…" : "确认删除"}
+              {removeWorkMutation.isPending && removeWorkMutation.variables?.deleteFiles === true && <Loader2 className="animate-spin" />}
+              删除，不保留文件
             </Button>
           </DialogFooter>
         </DialogContent>

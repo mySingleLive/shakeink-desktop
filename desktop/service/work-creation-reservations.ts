@@ -54,6 +54,7 @@ export class WorkCreationReservations{
   const previous=reservationSchema.parse(old.value);assertSame(previous,input);if(previous.phase!=='pending')throw new ContentError('REQUEST_CONFLICT','作品已创建完成，不能删除目录预留')
   await tx.systemConfig.delete({where:{key:key(input.requestId)}});assertCurrent()
  }))}
+ async records(){return this.withGlobal(async database=>(await database.systemConfig.findMany({where:{key:{startsWith:'desktop:work-creation-reservation:'}}})).map(row=>{const value=reservationSchema.parse(row.value);return{path:value.selection.path,phase:value.phase}}))}
  async directories(){return this.withGlobal(async database=>(await database.systemConfig.findMany({where:{key:{startsWith:'desktop:work-creation-reservation:'}}})).map(row=>reservationSchema.parse(row.value).selection.path))}
  async requireExisting(value:Input){const input=inputSchema.parse(value);return this.withGlobal(async database=>{const row=await database.systemConfig.findUnique({where:{key:key(input.requestId)}});if(!row)throw Error('原导入目录预留记录缺失');const previous=reservationSchema.parse(row.value);assertSame(previous,input);return previous})}
  async assertNoPendingCreation(requestId:string){return this.withGlobal(async database=>{

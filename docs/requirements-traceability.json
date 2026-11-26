@@ -5847,6 +5847,56 @@
       "全部展开时工具栏“全部展开 / 全部收起”仍按手动展开集合判断。",
       "窄面板中展开卡长标题换行后压在卡头下方内容上（docs/602 §11.5，既有样式，未在本次修改，待用户决定）。"
     ]
+  },
+  {
+    "id": "WD-608",
+    "requirement": "点击作品菜单“删除”时弹出对话框询问是否连磁盘文件一起删除；选“否”只从玄印写作删除作品数据（移出作品列表、删除关联对话，文件保留，可再用“打开作品”加入），选“是”连作品目录永久删除；正常作品与不可用作品都用此对话框；标题“删除《作品名》”、正文“是否同时删除磁盘上的作品文件？”+ 完整路径 +“选「否」只从玄印写作中删除，文件保留。”、按钮 取消/否/是，删除文件（用户 2026-11-25）；按钮改为 取消/删除/删除，不保留文件，提示句改为“选「删除」只从玄印写作中删除，文件保留。”（用户 2026-11-26，“否”易误解）",
+    "source": [
+      "docs/608-work-delete-files-plan.md",
+      "docs/608-work-delete-files-plan-review.md",
+      "docs/608-work-delete-files-cases.md",
+      "docs/608-work-delete-files-cases-review.md",
+      "docs/608-work-delete-files-code-review.md"
+    ],
+    "implementation": [
+      "desktop/service/workspaces.ts（removeWork：预检 inspectDeletion → 忙检查与 forgotten 同步 → 关闭连接失败即拒绝 → 锁快照 → 提交 → 提交后 deleteWorkFolder 逐条目复核身份/清单/锁，清单最后删；deletionRefusal 纯函数；removeTreeOnDevice 不跨设备不跟随链接；keptDeletions 残留目录受保护）",
+      "desktop/service/dispatcher.ts（GET /api/works/location；DELETE /api/works/[id] 严格请求体 {deleteFiles,path}）",
+      "desktop/service/work-creation-reservations.ts（records）",
+      "desktop/service/index.ts（引导目录加入受保护根）",
+      "src/components/layout/SidebarTree.tsx（统一删除对话框；正常作品不再调用 DELETE /api/novels/[id]；删除后先移除列表行与该作品查询）"
+    ],
+    "testIds": [
+      "tests/unit/work-delete-files.test.ts WDU-01/01b/02/03/04/05/06",
+      "tests/integration/work-delete-files.test.ts WD-01..24、06b/06c、09b、14b、17b",
+      "tests/integration/faulted-work-removal.test.ts WN-10（响应含 files）",
+      "tests/browser/works-loading.test.ts WDB-01..13、07b/09b（取代 WN-48'/49、50'、51'/52、53'），内存夹具，非真实目标",
+      "scripts/verify-work-delete-files.mjs WDR-01/01b/02/03/04（真实目标）",
+      "scripts/verify-reused-import-target.mjs 删除步骤改为新对话框选“否”"
+    ],
+    "verificationKind": "WORK_DELETE_FILES_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "对话框文案与路径": "真实目标 WDR-03：标题、问句、真实目录完整路径、提示句、按钮 取消/删除/删除，不保留文件（docs/608-work-delete-files-evidence/wdr-03-dialog.png）；浏览器 WDB-01/02",
+      "否：只删玄印数据": "真实目标 WDR-01：列表移除，目录条目除锁外不变；WDR-01b 用“打开作品”重新加入；集成 WD-01/02",
+      "是：永久删除目录": "真实目标 WDR-02：目录不存在，同级目录不变（wdr-02-ls.txt）；集成 WD-03（外部链接/硬链接不受影响）",
+      "不可用作品": "真实目标 WDR-04：移走目录后选“是”，提示未找到作品目录，移走的目录不变；集成 WD-06/06c",
+      "防误删": "集成 WD-07..16、21、24、14b、06b（符号链接、替换、清单不符、嵌套、预留、外机/存活/同进程锁、连接未关闭、数据根重叠、检查期间开始任务）；单元 WDU-04/05（挂载点、/、主目录、常用文件夹、数据根、引导目录）、WDU-01/01b/06（跨设备、提交后新锁）",
+      "部分失败": "集成 WD-17/17b：files=kept，清单保留，残留目录仍受保护（含无预留的打开作品）"
+    },
+    "evidence": [
+      "docs/608-work-delete-files-evidence/real-target-report.json、wdr-03-dialog.png、wdr-02-after-delete.png、wdr-02-ls.txt",
+      "/private/tmp/shakeink-delete-608/evidence/build.log、build-head.txt、run.log（构建后、运行期间未再构建）",
+      "单元+集成全量（npm test）：5211 项 43 失败；干净 HEAD 9947f8e 比较的失败集合包含全部 43 项，无新增",
+      "浏览器 works-loading 33/33、sidebar-navigation 22/22"
+    ],
+    "verificationLimits": [
+      "浏览器用例为内存夹具，不作为真实目标通过依据；真实目标只在 macOS 构建版、隔离 SHAKEINK_TEST_ROOT（零模型）执行，作品通过真实 POST /api/novels 创建，只替换原生目录选择框。",
+      "跨设备、挂载点只用注入 lstat 的单元测试覆盖，未挂载真实卷。",
+      "removeTreeOnDevice 按路径递归，“目录换成符号链接”的本机竞态只能收窄（审核低 3），未彻底消除；大目录预检与删除没有条目上限（审核低 4）。",
+      "取代：正常作品原“删除小说”（DELETE /api/novels/[id]，仅标记 DELETED，对话保留）改为本流程，选“否”会删除关联对话。Web 路由 DELETE /api/novels/[id] 保留，桌面界面已无调用方；以前通过它删除的作品仍留在 catalog 中，本次不处理。",
+      "残留目录（部分删除失败）若没有创建预留，只在本次应用运行期间受保护，重启后不再受保护（代码评审中2 复审）。",
+      "删除后的一次侧栏级联计数请求（GET /api/novels/:id/cascade）可能在列表刷新前返回“作品未关联到本地目录”，只在主进程日志中出现，界面无提示。"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

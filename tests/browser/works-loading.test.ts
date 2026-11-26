@@ -22,9 +22,10 @@ window.mountWorksFixture=({healthy=false,reason='stale-lease',bridge=true,empty=
  const workId='b3bd663e-0b87-480c-b6ad-6eaa1488d6cb';
  const summary={id:'healthy',title:'可用作品',coverUrl:null,status:'DRAFT',currentStage:'PLANNING',createdAt:'2026-01-01',updatedAt:'2026-01-01'};
  let body={novels:healthy?[summary]:[],unavailableWorks:empty?[]:[{workId,novelId:'unavailable',title:'待恢复作品',reason},...extra]};
- const calls=[],repairs=[],errors=[],requests=[],textMenus=[];let reads=0,removeReply={status:200,body:null},removeGate=null;
- window.fetch=async (input,init)=>{const path=String(input),method=init?.method??'GET';requests.push({path,method});if(path==='/api/novels'){reads++;if(globalError)throw Error('private-native-path-key');return Response.json(body)}
- if(path.startsWith('/api/works/')&&method==='DELETE'){if(removeGate)await removeGate.promise;const id=path.slice('/api/works/'.length),row=body.unavailableWorks.find(w=>w.workId===id);if(removeReply.reject)throw Error('private-native-path-key');if(removeReply.raw)return new Response(removeReply.raw,{status:removeReply.status});if(removeReply.status===200&&row)body={...body,unavailableWorks:body.unavailableWorks.filter(w=>w.workId!==id)};return Response.json(removeReply.body??(removeReply.status===200?{ok:true,workId:id,novelId:row?.novelId}:{error:'x'}),{status:removeReply.status})}
+ const calls=[],repairs=[],errors=[],requests=[],textMenus=[];let reads=0,removeReply={status:200,body:null},removeGate=null,locationReply={},locationGate=null;
+ window.fetch=async (input,init)=>{const path=String(input),method=init?.method??'GET';requests.push(init?.body?{path,method,body:JSON.parse(String(init.body))}:{path,method});
+ if(path.startsWith('/api/works/location?')){if(locationGate)await locationGate.promise;if(locationReply.fail)return Response.json({error:'x'},{status:500});const q=new URLSearchParams(path.split('?')[1]),byWork=q.get('workId'),row=byWork?body.unavailableWorks.find(w=>w.workId===byWork):body.novels.find(n=>n.id===q.get('novelId'));if(!row)return Response.json({error:'x',code:'WORK_NOT_FOUND'},{status:404});return Response.json({workId:byWork??'c2f1e8a4-1111-4111-8111-111111111111',novelId:row.novelId??row.id,path:'/Users/作者/作品/'+row.title})}if(path==='/api/novels'){reads++;if(globalError)throw Error('private-native-path-key');return Response.json(body)}
+ if(path.startsWith('/api/works/')&&method==='DELETE'){if(removeGate)await removeGate.promise;const id=path.slice('/api/works/'.length),row=body.unavailableWorks.find(w=>w.workId===id);if(removeReply.reject)throw Error('private-native-path-key');if(removeReply.raw)return new Response(removeReply.raw,{status:removeReply.status});const healthyRow=id==='c2f1e8a4-1111-4111-8111-111111111111',files=init?.body&&JSON.parse(String(init.body)).deleteFiles?'removed':'kept-by-choice';if(removeReply.status===200&&row)body={...body,unavailableWorks:body.unavailableWorks.filter(w=>w.workId!==id)};if(removeReply.status===200&&healthyRow)body={...body,novels:body.novels.filter(n=>n.id!=='healthy')};return Response.json(removeReply.body??(removeReply.status===200?{ok:true,workId:id,novelId:row?.novelId??'healthy',files}:{error:'x'}),{status:removeReply.status})}
  if(path.includes('/conversations')){if(conversationError)throw Error("Error invoking remote method 'desktop:request': Error: ENOENT: no such file or directory, stat '/private/var/folders/private-native-path-key/w-1'");return Response.json({conversations:[]})}
  if(path.includes('/worlds'))return Response.json({worlds:[]});
  return Response.json({novel:{...summary,volumes:[],characters:[],theme:null},characters:[],scenarios:[],scenes:[],settings:[]})};
@@ -34,7 +35,7 @@ window.mountWorksFixture=({healthy=false,reason='stale-lease',bridge=true,empty=
  const query=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity}}});
  useTabsStore.setState({tabs:[{id:'faulted-tab',type:'theme',novelId:'unavailable',title:'异常作品面板'},{id:'workid-tab',type:'theme',novelId:workId,title:'误用编号面板'}],activeTabId:'workid-tab'});const root=createRoot(document.getElementById('app'));
  flushSync(()=>root.render(<QueryClientProvider client={query}><div style={{width:280}}><SidebarTree user={{id:'local-author',name:'隔离作者',email:''}}/></div><input id='text-control' aria-label='文本输入' defaultValue='可编辑'/>{controller?<DesktopCommandController/>:null}<Toaster/><ContentTabs fullscreen={false} onToggleFullscreen={()=>{}} onToggleContent={()=>{}}/></QueryClientProvider>));
- window.worksFixture={calls,repairs,workId,requests,textMenus,reads:()=>reads,tabs:()=>useTabsStore.getState().tabs.map(t=>t.id),chat:()=>useChatStore.getState(),setChat:value=>useChatStore.setState(value),setRemove:value=>removeReply=value,holdRemove:()=>{removeGate=Promise.withResolvers()},releaseRemove:()=>{removeGate?.resolve();removeGate=null},setRoot:value=>useDesktopStore.setState(s=>({bootstrap:{...s.bootstrap,dataRoot:value}})),query,healthy:summary,append:()=>query.setQueryData(['novels'],current=>appendCreatedNovel(current,{...summary,id:'created',title:'新建作品'})),setBody:value=>body=value,setError:value=>globalError=value,resolve:value=>repairs.at(-1).resolve(value),reject:()=>repairs.at(-1).reject(Error('private-native-path-key')),unmount:()=>root.unmount()};
+ window.worksFixture={calls,repairs,workId,requests,textMenus,reads:()=>reads,tabs:()=>useTabsStore.getState().tabs.map(t=>t.id),chat:()=>useChatStore.getState(),setChat:value=>useChatStore.setState(value),setRemove:value=>removeReply=value,holdRemove:()=>{removeGate=Promise.withResolvers()},releaseRemove:()=>{removeGate?.resolve();removeGate=null},setLocation:value=>locationReply=value,holdLocation:()=>{locationGate=Promise.withResolvers()},releaseLocation:()=>{locationGate?.resolve();locationGate=null},setRoot:value=>useDesktopStore.setState(s=>({bootstrap:{...s.bootstrap,dataRoot:value}})),query,healthy:summary,append:()=>query.setQueryData(['novels'],current=>appendCreatedNovel(current,{...summary,id:'created',title:'新建作品'})),setBody:value=>body=value,setError:value=>globalError=value,resolve:value=>repairs.at(-1).resolve(value),reject:()=>repairs.at(-1).reject(Error('private-native-path-key')),unmount:()=>root.unmount()};
 };` }, bundle: true, platform: 'browser', format: 'iife', write: false, tsconfig: 'tsconfig.json', plugins: [{ name: 'unrelated-tab-bodies', setup(api) {
   api.onResolve({ filter: /^@\/components\/content\/(registry|StagedSaveSurface|StoryWorkflowPanel)$/ }, args => ({ path: args.path, namespace: 'works-fixture' }))
   api.onLoad({ filter: /.*/, namespace: 'works-fixture' }, () => ({ loader: 'tsx', contents: `export const renderTabContent=()=>null;export const StagedSaveSurface=({children})=>children;export const StagedInterceptionBootstrap=()=>null;export const StorySources=()=>null;export const StoryActivityBanner=()=>null;export const StoryLivePreview=()=>null;` }))
@@ -201,64 +202,119 @@ test('WL-04/06: global request failure on first load never exposes faulted nodes
   assert.equal(await node(page).count(), 0); assert.doesNotMatch(await page.locator('body').innerText(), /private-native-path-key|还没有小说/)
 }))
 
-test("WN-48'/49: delete opens a React dialog; cancel sends nothing; stale-lease warns to repair first", () => scenario({ extra }, async page => {
-  await openMenu(page, '缺失作品'); await item(page, '删除').click()
-  const dialog = page.getByRole('dialog'); await dialog.waitFor()
-  assert.equal(await dialog.getByRole('heading', { name: '删除作品', exact: true }).count(), 1)
+const H = 'c2f1e8a4-1111-4111-8111-111111111111'
+const deletes = async (page: Page) => (await page.evaluate(() => (window as any).worksFixture.requests)).filter((r: any) => r.method === 'DELETE')
+const no = (page: Page) => page.getByRole('dialog').getByRole('button', { name: '删除', exact: true })
+const yesButton = (page: Page) => page.getByRole('dialog').getByRole('button', { name: '删除，不保留文件', exact: true })
+async function openHealthyDelete(page: Page) {
+  const healthy = node(page, '可用作品'); await healthy.waitFor()
+  await healthy.click({ button: 'right' }); await menu(page).waitFor(); await item(page, '删除').click()
+  await page.getByRole('dialog').waitFor()
+}
+
+test("WDB-01/02/WN-48'': both work kinds open the same dialog with title, question, path and three buttons; cancel sends nothing", () => scenario({ healthy: true, extra }, async page => {
+  await openHealthyDelete(page)
+  const dialog = page.getByRole('dialog')
+  assert.equal(await dialog.getByRole('heading', { name: '删除《可用作品》', exact: true }).count(), 1)
+  await dialog.locator('[data-work-location]').waitFor()
   const text = await dialog.innerText()
-  for (const part of ['《缺失作品》', '与该作品关联的对话将一并删除。', '作品目录中的文件不会被改动。', '目录恢复后，可通过“打开作品目录”重新加入。']) assert.ok(text.includes(part), part)
+  for (const part of ['是否同时删除磁盘上的作品文件？', '/Users/作者/作品/可用作品', '选「删除」只从玄印写作中删除，文件保留。']) assert.ok(text.includes(part), part)
+  assert.deepEqual(await dialog.locator('[data-slot="dialog-footer"] button').allInnerTexts(), ['取消', '删除', '删除，不保留文件'])
   await dialog.getByRole('button', { name: '取消', exact: true }).click(); await dialog.waitFor({ state: 'detached' })
-  await openMenu(page); await item(page, '删除').click(); await dialog.waitFor()
-  const lease = await dialog.innerText()
-  assert.ok(lease.includes('建议先使用“修复作品锁”')); assert.ok(!lease.includes('可通过“打开作品目录”重新加入'))
-  await dialog.getByRole('button', { name: '取消', exact: true }).click()
-  assert.equal((await page.evaluate(() => (window as any).worksFixture.requests)).filter((r: any) => r.method === 'DELETE').length, 0)
+  await openMenu(page, '缺失作品'); await item(page, '删除').click(); await dialog.waitFor()
+  assert.equal(await dialog.getByRole('heading', { name: '删除《缺失作品》', exact: true }).count(), 1)
+  await dialog.getByText('/Users/作者/作品/缺失作品', { exact: true }).waitFor()
+  const requests = await page.evaluate(() => (window as any).worksFixture.requests)
+  assert.ok(requests.some((r: any) => r.path === '/api/works/location?novelId=healthy'))
+  assert.ok(requests.some((r: any) => r.path.startsWith('/api/works/location?workId=')))
+  await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'detached' })
+  assert.equal((await deletes(page)).length, 0)
 }))
 
-test("WN-50'/50b: confirming deletes once, closes only that novel's tabs, refreshes lists and starts a new chat if needed", () => scenario({ healthy: true }, async page => {
+test("WDB-03/WN-50'': “否” sends deleteFiles false once, closes only that novel's tabs, refreshes lists and starts a new chat", () => scenario({ healthy: true }, async page => {
   await page.evaluate(() => (window as any).worksFixture.setChat({ draftNovelId: 'unavailable', conversationId: 'faulted-conversation' }))
   await openMenu(page); await item(page, '删除').click()
-  const dialog = page.getByRole('dialog'); await dialog.waitFor()
+  const dialog = page.getByRole('dialog'); await dialog.locator('[data-work-location]').waitFor()
   const before = (await page.evaluate(() => (window as any).worksFixture.requests)).length
-  await dialog.getByRole('button', { name: '确认删除', exact: true }).click()
-  await dialog.waitFor({ state: 'detached' })
+  await no(page).click(); await dialog.waitFor({ state: 'detached' })
   await page.getByText('作品已从列表中删除', { exact: true }).waitFor()
   const requests = (await page.evaluate(() => (window as any).worksFixture.requests)).slice(before)
-  assert.deepEqual(requests.filter((r: any) => r.method === 'DELETE'), [{ path: `/api/works/${W}`, method: 'DELETE' }])
+  assert.deepEqual(requests.filter((r: any) => r.method === 'DELETE'), [{ path: `/api/works/${W}`, method: 'DELETE', body: { deleteFiles: false } }])
   assert.ok(requests.some((r: any) => r.path === '/api/novels'))
   assert.ok(requests.some((r: any) => r.path === '/api/chat/conversations'))
   assert.deepEqual(await page.evaluate(() => (window as any).worksFixture.tabs()), ['workid-tab'])
   assert.equal(await page.evaluate(() => (window as any).worksFixture.chat().newConversationRequested), true)
   await node(page).waitFor({ state: 'detached' })
 }))
-test('WN-50b: a concurrent removal reported as not found is treated as done', () => scenario({}, async page => {
-  await page.evaluate(() => (window as any).worksFixture.setRemove({ status: 404, body: { error: '作品不存在或已从列表中删除', code: 'WORK_NOT_FOUND' } }))
-  await openMenu(page); await item(page, '删除').click()
-  await page.getByRole('dialog').getByRole('button', { name: '确认删除', exact: true }).click()
-  await page.getByRole('dialog').waitFor({ state: 'detached' })
+
+test('WDB-04/12: “是” on a healthy work sends deleteFiles with the shown path and never calls the old novel route', () => scenario({ healthy: true }, async page => {
+  await openHealthyDelete(page); await page.getByRole('dialog').locator('[data-work-location]').waitFor()
+  await page.evaluate(() => (window as any).worksFixture.query.setQueryData(['cascade', 'healthy'], { pendingCount: 0 }))
+  await yesButton(page).click(); await page.getByRole('dialog').waitFor({ state: 'detached' })
+  await page.getByText('作品及其文件已删除', { exact: true }).waitFor()
+  assert.equal(await page.evaluate('window.worksFixture.query.getQueryCache().getAll().filter(function (q) { return q.queryKey.includes("healthy") }).length'), 0)
+  assert.deepEqual(await deletes(page), [{ path: `/api/works/${H}`, method: 'DELETE', body: { deleteFiles: true, path: '/Users/作者/作品/可用作品' } }])
+  await node(page, '可用作品').waitFor({ state: 'detached' })
 }))
-test("WN-51'/52: failures keep the dialog open with safe text and allow a second confirm", () => scenario({}, async page => {
-  await page.evaluate(() => (window as any).worksFixture.setRemove({ status: 409, body: { error: '作品仍有任务在运行，请稍后重试', code: 'WORK_BUSY' } }))
+
+test('WDB-05/10: missing, kept and not-found outcomes show their own messages', () => scenario({ healthy: true }, async page => {
+  const cases = [
+    [{ status: 200, body: { ok: true, files: 'missing' } }, '作品已删除，未找到作品目录，没有删除任何文件'],
+    [{ status: 200, body: { ok: true, files: 'kept' } }, '作品已删除，部分文件未能删除，请手动删除作品目录'],
+    [{ status: 404, body: { error: '作品不存在或已从列表中删除', code: 'WORK_NOT_FOUND' } }, '作品已从列表中删除'],
+  ] as const
+  for (const [reply, message] of cases) {
+    await page.evaluate(value => { const f = (window as any).worksFixture; f.setRemove(value); f.setBody({ novels: [f.healthy], unavailableWorks: [] }); f.query.invalidateQueries({ queryKey: ['novels'] }) }, reply as any)
+    await openHealthyDelete(page); await page.getByRole('dialog').locator('[data-work-location]').waitFor()
+    await yesButton(page).click(); await page.getByRole('dialog').waitFor({ state: 'detached' })
+    await page.getByText(message, { exact: true }).first().waitFor()
+  }
+}))
+
+test('WDB-06/07: while the path loads or fails, “是” is disabled; “否” still completes', () => scenario({}, async page => {
+  await page.evaluate(() => (window as any).worksFixture.holdLocation())
   await openMenu(page); await item(page, '删除').click()
-  const dialog = page.getByRole('dialog'), confirm = dialog.getByRole('button', { name: '确认删除', exact: true })
-  await confirm.click(); await dialog.getByRole('alert').getByText('作品仍有任务在运行，请稍后重试').waitFor()
+  const dialog = page.getByRole('dialog'); await dialog.getByText('正在读取作品目录…', { exact: true }).waitFor()
+  assert.equal(await yesButton(page).isDisabled(), true); assert.equal(await no(page).isDisabled(), false)
+  await page.evaluate(() => { const f = (window as any).worksFixture; f.setLocation({ fail: true }); f.releaseLocation() })
+  await dialog.getByText('无法读取作品目录位置').waitFor()
+  assert.equal(await yesButton(page).isDisabled(), true)
+  await no(page).click(); await dialog.waitFor({ state: 'detached' })
+  assert.deepEqual((await deletes(page)).map((r: any) => r.body), [{ deleteFiles: false }])
+}))
+
+test("WDB-09/WN-51'': failures keep the dialog open with safe text; the author can then choose “否”", () => scenario({}, async page => {
+  await page.evaluate(() => (window as any).worksFixture.setRemove({ status: 409, body: { error: '作品正在其他程序中使用，文件未删除', code: 'WORK_FILES_UNSAFE' } }))
+  await openMenu(page); await item(page, '删除').click()
+  const dialog = page.getByRole('dialog'); await dialog.locator('[data-work-location]').waitFor()
+  await yesButton(page).click(); await dialog.getByRole('alert').getByText('作品正在其他程序中使用，文件未删除').waitFor()
   await page.evaluate(() => (window as any).worksFixture.setRemove({ status: 500, raw: '<html>private-native-path-key</html>' }))
-  await confirm.click(); await dialog.getByRole('alert').getByText('暂时无法删除作品，原数据已保留，请重试。').waitFor()
+  await no(page).click(); await dialog.getByRole('alert').getByText('暂时无法删除作品，原数据已保留，请重试。', { exact: false }).waitFor()
   await page.evaluate(() => (window as any).worksFixture.setRemove({ status: 200, reject: true }))
-  await confirm.click(); await dialog.getByRole('alert').getByText('暂时无法删除作品，原数据已保留，请重试。').waitFor()
+  await no(page).click(); await dialog.getByRole('alert').getByText('暂时无法删除作品，原数据已保留，请重试。', { exact: true }).waitFor()
   assert.doesNotMatch(await dialog.innerText(), /private-native-path-key/)
-  assert.equal((await page.evaluate(() => (window as any).worksFixture.requests)).filter((r: any) => r.method === 'DELETE').length, 3)
+  await page.evaluate(() => (window as any).worksFixture.setRemove({ status: 200, body: null }))
+  await no(page).click(); await dialog.waitFor({ state: 'detached' })
+  assert.equal((await deletes(page)).length, 4)
 }))
-test("WN-53': a pending delete is single-flight and the dialog cannot be dismissed", () => scenario({}, async page => {
+
+test("WDB-08/WN-53'': a pending delete is single-flight and the dialog cannot be dismissed", () => scenario({}, async page => {
   await page.evaluate(() => (window as any).worksFixture.holdRemove())
   await openMenu(page); await item(page, '删除').click()
-  const dialog = page.getByRole('dialog')
-  await page.evaluate(() => { const b = [...document.querySelectorAll('[role=dialog] button')].find(e => e.textContent?.includes('确认删除')) as HTMLButtonElement; b.click(); b.click() })
-  await dialog.getByRole('button', { name: '正在删除…', exact: true }).waitFor()
-  assert.equal(await dialog.getByRole('button', { name: '取消', exact: true }).isDisabled(), true)
+  const dialog = page.getByRole('dialog'); await dialog.locator('[data-work-location]').waitFor()
+  await page.evaluate(() => { const b = [...document.querySelectorAll('[role=dialog] button')].find(e => e.textContent === '删除，不保留文件') as HTMLButtonElement; b.click(); b.click() })
+  await page.waitForFunction(() => [...document.querySelectorAll('[role=dialog] [data-slot="dialog-footer"] button')].every(b => (b as HTMLButtonElement).disabled))
   await page.keyboard.press('Escape'); await page.waitForTimeout(100); assert.equal(await dialog.isVisible(), true)
-  assert.equal((await page.evaluate(() => (window as any).worksFixture.requests)).filter((r: any) => r.method === 'DELETE').length, 1)
+  assert.equal((await deletes(page)).length, 1)
   await page.evaluate(() => (window as any).worksFixture.releaseRemove()); await dialog.waitFor({ state: 'detached' })
+}))
+
+test('WDB-11: the folder path appears only inside the dialog and never in the query cache', () => scenario({ healthy: true }, async page => {
+  await openHealthyDelete(page); await page.getByRole('dialog').locator('[data-work-location]').waitFor()
+  const cached = await page.evaluate(() => JSON.stringify((window as any).worksFixture.query.getQueryCache().getAll().map((q: any) => q.state.data)))
+  assert.doesNotMatch(cached, /\/Users\/作者/)
+  await page.keyboard.press('Escape'); await page.getByRole('dialog').waitFor({ state: 'detached' })
+  assert.doesNotMatch(await page.locator('body').innerText(), /\/Users\/作者/)
 }))
 test("WN-54': while reloading, repair and delete are disabled", () => scenario({}, async page => {
   await node(page).waitFor()
@@ -338,4 +394,30 @@ test('CV-01: a rejected conversation request shows a safe message in both sideba
   await page.getByRole('alert').filter({ hasText: '重试对话' }).first().waitFor()
   const text = await page.locator('body').innerText()
   assert.doesNotMatch(text, /private-native-path-key|ENOENT|desktop:request|\/private\/var/)
+}))
+
+test('WDB-13: a late path reply for a cancelled dialog never reaches the next work’s dialog', () => scenario({ healthy: true }, async page => {
+  await page.evaluate(() => (window as any).worksFixture.holdLocation())
+  await openMenu(page); await item(page, '删除').click()
+  const dialog = page.getByRole('dialog'); await dialog.getByText('正在读取作品目录…', { exact: true }).waitFor()
+  await dialog.getByRole('button', { name: '取消', exact: true }).click(); await dialog.waitFor({ state: 'detached' })
+  await openHealthyDelete(page); await dialog.getByText('正在读取作品目录…', { exact: true }).waitFor()
+  await page.evaluate(() => (window as any).worksFixture.releaseLocation())
+  await dialog.locator('[data-work-location]').waitFor()
+  assert.equal(await dialog.locator('[data-work-location]').innerText(), '/Users/作者/作品/可用作品')
+  await yesButton(page).click(); await dialog.waitFor({ state: 'detached' })
+  assert.deepEqual((await deletes(page)).map((r: any) => r.body), [{ deleteFiles: true, path: '/Users/作者/作品/可用作品' }])
+}))
+
+test('WDB-07b/09b: a healthy work whose path fails can retry; WORK_PATH_CHANGED stays in the dialog', () => scenario({ healthy: true }, async page => {
+  await page.evaluate(() => (window as any).worksFixture.setLocation({ fail: true }))
+  await openHealthyDelete(page)
+  const dialog = page.getByRole('dialog'); await dialog.getByText('无法读取作品目录位置').waitFor()
+  assert.equal(await yesButton(page).isDisabled(), true); assert.equal(await no(page).isDisabled(), true)
+  await page.evaluate(() => (window as any).worksFixture.setLocation({}))
+  await dialog.getByRole('button', { name: '重试', exact: true }).click()
+  await dialog.locator('[data-work-location]').waitFor()
+  await page.evaluate(() => (window as any).worksFixture.setRemove({ status: 409, body: { error: '作品目录位置已变化，请关闭对话框后重试', code: 'WORK_PATH_CHANGED' } }))
+  await yesButton(page).click(); await dialog.getByRole('alert').getByText('作品目录位置已变化，请关闭对话框后重试').waitFor()
+  assert.equal(await dialog.isVisible(), true)
 }))

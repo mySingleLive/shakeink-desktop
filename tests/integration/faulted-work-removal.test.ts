@@ -111,7 +111,7 @@ test('WN-10..13/11b: every fault kind is removable; directories and locks stay b
       const { revision } = await catalogRows(h)
       const result = await remove(h, work.id)
       assert.equal(result.status, 200, result.text)
-      assert.deepEqual(result.body, { ok: true, workId: work.id, novelId: work.novelId })
+      assert.deepEqual(result.body, { ok: true, workId: work.id, novelId: work.novelId, files: 'kept-by-choice' })
       const after = await catalogRows(h)
       assert.equal(after.revision, revision + 1)
       assert.ok(!after.value.some(r => r.id === work.id))

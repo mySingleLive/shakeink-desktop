@@ -11,7 +11,11 @@ import {getDatabaseContext} from './context'
 import { dispatchTemplateRequest } from "./template-dispatcher"
 import type { UnavailableWork } from "../shared/work-list"
 import { classifyUnavailableWork } from "./work-unavailability"
-export type RouteHandler = (request: Request, context: { params: Promise<Record<string, string>> }) => Promise<Response>
+const removeWorkBodySchema = z.union([
+  z.object({ deleteFiles: z.literal(false) }).strict(),
+  z.object({ deleteFiles: z.literal(true), path: z.string().min(1).max(32768) }).strict(),
+])
+export type RouteHandler =(request: Request, context: { params: Promise<Record<string, string>> }) => Promise<Response>
 export function matchRoute(path: string, method: string) {
   const segments = new URL(path, "https://local.invalid").pathname.split("/")
   for (const row of routes) {
@@ -116,8 +120,10 @@ export class LocalDispatcher {
       }
       return Response.json({ conversations: conversations.sort((a,b) => b.updatedAt.getTime() - a.updatedAt.getTime()) })
     }
+    // docs/608: exact match before the [id] route; a work's own folder is shown only in its delete dialog.
+    if (url.pathname === "/api/works/location" && input.method === "GET") return this.workLocation(url.searchParams)
     const workRoute = /^\/api\/works\/([^/]+)$/.exec(url.pathname)
-    if (workRoute && input.method === "DELETE") return this.removeWork(workRoute[1])
+    if (workRoute && input.method === "DELETE") return this.removeWork(workRoute[1], input.body)
     // Global model mutations belong to the main-process vault, not this legacy route.
     if (url.pathname.startsWith("/api/admin/models")) return Response.json({ error: "请在桌面设置中管理模型" }, { status: 400 })
     const match = matchRoute(input.path, input.method)
@@ -136,16 +142,34 @@ export class LocalDispatcher {
     // They cannot inherit the new work's candidate/approval execution scope.
     return conversationId?this.transfers.bind(conversationId,invoke):invoke()
   }
-  /** Removes any indexed work from the list. Files in its directory are never touched. */
-  private async removeWork(segment: string): Promise<Response> {
+  private async workLocation(params: URLSearchParams): Promise<Response> {
+    const invalid = () => Response.json({ error: "请求无效", code: "INVALID_REQUEST" }, { status: 400 })
+    const keys = [...params.keys()]
+    if (keys.length !== 1 || !["novelId", "workId"].includes(keys[0])) return invalid()
+    const value = params.get(keys[0])!
+    if (!value || keys[0] === "workId" && (!z.uuid().safeParse(value).success || value !== value.toLowerCase())) return invalid()
+    const record = (await this.works.list()).find(row => keys[0] === "workId" ? row.id === value : row.novelId === value)
+    if (!record || record.id === "inbox") return Response.json({ error: "作品不存在或已从列表中删除", code: "WORK_NOT_FOUND" }, { status: 404 })
+    return Response.json({ workId: record.id, novelId: record.novelId, path: record.path })
+  }
+  /** Removes an indexed work from the list; with deleteFiles also permanently deletes its folder (docs/608). */
+  private async removeWork(segment: string, body: ArrayLike<number> | undefined): Promise<Response> {
     const parsed = z.uuid().safeParse(segment)
     if (!parsed.success || parsed.data !== parsed.data.toLowerCase()) return Response.json({ error: "作品编号无效", code: "INVALID_WORK_ID" }, { status: 400 })
     const id = parsed.data
+    let options: { deleteFiles: boolean; path?: string } = { deleteFiles: false }
+    if (body?.length) {
+      let value: unknown
+      try { value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(body))) } catch { value = undefined }
+      const request = removeWorkBodySchema.safeParse(value)
+      if (!request.success) return Response.json({ error: "删除请求无效", code: "INVALID_REQUEST" }, { status: 400 })
+      options = request.data
+    }
     if (!this.transfers) return Response.json({ error: "会话目录服务暂不可用，作品未删除，请稍后重试。", code: "CONVERSATION_LEDGER_UNAVAILABLE" }, { status: 503 })
     try {
       const transfers = this.transfers
-      const record = await this.works.forget(id, () => transfers.forgetWorkspace(id))
-      return Response.json({ ok: true, workId: record.id, novelId: record.novelId })
+      const { record, files } = await this.works.removeWork(id, () => transfers.forgetWorkspace(id), options)
+      return Response.json({ ok: true, workId: record.id, novelId: record.novelId, files })
     } catch (error) {
       if (error instanceof ContentError) return Response.json({ error: error.message, code: error.code }, { status: error.status })
       return Response.json({ error: "暂时无法删除作品，原数据已保留，请重试。", code: "WORK_REMOVE_FAILED" }, { status: 500 })
