@@ -1,0 +1,303 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "id": "CR611-R01",
+      "result": "pass",
+      "pageStyle": {
+        "background-color": "rgb(251, 246, 233)",
+        "box-shadow": "none",
+        "width": "509.156px"
+      },
+      "body": {
+        "font-size": "18px",
+        "line-height": "35.1px",
+        "text-indent": "36px",
+        "font-family": "\"Noto Serif SC\", \"Songti SC\", STSong, SimSun, serif"
+      },
+      "crumb": "第一卷 青石巷 › 第一章 灯下来客"
+    },
+    {
+      "id": "CR611-R01b",
+      "result": "pass",
+      "wide": {
+        "width": "900px",
+        "box-shadow": "rgba(96, 74, 38, 0.1) 0px 1px 2px 0px, rgba(96, 74, 38, 0.22) 0px 10px 30px -12px",
+        "background-color": "rgb(251, 246, 233)"
+      },
+      "desk": {
+        "background-color": "rgb(239, 231, 210)"
+      }
+    },
+    {
+      "id": "CR611-R08",
+      "result": "pass",
+      "before": {
+        "width": 900,
+        "zoom": 1,
+        "font": "18px"
+      },
+      "wider": {
+        "width": 1020,
+        "zoom": 1,
+        "font": "18px",
+        "deltas": [
+          [
+            -120,
+            0
+          ]
+        ]
+      },
+      "intermediateFrames": 14,
+      "filled": {
+        "width": 1020,
+        "room": 1020,
+        "fill": "true",
+        "shadow": "none",
+        "zoom": 1,
+        "font": "18px"
+      },
+      "narrower": {
+        "width": 573,
+        "zoom": 1,
+        "font": "18px"
+      }
+    },
+    {
+      "id": "CR611-R11",
+      "result": "pass",
+      "typed": {
+        "text": "85%",
+        "width": 765
+      },
+      "back": {
+        "text": "100%",
+        "width": 900
+      }
+    },
+    {
+      "id": "CR611-R09",
+      "result": "pass",
+      "start": {
+        "value": "500",
+        "text": "100%",
+        "width": 900,
+        "thumbAtMiddle": true
+      },
+      "ninety": {
+        "text": "90%",
+        "width": 810
+      },
+      "full": {
+        "text": "铺满",
+        "width": 1020,
+        "room": 1020,
+        "max": 1000,
+        "trace": [
+          "97%",
+          "101%",
+          "104%",
+          "106%",
+          "109%",
+          "111%",
+          "铺满",
+          "铺满"
+        ],
+        "inputs": [
+          "466",
+          "556",
+          "647",
+          "737",
+          "828",
+          "919",
+          "1000"
+        ]
+      },
+      "fonts": {
+        "楷体": "\"Kaiti SC\"",
+        "黑体": "\"PingFang SC\"",
+        "仿宋": "STFangsong",
+        "宋体": "\"Noto Serif SC\"",
+        "苹方": "\"PingFang SC\"",
+        "兰亭黑": "\"Lantinghei SC\"",
+        "手札体": "\"Hannotate SC\"",
+        "跟随设置": "\"Noto Serif SC\"",
+        "disabledSample": [
+          "思源宋体（未安装）",
+          "华文中宋（未安装）",
+          "方正书宋（未安装）",
+          "方正小标宋（未安装）",
+          "霞鹜新致宋（未安装）",
+          "霞鹜文楷（未安装）",
+          "方正楷体（未安装）",
+          "等线（未安装）"
+        ],
+        "list": {
+          "groups": [
+            "宋体 / 明体",
+            "楷体",
+            "黑体",
+            "仿宋",
+            "其他",
+            "本机字体"
+          ],
+          "builtIn": 43,
+          "missing": 14,
+          "local": 201
+        }
+      }
+    },
+    {
+      "id": "CR611-R12",
+      "result": "pass",
+      "paper": [
+        "rgb(251, 246, 233)",
+        "rgb(227, 238, 219)",
+        "rgb(255, 255, 255)"
+      ]
+    },
+    {
+      "id": "CR611-R10",
+      "result": "pass",
+      "readers": 2,
+      "enabled": true,
+      "text": "80%",
+      "width": 720
+    },
+    {
+      "id": "CR611-R04",
+      "result": "pass",
+      "outsideClickCloses": true,
+      "escapeClosesViaSendInputEvent": true
+    },
+    {
+      "id": "CR611-R02",
+      "result": "pass",
+      "ink": {
+        "background-color": "rgb(22, 27, 37)",
+        "color": "rgb(204, 211, 222)"
+      }
+    },
+    {
+      "id": "CR611-R03",
+      "result": "pass",
+      "applied": {
+        "align": "left",
+        "fontSize": "20px",
+        "words": 0
+      }
+    },
+    {
+      "id": "CR611-R06",
+      "result": "pass",
+      "narrow": {
+        "box-shadow": "none",
+        "padding-left": "40px"
+      },
+      "split": {
+        "box-shadow": "none"
+      }
+    },
+    {
+      "id": "CR611-R05",
+      "result": "pass",
+      "restarted": {
+        "align": "left",
+        "fontSize": "20px",
+        "bg": "rgb(22, 27, 37)"
+      }
+    },
+    {
+      "id": "CR611-R07",
+      "result": "pass",
+      "version": 1,
+      "contentSha256": "8894de3e1989a2630a2710086dfda92b1953cfd85513a2a802015d1c3a9ae563"
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    {
+      "name": "crr-01-paper.png",
+      "sha256": "ece28a63ed906ac893985a9af29a363c155b24da1b179d5ad2efa9fb235426db"
+    },
+    {
+      "name": "crr-01b-paper-wide.png",
+      "sha256": "feb88139fd3e1729ba257b5f74e6cbf83561c49ce03b16f568a0700d4cde2351"
+    },
+    {
+      "name": "crr-08a-ctrl-wheel-fill.png",
+      "sha256": "2e5f27c85211534faaccf66d32118909a687ff1ccee2951a118ebf7e27bb8c2d"
+    },
+    {
+      "name": "crr-08b-ctrl-wheel-narrower.png",
+      "sha256": "28e1b46d00d01a906a1755cf3edb60ee835bc07a7f43b06d25ea921de38be3ad"
+    },
+    {
+      "name": "crr-09a-zoom-full.png",
+      "sha256": "ead054ad8b1cde090cfa2689edf80f495cef4fe7a7a721a535cbb35d1a314ffd"
+    },
+    {
+      "name": "crr-09b-font-kai.png",
+      "sha256": "5945f5d0ce083c5470a39bd683100dc75c2f107f86d986ab40ee4f7b31d4c376"
+    },
+    {
+      "name": "crr-12-paper-swatches.png",
+      "sha256": "f6a96acf03f8720977e865a3112f292b10bc6ab276ecb680a48d5b5b875dbbec"
+    },
+    {
+      "name": "crr-10-second-tab-zoom.png",
+      "sha256": "6b82bcb47be66caacda5180152285fc9eed29906a9583eeda6bbab59422754b8"
+    },
+    {
+      "name": "crr-03a-settings-open.png",
+      "sha256": "dd5f22e0e05b7b117af7f9457ef441a5f5db9f406f8e66ff442acfe1dcd3ea96"
+    },
+    {
+      "name": "crr-02-ink-blue.png",
+      "sha256": "234365059b40bd1b42adfbbed2a1f23877567406f5b511351a3e46d7d801cbf5"
+    },
+    {
+      "name": "crr-02b-ink-blue-wide.png",
+      "sha256": "99589a09072f19f2a2863c8b9b48888f469e89541fcfb6ee818f161b4f31c7d4"
+    },
+    {
+      "name": "crr-03-settings.png",
+      "sha256": "fd75cd24f86942d82b30c61a361d1fa56e25225061b9a1c10db43f546242d444"
+    },
+    {
+      "name": "crr-06a-narrow-window.png",
+      "sha256": "57d32838b21ad485dd3b101ff5d6eec28727c1232c6c827fd9d14c3c80b11630"
+    },
+    {
+      "name": "crr-06b-split.png",
+      "sha256": "ad2b8b6409082cada92916fc0a3f7282169a1c0f3d66bbd8c841f5c9cf00b3e6"
+    },
+    {
+      "name": "crr-05-restart.png",
+      "sha256": "ba9ee4a486c81eec86a4e4bdb6ce59a68939cf4ba72dfc317f683a17ffe42310"
+    }
+  ],
+  "isolation": {
+    "syntheticWorks": 1,
+    "zeroModels": true,
+    "offlineRenderer": true,
+    "httpServerStarted": false,
+    "userDataAccessed": false
+  },
+  "limitations": [
+    "Mouse/keyboard are Playwright/sendInputEvent synthetic input, not physical OS input.",
+    "Clicks on the window drag region or native menus do not close the popover (no pointer event reaches the page); not automated.",
+    "Reader settings after a data-root relocation were not verified."
+  ],
+  "runtime": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "electron": "44.6.0"
+  },
+  "chapter": {
+    "id": "cmwys2l9q0005ar6vux5mugwp",
+    "version": 1,
+    "contentSha256": "8894de3e1989a2630a2710086dfda92b1953cfd85513a2a802015d1c3a9ae563"
+  },
+  "screenshotDirectory": "~/shakeink-test-roots/chapter-reader-611-evidence/2026-11-27T09-27-21-757Z"
+}

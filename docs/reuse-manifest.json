@@ -474,7 +474,9 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "adapted-desktop-boundary",
+      "currentSha256": "ab38f13788d5800e0e06b39565bb3f27ad856978712102c84efbe1ed2940fb94",
+      "reason": "docs/611: optional header/footer/contentClassName/attributes/style slots for the chapter reader; without them the DOM is unchanged. Earlier unregistered drift (c4cf283 and others) also included in currentSha256."
     },
     {
       "source": "src/components/comments/comment-drafts.tsx",
@@ -573,7 +575,9 @@
       "allowedChanges": [
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
-      "status": "imported-unmodified"
+      "status": "adapted-desktop-boundary",
+      "currentSha256": "33a3e3b6ff1fbcecc7ddbce28773588f7ec298b20fc54e86558d6d0c61b9bbee",
+      "reason": "docs/611 chapter reader (user-approved design v4): breadcrumb top bar and reader layout passed to MarkdownEditor; autosave, generation, menus and comments unchanged. Earlier unregistered drift before 611 also included in currentSha256."
     },
     {
       "source": "src/components/content/ChapterFinalizationDialog.tsx",
@@ -1213,8 +1217,8 @@
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
       "status": "adapted-desktop-boundary",
-      "currentSha256": "4acebd907863aa40eef7f630167b95ad51d52ed1f259df491ae7cbfb40d1e59f",
-      "reason": "Add a desktop-scoped wrapper for local body typography; preserve the original editor, autosave, modes and comments."
+      "currentSha256": "dcdf2a1e39d48b4683b490c3c0af5b8a7399a93ba4e8c3b9b2fd21ba9e7e70c7",
+      "reason": "Add a desktop-scoped wrapper for local body typography; preserve the original editor, autosave, modes and comments. docs/611: optional reader prop (chapter content panel only) forwards reader slots to CommentablePreview and adds a toolbar slot in preview/split; other callers unchanged."
     },
     {
       "source": "src/components/editor/MarkdownPreview.tsx",

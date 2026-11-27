@@ -5976,6 +5976,58 @@
       "真实目标": "未执行：scripts/verify-import-prose-format.mjs 尚未运行；用户正在已构建应用中手动验收",
       "已知存量失败": "lotm-import-audit 11 项（仍有章节缺少细纲）与 lotm-local-import-audit FROZEN_CHAPTER_ORACLE_MISMATCH 在 HEAD 上同样失败，与本次无关"
     }
+  },
+  {
+    "id": "CR-611",
+    "requirement": "作品正文（章节内容面板）预览改为网文阅读排版：章首（卷名·章节号·章名·字数·状态·装饰线）、顶栏面包屑、书页与桌面底色、衬线正文 18px/1.95/段距.75em/缩进 2 字、章末「本章完」；「Aa 阅读设置」弹出框可设章首对齐、卷名/章节号/字数显示、字号 16–22、宣纸与玄墨各一套背景（分别记忆），即时保存；弹出框外任意点击或 Esc 关闭。其他编辑器与预览不变（用户 2026-11-28 批准设计稿 v4）",
+    "source": [
+      "docs/611-chapter-reader-research.md",
+      "design/chapter-reader/index.html（v4，已批准）",
+      "docs/611-chapter-reader-plan.md",
+      "docs/611-chapter-reader-plan-review.md",
+      "docs/611-chapter-reader-cases.md",
+      "docs/611-chapter-reader-cases-review.md",
+      "docs/611-chapter-reader-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/chapter-reader.ts（chineseNumeral、chapterHeading）",
+      "src/stores/chapter-reader.ts（阅读设置 zustand persist chapter-reader-v1，读回逐项校验）",
+      "src/components/content/ChapterReader.tsx（章首、章末、阅读设置弹出框、useChapterReader）",
+      "src/components/content/ChapterContentPanel.tsx（面包屑；传 reader）",
+      "src/components/editor/MarkdownEditor.tsx（可选 reader：预览插槽与工具条插槽）",
+      "src/components/comments/CommentablePreview.tsx（可选 header/footer/contentClassName/attributes）",
+      "src/components/editor/preview-selection.ts（[data-preview-chrome] 视为界面）",
+      "src/app/desktop.css（.chapter-reader 作用域样式）"
+    ],
+    "testIds": [
+      "tests/unit/chapter-reader.test.ts CRU-01..10、CR611-61",
+      "tests/browser/chapter-reader.test.ts CR611-01..60b（含 01b/05b/11b/21b/41b/51b/55b–e）",
+      "scripts/verify-chapter-reader.mjs CR611-R01..R07（含 R01b，真实 Electron）"
+    ],
+    "verificationKind": "CHAPTER_READER_TARGETED",
+    "status": "implemented-targeted-verified-real-target-verified",
+    "requirementEvidence": {
+      "单元": "tests/unit/chapter-reader.test.ts 16/16 通过",
+      "浏览器": "tests/browser/chapter-reader.test.ts 36/36 通过（真实 ChapterContentPanel/CandidatePanel/DesktopCommandController/globals.css+desktop.css，Chromium）；移除 reader 或 [data-preview-chrome] 时对应用例失败",
+      "真实目标": "docs/611-chapter-reader-evidence/real-target-report.json passed：macOS arm64 Electron 44.6.0，合成隔离根，零模型，离线；R01–R12 全部通过（含重启后设置保留、正文 sha256 与 version 不变；R08 Ctrl+滚轮连续缩放：一格 760→878px 经 13 个中间宽度过渡，继续放大至铺满面板 1020px（无阴影、无页边），再缩小至 573px；字号 18px 与窗口缩放 1 始终不变；R09 阅读设置页面缩放滑块默认 100%/760px，真实键盘左移 10 次为 90%/684px，鼠标拖到最右为「铺满」1020px，楷体/黑体/仿宋/宋体生效；R10 打开第二个章节标签后（第一个标签的阅读视图仍挂载但隐藏）滑块可用，方向键调到 80%/720px；R11 真实键盘在百分比框输入 85 回车为 765px；100% 为 900px，滑块拇指位于轨道正中；R12 宣纸三个背景色块分别为 #fbf6e9/#e3eedb/#ffffff；R09 本机 229 个字体中内置 43 项、14 项标「未安装」、本机字体分组 201 项，苹方/兰亭黑/手札体等生效）；截图存于 ~/shakeink-test-roots/chapter-reader-611-evidence/，不进仓库",
+      "回归": "npm test 5253 项中 42 项失败，与 HEAD 基线同批文件逐项比对：除 LOTM-L-C04 外均在 HEAD 同样失败；LOTM-L-C04 单独在两侧各跑 3 次全部通过（并发负载下偶发）。相关浏览器套件 74 项两侧失败集完全相同（text-context-menu 11 项为既有失败）。tsc --noEmit 通过",
+      "范围": "CR611-59/60a/60b：候选稿面板、其他评论预览、版本历史、候选稿对比预览无阅读排版，段落样式不变"
+    },
+    "deviations": [
+      "章首不可选择（批准稿 .chapter-head 为 user-select:text）：跨章首选区会使评论/伏笔取不到锚点（CR611-55）",
+      "阅读视图不使用设置里的正文字号与行距，由阅读设置字号与固定行距 1.95 取代；正文字体仍跟随设置（CR611-05/05b）",
+      "弹出框打开期间全局菜单命令与快捷键按模态拦截，与其他弹出层一致（CR611-49）",
+      "阅读设置存于数据根 session 目录的 localStorage，不随「导出配置」迁移；数据根迁移后是否保留未验证",
+      "窗口拖拽区与原生菜单的点击不会关闭弹出框（无页面指针事件），未自动化",
+      "窄工具条（容器 < 640px）中按钮只显示「Aa」，可访问名称仍为「阅读设置」；窄面板书页左右内边距 40px（批准稿 26px），避免评论钮压住正文",
+      "CR611-59 的第二个调用方为合成的 MarkdownEditor（SETTING 评论目标）而非真实 WorldPanel/SettingContentEditor",
+        "章首不显示「已生成」状态（用户 2026-11-28 修改，CR611-01c）；其余四种状态照常显示，顶栏状态标签不变",
+        "宣纸背景色块显示为同一颜色的修复（用户 2026-11-28）：按钮通用规则 background:transparent 优先级高于宣纸色块颜色，玄墨规则带 .ink 前缀不受影响；色块规则提高到同等作用域（CR611-21c、R12）",
+        "正文字体扩展为分组下拉框（用户 2026-11-28）：宋体/明体、楷体、黑体、仿宋、其他五组共 43 项内置字体，另列「本机字体」分组；经 Local Font Access 读取本机字体，未安装的内置字体标「（未安装）」并禁用；所选字体未安装时提示「此字体未安装，正文暂以宋体显示」；每个字体栈以宋体与通用字体收尾；旧值 song/kai/hei/fangsong 保持原字体栈（CR611-80/80b、CRU-12/15、R09）；字体名称与 Windows 字体未在 Windows 验证",
+        "页面缩放 100% 改为 900px（原 760px）且位于滑块正中：左半 60%→100%、右半 100%→铺满；百分比框可直接输入（回车或失焦生效，可带 %，超范围收到边界，最大即铺满，↑/↓ 每次 1%，非数字恢复原值）；旧默认 760px 读回时迁移为 900px，用户自选宽度保留（用户 2026-11-28 修改，CR611-81/84、CRU-13/14、R09–R11）",
+        "阅读设置新增「正文字体」下拉框（原生 select，与设置页正文字体一致；跟随设置/宋体/楷体/黑体/仿宋，默认跟随设置，下拉框以所选字体显示；作用于正文与章首，元信息与章末仍用界面字体）和「页面缩放」滑块（60% 至铺满，步长 1%，百分比 = 书页宽 / 760px，默认 100%，最大显示「铺满」；与 Ctrl+滚轮共用同一宽度；窄面板禁用并显示「铺满」）（用户 2026-11-28 新增，CR611-80..82、R09）；宋体等为系统字体，Windows 上依赖本机字体，未在 Windows 验证",
+        "Ctrl+滚轮调整书页宽度（用户 2026-11-28 新增，同日改为连续缩放）：按滚动量连续缩放（一格约 12.7%，触控板小增量对应几像素），逐帧缓动过渡；最小 456px（60%），最大铺满整个面板（无页边、无阴影、无桌面底色，记为 pageFill）；接近满宽时页边距与圆角连续收为 0；指针下文字保持屏幕位置；停止后保存，所有章节共用；文字大小与窗口缩放不变；窄面板（<820px）书页始终铺满，不响应（CR611-70..75、R08）"
+    ]
   }
   ],
   "developmentRecordUpdated": "2026-10-09",
