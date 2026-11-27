@@ -15,6 +15,7 @@ import {loadMigrations} from '../desktop/service/database/migrations'
 import {validatePlanning} from '../src/lib/planning/domain'
 import {realNovelSemanticAssertions} from './real-novel-semantic-assertions'
 import {workManifestSchema} from '../desktop/shared/workspace'
+import {formatImportChapterProse} from '../desktop/core/novel-import-prose'
 
 export class LotmLocalAuditFailure extends Error {constructor(readonly code:string){super(code)}}
 export const LOTM_LOCAL_TARGETS=['outline','theme','style','character','item','scene','world','foreshadow','trope','worldline','narrative'] as const
@@ -203,10 +204,11 @@ export function verifyLocalNativeRows(s:ImportSession,r:any,p:LocalAuditPrepared
  for(const [i,c]of r.chapters.entries()){
   const e=p.chapters[i]
   requireAudit(c.volumeId===r.volumes[e.volume-1]?.id&&c.index===e.positionInVolume&&c.title===e.title&&c.status==='WRITTEN','NATIVE_CHAPTER_SEQUENCE_MISMATCH')
-  requireAudit(c.content===p.body.slice(e.start,e.end)&&sha(c.content)===e.expectedUtf8Sha256,'NATIVE_CHAPTER_CONTENT_MISMATCH')
+  // docs/610: the stored body is the formatted source chapter.
+  requireAudit(c.content===formatImportChapterProse(p.body.slice(e.start,e.end),{title:e.title,volume:r.volumes[e.volume-1]?.title}).text&&sha(p.body.slice(e.start,e.end))===e.expectedUtf8Sha256,'NATIVE_CHAPTER_CONTENT_MISMATCH')
   requireAudit(c.wordCount===[...c.content].length,'NATIVE_CHAPTER_WORD_COUNT_MISMATCH')
  }
- requireAudit(r.chapters.map((c:any)=>c.content).join('')===p.body,'NATIVE_CHAPTER_CONTENT_MISMATCH')
+ requireAudit(p.chapters.map((e:any)=>p.body.slice(e.start,e.end)).join('')===p.body,'NATIVE_CHAPTER_CONTENT_MISMATCH')
  const expectedItems=projected.filter(a=>a.kind==='item').map(a=>({name:a.name,text:qualified(a)}))
  requireAudit(equal(multi(r.items.map((x:any)=>({name:x.name,text:x.description}))),multi(expectedItems)),'NATIVE_ITEM_MULTISET_MISMATCH')
  const expectedForeshadows=projected.filter(a=>a.kind==='foreshadow').map(a=>({name:a.name,text:qualified(a)}))

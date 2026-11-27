@@ -75,7 +75,10 @@ test("ZB-37: leaves: closed below d 430; at 445 ≤ d < 460 every card in view o
   await noneOpen(page)
   await zoomTo(page, 445, 460, "r6"); await frames(page)
   await allOpen(page, 24)
+  // docs/600: the table auto-opens by its own crowding; at its reset (level 1) nothing opens, and openCards is untouched.
+  // docs/601: the aligned table never auto-opens, so the check runs in linear mode (等距), where it could.
   await tab(page, "事件表"); await frames(page)
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: "等距", exact: true }).click(); await frames(page)
   await expect(page.locator('[data-event-card][aria-expanded="true"]')).toHaveCount(0)
   await tab(page, "时间线"); await frames(page, 4)
   await allOpen(page, 24)
@@ -144,7 +147,9 @@ test("ZB-40: collapsing an auto-opened card keeps it closed (top unchanged) thro
   await zoomTo(page, 445, 460, "r6"); await frames(page)
   await expect(k).toHaveAttribute("aria-expanded", "true")
   await allOpen(page, 24)
+  // docs/600: the table's own level (reset 1) does not auto-open r6; the timeline's closed set does not leak into it.
   await tab(page, "事件表"); await frames(page)
+  await page.locator("[data-rail-mode-toggle]").getByRole("button", { name: "等距", exact: true }).click(); await frames(page)
   await expect(page.locator('[data-event-card][data-event-id="r6"]')).toHaveAttribute("aria-expanded", "false")
 }, Z))
 
@@ -233,12 +238,15 @@ test("ZB-45: double click edits an auto-opened card and saving keeps it open aft
   const k = cardById(page, "r6")
   await revealTimelineCard(page, k)
   const v0 = await allOpen(page, 24)
-  const other = v0.ids.find(id => id !== "r6")!
+  // docs/599: the head gained a 24px 新建子事件 button; pick a card whose title is not under the tree splitter.
+  const lane0 = (await page.locator("[data-timeline-lane]").boundingBox())!
+  let other = v0.ids.find(id => id !== "r6")!
+  for (const id of v0.ids.filter(id => id !== "r6")) { const t = await cardById(page, id).locator("[data-card-title]").boundingBox(); if (t && t.x > lane0.x + 12) { other = id; break } }
   await cardById(page, other).locator("[data-card-title]").click(); await frames(page)
   assert.deepEqual((await inView(page)).openIds.sort(), v0.openIds.sort(), "a click selects only")
   await k.locator("[data-card-title]").dblclick()
   await page.getByLabel("事件标题").fill("改过的标题")
-  await page.getByRole("button", { name: "保存事件", exact: true }).click()
+  await page.getByRole("button", { name: "保存", exact: true }).click()
   await expect.poll(() => posts(page)).toBe(1)
   await zoomTo(page, 300, 430, "r6"); await frames(page)
   await expect(k).toHaveAttribute("aria-expanded", "true")

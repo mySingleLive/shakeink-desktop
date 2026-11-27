@@ -10,7 +10,16 @@ const SHORT = ["北塔钟声", "港口封锁", "旧书星图", "河谷列车", "
 const LONG = "码头工人在雨夜里连续罢工三天之后，商会终于派人前来谈判"
 /** docs/597: `leavesOnly` drops the parents (r2, r4, r8 become leaves without children); `longRoot` gives that root a
  * duration of three root gaps, so its bar pushes the next roots to a lower row. */
-export function zoomView(n = 24, options: { withKey?: boolean; leavesOnly?: boolean; longRoot?: number } = {}): WorldlineView {
+/** docs/600 §14.1: one Ctrl + wheel step of the event table (EventTable ±ln 1.15). */
+export const TABLE_STEP = Math.log(1.15)
+/** Wheel steps from crowding `from` to just past `target` (negative: zoom out). */
+export function stepsTo(target: number, from: number) {
+  const x = Math.log(target / from) / TABLE_STEP
+  return x < 0 ? Math.floor(x) : Math.ceil(x)
+}
+/** docs/600 §14.1 options: `sameTime: [i, j]` gives r_j the time of r_i; `pending` adds n unplaced 一般 roots;
+ * `farRoot` adds a root 50 years after the last (a rail break); `fact` gives roots a body (controls the open height). */
+export function zoomView(n = 24, options: { withKey?: boolean; leavesOnly?: boolean; longRoot?: number; sameTime?: [number, number]; pending?: number; farRoot?: boolean; fact?: Record<number, string> } = {}): WorldlineView {
   const withKey = options.withKey ?? true, leaves = options.leavesOnly ?? false
   const events: Record<string, unknown>[] = []
   const add = (e: Record<string, unknown>) => events.push({ line: "w", parent: null, fact: "", people: [], duration: 0, ...e })
@@ -22,8 +31,10 @@ export function zoomView(n = 24, options: { withKey?: boolean; leavesOnly?: bool
     const id = `r${i}`
     // A parent lasts 8 days, so its children (2, 4 and 6 days in) sit inside it (the planning schema checks this).
     const parent = !leaves && (i === 2 || i === 8 || (i === 4 && withKey))
+    const same = options.sameTime && options.sameTime[1] === i ? 1000 * 8640 + options.sameTime[0] * ZOOM_GAP : t
     add({ id, title, category: CATEGORIES[i % 7], importance: i === 2 || i === 8 ? 1 : i === 4 && withKey ? 3 : importance, people: i % 4 === 0 ? ["c-a"] : [],
-      duration: parent ? 192 : i === options.longRoot ? 3 * ZOOM_GAP : 0, time: { kind: "exact", value: t, precision: "day" } })
+      fact: options.fact?.[i] ?? "",
+      duration: parent ? 192 : i === options.longRoot ? 3 * ZOOM_GAP : 0, time: { kind: "exact", value: same, precision: "day" } })
     if (parent && (i === 2 || i === 8))
       [1, 2, 1].forEach((imp, k) => add({ id: `${id}c${k}`, parent: id, title: `${title}·阶段${k + 1}`, category: CATEGORIES[(i + k) % 7], importance: imp,
         time: { kind: "exact", value: t + (k + 1) * 48, precision: "day" } }))
@@ -31,6 +42,10 @@ export function zoomView(n = 24, options: { withKey?: boolean; leavesOnly?: bool
       [1, 1].forEach((imp, k) => add({ id: `${id}c${k}`, parent: id, title: `${title}·分支${k + 1}`, category: CATEGORIES[(i + k) % 7], importance: imp,
         time: { kind: "exact", value: t + (k + 1) * 48, precision: "day" } }))
   }
+  for (let k = 0; k < (options.pending ?? 0); k++)
+    add({ id: `u${k}`, title: `${SHORT[k % SHORT.length]}待定${k + 1}`, category: "其他", importance: 1, time: { kind: "unknown" } })
+  if (options.farRoot)
+    add({ id: "far", title: "远方来客", category: "其他", importance: 3, time: { kind: "exact", value: 1000 * 8640 + (n - 1) * ZOOM_GAP + 50 * 8640, precision: "day" } })
   return {
     version: 1,
     data: {

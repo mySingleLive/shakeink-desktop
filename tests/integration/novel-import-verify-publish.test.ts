@@ -7,6 +7,7 @@ import {Workspaces} from '../../desktop/service/workspaces'
 import {loadDatabaseSeed} from '../../desktop/service/database/seed'
 import {prisma} from '../../src/lib/db'
 import {publishNovelImport} from '../../desktop/service/novel-import-publish'
+import {storedChapterProse} from '../helpers/import-stored-prose'
 import {legacySceneFixture,filesF,rosterAi,fullAi,toVerify,injectJournalEdit,sleep,type Ai} from '../helpers/novel-import-wizard-fixture'
 import type {ImportAiRequest,ImportAiResult,ImportPublishInput,ImportSession} from '../../desktop/shared/novel-import'
 
@@ -42,7 +43,7 @@ async function assertSaved(saved:{novelId:string;workId:string},s:ImportSession)
  assert.deepEqual(names(await prisma.world.findMany({where:{novelId}})),names(kind('world').filter(a=>a.facts.entityType==='WORLD')))
  assert.equal(await prisma.foreshadow.count({where:{novelId}}),kind('foreshadow').length)
  const chapters=await prisma.chapter.findMany({where:{volume:{novelId}},orderBy:[{volume:{index:'asc'}},{index:'asc'}]})
- assert.equal(chapters.length,s.chapters.length);for(const [i,c] of s.chapters.entries()){assert.equal(chapters[i].content,c.content);assert.equal(chapters[i].outline,c.outline??'')}
+ assert.equal(chapters.length,s.chapters.length);const stored=storedChapterProse(s);for(const [i,c] of s.chapters.entries()){assert.equal(chapters[i].content,stored[i]);assert.doesNotMatch(chapters[i].content,/^第/u);assert.equal(chapters[i].outline,c.outline??'')}
 })}
 async function save(f:F){await f.act('wizard-next');const done=await f.settle();assert.equal(done.phase,'completed',done.error);return {novelId:done.publication!.novelId!,workId:done.publication!.workId!}}
 

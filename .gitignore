@@ -34,3 +34,6 @@ docs/evidence/
 
 # local portable toolchain (not committed)
 .tools/
+
+# Python bytecode
+__pycache__/

@@ -2,8 +2,8 @@ import type { DirectoryProof } from "../main/directory-authority"
 import { randomUUID } from "node:crypto"
 import { lstatSync, realpathSync } from "node:fs"
 import { mkdir, readdir, readFile, realpath, stat, lstat, writeFile, unlink, rmdir } from "node:fs/promises"
-import { join } from "node:path"
-import { hostname } from "node:os"
+import { dirname, join } from "node:path"
+import { homedir, hostname } from "node:os"
 import { z } from "zod"
 import { PGlite } from "@electric-sql/pglite"
 import { PrismaClient } from "../../src/generated/prisma/client"
@@ -42,6 +42,73 @@ async function holdsWorkStorage(path:string):Promise<boolean>{
   try{names=await readdir(path)}
   catch(error){const code=(error as NodeJS.ErrnoException).code;return !(code==='ENOENT'||code==='ENOTDIR')}
   return names.some(name=>WORK_STORAGE_ENTRY.test(name)||WORK_STORAGE_NAMES.has(name)||ATOMIC_TEMPORARY.test(name))
+}
+export interface TreeFs { lstat(path:string,options:{bigint:true}):Promise<{dev:bigint;ino:bigint;isSymbolicLink():boolean;isDirectory():boolean}>; readdir(path:string):Promise<string[]>; unlink(path:string):Promise<void>; rmdir(path:string):Promise<void> }
+const nodeTreeFs:TreeFs={lstat:(path,options)=>lstat(path,options),readdir:path=>readdir(path),unlink,rmdir}
+/** docs/608: remove a tree without following links or crossing onto another file system. Stops at the
+ * first entry on a different device; the caller keeps what remains. */
+export async function removeTreeOnDevice(path:string,device:bigint,fs:TreeFs=nodeTreeFs):Promise<void>{
+  const info=await fs.lstat(path,{bigint:true})
+  if(info.isSymbolicLink()||!info.isDirectory()){await fs.unlink(path);return}
+  if(info.dev!==device)throw Error("作品目录中有其他磁盘的内容，已停止删除")
+  const names=await fs.readdir(path),again=await fs.lstat(path,{bigint:true})
+  if(again.isSymbolicLink()||again.dev!==info.dev||again.ino!==info.ino)throw Error("作品目录内容已变化，已停止删除")
+  for(const name of names)await removeTreeOnDevice(join(path,name),device,fs)
+  await fs.rmdir(path)
+}
+/** docs/608: pure checks on the folder path itself; returns a refusal message or null. */
+export function deletionRefusal(input: { path: string; device: bigint; parentDevice: bigint; home: string; protectedRoots: string[] }): string | null {
+  const { path } = input
+  if (path === "/" || dirname(path) === path || path === input.home || within(input.home, path)) return "不能删除此目录"
+  // A work created directly in a common user folder (docs/608 CR 低2) would take everything else with it.
+  if (["Desktop", "Documents", "Downloads", "Library", "Movies", "Music", "Pictures", "Public", "Applications", "OneDrive", "iCloud Drive"].some(name => path === join(input.home, name))) return "作品位于常用文件夹，不能连目录删除，请手动删除作品文件"
+  if (input.parentDevice !== input.device) return "作品目录是磁盘根目录，文件未删除"
+  if (input.protectedRoots.some(root => within(path, root) || within(root, path))) return "作品目录与应用数据目录重叠，文件未删除"
+  return null
+}
+/** The lock seen before the index commit: absent, or one stale lock folder and its owner.json bytes. */
+export type LockSnapshot = null | { dev: bigint; ino: bigint; owner: string }
+export interface DeletionTarget { root: RootIdentity; device: bigint; brand: BrandObservation<z.infer<typeof manifestSchema>>; lock?: LockSnapshot }
+const unsafeFiles = (message: string) => new ContentError("WORK_FILES_UNSAFE", message, 409)
+async function readLock(lock: string): Promise<LockSnapshot | "unknown"> {
+  let info: Awaited<ReturnType<typeof lstat>>
+  try { info = await lstat(lock, { bigint: true }) } catch (error) { return (error as NodeJS.ErrnoException).code === "ENOENT" ? null : "unknown" }
+  if (!info.isDirectory() || info.isSymbolicLink()) return "unknown"
+  const entries = await readdir(lock).catch(() => null)
+  if (!entries || entries.length !== 1 || entries[0] !== "owner.json") return "unknown"
+  const owner = await readFile(join(lock, "owner.json"), "utf8").catch(() => null)
+  return owner === null ? "unknown" : { dev: info.dev, ino: info.ino, owner }
+}
+/** After this process closed its connection, a remaining lock may only be a stale one: exactly
+ * owner.json from this host whose process has ended. The worker shares its pid with main, so this
+ * process's pid always counts as in use. Returns the snapshot that deletion re-checks. */
+async function assertLockReleased(target: DeletionTarget): Promise<LockSnapshot> {
+  const snapshot = await readLock(join(target.root.path, target.brand.names.lock))
+  if (snapshot === null) return null
+  const inUse = unsafeFiles("作品正在其他程序中使用，文件未删除")
+  if (snapshot === "unknown") throw inUse
+  let owner: { host?: unknown; pid?: unknown } | null = null
+  try { owner = JSON.parse(snapshot.owner) } catch { throw inUse }
+  if (!owner || owner.host !== hostname() || typeof owner.pid !== "number" || !Number.isSafeInteger(owner.pid) || owner.pid < 1 || owner.pid === process.pid || alive(owner.pid)) throw inUse
+  return snapshot
+}
+const sameLock = (a: LockSnapshot | "unknown", b: LockSnapshot) => a === null || b === null || a === "unknown" ? a === b : a.dev === b.dev && a.ino === b.ino && a.owner === b.owner
+/** Entry by entry, re-checking the folder identity, manifest and lock first; manifest and lock go last.
+ * A lock that appeared or changed after the commit stops deletion (docs/608 CR 中1). */
+export async function deleteWorkFolder(target: DeletionTarget, fs: TreeFs = nodeTreeFs) {
+  const { root, brand } = target, names = brand.names, expected = target.lock ?? null
+  const guard = async () => {
+    await assertDirectory(root); brand.assertCurrent()
+    if (!sameLock(await readLock(join(root.path, names.lock)), expected)) throw Error("作品目录锁已变化，已停止删除")
+  }
+  await guard()
+  for (const name of (await fs.readdir(root.path)).filter(name => name !== names.workManifest && name !== names.lock)) { await guard(); await removeTreeOnDevice(join(root.path, name), target.device, fs) }
+  await guard()
+  if (expected) await removeTreeOnDevice(join(root.path, names.lock), target.device, fs)
+  await assertDirectory(root); brand.assertCurrent()
+  if (await readLock(join(root.path, names.lock)) !== null) throw Error("作品目录锁已变化，已停止删除")
+  await fs.unlink(join(root.path, names.workManifest))
+  await assertDirectory(root); await fs.rmdir(root.path)
 }
 /** Remove a directory tree without following symbolic links. */
 async function removeTree(path:string):Promise<void>{
@@ -112,6 +179,11 @@ export class Workspaces {
   private closing = false
   private closingPromise: Promise<void> | undefined
   private readonly creationReservations = new WorkCreationReservations(run=>this.run('inbox',()=>run(getDatabaseContext().database)))
+  /** Directories a permanent work deletion may never contain or enter (the bootstrap directory, docs/608). */
+  protectedRoots: string[] = []
+  /** Folders whose permanent deletion stopped part way in this process; they stay protected while they
+   * still hold work storage even if no reservation exists (docs/608 CR 中2). */
+  private readonly keptDeletions = new Set<string>()
   constructor(readonly root: string, readonly migrationsPath: string,private readonly databaseSeed?:Blob) {
     this.catalog = new VersionedStore(join(root, "catalog.json"), [], value => catalogSchema.parse(value))
   }
@@ -175,7 +247,7 @@ export class Workspaces {
    * folder emptied after its work was deleted can be chosen again (docs/567, 2R). Unreadable folders stay
    * protected. Reservation records themselves are kept. */
   async protectedDirectories(): Promise<string[]> {
-    const paths=[...new Set([...(await this.list()).map(record=>record.path),...await this.creationReservations.directories()])]
+    const paths=[...new Set([...(await this.list()).map(record=>record.path),...await this.creationReservations.directories(),...this.keptDeletions])]
     const kept=await Promise.all(paths.map(async path=>await holdsWorkStorage(path)?path:null))
     return kept.filter((path):path is string=>path!==null)
   }
@@ -429,23 +501,81 @@ export class Workspaces {
    * The guard is set synchronously with the busy check so no request can open a
    * new connection or register a conversation between cleanup and commit. */
   async forget(id: string, beforeCommit: () => Promise<void>): Promise<WorkRecord> {
+    return (await this.removeWork(id, beforeCommit)).record
+  }
+  /** docs/608: removes one work from the index; with deleteFiles also permanently deletes its folder.
+   * Every safety check runs before the index changes; deletion runs after the commit and any failure
+   * there only reports `kept` (the manifest is removed last, so a leftover folder stays protected). */
+  async removeWork(id: string, beforeCommit: () => Promise<void>, options: { deleteFiles?: boolean; path?: string } = {}): Promise<{ record: WorkRecord; files: "kept-by-choice" | "removed" | "missing" | "kept" }> {
     return this.serialize(async () => {
       const before = await this.catalog.read()
       const record = before.value.find(row => row.id === id)
       if (!record || id === "inbox") throw new ContentError("WORK_NOT_FOUND", "作品不存在或已从列表中删除", 404)
+      if (options.deleteFiles && options.path !== record.path) throw new ContentError("WORK_PATH_CHANGED", "作品目录位置已变化，请关闭对话框后重试", 409)
+      const busy = () => new ContentError("WORK_BUSY", "作品仍有任务在运行，请稍后重试", 409)
+      if ((this.slots.get(id)?.active ?? 0) > 0) throw busy()
+      // The async inspection may let a task start; after it, retiring is awaited again and the busy
+      // check and forgotten.add run in one synchronous block, as in retireStaleWorks (docs/608 CR 高1).
+      const target = options.deleteFiles ? await this.inspectDeletion(record, before.value) : null
       await this.retiring.get(id)
-      if ((this.slots.get(id)?.active ?? 0) > 0) throw new ContentError("WORK_BUSY", "作品仍有任务在运行，请稍后重试", 409)
+      if ((this.slots.get(id)?.active ?? 0) > 0) throw busy()
       this.forgotten.add(id)
       try {
         const idle = this.slots.get(id)
-        if (idle) { this.slots.delete(id); await this.retire(id, idle) }
+        if (idle) { this.slots.delete(id); const closed = await this.retire(id, idle); if (!closed && target) throw unsafeFiles("作品数据库未能关闭，文件未删除") }
         const stranded = this.failedRetirements.get(id)
         if (stranded) await this.disconnect(stranded).then(() => { if (this.failedRetirements.get(id) === stranded) this.failedRetirements.delete(id) }, () => undefined)
+        if (target && this.failedRetirements.has(id)) throw unsafeFiles("作品数据库未能关闭，文件未删除")
+        if (target) target.lock = await assertLockReleased(target)
         await beforeCommit()
         await this.catalog.update(before.revision, before.value.filter(row => row.id !== id))
-        return record
       } catch (error) { this.forgotten.delete(id); throw error }
+      if (!options.deleteFiles) return { record, files: "kept-by-choice" as const }
+      if (!target) return { record, files: "missing" as const }
+      try { await deleteWorkFolder(target); return { record, files: "removed" as const } }
+      catch { this.keptDeletions.add(record.path); return { record, files: "kept" as const } }
     })
+  }
+  /** Read-only checks before a permanent folder deletion; null means the folder no longer exists. */
+  private async inspectDeletion(record: WorkRecord, rows: WorkRecord[]): Promise<DeletionTarget | null> {
+    let info: Awaited<ReturnType<typeof lstat>>
+    try { info = await lstat(record.path, { bigint: true }) }
+    catch (error) { const code = (error as NodeJS.ErrnoException).code; if (code === "ENOENT" || code === "ENOTDIR") return null; throw unsafeFiles("无法读取作品目录，文件未删除") }
+    const changed = () => unsafeFiles("作品目录已变化，文件未删除")
+    if (info.isSymbolicLink() || !info.isDirectory()) throw changed()
+    const path = record.path
+    if (await realpath(path).catch(() => null) !== path || String(info.dev) !== record.identity.device || String(info.ino) !== record.identity.inode) throw changed()
+    const parent = await lstat(dirname(path), { bigint: true })
+    const refusal = deletionRefusal({ path, device: info.dev, parentDevice: parent.dev, home: homedir(), protectedRoots: [await realpath(this.root), ...this.protectedRoots] })
+    if (refusal) throw unsafeFiles(refusal)
+    let brand: BrandObservation<z.infer<typeof manifestSchema>>
+    try { brand = await readWorkBrand({ path, device: String(info.dev), inode: String(info.ino) }) } catch { throw changed() }
+    if (brand.value.id !== record.id || brand.value.novelId !== record.novelId) throw changed()
+    const nested = unsafeFiles("作品目录中还有其他作品，文件未删除")
+    if (rows.some(row => row.id !== record.id && row.path !== path && within(row.path, path))) throw nested
+    for (const reservation of await this.creationReservations.records()) {
+      if (reservation.path === path || !within(reservation.path, path)) continue
+      if (reservation.phase === "pending" || await holdsWorkStorage(reservation.path)) throw nested
+    }
+    const own = new Set([join(path, brand.names.restores), join(path, brand.names.preserved)])
+    const markers = new Set(BRAND_NAMES.flatMap(names => [names.workManifest, names.appMarker]))
+    const scan = async (directory: string, inOwnStorage: boolean): Promise<void> => {
+      for (const name of await readdir(directory)) {
+        const child = join(directory, name), entry = await lstat(child, { bigint: true })
+        if (entry.dev !== info.dev) throw unsafeFiles("作品目录中有其他磁盘的内容，文件未删除")
+        if (entry.isSymbolicLink()) continue
+        if (entry.isDirectory()) await scan(child, inOwnStorage || own.has(child))
+        else if (!inOwnStorage && markers.has(name)) throw nested
+      }
+    }
+    try {
+      for (const name of await readdir(path)) {
+        const child = join(path, name), entry = await lstat(child, { bigint: true })
+        if (entry.dev !== info.dev) throw unsafeFiles("作品目录中有其他磁盘的内容，文件未删除")
+        if (entry.isDirectory() && !entry.isSymbolicLink()) await scan(child, own.has(child))
+      }
+    } catch (error) { if (error instanceof ContentError) throw error; throw unsafeFiles("无法读取作品目录，文件未删除") }
+    return { root: { path, device: String(info.dev), inode: String(info.ino) }, device: info.dev, brand }
   }
   /** LRU-compatible retirement. A failed close is retained for close(); it never throws. */
   private async retire(id: string, slot: Slot): Promise<boolean> {

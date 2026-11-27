@@ -2,7 +2,7 @@ import { splitMarkdownBlocks } from "@/lib/comment-anchor"
 import { renderedTextMap } from "@/lib/comment-selection"
 export interface PreviewRangeIdentity { start: Node; startOffset: number; end: Node; endOffset: number }
 export interface PreviewSelection { source: string; start: number; end: number; text: string; canReplace: boolean; range: PreviewRangeIdentity }
-const ui = "button,input,textarea,select,svg,script,style,[contenteditable=true],[data-comment-composer],.text-comment-add-btn,.text-comment-anchor-toggle,.foreshadow-inline-flag"
+const ui = "button,input,textarea,select,svg,script,style,[contenteditable=true],[data-comment-composer],.text-comment-add-btn,.text-comment-anchor-toggle,.foreshadow-inline-flag,[data-preview-chrome]"
 export function previewBodyRoots(container: HTMLElement): HTMLElement[] {
   const blocks = [...container.querySelectorAll<HTMLElement>("[data-block]")]
   if (blocks.length) return blocks

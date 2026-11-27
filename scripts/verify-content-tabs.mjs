@@ -276,11 +276,12 @@ try {
   await page.getByRole('button', { name: '显示 / 隐藏内容面板', exact: true }).click(); await page.locator('.workspace-content').waitFor({ state: 'detached' })
   await page.getByRole('button', { name: '显示内容面板', exact: true }).click(); await tabs().first().waitFor()
   report.checks.push({ label: 'related real fullscreen, hide and restore tools' })
-  await choose(originalId)
-  const beforeClose = await order(), closeIndex = beforeClose.indexOf(originalId), expectedNeighbor = beforeClose[closeIndex - 1] ?? beforeClose[closeIndex + 1]
+  const beforeClose = await order(), expectedPrevious = beforeClose.at(-1)
+  assert.notEqual(expectedPrevious, originalId)
+  await choose(expectedPrevious); await choose(originalId)
   await selected().getByRole('button', { name: /^关闭 / }).click(); await settle()
-  assert.equal(await active(), expectedNeighbor); assert.equal(await tabs().count(), 19)
-  report.checks.push({ label: 'close selected chooses neighbor in current reordered array', expectedNeighbor, finalOrder: await order() })
+  assert.equal(await active(), expectedPrevious); assert.equal(await tabs().count(), 19)
+  report.checks.push({ label: 'close selected returns to the previously browsed tab rather than a visual neighbor', expectedPrevious, finalOrder: await order() })
   assert.deepEqual(report.errors, []); report.status = 'passed'
 } catch (error) {
   report.status = 'failed'; report.failure = String(error); report.failureStack = error.stack

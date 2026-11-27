@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>作品正文阅读排版设计稿 v4</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ecebe6; color: #302b24; font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 1360px; margin: 0 auto; padding: 28px 28px 56px; }
+  h1.page { margin: 0; font-size: 22px; font-weight: 600; }
+  .intro { margin: 6px 0 18px; color: #6f665a; max-width: 960px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; margin-bottom: 16px; }
+  .group { display: flex; align-items: center; gap: 4px; }
+  .group > span { margin-right: 4px; color: #6f665a; font-size: 12px; }
+  .controls button { font: inherit; font-size: 12px; cursor: pointer; border: 1px solid #d3ccbf; border-radius: 6px; background: transparent; padding: 4px 12px; min-height: 30px; color: inherit; }
+  .controls button[aria-pressed="true"] { background: #373329; color: #faf8f0; border-color: #373329; }
+  .stage { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  .stage.compare { grid-template-columns: 1fr 1fr; }
+  .caption { font-size: 12px; color: #6f665a; margin: 0 0 6px; }
+  .frame { width: 100%; }
+  .frame.narrow { max-width: 560px; }
+
+  /* ===== 面板主题变量（取自 globals.css 宣纸 / 玄墨） ===== */
+  .panel {
+    --foreground: #2b251b; --muted-fg: #7d7157; --card: #faf5e8; --border: #d8cba6; --muted: #eae1c8;
+    --primary: #b03524; --editor-bg: #f9f4e4; --badge: #e7dcc0; --badge-fg: #4d4430; --success: #64804a;
+    /* 阅读视图新增 */
+    --reader-desk: #efe7d2; --reader-page: #fbf6e9; --reader-ink: #33291c; --reader-meta: #75664b;
+    --reader-rule: #c9b78f; --reader-shadow: 0 1px 2px rgba(96,74,38,.10), 0 10px 30px -12px rgba(96,74,38,.22);
+    --reader-seal: #b03524;
+    height: 720px; display: flex; flex-direction: column; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 9px; background: var(--editor-bg); color: var(--foreground);
+    box-shadow: 0 9px 25px #29231714; position: relative;
+  }
+  .panel.ink {
+    --foreground: #ece7e1; --muted-fg: #9a918a; --card: #141110; --border: rgba(255,248,240,.09); --muted: #181413;
+    --primary: #e07a5f; --editor-bg: #100d0c; --badge: #1a1614; --badge-fg: #ded7cf; --success: #7cb083;
+    --reader-desk: #0f0d0c; --reader-page: #1a1716; --reader-ink: #d6cec4; --reader-meta: #8f857c;
+    --reader-rule: #4a3f37; --reader-shadow: 0 0 0 1px rgba(255,248,240,.05);
+    --reader-seal: #e07a5f;
+  }
+  .panel.bg-green { --reader-desk: #d5e3cf; --reader-page: #e3eedb; --reader-ink: #26331f; --reader-meta: #586a4c; --reader-rule: #a9bf9c; }
+  .panel.bg-white { --reader-desk: #ebebeb; --reader-page: #ffffff; --reader-ink: #222222; --reader-meta: #6e6e6e; --reader-rule: #cfcfcf; }
+  /* 玄墨专用背景：均为低亮度底 + 柔和浅字，正文对比约 10:1，避免纯黑纯白 */
+  .panel.ink.bg-ink-green { --reader-desk: #0c1210; --reader-page: #15201b; --reader-ink: #cbd8ce; --reader-meta: #7f9186; --reader-rule: #34463c; }
+  .panel.ink.bg-ink-blue  { --reader-desk: #0c0f15; --reader-page: #161b25; --reader-ink: #ccd3de; --reader-meta: #808a9a; --reader-rule: #343d4d; }
+  .panel.ink.bg-ink-black { --reader-desk: #000000; --reader-page: #050505; --reader-ink: #bdb6ad; --reader-meta: #7a736b; --reader-rule: #2c2824; --reader-shadow: 0 0 0 1px rgba(255,248,240,.06); }
+
+  /* ===== 面板顶栏 ===== */
+  .topbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--card); flex-shrink: 0; }
+  .topbar h2 { margin: 0; font: 600 16px/1.4 "Noto Serif SC", "Songti SC", serif; }
+  .crumb { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--muted-fg); white-space: nowrap; overflow: hidden; }
+  .crumb b { color: var(--foreground); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+  .crumb i { font-style: normal; opacity: .6; }
+  .badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--badge); color: var(--badge-fg); white-space: nowrap; }
+  .saved { font-size: 11.5px; color: var(--muted-fg); white-space: nowrap; }
+  .saved::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); margin-right: 5px; vertical-align: 1px; }
+  .spacer { flex: 1; }
+  .icon-btn { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; color: var(--muted-fg); border: 0; background: transparent; font-size: 16px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--editor-bg); flex-shrink: 0; font-size: 12px; color: var(--muted-fg); }
+  .toolbar .left { display: flex; gap: 12px; align-items: center; font-family: "SF Mono", Menlo, monospace; }
+  .modes { display: flex; gap: 2px; border: 1px solid var(--border); background: var(--muted); border-radius: 6px; padding: 2px; }
+  .modes span { padding: 1px 8px; border-radius: 4px; }
+  .modes span.on { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .reader-tools { position: relative; }
+  .reader-tools > button { font: inherit; font-size: 12px; color: var(--muted-fg); background: transparent; border: 0; padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+  .reader-tools > button:hover { color: var(--foreground); }
+  .reader-pop { position: absolute; right: 0; top: 30px; z-index: 5; width: 252px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); box-shadow: 0 8px 24px -8px rgba(0,0,0,.3); display: none; font-family: -apple-system, "PingFang SC", sans-serif; }
+  .reader-pop.open { display: block; }
+  .reader-pop label { display: block; font-size: 11.5px; color: var(--muted-fg); margin: 0 0 6px; }
+  .reader-pop .row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .reader-pop .row:last-child { margin-bottom: 0; }
+  .reader-pop .row button { flex: 1; font: inherit; font-size: 12px; padding: 4px 0; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: inherit; cursor: pointer; }
+  .reader-pop .row button[aria-pressed="true"] { border-color: var(--primary); color: var(--primary); }
+  .reader-pop .toggle { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; padding: 4px 0; cursor: pointer; }
+  .reader-pop .toggle + .toggle { border-top: 1px solid var(--border); }
+  .reader-pop .switch { width: 28px; height: 16px; border-radius: 999px; background: var(--border); position: relative; flex: none; border: 0; padding: 0; cursor: pointer; }
+  .reader-pop .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .reader-pop .switch[aria-checked="true"] { background: var(--primary); }
+  .reader-pop .switch[aria-checked="true"]::after { left: 14px; }
+  .reader-pop .toggles { margin-bottom: 12px; }
+  .reader-pop .row .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--primary); }
+  .panel.ink .reader-pop .swatch { border-color: rgba(255,248,240,.22); }
+  .swatch { width: 26px; height: 26px; flex: none !important; border-radius: 50% !important; padding: 0 !important; }
+
+  /* ===== 现状（照搬 globals.css 当前值） ===== */
+  .old-scroll { flex: 1; overflow-y: auto; }
+  .old-body { max-width: 720px; margin: 0 auto; padding: 32px 44px 96px; font: 15px/2.05 "Noto Serif SC", "Songti SC", serif; }
+  .panel.ink .old-body { font: 14px/1.9 "Noto Sans SC", -apple-system, "PingFang SC", sans-serif; }
+  .old-body p { text-indent: 2em; margin: .45em 0; }
+
+  /* ===== 新阅读视图 ===== */
+  .reader-scroll { flex: 1; overflow-y: auto; background: var(--reader-desk); scrollbar-width: thin; }
+  .reader-page {
+    max-width: 760px; margin: 28px auto 40px; padding: 56px 64px 48px; background: var(--reader-page);
+    border-radius: 4px; box-shadow: var(--reader-shadow); color: var(--reader-ink);
+    font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+    --reader-size: 18px;
+  }
+  .panel.size-s .reader-page { --reader-size: 16px; }
+  .panel.size-l .reader-page { --reader-size: 20px; }
+  .panel.size-xl .reader-page { --reader-size: 22px; }
+  /* 窄面板：书页铺满，不留桌面边 */
+  .frame.narrow .reader-page, .frame.narrow .reader-scroll { background: var(--reader-page); }
+  .frame.narrow .reader-page { margin: 0; max-width: none; padding: 36px 26px 40px; box-shadow: none; border-radius: 0; }
+
+  .chapter-head { text-align: center; margin-bottom: 44px; user-select: text; }
+  .chapter-head .vol { font-size: 13px; letter-spacing: .18em; color: var(--reader-meta); margin: 0 0 14px; }
+  .chapter-head h1 { margin: 0; font-size: calc(var(--reader-size) * 1.6); line-height: 1.4; font-weight: 700; letter-spacing: .08em; color: var(--reader-ink); }
+  .chapter-head .no { display: block; font-size: .56em; font-weight: 600; letter-spacing: .3em; color: var(--reader-seal); margin-bottom: 8px; }
+  .chapter-head .meta { margin: 16px 0 0; font: 12px/1.6 -apple-system, "PingFang SC", sans-serif; color: var(--reader-meta); letter-spacing: .04em; }
+  .chapter-head .meta span + span::before { content: "·"; margin: 0 8px; opacity: .7; }
+  .chapter-head .ornament { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 22px; color: var(--reader-rule); }
+  .chapter-head .ornament::before, .chapter-head .ornament::after { content: ""; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, var(--reader-rule)); }
+  .chapter-head .ornament::after { transform: scaleX(-1); }
+  .chapter-head .ornament i { width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid var(--reader-seal); opacity: .75; }
+  .panel.left .chapter-head { text-align: left; }
+  .panel.left .chapter-head .ornament { justify-content: flex-start; }
+  .panel.left .chapter-head .ornament::before { display: none; }
+  .panel.left .chapter-head .ornament i { display: none; }
+  .panel.left .chapter-head .ornament::after { width: 48px; height: 2px; transform: none; background: var(--reader-seal); opacity: .8; }
+
+  .reader-body { font-size: var(--reader-size); line-height: 1.95; letter-spacing: .02em; text-align: justify; }
+  .reader-body p { margin: 0 0 .75em; text-indent: 2em; }
+  .chapter-end { margin: 48px 0 0; text-align: center; font-size: 13px; letter-spacing: .3em; color: var(--reader-meta); }
+  .chapter-end::before, .chapter-end::after { content: "—"; margin: 0 12px; color: var(--reader-rule); letter-spacing: 0; }
+  .chapter-end small { display: block; margin-top: 6px; letter-spacing: .04em; font: 12px -apple-system, "PingFang SC", sans-serif; opacity: .8; }
+  .note { margin-top: 26px; padding: 14px 18px; border-left: 3px solid #b03524; background: #f7f5ef; border-radius: 0 8px 8px 0; color: #4d4639; max-width: 980px; }
+  .note h3 { margin: 0 0 6px; font-size: 14px; }
+  .note ul { margin: 0; padding-left: 18px; }
+  .note li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1 class="page">作品正文阅读排版 · 设计稿 v4</h1>
+  <p class="intro">只针对「章节内容」面板的预览视图。样例章节为本稿虚构文字，不进入产品；正文来源于真实章节内容，章首信息来源于真实卷、章、字数与状态。可切换主题、面板宽度并与现状对照；章首对齐、字数/卷名/章节号显示、字号与背景在面板工具条「Aa 阅读设置」中调整；阅读设置弹出后点击弹出框以外的任何区域即关闭（v3 修改）；玄墨主题有一套专用背景色（v4 修改）。</p>
+
+  <div class="controls" role="toolbar" aria-label="审核选项">
+    <div class="group"><span>视图</span>
+      <button data-set="view" data-v="new" aria-pressed="true">新设计</button>
+      <button data-set="view" data-v="compare" aria-pressed="false">现状 / 新设计 对照</button>
+    </div>
+    <div class="group"><span>主题</span>
+      <button data-set="theme" data-v="paper" aria-pressed="true">宣纸</button>
+      <button data-set="theme" data-v="ink" aria-pressed="false">玄墨</button>
+    </div>
+    <div class="group"><span>面板</span>
+      <button data-set="width" data-v="wide" aria-pressed="true">正常宽度</button>
+      <button data-set="width" data-v="narrow" aria-pressed="false">窄面板 560px</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="note">
+    <h3>设计要点（审核项）</h3>
+    <ul>
+      <li><b>章首</b>：卷信息小字 → 印章色「第三章」→ 大字章名 → 字数 · 状态 → 菱形装饰线。默认居中，卷名、章节号、字数默认都显示，可在「阅读设置」中改对齐方式和逐项隐藏；隐藏字数时章末字数一并隐藏。章首随正文滚动，不计入字数，评论与伏笔不能锚到章首。</li>
+      <li><b>顶栏</b>：章节名改为面包屑「卷名 › 章名」，保留状态徽标、保存状态与「⋯」菜单；主标题只在章首出现一次。</li>
+      <li><b>书页</b>：正常宽度时正文区为深一档的“桌面”底色，中间 760px 书页带极轻阴影；窄面板时书页铺满。</li>
+      <li><b>字体</b>：两个主题正文都用衬线（Noto Serif SC → 宋体），默认 18px，行高 1.95，段距 0.75em，首行缩进 2 字，两端对齐。</li>
+      <li><b>颜色</b>：宣纸正文深棕 #33291c 配书页 #fbf6e9；玄墨书页暖深灰 #1a1716 配浅灰 #d6cec4（原为 #100d0c / #ece7e1），对比更柔和。</li>
+      <li><b>章末</b>：「— 本章完 —」与本章字数。</li>
+      <li><b>阅读设置</b>（工具条「Aa 阅读设置」）：章首对齐（居中/左对齐）；章首显示卷名/章节号/字数（开关）；字号 16/18/20/22；背景按主题各一套：宣纸「米黄（默认）/ 护眼绿 / 纯白」，玄墨「玄石（默认）/ 墨绿 / 夜蓝 / 纯黑」。两个主题的背景分别记忆，切换主题时各自恢复。弹出后点击弹出框以外的任何区域（正文、顶栏、工具条、页面其他位置）即关闭，点击弹出框内部不关闭。设置即时保存，作用于所有章节。</li>
+      <li>分屏模式右侧预览同样使用书页排版；编辑模式、评审视图不变。其他编辑器、候选稿对比、冲突对比不变。</li>
+    </ul>
+  </div>
+</main>
+
+<template id="tpl-paras">
+  <p>雨是在黄昏时落下来的。先是几点，打在檐角的铜铃上，叮的一声，像谁在很远的地方敲了一下碗沿；随后便连成了片，把整条青石巷都织进一张灰白的网里。</p>
+  <p>沈既白站在书铺门口，看着对面那盏还没点起的灯笼。灯笼纸是新糊的，红得有些过分，风一吹，便在雨里轻轻打转。</p>
+  <p>“客官，要关门了。”掌柜从柜台后探出半个身子，手里还捏着一支没写完字的笔。</p>
+  <p>“再等一刻。”他说。</p>
+  <p>掌柜也不多问，缩回去继续写他的账。笔尖划过纸面的沙沙声和雨声混在一起，竟分不出哪一样更密些。</p>
+  <p>一刻之后，巷口果然来了一个人。那人披着蓑衣，斗笠压得很低，走路时左脚略略拖着，在积水里拖出一道细长的波纹。他在灯笼下停住，抬手，把灯点亮了。</p>
+  <p>红光一下子漫开，映在湿漉漉的石板上，像一摊刚洒下的酒。</p>
+  <p>沈既白收起伞，迈步走进雨里。他没有回头，所以没有看见，掌柜在他身后放下了笔，账本那一页上，从头到尾只写着同一个名字。</p>
+  <p>雨越下越大了。</p>
+</template>
+
+<script>
+  const state = { view: "new", theme: "paper", align: "center", width: "wide", size: "m", bgPaper: "default", bgInk: "default", showWords: true, showVolume: true, showNumber: true, pop: false }
+  const paras = document.getElementById("tpl-paras").innerHTML
+
+  function topbarOld() {
+    return `<div class="topbar"><h2>第 1 卷 · 第 3 章《灯下来客》</h2><span class="badge">草稿</span><span class="saved">已保存</span><span class="spacer"></span><button class="icon-btn" aria-label="正文功能菜单">⋯</button></div>`
+  }
+  function topbarNew() {
+    return `<div class="topbar"><div class="crumb"><span>第一卷 青石巷</span><i>›</i><b>第三章 灯下来客</b></div><span class="badge">草稿</span><span class="saved">已保存</span><span class="spacer"></span><button class="icon-btn" aria-label="正文功能菜单">⋯</button></div>`
+  }
+  function toolbar(withReader) {
+    const sizes = [["s","16"],["m","18"],["l","20"],["xl","22"]]
+    const ink = state.theme === "ink"
+    const bgKey = ink ? "bgInk" : "bgPaper"
+    const bgs = ink
+      ? [["default","#1a1716","玄石（默认）"],["ink-green","#15201b","墨绿"],["ink-blue","#161b25","夜蓝"],["ink-black","#050505","纯黑"]]
+      : [["default","#fbf6e9","米黄（默认）"],["green","#e3eedb","护眼绿"],["white","#ffffff","纯白"]]
+    const pop = withReader ? `<div class="reader-tools"><button data-act="pop">Aa 阅读设置</button>
+      <div class="reader-pop ${state.pop ? "open" : ""}">
+        <label>章首对齐</label><div class="row"><button data-set="align" data-v="center" aria-pressed="${state.align==="center"}">居中</button><button data-set="align" data-v="left" aria-pressed="${state.align==="left"}">左对齐</button></div>
+        <label>章首显示</label><div class="toggles">${[["showVolume","卷名"],["showNumber","章节号"],["showWords","字数"]].map(([k,l]) => `<div class="toggle" data-toggle="${k}"><span>${l}</span><button class="switch" role="switch" aria-label="显示${l}" aria-checked="${state[k]}"></button></div>`).join("")}</div>
+        <label>字号</label><div class="row">${sizes.map(([k,l]) => `<button data-set="size" data-v="${k}" aria-pressed="${state.size===k}">${l}</button>`).join("")}</div>
+        <label>背景（${ink ? "玄墨" : "宣纸"}）</label><div class="row">${bgs.map(([k,c,l]) => `<button class="swatch" title="${l}" aria-label="${l}" style="background:${c}" data-set="${bgKey}" data-v="${k}" aria-pressed="${state[bgKey]===k}"></button>`).join("")}</div>
+      </div></div>` : ""
+    return `<div class="toolbar"><div class="left"><span>字数 1,236</span><span>🏳 标注伏笔</span><span>💬 0</span></div><div style="display:flex;align-items:center;gap:8px">${pop}<div class="modes"><span>编辑</span><span>分屏</span><span class="on">预览</span><span>评审</span></div></div></div>`
+  }
+  function panelOld() {
+    return `<div class="panel ${state.theme}">${topbarOld()}${toolbar(false)}<div class="old-scroll"><div class="old-body">${paras}</div></div></div>`
+  }
+  function panelNew() {
+    const cls = [state.theme, state.align === "left" ? "left" : "", "size-" + state.size, (b => b !== "default" ? "bg-" + b : "")(state.theme === "ink" ? state.bgInk : state.bgPaper)].join(" ")
+    return `<div class="panel ${cls}">${topbarNew()}${toolbar(true)}
+      <div class="reader-scroll"><article class="reader-page">
+        <header class="chapter-head" aria-label="章节信息">
+          ${state.showVolume ? `<p class="vol">第一卷 · 青石巷</p>` : ""}
+          <h1>${state.showNumber ? `<span class="no">第三章</span>` : ""}灯下来客</h1>
+          <p class="meta">${state.showWords ? "<span>1,236 字</span>" : ""}<span>草稿</span></p>
+          <div class="ornament" aria-hidden="true"><i></i></div>
+        </header>
+        <div class="reader-body">${paras}</div>
+        <p class="chapter-end">本章完${state.showWords ? "<small>1,236 字</small>" : ""}</p>
+      </article></div></div>`
+  }
+  function render() {
+    const stage = document.getElementById("stage")
+    stage.className = "stage" + (state.view === "compare" ? " compare" : "")
+    const frame = c => `<div class="frame ${state.width}">${c}</div>`
+    stage.innerHTML = state.view === "compare"
+      ? `<div><p class="caption">现状</p>${frame(panelOld())}</div><div><p class="caption">新设计</p>${frame(panelNew())}</div>`
+      : frame(panelNew())
+    document.querySelectorAll(".controls button").forEach(b => b.setAttribute("aria-pressed", String(state[b.dataset.set] === b.dataset.v)))
+  }
+  document.addEventListener("click", e => {
+    // 弹出框以外的任何点击都先关闭阅读设置，再照常处理该点击（例如切换主题）
+    if (state.pop && !e.target.closest(".reader-pop, [data-act=\"pop\"]")) { state.pop = false; render() }
+    const t0 = e.target.closest("[data-toggle]")
+    if (t0) { state[t0.dataset.toggle] = !state[t0.dataset.toggle]; render(); return }
+    const b = e.target.closest("button"); if (!b) return
+    if (b.dataset.act === "pop") { state.pop = !state.pop; render(); return }
+    if (b.dataset.set) { state[b.dataset.set] = b.dataset.v; render() }
+  })
+  render()
+</script>
+</body>
+</html>

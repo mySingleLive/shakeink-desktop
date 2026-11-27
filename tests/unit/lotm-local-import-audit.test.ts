@@ -19,6 +19,7 @@ import {importReviewTaskKeys} from '../../desktop/core/novel-import-review-tasks
 import {IMPORT_WORLD_SETTING_TYPES,stripImportKnowledgeAnnotations,importLengthClass,importThemeSynopsisFallback} from '../../desktop/core/novel-import-semantics'
 import {validatePlanning} from '../../src/lib/planning/domain'
 import type {ImportArtifact,ImportSession} from '../../desktop/shared/novel-import'
+import {formatImportChapterProse} from '../../desktop/core/novel-import-prose'
 
 const sha=(value:string|Uint8Array)=>createHash('sha256').update(value).digest('hex')
 const clone=<T>(value:T):T=>structuredClone(value)
@@ -101,7 +102,8 @@ function freezeRows(session:ImportSession,chapters:any[]){
  const result:any={novels:[{id:novelId,userId:'local-author',title:session.title,currentStage:'WRITING'}],volumes:[],chapters:[],themes:[],characters:[],scenes:[],items:[],worlds:[],settings:[],foreshadows:[],tropes:[],planning:[],versions:[],mutations:[]}
  for(let v=0;v<9;v++)result.volumes.push({id:`native-volume-${v+1}`,novelId,index:v+1,title:names[v],summary:v===0?projected.filter(a=>a.kind==='outline'&&a.facts.chapterIndex===undefined).map(nativeText).join('\n\n'):''})
  for(const [i,chapter]of chapters.entries()){const outline=session.chapters[i].outline??'';result.chapters.push({id:`native-chapter-${String(i+1).padStart(4,'0')}`,volumeId:`native-volume-${chapter.volume}`,index:chapter.positionInVolume,title:chapter.title,outline,content:session.chapters[i].content,wordCount:0,status:'WRITTEN'})}
- for(const [i,row]of result.chapters.entries()){row.content=session.chapters[i].content;row.wordCount=[...row.content].length}
+ // docs/610: publication stores the formatted chapter body.
+ for(const [i,row]of result.chapters.entries()){const c=session.chapters[i];row.content=formatImportChapterProse(c.content,{title:c.title,...(c.volume!==undefined?{volume:c.volume}:{})}).text;row.wordCount=[...row.content].length}
  result.themes.push({id:'native-theme',novelId,title:session.title,synopsis:importThemeSynopsisFallback(joined('theme')),referenceCases:'',channel:'',genre:'',length:session.chapters.length?importLengthClass(session.chapters.reduce((n,c)=>n+Array.from(c.content).length,0)):'',authorPosition:null,tags:[],sellingPoints:'',targetAudience:'',version:1,createdAt:updatedAt,updatedAt})
  for(const a of projected.filter(a=>a.kind==='character')){const native=mapping.decoded.get(a.id)!.native as any;result.characters.push({id:`native-${a.id}`,novelId,name:a.name,roleType:native.roleType,aliases:native.aliases,age:native.age,gender:native.gender,occupation:native.occupation,bio:nativeText(a),personality:native.personality,appearance:native.appearance,clothing:native.clothing,catchphrase:native.catchphrase,growthArc:native.growthArc,extra:native.extra,relationships:native.relationships.map((r:any)=>({...r,...(r.characterId?{characterId:`native-${r.characterId}`}:{})}))})}
  for(const a of projected.filter(a=>a.kind==='scene')){const native=mapping.decoded.get(a.id)!.native as any;result.scenes.push({id:`native-${a.id}`,novelId,name:a.name,parentId:native.parentId?`native-${native.parentId}`:null,coordinates:native.coordinates,description:nativeText(a)})}

@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>docs/599 设计稿 · 世界线事件卡片编辑形态</title>
+<style>
+/* Theme values copied from src/app/globals.css (.ink 玄墨 / .paper 宣纸). Card rules copied from worldline.module.css;
+ * rules added for the edit state are under "NEW". Sample event text is design-only and does not enter the product. */
+.ink{--background:#0d0b0a;--foreground:#ece7e1;--card:#141110;--popover:#171312;--primary:#e07a5f;--primary-foreground:#0d0b0a;--muted:#181413;--muted-foreground:#9a918a;--border:rgba(255,248,240,.09);--input:rgba(255,248,240,.13);--ring:rgba(224,122,95,.45);--hover-wash:rgba(255,248,240,.05);--shadow-2:0 8px 24px -8px rgba(0,0,0,.6);
+ --event-conflict:#e8735f;--event-scheme:#d9ab5b;--event-reveal:#67b6cc;--event-relation:#cf8bbd;--event-growth:#8cc48a;--event-change:#a08cf0;--event-other:#8d837c}
+.paper{--background:#f4edda;--foreground:#2b251b;--card:#faf5e8;--popover:#fcf8ee;--primary:#b03524;--primary-foreground:#faf5e8;--muted:#eae1c8;--muted-foreground:#7d7157;--border:#d8cba6;--input:#cfc29b;--ring:rgba(176,53,36,.35);--hover-wash:rgba(96,74,38,.06);--shadow-2:0 8px 24px -8px rgba(96,74,38,.14);
+ --event-conflict:#bf4633;--event-scheme:#8f6721;--event-reveal:#29788e;--event-relation:#a2538d;--event-growth:#3f7b3d;--event-change:#6f5bd0;--event-other:#776d66}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:var(--background);color:var(--foreground);font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;padding:0}
+.review{position:sticky;top:0;z-index:50;display:flex;gap:8px 14px;align-items:center;flex-wrap:wrap;min-height:40px;padding:6px 18px;background:#000;color:#bbb;font-size:12px}
+.review .g{display:inline-flex;gap:4px;align-items:center}.review b{color:#fff;margin-right:2px}
+.review button{padding:3px 10px;border:1px solid #444;border-radius:6px;color:#ccc}
+.review button[aria-pressed=true]{background:#fff;color:#000}
+.page{padding:18px 28px 80px}
+.cols{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.col h2{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--muted-foreground);letter-spacing:.06em}
+.col.table{flex:1 1 640px;max-width:920px}.col.timeline{width:420px;flex:none}
+.notes{max-width:920px;margin:28px 0 0;padding:14px 18px;border:1px dashed var(--input);border-radius:10px;color:var(--muted-foreground);font-size:12.5px;line-height:1.8}
+.notes b{color:var(--foreground)}.notes ol{margin:4px 0 0;padding-left:20px}
+.stampDemo{position:relative;height:16px;margin-left:4px;font-size:10.5px;color:var(--muted-foreground)}
+.stampDemo::before{content:"";display:inline-block;width:5px;height:5px;margin-right:5px;vertical-align:1px;border-radius:50%;background:var(--ec)}
+
+/* ---------- card (worldline.module.css) ---------- */
+.card{--ec:var(--event-other);position:relative;border-radius:9px;border:1px solid var(--border);background:linear-gradient(90deg,color-mix(in srgb,var(--ec) 13%,var(--card)),var(--card) 46%);transition:border-color .15s,box-shadow .15s}
+.card::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--ec)}
+.card.open{background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 11%,var(--card)),var(--card) 70px);box-shadow:var(--shadow-2)}
+.head{display:flex;align-items:center;gap:9px;height:42px;padding:0 6px 0 14px;min-width:0}
+.ln{flex:none;display:flex;align-items:center;height:18px}
+.dot{flex:none;border-radius:50%;background:var(--ec);transition:width .15s,height .15s}
+.dot.i1{width:6px;height:6px}.dot.i2{width:9px;height:9px}.dot.i3{width:12px;height:12px;box-shadow:0 0 0 3px color-mix(in srgb,var(--ec) 22%,transparent)}
+.title{flex:1;min-width:0;margin:0;font:inherit;font-weight:600;font-size:14px;white-space:normal}
+.kids{flex:none;padding:0 7px;border-radius:8px;border:1px solid var(--border);color:var(--muted-foreground);font-size:11px}
+.btn24{display:grid;place-items:center;width:24px;height:24px;border-radius:6px;color:var(--muted-foreground)}
+.btn24:hover{color:var(--foreground)}.btn24.up svg{transform:rotate(180deg)}
+.body{padding:0 16px 14px 30px}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;color:var(--muted-foreground);font-size:12px}
+.tag{padding:0 8px;border-radius:9px;color:var(--ec);background:color-mix(in srgb,var(--ec) 15%,transparent);font-weight:600}
+.when{color:var(--foreground);font-variant-numeric:tabular-nums}
+.fact{font-size:13px;line-height:1.75;color:color-mix(in srgb,var(--foreground) 88%,var(--muted-foreground))}
+.fact p{margin:0 0 8px}.fact p:last-child{margin-bottom:0}
+.people{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.who{position:relative;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px 0 3px;border-radius:12px;border:1px solid var(--border);font-size:12px}
+.who i{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;font-style:normal;font-size:10px;color:var(--primary-foreground);background:color-mix(in srgb,var(--ec) 65%,var(--foreground))}
+.change{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:7px 10px;border-radius:8px;background:var(--muted);color:var(--muted-foreground);font-size:12px}
+.change b{color:var(--foreground)}
+.refs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.refs button{font-size:11px;color:var(--event-reveal)}
+
+/* ---------- NEW: edit state. Same boxes as the open card; each field is the same text made editable. ---------- */
+/* The card says it is being edited only through its border (type colour, like a selected card). */
+.card.editing{border-color:color-mix(in srgb,var(--ec) 60%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--ec) 12%,transparent),var(--shadow-2)}
+/* Shared affordance: nothing changes at rest; hover shows a soft wash, focus a type-colour underline / ring.
+ * Negative margins cancel the padding so the text sits exactly where the open card draws it. */
+.ed{border:0;outline:none;background:transparent;border-radius:5px;transition:background-color .12s,box-shadow .12s}
+.ed:hover{background:var(--hover-wash)}
+.ed:focus-visible,.ed:focus{background:var(--hover-wash);box-shadow:inset 0 -1.5px 0 var(--ec)}
+textarea.ed{display:block;resize:none;field-sizing:content;overflow:hidden}
+/* Size rule (review round 1): entering edit must not change the card's size. Every editable box cancels its own
+ * padding with a negative margin, keeps the open card's line height, and floats anything extra (×, timing, pickers,
+ * validation note) out of the flow. */
+.title textarea.ed{width:calc(100% + 8px);margin:-2px -4px;padding:2px 4px;font:inherit;line-height:inherit}
+.title textarea.ed::placeholder{color:var(--muted-foreground);font-weight:400}
+/* Meta row: tag / time / importance keep their text; a 9px caret or a dotted underline says they open a picker. */
+.meta .pick{position:relative;display:inline-flex;align-items:center;gap:3px;cursor:pointer}
+.meta .pick svg{width:9px;height:9px;opacity:.55;flex:none}
+.meta .tag.pick{padding-right:5px}
+.meta .tag.pick:hover{background:color-mix(in srgb,var(--ec) 24%,transparent)}
+.meta .when.pick{padding:0 2px;margin:0 -2px;border-radius:4px;text-decoration:underline dotted color-mix(in srgb,var(--foreground) 40%,transparent);text-underline-offset:3px}
+.meta .imp.pick{padding:0 2px;margin:0 -2px;border-radius:4px}
+.meta .when.pick:hover,.meta .imp.pick:hover,.meta .pick[aria-expanded=true]{background:var(--hover-wash);color:var(--foreground)}
+.meta .tag.pick[aria-expanded=true]{background:color-mix(in srgb,var(--ec) 24%,transparent);color:var(--ec)}
+/* Body: at rest the card keeps the rendered body. A click or Tab turns the same box into a paragraph editor: one
+ * block per Markdown paragraph with the same 13px / 1.75 and 8px gap, the source text shown as typed. A blank line in a
+ * textarea would take a full 23px line instead of 8px, so a textarea would make the card grow. Leaving it renders again. */
+.fact .factView,.fact .factSrc{margin:-4px -6px;padding:4px 6px;border-radius:6px;outline:none;transition:background-color .12s,box-shadow .12s}
+.fact .factView{cursor:text}
+.fact .factView:hover,.fact .factView:focus-visible{background:var(--hover-wash)}
+.fact .factSrc{background:var(--hover-wash);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ec) 40%,transparent);white-space:pre-wrap;word-break:break-word}
+.fact .factSrc p:empty::before{content:"\200b"}
+.fact .factSrc[data-empty] p::before{content:"客观发生的事实";color:var(--muted-foreground);pointer-events:none}
+/* An empty body draws nothing in the open card, so it draws nothing here either; ＋ › 正文 opens it. */
+.fact:empty{display:none}
+/* People: the same pills; × floats on the pill's corner (no layout change); a dashed pill adds one. */
+.who .x{position:absolute;top:-6px;right:-6px;display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--popover);border:1px solid var(--input);color:var(--muted-foreground);font-size:10px;line-height:1;opacity:0;transition:opacity .12s}
+.editing .who:hover .x,.editing .who:focus-within .x{opacity:1}
+.who .x:hover{color:var(--foreground);border-color:var(--muted-foreground)}
+/* Key change: the same grey row; fields are inline inputs on the row's 18px line, timing and × float on the row end. */
+.change{position:relative}
+.change input.ed{min-width:2em;field-sizing:content;padding:0 3px;margin:0 -3px;height:18px;line-height:18px;font:inherit;color:inherit}
+.change input.ed::placeholder{color:color-mix(in srgb,var(--muted-foreground) 60%,transparent)}
+.change b.ed{position:relative;padding:0 3px;margin:0 -3px;line-height:18px;cursor:pointer;font-weight:700}
+.change .tail{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:2px;padding-left:12px;opacity:0;pointer-events:none;transition:opacity .12s;
+ background:linear-gradient(90deg,transparent,var(--muted) 12px)}
+.change:hover .tail,.change:focus-within .tail{opacity:1;pointer-events:auto}
+.change .tail button{height:20px;padding:0 6px;border-radius:5px;color:var(--muted-foreground);font-size:11px}
+.change .tail button:hover{background:var(--hover-wash);color:var(--foreground)}
+/* Save bar: hangs under the card's bottom-right edge, out of the flow, so the card keeps its size; the head is
+ * unchanged (the timeline ⌄ stays, disabled: the card stays open while editing). The validation note sits left of
+ * the buttons in the same bar. The bar is above neighbouring cards (the editing card is raised). */
+.card.editing{z-index:6}
+.saveBar{position:absolute;z-index:31;top:calc(100% + 6px);right:-1px;display:flex;align-items:center;gap:6px;padding:4px;border-radius:9px;
+ background:var(--popover);border:1px solid color-mix(in srgb,var(--ec) 45%,var(--border));box-shadow:var(--shadow-2)}
+.saveBar .msg{max-width:240px;padding:0 6px 0 8px;font-size:12px;color:var(--event-conflict)}
+.hbtn{height:26px;padding:0 12px;border-radius:6px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.hbtn.ghost{color:var(--muted-foreground)}.hbtn.ghost:hover{background:var(--hover-wash);color:var(--foreground)}
+.hbtn.primary{background:var(--primary);color:var(--primary-foreground)}.hbtn.primary:hover{background:color-mix(in srgb,var(--primary) 85%,transparent)}
+.btn24:disabled{opacity:.35;cursor:default}
+/* Round 3: open card: a person pill opens that character's detail panel. Edit card: a pill opens the character list
+ * and the choice replaces that pill in place (× still removes it). Same pill box in both, so no size change. */
+.who.link{cursor:pointer;transition:border-color .12s,background-color .12s}
+.who.link:hover{border-color:color-mix(in srgb,var(--ec) 55%,var(--border));background:var(--hover-wash)}
+.who.link:focus-visible{outline:2px solid var(--ring);outline-offset:1px}
+.editing .who.swap{cursor:pointer}
+.editing .who.swap:hover,.editing .who.swap[aria-expanded=true]{border-color:color-mix(in srgb,var(--ec) 55%,var(--border));background:var(--hover-wash)}
+.pop .item:disabled{opacity:.45;cursor:default}.pop .item:disabled:hover{background:none}
+.pop .item .note{margin-left:auto;font-size:11px;color:var(--muted-foreground)}
+.toast{position:fixed;z-index:60;left:50%;bottom:24px;transform:translateX(-50%);padding:8px 14px;border-radius:8px;background:var(--popover);border:1px solid var(--border);box-shadow:var(--shadow-2);font-size:12.5px}
+.reenter{display:inline-flex;align-items:center;gap:6px;margin:6px 0 0;font-size:11px;color:var(--muted-foreground)}
+.reenter button{height:22px;padding:0 9px;border-radius:6px;border:1px solid var(--input);color:var(--foreground);font-size:11px}
+/* Round 2: ＋ after the last person (a 24px round pill on the pills' line); ＋ on the right end of the last key change
+ * (20px icon on the row's 18px line, absolute, so the row keeps its height). The meta-row ＋ only adds a section the
+ * open card does not draw (no people / no key change / no body) and is hidden when all three exist. */
+.who.addP{position:relative;justify-content:center;width:24px;padding:0;border-style:dashed;color:var(--muted-foreground);cursor:pointer;font-size:13px}
+.who.addP:hover,.who.addP[aria-expanded=true]{color:var(--foreground);border-color:var(--muted-foreground);background:var(--hover-wash)}
+.change.last{padding-right:36px}
+.change .addC{position:absolute;right:7px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:20px;height:20px;border-radius:50%;
+ border:1px dashed color-mix(in srgb,var(--muted-foreground) 55%,transparent);color:var(--muted-foreground);font-size:12px;line-height:1}
+.change .addC:hover{color:var(--foreground);border-color:var(--muted-foreground);background:var(--hover-wash)}
+.change.last .tail{right:32px}
+/* One ＋ at the end of the meta row adds a missing section (18px, on the row's line). */
+.meta .add.pick{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1px dashed var(--input);color:var(--muted-foreground);font-size:12px;line-height:1}
+.meta .add.pick:hover,.meta .add.pick[aria-expanded=true]{color:var(--foreground);border-color:var(--muted-foreground);background:var(--hover-wash)}
+.pop .sep{height:1px;margin:4px 2px;background:var(--border)}
+.pop .cap{padding:4px 10px 2px;font-size:11px;color:var(--muted-foreground)}
+/* Review aid only: live heights of the open and editing cards. */
+.size{margin:6px 0 0;font-size:11px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.size b{color:var(--foreground)}.size .bad{color:var(--event-conflict)}
+
+/* ---------- NEW: pickers (inside the card, like the 「…」 menu; they zoom with the timeline card) ---------- */
+/* Pickers sit above the save bar (z 31): both are in the editing card's stacking context. */
+.pop{position:absolute;z-index:40;top:calc(100% + 6px);left:0;padding:4px;border-radius:10px;border:1px solid var(--border);background:var(--popover);box-shadow:var(--shadow-2);color:var(--foreground);font-size:13px;font-weight:400;cursor:default;text-decoration:none}
+.pop .item{display:flex;align-items:center;gap:8px;width:100%;min-width:120px;height:28px;padding:0 10px;border-radius:6px;text-align:left;white-space:nowrap}
+.pop .item:hover{background:var(--muted)}
+.pop .item[aria-selected=true]{background:var(--muted);font-weight:600}
+.pop .item i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.pop .item .chk{margin-left:auto;opacity:.7}
+.pop .item.imp .dot{background:var(--ec)}
+.pop .item.imp .dw{display:grid;place-items:center;width:14px;flex:none}
+.pop .search{display:block;width:100%;height:28px;margin-bottom:4px;padding:0 9px;border-radius:6px;border:1px solid var(--input);background:transparent;outline:none}
+.pop .search:focus{border-color:var(--ring)}
+.pop .av{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;font-size:10px;color:var(--primary-foreground);background:color-mix(in srgb,var(--event-relation) 65%,var(--foreground));flex:none}
+.pop .empty{padding:6px 10px;color:var(--muted-foreground);font-size:12px}
+/* Time picker (review round 4): two questions, 开始 / 结束, each a choice + one sentence to fill in, with a live
+ * preview of the card's time text and a small drawing of the span on top. Changes apply at once (the card's time text
+ * follows); 完成 or a click outside the picker closes it. */
+.pop.time{left:-8px;width:380px;max-width:calc(100vw - 40px);padding:0;overflow:hidden}
+.pop.time .pv{padding:12px 14px 10px;background:color-mix(in srgb,var(--ec) 8%,var(--popover));border-bottom:1px solid var(--border)}
+.pop.time .pv .txt{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--foreground)}
+/* Round 5: the strip is a small draggable timeline. Dots are the time ends (a span that ends at a known time has a
+ * dot on both ends); dragging a dot moves that end (the other stays), dragging the bar / window moves the whole event.
+ * Values snap to a step fitted to the visible range; arrow keys move a focused dot by one step (Shift: 10). The scale
+ * is fixed while dragging and refits when the picker opens, the type changes, or a typed value leaves the range. */
+.pop.time .strip{position:relative;height:36px;margin-top:6px;touch-action:none;user-select:none;-webkit-user-select:none}
+.strip .ax{position:absolute;left:0;right:0;top:9px;height:2px;border-radius:1px;background:var(--border)}
+.strip .bar{position:absolute;top:7px;height:6px;border-radius:3px;background:var(--ec)}
+.strip .bar.fade{background:linear-gradient(90deg,var(--ec),transparent)}
+.strip .bar.arrow::after{content:"";position:absolute;right:-6px;top:-3px;border:6px solid transparent;border-left-color:var(--ec);border-right:0}
+.strip .win{position:absolute;top:3px;height:14px;border-radius:7px;border:1.5px dashed var(--ec);background:color-mix(in srgb,var(--ec) 14%,transparent)}
+.strip .mv{cursor:grab}.strip.drag,.strip.drag .mv{cursor:grabbing}
+.strip .h{position:absolute;z-index:2;top:4px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--ec);box-shadow:0 0 0 2px var(--popover);cursor:ew-resize;outline:none;transition:transform .1s,box-shadow .1s}
+.strip .h::before{content:"";position:absolute;inset:-8px}
+.strip .h:hover,.strip .h:focus-visible,.strip .h.on{transform:scale(1.25);box-shadow:0 0 0 2px var(--popover),0 0 0 5px color-mix(in srgb,var(--ec) 32%,transparent)}
+.strip .lb{position:absolute;top:21px;font-size:10.5px;line-height:14px;color:var(--muted-foreground);font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
+.strip .lb.l{left:0}.strip .lb.r{right:0}
+.strip .lb.tip{z-index:3;transform:translateX(-50%);padding:0 6px;border-radius:5px;color:#fff;background:var(--ec)}
+.strip .q{position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted-foreground)}
+.pop.time .pv .row{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.pop.time .pv .row small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--muted-foreground)}
+@media (prefers-reduced-motion:reduce){.strip .h{transition:none}}
+.pop.time .sec{padding:12px 14px 4px}
+.pop.time .sec + .sec{border-top:1px solid var(--border)}
+.pop.time .sh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.pop.time .sh b{font-size:12px;font-weight:600}
+.pop.time .say{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;white-space:nowrap;min-height:28px;margin-bottom:8px;font-size:12.5px;color:var(--muted-foreground)}
+.pop.time .hint{margin:-2px 0 10px;font-size:11.5px;color:var(--muted-foreground)}
+.pop.time .chk{display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;font-size:12.5px;cursor:pointer}
+.pop.time .chk input{accent-color:var(--primary)}
+.pop.time .tog{height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--input);font-size:12.5px;color:var(--foreground)}
+.pop.time .tog:hover{background:var(--muted)}
+.pop.time .link{font-size:11.5px;color:var(--muted-foreground);text-decoration:underline dotted;text-underline-offset:3px}
+.pop.time .link:hover{color:var(--foreground)}
+.pop.time .foot{display:flex;justify-content:flex-end;padding:8px 10px;border-top:1px solid var(--border)}
+.pop.time .foot button{height:26px;padding:0 14px;border-radius:6px;background:var(--muted);font-size:12px}
+.pop.time .foot button:hover{background:var(--input)}
+.seg{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--muted);flex-wrap:wrap}
+.seg button{height:22px;padding:0 9px;border-radius:6px;color:var(--muted-foreground);font-size:12px;white-space:nowrap}
+.seg button:hover{color:var(--foreground)}
+.seg button[aria-pressed=true]{background:var(--background);color:var(--foreground);box-shadow:0 0 0 1px var(--input)}
+.seg button:disabled{opacity:.4;cursor:default}
+.fld{height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--input);background:transparent;outline:none;font-size:12.5px;min-width:0}
+.fld:focus{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 40%,transparent)}
+/* Round 6: number fields. The native spin buttons are hidden (they covered the digits); a slim themed ▴▾ column sits
+ * inside the field's right edge, in space the input's padding reserves, so the digits never sit under it. Click steps
+ * by 1 in the field's unit, holding repeats; ↑ / ↓ keys step too (Shift: 10). */
+.numf{position:relative;display:inline-flex;align-items:stretch;height:28px;border-radius:6px;border:1px solid var(--input);transition:border-color .12s,box-shadow .12s}
+.numf:hover{border-color:color-mix(in srgb,var(--muted-foreground) 55%,var(--input))}
+.numf:focus-within{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 40%,transparent)}
+.numf input{width:58px;min-width:0;height:100%;padding:0 22px 0 8px;border:0;outline:none;background:transparent;font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right;-moz-appearance:textfield;appearance:textfield}
+.numf input::-webkit-inner-spin-button,.numf input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.numf .spin{position:absolute;top:3px;right:3px;bottom:3px;display:flex;flex-direction:column;width:15px;border-radius:4px;overflow:hidden;opacity:.5;transition:opacity .12s}
+.numf:hover .spin,.numf:focus-within .spin{opacity:1}
+.numf .spin button{flex:1;display:grid;place-items:center;color:var(--muted-foreground)}
+.numf .spin button:hover{background:var(--muted);color:var(--foreground)}
+.numf .spin button:active{background:var(--input)}
+.numf .spin button:disabled{opacity:.35;cursor:default;background:none}
+.numf .spin svg{width:9px;height:9px}
+select.fld.anc{max-width:118px}
+select.fld{appearance:none;-webkit-appearance:none;padding-right:22px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 7px center}
+select.fld option{background:var(--popover);color:var(--foreground)}
+select.fld.grow{flex:1}
+
+@media (prefers-reduced-motion:reduce){.ed,.who .x,.change .tail,.dot{transition:none}}
+/* ---------- Round 7: parent / child families (worldline.module.css .groupBox / .groupHead / .familyFrame) ---------- */
+.card:not(.open) > .head{height:32px}
+.card:not(.open) .title{font-weight:400;font-size:13px;white-space:nowrap;overflow:hidden}
+.fold{display:grid;place-items:center;width:20px;height:20px;margin-left:-6px;border-radius:50%;background:color-mix(in srgb,var(--ec) 12%,transparent);color:color-mix(in srgb,var(--ec) 75%,var(--foreground))}
+.fold:hover{background:color-mix(in srgb,var(--ec) 26%,transparent);color:var(--foreground)}
+.fold svg{display:block;transition:transform .15s}.fold.foldClosed svg{transform:rotate(-90deg)}
+/* 新建子事件 icon button: in the head of every card, left of the timeline ⌄ and 「…」; same in open and edit (size rule). */
+.btn24.addKid svg{width:15px;height:15px}
+.btn24.addKid:hover:not(:disabled){background:var(--hover-wash);color:var(--foreground)}
+/* Collapsed card (review round 7 fix): the button keeps its own 24px place in the head (no overlap with the title or
+ * ▸ N); muted at rest, full on hover / focus. The layout's collapsed width (collapsedCardWidth) counts it. */
+.card:not(.open) .addKidSlot .addKid{margin-block:-3px;opacity:.55;transition:opacity .12s}
+.card:not(.open):hover .addKidSlot .addKid,.card:not(.open) .addKidSlot .addKid:focus-visible{opacity:1}
+/* Event table: a parent heads its group box (docs/588 §1). */
+.groupBox{position:relative;border-radius:12px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ec) 22%,var(--border)),inset 3px 0 0 var(--ec);background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 7%,transparent),transparent 80%)}
+.groupBox > .card.groupHead{border:0;border-radius:12px 12px 0 0;box-shadow:inset 3px 0 0 var(--ec),inset 0 -1px 0 var(--border);background:color-mix(in srgb,var(--ec) 12%,var(--card))}
+.groupBox > .card.groupHead::before{display:none}
+.groupBox.folded > .card.groupHead{border-radius:12px}
+.groupBox > .card.groupHead.editing{box-shadow:inset 3px 0 0 var(--ec),inset 0 0 0 1.5px color-mix(in srgb,var(--ec) 60%,var(--border)),0 0 0 3px color-mix(in srgb,var(--ec) 12%,transparent)}
+.kidsWrap{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:10px 14px 12px 22px}
+.kslot{width:100%}
+.kslot > .card:not(.open){width:fit-content;min-width:220px;max-width:100%}
+/* Timeline: the family frame; the parent's card is its header, children sit at their time inside. */
+.famFrame{position:relative;border-radius:12px;border:1px solid color-mix(in srgb,var(--ec) 22%,var(--border));background:linear-gradient(180deg,color-mix(in srgb,var(--ec) 7%,transparent),transparent 85%)}
+.famFrame > .card.groupHead{margin:-1px -1px 0;background:linear-gradient(90deg,color-mix(in srgb,var(--ec) 20%,var(--card)),color-mix(in srgb,var(--ec) 6%,var(--card)))}
+.famFrame .kidsWrap{gap:4px;padding:6px 12px 12px}
+.famFrame .kslot > .card:not(.open){min-width:150px;max-width:300px}
+.famFrame .kslot.openK{margin-left:0!important}
+/* Nested families: a child that has children heads its own box inside the parent's box. */
+.kidsWrap > .groupBox,.kidsWrap > .famFrame{width:100%}
+.kidsWrap > .stampDemo{margin-top:2px}
+.pop.menu{left:auto;right:0;min-width:160px}
+.card[data-flash]{animation:famFlash .6s ease-out 2}
+@keyframes famFlash{30%{box-shadow:0 0 0 4px color-mix(in srgb,var(--ec) 45%,transparent)}}
+@media (prefers-reduced-motion:reduce){.card[data-flash]{animation:none}.fold svg{transition:none}}
+/* ---------- Round 10: character hover card (same content and timing as the chat EntityHoverCard) ---------- */
+/* Open (not editing) cards only: hovering a person pill for 400 ms shows avatar, name, role · occupation and the first
+ * sentence of the bio; leaving hides it after 200 ms, so the pointer can move onto it and click 打开角色卡 ›. */
+.hcard{position:fixed;z-index:3000;display:flex;flex-direction:column;gap:8px;width:264px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--popover);box-shadow:var(--shadow-2);font-size:12px;animation:hcIn .12s ease-out}
+@keyframes hcIn{from{opacity:0;transform:translateY(-2px)}}
+.hcard .top{display:flex;align-items:center;gap:8px;min-width:0}
+.hcard .av{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:600;color:var(--primary-foreground);background:color-mix(in srgb,var(--event-relation) 65%,var(--foreground))}
+.hcard .nm{font-size:13px;font-weight:600;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcard .rl{font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hcard p{margin:0;font-size:12px;line-height:1.6;color:color-mix(in srgb,var(--foreground) 85%,transparent);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.hcard .go{width:fit-content;font-size:11.5px;color:var(--primary)}.hcard .go:hover{text-decoration:underline}
+@media (prefers-reduced-motion:reduce){.hcard{animation:none}}
+</style>
+</head>
+<body class="ink">
+<div class="review">
+  <span class="g"><b>主题</b><button data-k="theme" data-v="ink">玄墨</button><button data-k="theme" data-v="paper">宣纸</button></span>
+  <span class="g"><b>显示</b><button data-k="view" data-v="both">展开 / 编辑对照</button><button data-k="view" data-v="edit">只看编辑</button><button data-k="view" data-v="open">只看展开</button></span>
+    <span class="g"><b>示例</b><button data-k="sample" data-v="full">完整事件</button><button data-k="sample" data-v="long">长标题</button><button data-k="sample" data-v="blank">新建子事件</button><button data-k="sample" data-v="family">父子事件</button></span>
+</div>
+<div id="toast"></div>
+<div class="page">
+  <div class="cols">
+    <section class="col table"><h2>事件表（卡片槽最宽 920px）</h2><div id="table"></div></section>
+    <section class="col timeline"><h2>时间线（展开卡宽 420px）</h2><div id="timeline"></div></section>
+  </div>
+  <div class="notes">
+    <b>审核要点</b>
+    <ol>
+      <li><b>尺寸不变（审核第 1 轮）：</b>进入编辑的瞬间卡片宽高与展开形态完全相同（每列下方实时显示两张卡片的尺寸与高度差，未改动内容时为 0px）。之后只有用户改了内容（多写一段、加一个角色或角色转变）卡片才按内容变化，与保存后展开形态的尺寸一致。</li>
+      <li>做法：所有可编辑区域都与展开形态的文字同字号、同行高、同位置（内边距用负外边距抵消）；所有额外元素都浮在布局之外：角色 ×、角色转变的“结束时 ⇄ / ×”、各选择浮层、保存条与校验提示。</li>
+      <li>标题、角色转变的文字直接输入。正文平时显示渲染后的样子，点击（或 Tab 聚焦后回车）原位变成按段落编辑的文本，段距仍是 8px，以 Markdown 源码显示（例如 **加粗**），离开后恢复渲染。</li>
+      <li>类型、重要度、时间点击后在卡片内弹出选择浮层。时间浮层包含现有编辑器的全部时间字段，顶部实时显示卡片上的时间文本。</li>
+      <li><b>审核第 2 轮：</b>添加角色的“＋”在最后一个角色胶囊后面（同高 24px 的圆形虚线胶囊）；最后一条角色转变的最右侧是“新增角色转变”的“＋”图标按钮（浮在行内右端，行高不变）。</li>
+      <li>展开形态不显示空的角色 / 角色转变 / 正文，编辑形态也不显示，所以新建子事件进入编辑时尺寸同样不变。这些空的部分从元信息行末尾的 18px “＋”添加；三者都有时这个“＋”不显示。</li>
+      <li><b>审核第 3 轮：</b>编辑中点击这张卡片以外的任意位置，编辑自动取消（未保存的修改丢弃，与点“取消”相同）；卡片自己的浮层、保存条、「…」菜单属于卡片内部。设计稿里点卡片外部即可看到，双击卡片重新进入编辑。</li>
+      <li><b>审核第 3 轮：</b>展开形态的角色胶囊可点击，打开该角色的详情标签页（设计稿用底部提示代替）；编辑形态点击角色胶囊弹出可搜索的角色列表，选中的角色替换这个位置的原角色，已参与的角色置灰；胶囊右上角 × 仍是移除。</li>
+      <li><b>审核第 5 轮：</b>时间浮层顶部的小时间轴可以拖动：圆点是时间端点，持续一段时间且结束确定时两端都有圆点；拖圆点改这一端（另一端不动），拖线段或虚线框整体移动；数值按可见范围自动取整到 小时 / 天 / 月 / 年；拖动时圆点下方显示数值；聚焦圆点后可用 ← → 微调（Shift 一次 10 步）。下面的数字框同步变化。</li>
+      <li><b>审核第 6 轮：</b>数字框去掉系统自带的上下箭头（会挡住数字），换成框内右侧一条细的 ▴▾ 按钮列，数字右对齐并留出空位，不会被挡；平时半透明，悬停或聚焦时清晰；单击加减 1（按框旁的单位），按住连续加减，↑ ↓ 键同样可用（Shift 一次 10）；最小为 0 的框到 0 时 ▾ 置灰。</li>
+      <li><b>审核第 7 轮（示例“父子事件”）：</b>父事件、子事件的卡片用同一套编辑形态（事件表中父事件是分组框的标题栏，时间线中是家族框的头卡），双击任一卡片编辑，尺寸规则不变。每张卡片头部有“新建子事件”图标按钮（⌄ 与「…」左侧；收起的卡片悬停时出现，不改变卡片宽度）：点击后立即新建一个“未命名事件”子事件并保存（可撤销），普通事件随即变为父事件，子事件卡片直接进入编辑、标题已选中；默认时间为父事件开始时刻、瞬间。「…」→ 删除 删掉一个父事件的最后一个子事件后，它自动变回普通事件（分组框 / 家族框消失，卡片闪一下）。有子事件的事件仍不能直接删除（现有规则）。编辑中的卡片上“新建子事件”置灰。</li>
+      <li><b>审核第 8 轮：</b>点“新建子事件”后，如果没有改动新子事件的任何内容就取消（点“取消”、按 Esc、或点击卡片外部），这个子事件直接删除，不弹确认；若它是父事件唯一的子事件，父事件同时变回普通事件。改动过再取消，则只丢弃改动（与其他事件相同）。Esc：有浮层打开时先关浮层，再按一次取消编辑。</li>
+      <li><b>审核第 9 轮：</b>任何卡片（普通事件、父事件、子事件）在编辑中按 Esc，都等于点“取消”：丢弃未保存的修改并退出编辑，卡片回到展开形态（尺寸不变）。有选择浮层打开时，第一次 Esc 只关浮层。</li>
+      <li><b>审核第 10 轮：</b>非编辑状态下，鼠标在角色胶囊上停留 0.4 秒，弹出角色简介悬浮框：头像、名字、“身份 · 职业”、简介第一句（最多两行），以及“打开角色卡 ›”。移出 0.2 秒后消失，期间可移到悬浮框上点击；点胶囊本身仍直接打开角色详情。内容、延迟与对话区角色芯片的悬浮框相同。编辑状态下胶囊不弹（点击是换角色）。</li>
+      <li>“取消”“保存”在卡片右下边缘外悬挂的保存条里，校验提示显示在按钮左侧。头部不变；时间线的 ⌄ 在编辑中置灰（编辑中卡片保持展开）。编辑中的卡片边框换成类型色，不占尺寸。</li>
+      <li>示例文字仅用于设计稿，不进入正式产品。</li>
+    </ol>
+  </div>
+</div>
+<script>
+document.execCommand("defaultParagraphSeparator", false, "p");
+const SVG = {
+  down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  chev: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+  more: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>',
+};
+const CATS = { 冲突: "conflict", 谋划: "scheme", 揭示: "reveal", 关系: "relation", 成长: "growth", 变故: "change", 其他: "other" };
+const IMP = ["一般", "重要", "关键"];
+const PEOPLE = [
+  { id: "c1", name: "林衡", role: "主角", occupation: "旧城书吏", bio: "旧城书吏出身，为寻失踪的兄长一路南下。性子沉稳，记性极好。" },
+  { id: "c2", name: "苏晚", role: "女主", occupation: "渡口船娘", bio: "在渡口撑船的姑娘，熟悉南下水路，对旧城的事讳莫如深。" },
+  { id: "c3", name: "沈既白", role: "配角", occupation: "", bio: "" },
+  { id: "c4", name: "周伯", role: "配角", occupation: "老更夫", bio: "旧城的老更夫，失火那夜最后一个见过兄长的人。" },
+];
+const OTHER_EVENTS = [{ id: "e0", title: "旧城失火" }, { id: "p", title: "南下寻人" }];
+const UNITS = [{ l: "小时", v: 1 }, { l: "天", v: 24 }, { l: "个月", v: 720 }, { l: "年", v: 8640 }];
+const KID_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v7a4 4 0 0 0 4 4h7"/><path d="m13 12 3 3-3 3"/><path d="M18 3v6"/><path d="M15 6h6"/></svg>';
+const FOLD_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25"><path d="m6 9 6 6 6-6"/></svg>';
+const ev0 = o => ({ title: "", category: "其他", importance: 1, parent: null, time: { kind: "exact", value: 0, end: null, anchor: null, boundary: "start", label: "" }, duration: 0, ongoing: false, fact: "", people: [], changes: [], refs: [], ...o, time: { kind: "exact", value: 0, end: null, anchor: null, boundary: "start", label: "", ...(o.time || {}) } });
+const FAMILY = () => [
+  ev0({ id: "p", title: "南下寻人", category: "成长", importance: 3, time: { value: 24 }, duration: 240, fact: "林衡离开旧城，一路南下。", people: ["c1"] }),
+  ev0({ id: "k1", parent: "p", title: "渡口相遇", category: "关系", importance: 2, time: { value: 48 }, duration: 6, fact: "两人在渡口初次相遇，约定三日后同行。", people: ["c1", "c2"], changes: [{ id: "x1", character: "c1", dimension: "立场", before: "旁观", after: "同行", at: "end" }] }),
+  ev0({ id: "k2", parent: "p", title: "夜宿荒庙", category: "变故", importance: 1, time: { value: 120 }, duration: 12 }),
+  ev0({ id: "g1", parent: "k2", title: "庙中遇雨", category: "其他", importance: 1, time: { value: 121 } }),
+  ev0({ id: "g2", parent: "k2", title: "神像后的暗格", category: "揭示", importance: 2, time: { value: 128 } }),
+  ev0({ id: "n", title: "旧城失火", category: "变故", importance: 2, time: { value: 600 }, fact: "子时旧城起火，火势一夜未熄。" }),
+];
+let fam = FAMILY();
+const SAMPLES = {
+  full: () => ({ title: "渡口相遇", category: "关系", importance: 2, kids: 0, time: { kind: "exact", value: 24, end: null, anchor: null, boundary: "start", label: "" }, duration: 6, ongoing: false,
+    fact: "两人在渡口初次相遇，约定三日后同行。\n\n夜里起了大雾。", people: ["c1", "c2"],
+    changes: [{ id: "x1", character: "c1", dimension: "立场", before: "旁观", after: "同行", at: "end" }], refs: ["主线 · 渡口 · 林衡"] }),
+  long: () => ({ ...SAMPLES.full(), title: "港口商会签下秘密契约后暗中交易被发现并引发全城追捕的一夜", category: "冲突", importance: 3, people: ["c1", "c2", "c3", "c4"],
+    fact: "商会的账册在子时被人翻出，**三处**货栈同时起火。\n\n林衡带人封了北门。\n\n天亮前，追捕扩大到全城。" }),
+  family: () => structuredClone(FAMILY()[0]),
+  blank: () => ({ title: "未命名事件", category: "其他", importance: 1, kids: 0, time: { kind: "unknown", value: 0, end: null, anchor: "p", boundary: "start", label: "" }, duration: 0, ongoing: false,
+    fact: "", people: [], changes: [], refs: [] }),
+};
+const ui = { fresh: null, fEdit: null, fOpen: new Set(["p", "n"]), fFold: new Set(), flash: null, selectTitle: false, drag: null, sv: null, svKey: "", theme: "ink", view: "both", factEdit: null, editing: { table: true, timeline: true }, toast: "", sample: "full", pop: null, endMode: false, startUnit: 1, durUnit: 1, msg: "" };
+let d = SAMPLES.full(), saved = structuredClone(d);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const nm = id => PEOPLE.find(p => p.id === id)?.name ?? "未知角色";
+const ec = e => `--ec:var(--event-${CATS[e.category]})`;
+const num = v => +(+v).toPrecision(12);
+
+/* Same rules as EventCard timeText(); the fixed calendar here labels a start as 后N小时. */
+const isFam = () => ui.sample === "family";
+const evTitle = id => (fam.find(x => x.id === id) ?? OTHER_EVENTS.find(x => x.id === id))?.title ?? "";
+const anchorList = () => isFam() ? fam.filter(x => x.id !== d.id) : OTHER_EVENTS;
+function timeText(e) {
+  if (e.time.kind === "unknown") return "待定位";
+  const u = ui.startUnit, ul = UNITS.find(x => x.v === u)?.l ?? "小时";
+  const rel = v => `${v < 0 ? "前" : "后"}${num(Math.abs(v) / u)}${ul}`;
+  const base = (e.time.anchor ? `${evTitle(e.time.anchor)}${e.time.boundary === "end" ? "结束" : "开始"}` : "") + rel(e.time.value);
+  let out = base;
+  if (e.time.kind === "exact" && e.time.label) out += ` · ${e.time.label}`;
+  if (e.time.kind === "window") out += e.time.label === "仅同日" ? " · 仅同日" : `～${num(Math.abs(e.time.end ?? 0) / u)}${ul} · ${e.time.label || "时间窗口"}`;
+  else if (e.duration === 0) out += " · 时点";
+  else if (e.duration === null) out += ` · ${e.ongoing ? "持续中" : "结束未定"}`;
+  else out += ` · 持续 ${num(e.duration / ui.durUnit)} ${UNITS.find(x => x.v === ui.durUnit)?.l ?? "小时"}`;
+  if (e.duration === null) out += " · 宽度仅供阅读";
+  return out;
+}
+function factHtml(src) { return src.split(/\n{2,}/).filter(Boolean).map(p => `<p>${esc(p).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</p>`).join(""); }
+
+/* o (family scene): { id, kids, open }. Without o the card is the top scene's open / edit pair (always open). */
+function head(e, col, editing, o = null) {
+  const open = o ? o.open : true, kids = o?.kids ?? 0, id = o?.id ?? "";
+  const menu = o ? `menu:${id}` : null;
+  return `<div class="head">
+    ${kids ? `<span class="ln"><button class="fold ${ui.fFold.has(id) ? "foldClosed" : ""}" data-fold="${id}" aria-label="${ui.fFold.has(id) ? "展开" : "折叠"}${esc(e.title)}的子事件" aria-expanded="${!ui.fFold.has(id)}">${FOLD_ICON}</button></span>` : ""}
+    <span class="ln"><span class="dot i${e.importance}" aria-hidden></span></span>
+    <h3 class="title">${editing ? `<textarea class="ed" rows="1" aria-label="事件标题" data-in="title" placeholder="事件名称">${esc(e.title)}</textarea>` : esc(e.title)}</h3>
+    ${kids ? `<span class="ln"><span class="kids" title="${o?.desc ?? kids} 个子事件">${open ? `${kids} 个子事件` : `▸ ${o.desc ?? kids}`}</span></span>` : ""}
+    <span class="ln addKidSlot"><button class="btn24 addKid" data-addkid="${id}" aria-label="新建子事件" title="${editing ? "先保存或取消当前编辑" : "新建子事件"}" ${editing ? "disabled" : ""}>${KID_ICON}</button></span>
+    ${col === "timeline" ? `<span class="ln"><button class="btn24 ${open ? "up" : ""}" data-fexp="${id}" aria-label="${open ? "收起" : "展开"}" ${editing ? "disabled" : ""}>${SVG.chev}</button></span>` : ""}
+    <span class="ln rel"><button class="btn24" aria-label="更多操作" ${menu ? pickAttr(col, menu) : ""}>${SVG.more}</button>${menu && isOpen(col, menu) ? menuPop(id, editing) : ""}</span>
+  </div>`;
+}
+function menuPop(id, editing) {
+  const kids = fam.filter(x => x.parent === id).length;
+  return `<div class="pop menu" role="menu" aria-label="更多操作">
+    <button class="item" role="menuitem" data-addkid="${id}" ${editing ? "disabled" : ""}>新建子事件</button>
+    <button class="item" role="menuitem" data-fedit="${id}" ${editing ? "disabled" : ""}>编辑</button>
+    <button class="item" role="menuitem" data-del="${id}" ${editing || kids ? "disabled" : ""}>删除${kids ? '<span class="note">先删除子事件</span>' : ""}</button></div>`;
+}
+function openBody(e) {
+  return `<div class="body">
+    <div class="meta"><span class="tag">${e.category}</span><small class="when">${esc(timeText(e))}</small><span>${IMP[e.importance - 1]}</span></div>
+    <div class="fact">${factHtml(e.fact)}</div>
+    ${e.people.length ? `<div class="people">${e.people.map(id => `<button class="who link" data-goto="${id}" aria-label="打开角色 ${nm(id)}" title="打开角色详情"><i>${nm(id)[0]}</i>${nm(id)}</button>`).join("")}</div>` : ""}
+    ${e.changes.map(c => `<div class="change"><b>${nm(c.character)}</b>${esc(c.dimension)}<span>${esc(c.before)}</span>→<span>${esc(c.after)}</span></div>`).join("")}
+    ${e.refs.length ? `<div class="refs">${e.refs.map(r => `<button>${esc(r)}</button>`).join("")}</div>` : ""}
+  </div>`;
+}
+const isOpen = (col, k) => ui.pop === `${col}:${k}`;
+const pickAttr = (col, k) => `data-pop="${col}:${k}" aria-haspopup="dialog" aria-expanded="${isOpen(col, k)}" role="button" tabindex="0"`;
+function catPop() {
+  return `<div class="pop" role="listbox" aria-label="事件类型">${Object.entries(CATS).map(([c, k]) =>
+    `<button class="item" role="option" aria-selected="${d.category === c}" data-set="category" data-v="${c}" style="--c:var(--event-${k})"><i></i>${c}${d.category === c ? '<span class="chk">✓</span>' : ""}</button>`).join("")}</div>`;
+}
+function impPop() {
+  return `<div class="pop" role="radiogroup" aria-label="重要程度">${IMP.map((l, i) =>
+    `<button class="item imp" role="radio" aria-checked="${d.importance === i + 1}" aria-selected="${d.importance === i + 1}" data-set="importance" data-v="${i + 1}"><span class="dw"><span class="dot i${i + 1}"></span></span>${l}${d.importance === i + 1 ? '<span class="chk">✓</span>' : ""}</button>`).join("")}</div>`;
+}
+function startKind() { return d.time.kind === "window" && d.time.label === "仅同日" ? "day" : d.time.kind; }
+function durKind() { return ui.endMode ? "end" : d.ongoing ? "ongoing" : d.duration === null ? "unknown" : d.duration === 0 ? "point" : "duration"; }
+const endGroup = k => k === "point" ? "point" : k === "duration" || k === "end" ? "span" : "open";
+const numField = (aria, key, value, min) => `<span class="numf"><input type="number" inputmode="decimal" ${min !== undefined ? `min="${min}"` : ""} aria-label="${aria}" data-num="${key}" value="${value}"><span class="spin" aria-hidden="true"><button tabindex="-1" data-step="${key}" data-dir="1" title="增加"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button><button tabindex="-1" data-step="${key}" data-dir="-1" title="减少" ${min !== undefined && +value <= min ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></span></span>`;
+const unitSel = (aria, val, key, only) => `<select class="fld" aria-label="${aria}" data-unit="${key}">${UNITS.filter(u => !only || only.includes(u.v)).map(u => `<option value="${u.v}" ${u.v === val ? "selected" : ""}>${u.l}</option>`).join("")}</select>`;
+const sign = () => (d.time.value < 0 ? -1 : 1);
+const anchorSel = () => `<select class="fld anc" aria-label="时间参考" data-anchor><option value="">故事开始</option>${anchorList().map(e => `<option value="${e.id}" ${d.time.anchor === e.id ? "selected" : ""}>${esc(e.title)}</option>`).join("")}</select>`
+  + (d.time.anchor ? `<select class="fld" aria-label="参考边界" data-boundary><option value="start" ${d.time.boundary === "start" ? "selected" : ""}>开始</option><option value="end" ${d.time.boundary === "end" ? "selected" : ""}>结束</option></select>` : "");
+const signBtn = () => `<button class="tog" aria-label="之前或之后" data-sign>${sign() < 0 ? "前" : "后"}</button>`;
+/* ---- draggable strip ---- */
+const STEPS = [1, 24, 720, 8640];
+function ends() {
+  const sk = startKind(), k = durKind(), a = d.time.value;
+  if (sk === "window" || sk === "day") return { a, b: sk === "day" ? a + 24 : (d.time.end ?? a) };
+  if (k === "duration" || k === "end") return { a, b: a + (d.duration ?? 0) };
+  return { a, b: a };
+}
+function fitView() {
+  const { a, b } = ends(), k = durKind();
+  const base = b > a ? b - a : Math.max(ui.startUnit, ui.durUnit, 24) * 2;
+  const tail = k === "ongoing" || k === "unknown" ? 1.1 : 0.6;
+  ui.sv = [a - base * 0.3, b + base * tail];
+  ui.svKey = svKey();
+}
+const svKey = () => `${ui.pop}|${startKind()}|${durKind()}`;
+function ensureView() {
+  if (ui.drag) return;
+  const { a, b } = ends();
+  if (!ui.sv || ui.svKey !== svKey() || a < ui.sv[0] || b > ui.sv[1]) fitView();
+}
+const step = () => startKind() === "day" ? 24 : STEPS.filter(u => u <= (ui.sv[1] - ui.sv[0]) / 30).pop() ?? 1;
+const snap = v => Math.round(v / step()) * step();
+const px = v => ((v - ui.sv[0]) / (ui.sv[1] - ui.sv[0]) * 100).toFixed(3) + "%";
+function rel(v) { const u = UNITS.filter(x => x.v <= Math.max(step(), 1)).pop(); return `${v < 0 ? "前" : "后"}${num(Math.abs(v) / u.v)}${u.l}`; }
+function strip() {
+  const sk = startKind(), k = durKind();
+  if (sk === "unknown") return `<div class="strip"><div class="ax"></div><span class="q">开始时间未定</span></div>`;
+  ensureView();
+  const { a, b } = ends(), on = h => (ui.drag?.h === h ? "on" : "");
+  const dot = (h, v, label) => `<span class="h ${on(h)}" data-h="${h}" role="slider" tabindex="0" aria-label="${label}" aria-valuetext="${rel(v)}" style="left:${px(v)}"></span>`;
+  let body;
+  if (sk === "day") body = `<div class="win mv" data-h="m" title="拖动换一天" style="left:${px(a)};width:calc(${px(b)} - ${px(a)})"></div>`;
+  else if (sk === "window") body = `<div class="win mv" data-h="m" title="拖动整体移动" style="left:${px(a)};width:calc(${px(b)} - ${px(a)})"></div>${dot("s", a, "时间窗口开始")}${dot("e", b, "时间窗口结束")}`;
+  else if (k === "point") body = dot("s", a, "发生时间");
+  else if (k === "ongoing") body = `<div class="bar arrow" style="left:${px(a)};right:6px"></div>${dot("s", a, "开始时间")}`;
+  else if (k === "unknown") body = `<div class="bar fade" style="left:${px(a)};width:40%"></div>${dot("s", a, "开始时间")}`;
+  else body = `<div class="bar mv" data-h="m" title="拖动整体移动" style="left:${px(a)};width:calc(${px(b)} - ${px(a)})"></div>${dot("s", a, "开始时间")}${dot("e", b, "结束时间")}`;
+  const tipV = ui.drag ? (ui.drag.h === "e" ? b : a) : null;
+  const labels = tipV === null ? `<span class="lb l">${rel(Math.ceil(ui.sv[0] / step()) * step())}</span><span class="lb r">${rel(Math.floor(ui.sv[1] / step()) * step())}</span>`
+    : `<span class="lb tip" style="left:${px(tipV)}">${ui.drag.h === "m" && b > a ? `${rel(a)} – ${rel(b)}` : rel(tipV)}</span>`;
+  return `<div class="strip ${ui.drag ? "drag" : ""}" data-strip><div class="ax"></div>${body}${labels}</div>`;
+}
+/* A dragged value is a whole number of steps; the number fields switch to the largest unit that shows it whole. */
+function fitUnits() {
+  const whole = (v, u) => Math.abs(v / u - Math.round(v / u)) < 1e-9;
+  if (!whole(d.time.value, ui.startUnit) || (d.time.end !== null && !whole(d.time.end, ui.startUnit)))
+    ui.startUnit = [...UNITS].reverse().find(u => whole(d.time.value, u.v) && (d.time.end === null || whole(d.time.end, u.v))).v;
+  if (d.duration && !whole(d.duration, ui.durUnit)) ui.durUnit = [...UNITS].reverse().find(u => whole(d.duration, u.v)).v;
+}
+function moveHandle(h, o, dh) { moveHandle0(h, o, dh); fitUnits(); }
+/* One move of handle h by dh hours from the values at drag start (o). */
+function moveHandle0(h, o, dh) {
+  const sk = startKind(), k = durKind(), win = sk === "window" || sk === "day";
+  if (h === "m") { const t = snap(o.a + dh) - o.a; d.time.value = o.a + t; if (win && sk === "window") d.time.end = o.b + t; if (sk === "day") d.time.end = d.time.value + 24; return; }
+  if (h === "s") {
+    const v = snap(o.a + dh);
+    if (win) d.time.value = Math.min(v, o.b);
+    else if (k === "duration" || k === "end") { const nv = Math.min(v, o.b); d.time.value = nv; d.duration = o.b - nv; }
+    else d.time.value = v;
+    return;
+  }
+  const v = Math.max(o.a, snap(o.b + dh));
+  if (win) d.time.end = v; else d.duration = v - o.a;
+}
+function timePop() {
+  const sk = startKind(), k = durKind(), g = endGroup(k), S = sign();
+  const abs = v => num(Math.abs(v) / ui.startUnit);
+  const startSay = sk === "unknown" ? `<p class="hint">还不知道什么时候发生，时间线上显示为“待定位”。</p>` : sk === "window"
+    ? `<div class="say">${anchorSel()} ${signBtn()} ${numField("开始时间偏移", "value", abs(d.time.value), 0)}至${numField("窗口结束", "end", abs(d.time.end ?? d.time.value), 0)} ${unitSel("开始时间单位", ui.startUnit, "startUnit")}</div><p class="hint">在这段时间内的某一刻发生，具体时刻不确定。</p>`
+    : `<div class="say">${anchorSel()} ${signBtn()} ${numField("开始时间偏移", "value", abs(d.time.value), 0)} ${sk === "day" ? unitSel("开始时间单位", ui.startUnit, "startUnit", [24, 720, 8640]) : unitSel("开始时间单位", ui.startUnit, "startUnit")}</div>`
+      + (sk === "day" ? `<p class="hint">只知道是哪一天，当天的具体时刻未知。</p>` : "");
+  const endSay = g === "point" ? `<p class="hint">一瞬间发生，没有持续时间。</p>`
+    : g === "span" ? (k === "duration"
+      ? `<div class="say">持续 ${numField("事件时长", "duration", num((d.duration ?? 0) / ui.durUnit), 0)} ${unitSel("持续时间单位", ui.durUnit, "durUnit")} <button class="link" data-dur="end">改填结束时间</button></div>`
+      : `<div class="say">到 ${d.time.anchor ? esc(evTitle(d.time.anchor)) + (d.time.boundary === "end" ? "结束" : "开始") : "故事开始"}${S < 0 ? "前" : "后"} ${numField("结束时间点", "endAt", num(Math.abs(d.time.value + (d.duration ?? 0)) / ui.startUnit), undefined)} ${UNITS.find(u => u.v === ui.startUnit).l} 结束 <button class="link" data-dur="duration">改填时长</button></div>`)
+    : `<label class="chk"><input type="checkbox" data-ongoing ${k === "ongoing" ? "checked" : ""}> 至今仍在持续</label><p class="hint">${k === "ongoing" ? "时间线上的长度延伸到当前，仅供阅读。" : "结束时间不确定，时间线上的长度仅供阅读。"}</p>`;
+  return `<div class="pop time" role="dialog" aria-label="事件时间">
+    <div class="pv"><div class="row"><div class="txt">${esc(timeText(d))}</div>${startKind() === "unknown" ? "" : "<small>拖动圆点或线段修改</small>"}</div>${strip()}</div>
+    <div class="sec"><div class="sh"><b>开始</b><div class="seg" role="radiogroup" aria-label="开始时间类型">${[["exact", "确定"], ["day", "只知道哪天"], ["window", "某段时间内"], ["unknown", "未定"]].map(([v, l]) =>
+      `<button role="radio" aria-checked="${sk === v}" aria-pressed="${sk === v}" data-start="${v}">${l}</button>`).join("")}</div></div>${startSay}</div>
+    ${sk !== "exact" ? "" : `<div class="sec"><div class="sh"><b>结束</b><div class="seg" role="radiogroup" aria-label="事件持续类型">${[["point", "瞬间"], ["span", "持续一段时间"], ["open", "未定"]].map(([v, l]) =>
+      `<button role="radio" aria-checked="${g === v}" aria-pressed="${g === v}" data-endg="${v}">${l}</button>`).join("")}</div></div>${endSay}</div>`}
+    <div class="foot"><button data-close>完成</button></div>
+  </div>`;
+}
+function peoplePop() {
+  const rest = PEOPLE.filter(p => !d.people.includes(p.id));
+  return `<div class="pop" role="dialog" aria-label="添加参与角色" style="min-width:180px"><input class="search" placeholder="搜索角色" aria-label="搜索角色" data-search>
+    ${rest.length ? rest.map(p => `<button class="item" data-addp="${p.id}"><span class="av">${p.name[0]}</span>${p.name}</button>`).join("") : '<div class="empty">没有可添加的角色</div>'}</div>`;
+}
+const missing = () => ({ people: !d.people.length, change: !d.changes.length, fact: !d.fact && !ui.factEdit });
+function addPop() {
+  const m = missing();
+  return `<div class="pop" role="menu" aria-label="添加" style="min-width:180px">
+    ${m.people ? `<div class="cap">参与角色</div><input class="search" placeholder="搜索角色" aria-label="添加参与角色" data-search>
+    ${PEOPLE.map(p => `<button class="item" role="menuitem" data-addp="${p.id}"><span class="av">${p.name[0]}</span>${p.name}</button>`).join("")}` : ""}
+    ${m.people && (m.change || m.fact) ? '<div class="sep"></div>' : ""}
+    ${m.change ? `<button class="item" role="menuitem" data-addc>＋ 角色转变</button>` : ""}
+    ${m.fact ? `<button class="item" role="menuitem" data-addfact>＋ 正文</button>` : ""}</div>`;
+}
+function swapPop(i) {
+  const cur = d.people[i];
+  return `<div class="pop" role="dialog" aria-label="更换角色" style="min-width:180px"><input class="search" placeholder="搜索角色" aria-label="搜索角色" data-search>
+    ${PEOPLE.map(p => p.id === cur ? `<button class="item" aria-selected="true" disabled data-swapi="${i}"><span class="av">${p.name[0]}</span>${p.name}<span class="chk">✓</span></button>`
+      : d.people.includes(p.id) ? `<button class="item" disabled><span class="av">${p.name[0]}</span>${p.name}<span class="note">已参与</span></button>`
+      : `<button class="item" data-swapi="${i}" data-v="${p.id}"><span class="av">${p.name[0]}</span>${p.name}</button>`).join("")}</div>`;
+}
+function whoPop(i) {
+  const c = d.changes[i];
+  return `<div class="pop" role="listbox" aria-label="变化角色">${PEOPLE.map(p => `<button class="item" role="option" aria-selected="${c.character === p.id}" data-chg-char="${i}" data-v="${p.id}"><span class="av">${p.name[0]}</span>${p.name}</button>`).join("")}</div>`;
+}
+function editBody(col) {
+  const fact = ui.factEdit === col
+    ? `<div class="factSrc" contenteditable="true" role="textbox" aria-multiline="true" aria-label="事实正文" data-factsrc ${d.fact ? "" : "data-empty"}>${(d.fact ? d.fact.split(/\n{2,}/) : [""]).map(t => `<p>${esc(t)}</p>`).join("")}</div>`
+    : d.fact ? `<div class="factView" role="textbox" aria-label="事实正文" tabindex="0" data-factview="${col}">${factHtml(d.fact)}</div>` : "";
+  return `<div class="body">
+    <div class="meta">
+      <span class="tag pick" aria-label="事件类型 ${d.category}" ${pickAttr(col, "cat")}>${d.category}${SVG.down}${isOpen(col, "cat") ? catPop() : ""}</span>
+      <small class="when pick" aria-label="事件时间 ${esc(timeText(d))}" ${pickAttr(col, "time")}>${esc(timeText(d))}${isOpen(col, "time") ? timePop() : ""}</small>
+      <span class="imp pick" aria-label="重要程度 ${IMP[d.importance - 1]}" ${pickAttr(col, "imp")}>${IMP[d.importance - 1]}${SVG.down}${isOpen(col, "imp") ? impPop() : ""}</span>
+      ${Object.values(missing()).some(Boolean) ? `<span class="add pick" aria-label="添加" title="添加${[missing().people && "参与角色", missing().change && "角色转变", missing().fact && "正文"].filter(Boolean).join(" / ")}" ${pickAttr(col, "add")}>＋${isOpen(col, "add") ? addPop() : ""}</span>` : ""}
+    </div>
+    <div class="fact">${fact}</div>
+    ${d.people.length ? `<div class="people">${d.people.map((id, i) => `<span class="who swap" aria-label="更换角色 ${nm(id)}" ${pickAttr(col, "swap" + i)}><i>${nm(id)[0]}</i>${nm(id)}<button class="x" aria-label="移除${nm(id)}" data-delp="${id}">×</button>${isOpen(col, "swap" + i) ? swapPop(i) : ""}</span>`).join("")}<span class="who addP" aria-label="添加参与角色" title="添加参与角色" ${pickAttr(col, "people")}>＋${isOpen(col, "people") ? peoplePop() : ""}</span></div>` : ""}
+    ${d.changes.map((c, i) => `<div class="change ${i === d.changes.length - 1 ? "last" : ""}">
+      <b class="ed" aria-label="变化角色 ${nm(c.character)}" ${pickAttr(col, "who" + i)}>${nm(c.character)}${isOpen(col, "who" + i) ? whoPop(i) : ""}</b><input class="ed" aria-label="维度" data-chg="${i}" data-f="dimension" value="${esc(c.dimension)}" placeholder="维度"><input class="ed" aria-label="变化前" data-chg="${i}" data-f="before" value="${esc(c.before)}" placeholder="变化前">→<input class="ed" aria-label="变化后" data-chg="${i}" data-f="after" value="${esc(c.after)}" placeholder="变化后">
+      <span class="tail"><button aria-label="生效时机" data-at="${i}">${c.at === "start" ? "开始时" : "结束时"} ⇄</button><button aria-label="移除角色转变" data-delc="${i}">×</button></span>
+      ${i === d.changes.length - 1 ? `<button class="addC" aria-label="新增角色转变" title="新增角色转变" data-addc>＋</button>` : ""}
+    </div>`).join("")}
+    ${d.refs.length ? `<div class="refs">${d.refs.map(r => `<button disabled>${esc(r)}</button>`).join("")}</div>` : ""}
+  </div>`;
+}
+function saveBar() {
+  return `<div class="saveBar">${ui.msg ? `<span class="msg" role="alert">${esc(ui.msg)}</span>` : ""}<button class="hbtn ghost" data-cancel>取消</button><button class="hbtn primary" data-save>保存</button></div>`;
+}
+function card(e, col, editing, second) {
+  return `<article class="card open ${editing ? "editing" : ""}" data-col="${col}" data-mode="${second ? "edit" : "open"}" ${second ? `data-editcard="${col}"` : ""} style="${ec(e)}" aria-label="${esc(e.title)}">${head(e, col, editing)}${editing ? editBody(col) : openBody(e)}${editing ? saveBar() : ""}</article>`;
+}
+/* ---- family scene ---- */
+function absStart(e, seen = []) {
+  if (!e.time.anchor || seen.includes(e.id)) return e.time.value;
+  const a = fam.find(x => x.id === e.time.anchor);
+  if (!a) return e.time.value;
+  const s0 = absStart(a, [...seen, e.id]);
+  return (e.time.boundary === "end" ? s0 + (a.duration ?? 0) : s0) + e.time.value;
+}
+function famCard(e, col, groupHead) {
+  const editing = !!ui.fEdit && ui.fEdit.id === e.id && ui.fEdit.col === col;
+  const open = editing || ui.fOpen.has(e.id), v = editing ? d : e;
+  const kids = fam.filter(x => x.parent === e.id).length;
+  const desc = (id => { let n = 0; const walk = i => fam.filter(x => x.parent === i).forEach(x => { n++; walk(x.id); }); walk(id); return n; })(e.id);
+  return `<article class="card ${open ? "open" : ""} ${editing ? "editing" : ""} ${groupHead ? "groupHead" : ""}" data-fid="${e.id}" data-fcol="${col}" ${editing ? `data-editcard="${col}"` : ""} ${ui.flash === e.id ? "data-flash" : ""} style="${ec(v)}" aria-label="${esc(e.title)}">${head(v, col, editing, { id: e.id, kids, desc, open })}${open ? (editing ? editBody(col) : openBody(v)) : ""}${editing ? saveBar() : ""}</article>`;
+}
+function famStamp(e, col) { return col === "timeline" ? `<div class="stampDemo" style="${ec(e)}">${esc(timeText(e).split(" · ")[0])}</div>` : ""; }
+function famNode(e, col, parent) {
+  const kids = fam.filter(x => x.parent === e.id);
+  const kOpen = ui.fOpen.has(e.id) || ui.fEdit?.id === e.id && ui.fEdit.col === col;
+  let off = 0;
+  if (parent && col === "timeline") {
+    const span = Math.max(parent.duration || 0, 1);
+    off = Math.round(Math.min(kids.length ? 40 : 110, Math.max(0, (absStart(e) - absStart(parent)) / span * 220)));
+  }
+  if (!kids.length) {
+    const card = `${famStamp(e, col)}${famCard(e, col)}`;
+    return parent ? `<div class="kslot ${kOpen ? "openK" : ""}" style="${off ? `margin-left:${off}px` : ""}">${card}</div>` : `<div class="fslot">${card}</div>`;
+  }
+  const folded = ui.fFold.has(e.id);
+  const inner = folded ? "" : `<div class="kidsWrap">${kids.map(k => famNode(k, col, e)).join("")}</div>`;
+  const box = `<div class="${col === "table" ? "groupBox" : "famFrame"} ${folded ? "folded" : ""}" data-family="${e.id}" style="${ec(e)}${off ? `;margin-left:${off}px;width:calc(100% - ${off}px)` : ""}">${famCard(e, col, true)}${inner}</div>`;
+  return `${famStamp(e, col)}${box}`;
+}
+function famColumn(col) {
+  return fam.filter(e => !e.parent).map(r => famNode(r, col, null)).join('<div style="height:18px"></div>')
+    + `<div style="height:40px"></div><p class="size" data-size="${col}"></p>`;
+}
+function column(col) {
+  if (isFam()) return famColumn(col);
+  const parts = [];
+  const stamp = e => col === "timeline" ? `<div class="stampDemo" style="${ec(e)}">${esc(timeText(e).split(" · ")[0])}</div>` : "";
+  if (ui.view !== "edit") parts.push(`${stamp(saved)}${card(saved, col, false)}`);
+  if (ui.view !== "open") parts.push(`${stamp(ui.editing[col] ? d : saved)}${card(ui.editing[col] ? d : saved, col, ui.editing[col], true)}${ui.editing[col] ? "" : `<div class="reenter">编辑已取消（未保存的修改已丢弃）<button data-reenter="${col}">双击卡片或点此重新编辑</button></div>`}`);
+  return parts.join('<div style="height:22px"></div>') + (ui.view !== "open" ? '<div style="height:40px"></div>' : '') + `<p class="size" data-size="${col}"></p>`;
+}
+/* Review aid: the open card is the saved event, the editing card the draft; before any change they must match. */
+function measure() {
+  for (const col of ["table", "timeline"]) {
+    const o = document.querySelector(`[data-col=${col}][data-mode=open]`), e = document.querySelector(`[data-col=${col}][data-mode=edit]`);
+    const out = document.querySelector(`[data-size=${col}]`);
+    if (!o || !e) { out.textContent = ""; continue; }
+    const a = o.getBoundingClientRect(), b = e.getBoundingClientRect();
+    const dh = Math.round(b.height - a.height);
+    out.innerHTML = `展开 ${Math.round(a.width)} × <b>${Math.round(a.height)}</b> · 编辑 ${Math.round(b.width)} × <b>${Math.round(b.height)}</b> · 高度差 <span class="${dh ? "bad" : ""}">${dh > 0 ? "+" : ""}${dh}px</span>${dh ? "（已改动内容或正文在输入中）" : ""}`;
+  }
+}
+let rendering = false;
+function render() {
+  rendering = true;
+  const a = document.activeElement, key = a?.dataset && (a.dataset.in || a.dataset.f || a.dataset.num) ? [a.closest(".col")?.classList[1], a.dataset.in, a.dataset.chg, a.dataset.f, a.dataset.num].join("|") : null;
+  const sel = key && "selectionStart" in a ? [a.selectionStart, a.selectionEnd] : null;
+  document.body.className = ui.theme;
+  document.querySelectorAll(".review button").forEach(b => b.setAttribute("aria-pressed", ui[b.dataset.k] === b.dataset.v));
+  document.getElementById("table").innerHTML = column("table");
+  document.getElementById("timeline").innerHTML = column("timeline");
+  document.getElementById("toast").innerHTML = ui.toast ? `<div class="toast" role="status">${esc(ui.toast)}</div>` : "";
+  if (key) {
+    const el = [...document.querySelectorAll("[data-in],[data-f],[data-num]")].find(x => [x.closest(".col")?.classList[1], x.dataset.in, x.dataset.chg, x.dataset.f, x.dataset.num].join("|") === key);
+    if (el) { el.focus(); try { if (sel) el.setSelectionRange(...sel); } catch {} }
+  }
+  if (ui.factEdit && !key) {
+    const f = document.querySelector(`[data-col=${ui.factEdit}] [data-factsrc]`);
+    if (f) { f.focus(); const r = document.createRange(); r.selectNodeContents(f.lastElementChild ?? f); r.collapse(false); getSelection().removeAllRanges(); getSelection().addRange(r); }
+  }
+  if (ui.selectTitle) { ui.selectTitle = false; const t = document.querySelector("[data-editcard] .title textarea"); t?.focus(); t?.select(); }
+  rendering = false;
+  requestAnimationFrame(measure);
+}
+/* Same draft rules as PlanningWorkspace renderEventEditor(); only the container changes. */
+function setStart(v) {
+  d.time = { ...d.time, kind: v === "day" ? "window" : v, precision: v === "day" ? "day" : "hour", label: v === "day" ? "仅同日" : "", end: ["window", "day"].includes(v) ? d.time.value + 24 : null };
+}
+function setDur(v) {
+  ui.endMode = v === "end";
+  d.ongoing = v === "ongoing";
+  d.duration = ["ongoing", "unknown"].includes(v) ? null : v === "point" ? 0 : d.duration || 1;
+}
+/* Round 3: a press outside the editing card cancels its edit (draft discarded). Its own pickers, the save bar and the
+ * 「…」 menu are inside the card, so they do not count as outside. Capture phase, before the clicked control acts. */
+// Design-only: both columns show one editing card each; in the product only one card edits at a time, so a click on
+// either editing card counts as inside. A press that starts inside and ends outside (text selection) is not a click
+// outside (the product keeps the existing pointerInside guard, PlanningWorkspace.tsx:328-337).
+let pressInside = false;
+document.addEventListener("pointerdown", ev => { pressInside = !!ev.target.closest("[data-editcard]"); }, true);
+document.addEventListener("click", ev => {
+  if (ev.target.closest(".review") || pressInside || ev.target.closest("[data-editcard]")) return;
+  if (isFam()) { if (!ui.fEdit) return; cancelFamEdit(); return; }
+  if (!ui.editing.table && !ui.editing.timeline) return;
+  ui.editing = { table: false, timeline: false }; ui.pop = null; ui.factEdit = null;
+  d = structuredClone(saved); ui.msg = ""; ui.endMode = false;
+  render();
+}, true);
+document.addEventListener("dblclick", ev => {
+  const fc = ev.target.closest("[data-fid]");
+  if (isFam()) {
+    if (!fc || fc.matches("[data-editcard]") || ev.target.closest("button,.pop")) return;
+    clearTimeout(toggleTimer); startFamEdit(fc.dataset.fid, fc.dataset.fcol); return;
+  }
+  const c = ev.target.closest("[data-editcard]");
+  if (c && !ui.editing[c.dataset.editcard]) { ui.editing = { table: true, timeline: true }; render(); }
+});
+document.addEventListener("pointerdown", ev => {
+  const h = ev.target.closest(".strip [data-h]");
+  if (!h || ev.button !== 0) return;
+  ev.preventDefault();
+  const r = h.closest("[data-strip]").getBoundingClientRect();
+  ui.drag = { h: h.dataset.h, x: ev.clientX, w: r.width, o: ends() };
+  render();
+});
+document.addEventListener("pointermove", ev => {
+  if (!ui.drag) return;
+  moveHandle(ui.drag.h, ui.drag.o, (ev.clientX - ui.drag.x) / ui.drag.w * (ui.sv[1] - ui.sv[0]));
+  render();
+});
+// The DOM under the pointer is rebuilt while dragging, so the click that follows lands on an ancestor; swallow it.
+let dragged = false;
+document.addEventListener("click", ev => { if (dragged) { dragged = false; ev.stopImmediatePropagation(); } }, true);
+document.addEventListener("pointerup", () => { if (ui.drag) { dragged = true; setTimeout(() => { dragged = false; }); const h = ui.drag.h; ui.drag = null; render(); document.querySelector(`.pop.time [data-h="${h}"].h`)?.focus({ preventScroll: true }); } });
+function stepNum(key, dir) {
+  const el = document.querySelector(`.pop.time [data-num="${key}"]`);
+  if (!el) return;
+  const min = el.min === "" ? -Infinity : +el.min;
+  el.value = num(Math.max(min, (+el.value || 0) + dir));
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+let repeat;
+document.addEventListener("pointerdown", ev => {
+  const b = ev.target.closest("[data-step]");
+  if (!b || b.disabled) return;
+  ev.preventDefault();
+  const { step: key, dir } = b.dataset;
+  document.querySelector(`.pop.time [data-num="${key}"]`)?.focus({ preventScroll: true });
+  stepNum(key, +dir);
+  repeat = setTimeout(function tick() { stepNum(key, +dir); repeat = setTimeout(tick, 60); }, 400);
+});
+["pointerup", "pointercancel", "blur"].forEach(t => window.addEventListener(t, () => clearTimeout(repeat)));
+let toastTimer, toggleTimer, flashTimer;
+/* ---- character hover card ---- */
+let hcShow, hcHide, hcEl = null;
+function hcClose() { clearTimeout(hcShow); clearTimeout(hcHide); hcEl?.remove(); hcEl = null; }
+function hcOpen(pill) {
+  const c = PEOPLE.find(x => x.id === pill.dataset.goto); if (!c) return;
+  hcEl?.remove();
+  const r = pill.getBoundingClientRect();
+  hcEl = document.createElement("div");
+  hcEl.className = "hcard"; hcEl.setAttribute("role", "tooltip");
+  hcEl.innerHTML = `<div class="top"><span class="av">${c.name[0]}</span><div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="rl">${esc(c.occupation ? `${c.role} · ${c.occupation}` : c.role)}</div></div></div>
+    ${c.bio ? `<p>${esc(c.bio.split(/(?<=[。！？])/)[0])}</p>` : ""}<button class="go" data-goto="${c.id}">打开角色卡 ›</button>`;
+  document.body.append(hcEl);
+  const below = r.bottom + 8, h = hcEl.offsetHeight;
+  hcEl.style.left = Math.max(8, Math.min(r.left, innerWidth - 264 - 20)) + "px";
+  hcEl.style.top = (below + h > innerHeight - 8 ? r.top - 8 - h : below) + "px";
+  hcEl.addEventListener("mouseenter", () => clearTimeout(hcHide));
+  hcEl.addEventListener("mouseleave", () => { hcHide = setTimeout(hcClose, 200); });
+}
+document.addEventListener("mouseover", ev => {
+  const pill = ev.target.closest?.(".who.link");
+  if (!pill || pill.contains(ev.relatedTarget)) return;
+  clearTimeout(hcShow); clearTimeout(hcHide);
+  hcShow = setTimeout(() => hcOpen(pill), 400);
+});
+document.addEventListener("mouseout", ev => {
+  const pill = ev.target.closest?.(".who.link");
+  if (!pill || pill.contains(ev.relatedTarget)) return;
+  clearTimeout(hcShow); hcHide = setTimeout(hcClose, 200);
+});
+document.addEventListener("pointerdown", ev => { if (hcEl && !hcEl.contains(ev.target)) hcClose(); }, true);
+addEventListener("scroll", hcClose, true);
+function toast(msg) { ui.toast = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => { ui.toast = ""; render(); }, 2600); }
+function startFamEdit(id, col) {
+  const e = fam.find(x => x.id === id); if (!e) return;
+  ui.fEdit = { id, col }; d = structuredClone(e); saved = structuredClone(e);
+  ui.msg = ""; ui.endMode = false; ui.pop = null; ui.factEdit = null; ui.startUnit = 1; ui.durUnit = 1; ui.sv = null;
+  render();
+}
+function endFamEdit() { ui.fEdit = null; ui.fresh = null; ui.pop = null; ui.factEdit = null; ui.msg = ""; ui.endMode = false; }
+/* Round 8: cancel (取消 / Esc / a click outside). A child just made by 新建子事件 whose draft was never changed is
+ * removed at once (no confirm; in the product this undoes its creation, so history keeps no trace). A changed draft is
+ * discarded as usual. */
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function cancelFamEdit() {
+  const id = ui.fEdit?.id, fresh = ui.fresh === id && same(d, saved);
+  endFamEdit();
+  if (!fresh) return render();
+  const e = fam.find(x => x.id === id);
+  fam = fam.filter(x => x.id !== id);
+  const p = e?.parent && fam.find(x => x.id === e.parent);
+  if (p && !fam.some(x => x.parent === p.id)) { ui.fFold.delete(p.id); ui.flash = p.id; clearTimeout(flashTimer); flashTimer = setTimeout(() => { ui.flash = null; render(); }, 1300); }
+  toast(`未修改的新子事件已移除${p && !fam.some(x => x.parent === p.id) ? `，「${p.title}」变回普通事件` : ""}`);
+  render();
+}
+/* 新建子事件: saved at once as one undoable change; the parent becomes a parent with this child, which opens in edit
+ * with its title selected. Default time: the parent's start, a moment, so it sits inside the family. */
+function addKid(pid, col) {
+  const p = fam.find(x => x.id === pid); if (!p) return;
+  const k = ev0({ id: "k" + Math.random().toString(36).slice(2, 7), parent: pid, title: "未命名事件", time: { kind: "exact", value: 0, anchor: pid, boundary: "start" }, duration: 0 });
+  const at = fam.findLastIndex(x => x.id === pid || x.parent === pid);
+  fam.splice(at + 1, 0, k);
+  ui.fOpen.add(pid); ui.fFold.delete(pid);
+  toast(`已在「${p.title}」下新建子事件（已保存，可撤销）`);
+  ui.selectTitle = true; startFamEdit(k.id, col); ui.fresh = k.id;
+}
+function delEvent(id) {
+  const e = fam.find(x => x.id === id); if (!e) return;
+  fam = fam.filter(x => x.id !== id); ui.pop = null;
+  if (ui.fEdit?.id === id) endFamEdit();
+  const p = e.parent && fam.find(x => x.id === e.parent);
+  if (p && !fam.some(x => x.parent === p.id)) {
+    ui.fFold.delete(p.id); ui.flash = p.id; clearTimeout(flashTimer); flashTimer = setTimeout(() => { ui.flash = null; render(); }, 1300);
+    toast(`已删除「${e.title}」。「${p.title}」已没有子事件，变回普通事件（正式产品沿用删除确认对话框，可撤销）`);
+  } else toast(`已删除「${e.title}」（正式产品沿用删除确认对话框，可撤销）`);
+  render();
+}
+document.addEventListener("click", ev => {
+  {
+    const b = ev.target.closest("[data-addkid],[data-del],[data-fedit],[data-fold],[data-fexp]");
+    const col = ev.target.closest("[data-fcol]")?.dataset.fcol;
+    if (b && !b.disabled) {
+      const ds = b.dataset;
+      if (ds.addkid !== undefined) { if (!isFam()) { toast("新建子事件：切换到示例“父子事件”查看效果"); return render(); } ui.pop = null; return addKid(ds.addkid, col); }
+      if (ds.del) return delEvent(ds.del);
+      if (ds.fedit) return startFamEdit(ds.fedit, col);
+      if (ds.fold) { ui.fFold.has(ds.fold) ? ui.fFold.delete(ds.fold) : ui.fFold.add(ds.fold); return render(); }
+      if (ds.fexp) { if (!isFam()) return; ui.fOpen.has(ds.fexp) ? ui.fOpen.delete(ds.fexp) : ui.fOpen.add(ds.fexp); return render(); }
+    }
+    if (b) return;
+    // Event table: a click on a family card toggles it (after the double-click interval, so a double click edits).
+    const fc = ev.target.closest("[data-fid]");
+    if (isFam() && fc && fc.dataset.fcol === "table" && !fc.matches("[data-editcard]") && !ev.target.closest("button,[data-pop],.pop,[data-factview]")) {
+      clearTimeout(toggleTimer); const id = fc.dataset.fid;
+      toggleTimer = setTimeout(() => { ui.fOpen.has(id) ? ui.fOpen.delete(id) : ui.fOpen.add(id); render(); }, 240);
+      return;
+    }
+  }
+  const go = ev.target.closest("[data-goto]");
+  if (go) { hcClose(); ui.toast = `打开角色详情：${nm(go.dataset.goto)}（正式产品中打开该角色的详情标签页）`; clearTimeout(toastTimer); toastTimer = setTimeout(() => { ui.toast = ""; render(); }, 2200); return render(); }
+  const re = ev.target.closest("[data-reenter]");
+  if (re) { ui.editing = { table: true, timeline: true }; return render(); }
+  const sw = ev.target.closest("[data-swapi]");
+  if (sw && sw.dataset.v) { d.people[+sw.dataset.swapi] = sw.dataset.v; ui.pop = null; return render(); }
+  const fv = ev.target.closest("[data-factview]");
+  if (fv && !ev.target.closest(".pop")) { ui.factEdit = fv.dataset.factview; ui.pop = null; return render(); }
+  const t = ev.target.closest("button,[data-pop],[data-addc]");
+  const inPop = ev.target.closest(".pop");
+  if (!t) { if (!inPop && ui.pop) { ui.pop = null; render(); } return; }
+  const ds = t.dataset;
+  if (ds.k) { ui[ds.k] = ds.v; if (ds.k === "sample") { fam = FAMILY(); ui.fEdit = null; ui.fOpen = new Set(["p", "n"]); ui.fFold = new Set(); ui.editing = { table: true, timeline: true }; d = SAMPLES[ds.v](); saved = structuredClone(d); ui.endMode = false; ui.msg = ""; } ui.pop = null; return render(); }
+  if (ds.pop && !inPop) { ui.pop = ui.pop === ds.pop ? null : ds.pop; render(); ui.pop && document.querySelector(".pop [data-search]")?.focus(); return; }
+  if (ds.set) { d[ds.set] = ds.set === "importance" ? +ds.v : ds.v; ui.pop = null; return render(); }
+  if (ds.start) { setStart(ds.start); if (ds.start === "day" && ![24, 720, 8640].includes(ui.startUnit)) ui.startUnit = 24; return render(); }
+  if (ds.sign !== undefined) { d.time.value = -d.time.value; if (d.time.end !== null) d.time.end = -d.time.end; return render(); }
+  if (ds.endg) { setDur(ds.endg === "point" ? "point" : ds.endg === "span" ? (ui.endMode ? "end" : "duration") : "unknown"); return render(); }
+  if (ds.dur) { setDur(ds.dur); return render(); }
+  if (ds.close !== undefined) { ui.pop = null; return render(); }
+  if (ds.addfact !== undefined) { ui.factEdit = ui.pop.split(":")[0]; ui.pop = null; return render(); }
+  if (ds.addp) { d.people = [...new Set([...d.people, ds.addp])]; ui.pop = null; return render(); }
+  if (ds.delp) { d.people = d.people.filter(p => p !== ds.delp); return render(); }
+  if (ds.chgChar) { d.changes[+ds.chgChar].character = ds.v; ui.pop = null; return render(); }
+  if (ds.at) { const c = d.changes[+ds.at]; c.at = c.at === "start" ? "end" : "start"; return render(); }
+  if (ds.delc) { d.changes.splice(+ds.delc, 1); return render(); }
+  if (ds.addc !== undefined) { ui.pop = null; d.changes.push({ id: Math.random().toString(36).slice(2), character: PEOPLE[0].id, dimension: "境界", before: "", after: "", at: "end" }); return render(); }
+  if (ds.cancel !== undefined && isFam()) return cancelFamEdit();
+  // Round 9: 取消 (and Esc, which clicks it) discards the draft and leaves edit mode, as a click outside does.
+  if (ds.cancel !== undefined) { ui.editing = { table: false, timeline: false }; d = structuredClone(saved); ui.msg = ""; ui.pop = null; ui.endMode = false; ui.factEdit = null; return render(); }
+  if (ds.save !== undefined) {
+    ui.msg = !d.title.trim() ? "请填写事件名称。" : d.duration !== null && d.duration < 0 ? "结束时间不能早于开始时间，请调整后再保存。"
+      : d.time.kind === "window" && (d.time.end === null || d.time.end < d.time.value) ? "时间窗口结束不能早于开始。" : "";
+    if (!ui.msg && isFam()) { const i = fam.findIndex(x => x.id === ui.fEdit.id); fam[i] = structuredClone(d); endFamEdit(); return render(); }
+    if (!ui.msg) saved = structuredClone(d);
+    ui.pop = null; return render();
+  }
+});
+document.addEventListener("input", ev => {
+  const t = ev.target, ds = t.dataset;
+  if (ds.search !== undefined) { const q = t.value.trim(); t.closest(".pop").querySelectorAll(".item").forEach(b => b.hidden = !!q && !b.textContent.includes(q)); return; }
+  if (ds.factsrc !== undefined) {
+    if (!t.querySelector("p")) t.innerHTML = `<p>${esc(t.textContent)}</p>`;
+    d.fact = [...t.children].map(x => x.innerText.replace(/\n$/, "")).filter((x, i, a) => x || i < a.length - 1).join("\n\n").replace(/\n+$/, "");
+    t.toggleAttribute("data-empty", !d.fact);
+    requestAnimationFrame(measure); return;
+  }
+  if (ds.in) { d[ds.in] = t.value; return render(); }
+  if (ds.chg !== undefined) { d.changes[+ds.chg][ds.f] = t.value; return render(); }
+  if (ds.num) {
+    const v = Number(t.value);
+    const S = sign();
+    if (ds.num === "value") { const oldEnd = d.duration === null ? null : d.time.value + d.duration; d.time.value = S * Math.abs(v) * ui.startUnit; if (ui.endMode && oldEnd !== null) d.duration = oldEnd - d.time.value; }
+    if (ds.num === "end") d.time.end = S * Math.abs(v) * ui.startUnit;
+    if (ds.num === "duration") d.duration = v * ui.durUnit;
+    if (ds.num === "endAt") { d.duration = S * v * ui.startUnit - d.time.value; d.ongoing = false; }
+    return render();
+  }
+});
+document.addEventListener("change", ev => {
+  const t = ev.target, ds = t.dataset;
+  if (ds.anchor !== undefined) { d.time.anchor = t.value || null; return render(); }
+  if (ds.boundary !== undefined && t.tagName === "SELECT") { d.time.boundary = t.value; return render(); }
+  if (ds.ongoing !== undefined) { setDur(t.checked ? "ongoing" : "unknown"); return render(); }
+  if (ds.unit) { ui[ds.unit] = +t.value; return render(); }
+});
+document.addEventListener("keydown", ev => {
+  const nf = ev.target.matches?.(".numf input");
+  if (nf && (ev.key === "ArrowUp" || ev.key === "ArrowDown")) { ev.preventDefault(); stepNum(ev.target.dataset.num, (ev.key === "ArrowUp" ? 1 : -1) * (ev.shiftKey ? 10 : 1)); return; }
+  const sh = ev.target.closest?.(".strip .h");
+  if (sh && (ev.key === "ArrowLeft" || ev.key === "ArrowRight")) {
+    ev.preventDefault();
+    moveHandle(sh.dataset.h, ends(), (ev.key === "ArrowLeft" ? -1 : 1) * step() * (ev.shiftKey ? 10 : 1));
+    const h = sh.dataset.h; render(); document.querySelector(`.pop.time .h[data-h="${h}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches("[data-factview]")) { ev.preventDefault(); ev.target.click(); return; }
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches("[data-pop],[data-addc]") && !ev.target.closest(".pop")) { ev.preventDefault(); ev.target.click(); }
+  // Esc closes an open picker first; with none open it cancels the edit (same as 取消).
+  if (ev.key === "Escape" && hcEl) { hcClose(); return; }
+  if (ev.key === "Escape" && ui.pop) { ui.pop = null; render(); return; }
+  if (ev.key === "Escape" && isFam() && ui.fEdit) { ev.preventDefault(); cancelFamEdit(); return; }
+  if (ev.key === "Escape" && !isFam() && (ui.editing.table || ui.editing.timeline)) { ev.preventDefault(); document.querySelector("[data-editcard] [data-cancel]")?.click(); }
+});
+/* Leaving the body textarea renders the body again (same as the open card). */
+document.addEventListener("focusout", ev => {
+  if (rendering || !ev.target.matches?.("[data-factsrc]")) return;
+  setTimeout(() => { if (ui.factEdit && !document.activeElement?.matches?.("[data-factsrc]")) { ui.factEdit = null; render(); } });
+});
+window.addEventListener("resize", measure);
+render();
+</script>
+</body>
+</html>

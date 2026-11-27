@@ -10,6 +10,7 @@ import {validateImportBudgetState} from '../desktop/core/novel-import-budget-pol
 import {importSemanticAudit,importSemanticInputHash,importSemanticDecisionHash,importSemanticResultHash,importNativeMappings,validateImportSemanticState} from '../desktop/core/novel-import-semantic-state'
 import {importReviewTaskKeys} from '../desktop/core/novel-import-review-tasks'
 import {stripImportKnowledgeAnnotations} from '../desktop/core/novel-import-semantics'
+import {formatImportChapterProse} from '../desktop/core/novel-import-prose'
 import {loadMigrations} from '../desktop/service/database/migrations'
 import {validatePlanning} from '../src/lib/planning/domain'
 import {realNovelSemanticAssertions} from './real-novel-semantic-assertions'
@@ -119,9 +120,10 @@ export function verifyNativeRows(s:ImportSession,r:any,p:AuditPrepared):AuditRes
   check('all-rows-belong-to-own-novel',!!novelId&&own.every((x:any)=>x.novelId===novelId)&&r.chapters.every((c:any)=>r.volumes.some((v:any)=>v.id===c.volumeId)))
   check('novel-owner-and-title',r.novels.length===1&&r.novels[0].id===novelId&&r.novels[0].userId==='local-author'&&r.novels[0].title===s.title)
   check('eight-native-volumes-order-names',r.volumes.length===8&&r.volumes.every((v:any,i:number)=>v.index===i+1&&v.title===p.volumes[i].name))
-  check('1394-native-chapters-source-order',r.chapters.length===1394&&r.chapters.every((c:any,i:number)=>{const e=p.chapters[i];return c.volumeId===r.volumes[e.volume-1]?.id&&c.index===e.positionInVolume&&c.title===e.title&&c.content===p.body.slice(e.start,e.end)&&sha(c.content)===e.expectedUtf8Sha256&&c.status==='WRITTEN'&&c.wordCount===[...c.content].length}))
-  check('native-prepared-body-byte-equality',r.chapters.map((c:any)=>c.content).join('')===p.body)
-  check('native-original-body-after-exact-header-removal',r.chapters.map((c:any,i:number)=>{const expected=p.chapters[i];if(!expected)return '';const n=expected.insertedHeaderCharacters;if(n&&c.content.slice(0,n)!==p.headers[expected.volume-1].text)return '\0INVALID_HEADER';return c.content.slice(n)}).join('')===p.main)
+  check('1394-native-chapters-source-order',r.chapters.length===1394&&r.chapters.every((c:any,i:number)=>{const e=p.chapters[i];return c.volumeId===r.volumes[e.volume-1]?.id&&c.index===e.positionInVolume&&c.title===e.title&&c.content===formatImportChapterProse(p.body.slice(e.start,e.end),{title:e.title,volume:r.volumes[e.volume-1]?.title}).text&&sha(p.body.slice(e.start,e.end))===e.expectedUtf8Sha256&&c.status==='WRITTEN'&&c.wordCount===[...c.content].length}))
+  // docs/610: stored bodies are the formatted source (leading headings removed, blank-line paragraphs).
+  check('native-prepared-body-formatted-equality',r.chapters.map((c:any)=>c.content).join('\u0000')===p.chapters.map((e:any)=>formatImportChapterProse(p.body.slice(e.start,e.end),{title:e.title,volume:r.volumes[e.volume-1]?.title}).text).join('\u0000'))
+  check('native-bodies-carry-no-inserted-volume-header',r.chapters.every((c:any,i:number)=>{const expected=p.chapters[i];if(!expected)return false;const header=expected.insertedHeaderCharacters?p.headers[expected.volume-1].text.trim():'';return !header||!c.content.startsWith(header.split(/\r?\n/u)[0])}))
   const mapping=importNativeMappings(s),artifacts=s.artifacts.filter(a=>mapping.projectable.has(a.id)),qualified=(a:ImportArtifact)=>a.origin==='source'?a.text:stripImportKnowledgeAnnotations(a.text)
   check('outline-full-source-text-first-volume',r.volumes[0]?.summary===artifacts.filter(a=>a.kind==='outline').map(qualified).join('\n\n')&&r.volumes.slice(1).every((v:any)=>v.summary===''))
   const multi=(values:unknown[])=>values.map(importHash).sort()

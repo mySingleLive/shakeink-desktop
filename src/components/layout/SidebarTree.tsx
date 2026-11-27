@@ -3,7 +3,7 @@ import { openAllScenes } from "@/components/content/scene/SceneWorkspace"
 import { worldDisplayName } from "@/lib/world-schema"
 import { worldForest } from "@/lib/world-tree"
 import { useDesktopCommands } from "@/lib/desktop/use-command-target"
-import { useNovelList } from "@/lib/novel-list"
+import { useNovelList, type NovelList } from "@/lib/novel-list"
 import { FaultedWorkMenuItems, faultInfo, repairStatus, useWorkLeaseRepair, type WorkLeaseRepair } from "@/components/desktop/UnavailableWorks"
 import { FaultedWorkIcon, type FaultTone } from "@/components/desktop/FaultedWorkIcon"
 import { ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu"
@@ -11,7 +11,7 @@ import type { UnavailableWork } from "@desktop/shared/work-list"
 import {requestNovelImport} from '@/lib/desktop/novel-import'
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
   BookOpen,
@@ -49,6 +49,11 @@ import {
   RefreshCw,
   Settings,
   Settings2,
+  SquarePen,
+  Download,
+  UserPlus,
+  PackagePlus,
+  MapPinPlus,
   Trash2,
   UserRound,
   Users,
@@ -98,6 +103,7 @@ import {
   buildTabId,
   getTabIcon,
   useTabsStore,
+  type Tab,
   type TabType,
 } from "@/stores/tabs"
 import type { CharacterRoleType, SettingType } from "@/generated/prisma/enums"
@@ -114,7 +120,12 @@ import { firstSentence } from "../chat/use-entity-index"
 import { CHAPTER_STATUS_ICONS } from "../content/chapter-status"
 import { CroppedImage } from "../content/CroppedImage"
 import { CreateNovelDialog } from "./CreateNovelDialog"
-import { OutlineTreeMenu } from "./OutlineTreeMenu"
+import { OutlineTreeMenu, useCollectionExport } from "./OutlineTreeMenu"
+import { ManuscriptExportItems } from "../content/ManuscriptExportItems"
+import { apiGet, apiSend } from "../content/api"
+import { nextForeshadowTitle } from "@/lib/foreshadow-title"
+import { useSceneUiStore } from "@/stores/scene-ui"
+import type { ForeshadowDTO } from "@/lib/services/foreshadow"
 import {
   CharactersHeaderHoverCard,
   HOVER_SHOW_MS,
@@ -409,13 +420,25 @@ function FaultedWorkGroup({ work, view, collapsed, onToggle, actions }: { work: 
   </NavigationWorkGroup>
 }
 
+/** docs/608: one delete dialog for healthy and unavailable works. The folder path is read on open and
+ * kept only in this dialog's state (never in the query cache). */
+interface DeleteWorkTarget { novelId: string; workId?: string; title: string }
+type WorkLocation = { state: "loading" } | { state: "ready"; workId: string; path: string } | { state: "failed" }
+type DeleteFilesOutcome = "kept-by-choice" | "removed" | "missing" | "kept" | "not-found"
+const DELETE_OUTCOME_TOAST: Record<DeleteFilesOutcome, string> = {
+  "kept-by-choice": "作品已从列表中删除",
+  "not-found": "作品已从列表中删除",
+  removed: "作品及其文件已删除",
+  missing: "作品已删除，未找到作品目录，没有删除任何文件",
+  kept: "作品已删除，部分文件未能删除，请手动删除作品目录",
+}
+
 type DialogState =
   | { type: "rename"; novel: NovelSummary }
-  | { type: "delete"; novel: NovelSummary }
   | { type: "world-create"; novel: NovelSummary; parentWorld?: WorldRecord }
   | { type: "world-rename"; novel: NovelSummary; world: WorldRecord }
   | { type: "world-delete"; novel: NovelSummary; world: WorldRecord }
-  | { type: "remove-faulted"; work: UnavailableWork }
+  | { type: "delete-work"; work: DeleteWorkTarget }
   | null
 
 const CHARACTER_ROLE_ORDER: CharacterRoleType[] = [
@@ -1459,12 +1482,15 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
   const scroll = useNavigationScroll(view, scope, scrollRef)
   const [scenarioSession, setScenarioSession] = useState<ScenarioLibrarySession | null>(null)
   const scenarioSequence = useRef(0)
-  const openScenario = (novel: NovelSummary, initialMode: "library" | "create", launcher: HTMLElement) => setScenarioSession({ id: ++scenarioSequence.current, novel, initialMode, launcher })
+  const openScenario = (novel: NovelSummary, initialMode: "library" | "create", launcher: HTMLElement | null) => setScenarioSession({ id: ++scenarioSequence.current, novel, initialMode, launcher })
   const chooseView = (next: NavigationView) => { scroll.capture(); setTransientEpoch(value => value + 1); setView(next) }
   const toggleGroup = (id: string) => setCollapsedByView(previous => ({ ...previous, [view]: { ...previous[view], [id]: !previous[view]?.[id] } }))
+  const workExport = useCollectionExport()
+  const cancelWorkExport = workExport.cancel
   useLayoutEffect(() => {
+    cancelWorkExport()
     setView("works"); setExpandedByView({}); setCollapsedByView({}); setScenarioSession(null); setDialog(null); setCreateOpen(false); setTransientEpoch(value => value + 1)
-  }, [scope])
+  }, [scope, cancelWorkExport])
   const [dialog, setDialog] = useState<DialogState>(null)
   const [titleInput, setTitleInput] = useState("")
   /** 创建作品两步向导（书名 + 创作切入方式） */
@@ -1499,24 +1525,37 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     queryClient.invalidateQueries({ queryKey: ["novels"] })
   const leaseRepair = useWorkLeaseRepair(scope)
   const [removeError, setRemoveError] = useState<string | null>(null)
+  const [workLocation, setWorkLocation] = useState<WorkLocation>({ state: "loading" })
+  const locationRequest = useRef(0)
   // isPending updates after render; a ref keeps two synchronous confirms single-flight.
   const removeFlight = useRef(false)
-  const removeFaultedMutation = useMutation({
-    mutationFn: async (work: UnavailableWork) => {
+  const removeWorkMutation = useMutation({
+    mutationFn: async ({ workId, deleteFiles, path }: { work: DeleteWorkTarget; workId: string; deleteFiles: boolean; path?: string }): Promise<DeleteFilesOutcome> => {
       const generic = "暂时无法删除作品，原数据已保留，请重试。"
       let res: Response
-      try { res = await fetch(`/api/works/${work.workId}`, { method: "DELETE" }) } catch { throw new Error(generic) }
-      if (res.ok) return
-      const data = await res.json().catch(() => null) as { error?: string; code?: string } | null
-      if (res.status === 404 && data?.code === "WORK_NOT_FOUND") return
+      try {
+        res = await fetch(`/api/works/${workId}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(deleteFiles ? { deleteFiles, path } : { deleteFiles }) })
+      } catch { throw new Error(generic) }
+      const data = await res.json().catch(() => null) as { error?: string; code?: string; files?: DeleteFilesOutcome } | null
+      if (res.ok) return data?.files && Object.hasOwn(DELETE_OUTCOME_TOAST, data.files) ? data.files : deleteFiles ? "kept" : "kept-by-choice"
+      if (res.status === 404 && data?.code === "WORK_NOT_FOUND") return "not-found"
       throw new Error(res.status >= 500 || !data?.error ? `${generic}关联对话可能已删除，请重试完成移除。` : data.error)
     },
     onMutate: () => setRemoveError(null),
-    onSuccess: (_data, work) => {
-      toast.success("作品已从列表中删除")
+    onSuccess: (outcome, { work }) => {
+      if (outcome === "kept") toast.warning(DELETE_OUTCOME_TOAST[outcome]); else toast.success(DELETE_OUTCOME_TOAST[outcome])
+      cancelWorkExport(work.novelId)
       closeAllTabsOfNovel(work.novelId)
       const chat = useChatStore.getState()
       if (chat.draftNovelId === work.novelId) chat.requestNewConversation()
+      // The work has left the catalog: drop its row first so its panels unmount, then its own queries,
+      // which would otherwise refetch into "作品未关联到本地目录" until the list reloads.
+      queryClient.setQueryData<NovelList>(["novels"], current => current && {
+        novels: current.novels.filter(novel => novel.id !== work.novelId),
+        unavailableWorks: current.unavailableWorks.filter(row => row.novelId !== work.novelId),
+      })
+      void queryClient.cancelQueries({ predicate: query => query.queryKey.includes(work.novelId) })
+      queryClient.removeQueries({ predicate: query => query.queryKey.includes(work.novelId) })
       invalidateNovels()
       void queryClient.invalidateQueries({ queryKey: ["chat-conversations"] })
       setDialog(null)
@@ -1524,14 +1563,27 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     onError: (err) => setRemoveError(err.message),
     onSettled: () => { removeFlight.current = false },
   })
-  const confirmRemove = (work: UnavailableWork) => {
-    if (removeFlight.current) return
-    removeFlight.current = true
-    removeFaultedMutation.mutate(work)
+  const openDeleteWork = (work: DeleteWorkTarget) => {
+    setRemoveError(null); setWorkLocation({ state: "loading" }); setDialog({ type: "delete-work", work })
+    const request = ++locationRequest.current
+    const query = work.workId ? `workId=${encodeURIComponent(work.workId)}` : `novelId=${encodeURIComponent(work.novelId)}`
+    void fetch(`/api/works/location?${query}`).then(async res => {
+      const data = await res.json().catch(() => null) as { workId?: unknown; path?: unknown } | null
+      if (!res.ok || typeof data?.workId !== "string" || typeof data.path !== "string") throw new Error("location")
+      return { state: "ready" as const, workId: data.workId, path: data.path }
+    }).catch(() => ({ state: "failed" as const })).then(next => { if (locationRequest.current === request) setWorkLocation(next) })
   }
+  const confirmRemove = (work: DeleteWorkTarget, deleteFiles: boolean) => {
+    if (removeFlight.current) return
+    const workId = workLocation.state === "ready" ? workLocation.workId : work.workId
+    if (!workId || deleteFiles && workLocation.state !== "ready") return
+    removeFlight.current = true
+    removeWorkMutation.mutate({ work, workId, deleteFiles, path: workLocation.state === "ready" ? workLocation.path : undefined })
+  }
+  const closeDeleteWork = () => { locationRequest.current++; setWorkLocation({ state: "loading" }); setDialog(null) }
   const faultedActions: FaultedWorkActions = {
-    repair: leaseRepair, reloading: isFetching, removing: removeFaultedMutation.isPending,
-    reload: () => void refetch(), remove: work => { setRemoveError(null); setDialog({ type: "remove-faulted", work }) },
+    repair: leaseRepair, reloading: isFetching, removing: removeWorkMutation.isPending,
+    reload: () => void refetch(), remove: work => openDeleteWork({ novelId: work.novelId, workId: work.workId, title: work.title }),
   }
 
   const renameMutation = useMutation({
@@ -1553,19 +1605,6 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
     onError: (err) => toast.error(err.message),
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/novels/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error(await readError(res, "删除失败"))
-    },
-    onSuccess: (_data, id) => {
-      toast.success("小说已删除")
-      closeAllTabsOfNovel(id)
-      invalidateNovels()
-      setDialog(null)
-    },
-    onError: (err) => toast.error(err.message),
-  })
 
   const invalidateWorlds = (novelId: string) =>
     queryClient.invalidateQueries({ queryKey: ["worlds", novelId] })
@@ -1855,7 +1894,71 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
 
   </>
 
-  /** The exact original healthy-work menu, shared by … and right-click. */
+  // docs/609 作品菜单创建项：与各面板自带的新建按钮相同的请求、刷新与提示。
+  const createCharacterMutation = useMutation({
+    mutationKey: ["work-menu-create", "character"],
+    mutationFn: ({ novelId }: { novelId: string }) =>
+      apiSend<{ character: { id: string; name: string } }>(`/api/novels/${novelId}/characters`, "POST", { name: "新角色", roleType: "PROTAGONIST" }, "创建角色失败"),
+    onSuccess: ({ character }, { novelId }) => {
+      queryClient.invalidateQueries({ queryKey: ["characters", novelId] })
+      queryClient.invalidateQueries({ queryKey: ["novels"] })
+      queryClient.invalidateQueries({ queryKey: ["novels", novelId] })
+      openTab({ id: buildTabId("character", novelId, { refId: character.id }), type: "character", novelId, refId: character.id, title: character.name })
+      toast.success(`已创建角色「${character.name}」，点击编辑资料`)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+  const createItemMutation = useMutation({
+    mutationKey: ["work-menu-create", "item"],
+    mutationFn: ({ novelId }: { novelId: string }) =>
+      apiSend<{ item: { id: string; name: string } }>(`/api/novels/${novelId}/items`, "POST", { name: "新物品" }, "创建物品失败"),
+    onSuccess: ({ item }, { novelId }) => {
+      queryClient.invalidateQueries({ queryKey: ["items", novelId] })
+      openTab({ id: buildTabId("item", novelId, { refId: item.id }), type: "item", novelId, refId: item.id, title: item.name })
+      toast.success(`已创建物品「${item.name}」，点击编辑资料`)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+  /** Opens a tab through the scene leave guard; true only when it actually became active. */
+  const navigateTo = async (tab: Tab) => {
+    try { return await useTabsStore.getState().openTabForNavigation(tab, new AbortController().signal) }
+    catch (error) { toast.error(error instanceof Error ? error.message : "草稿尚未保存，请重试或明确放弃"); return false }
+  }
+  const createForeshadowMutation = useMutation({
+    mutationKey: ["work-menu-create", "foreshadow"],
+    mutationFn: async ({ novelId }: { novelId: string }) => {
+      const { foreshadows } = await queryClient.ensureQueryData({
+        queryKey: ["foreshadows", novelId],
+        queryFn: () => apiGet<{ foreshadows: ForeshadowDTO[] }>(`/api/novels/${novelId}/foreshadows`, "加载伏笔失败"),
+      })
+      return apiSend<{ foreshadow: ForeshadowDTO }>(`/api/novels/${novelId}/foreshadows`, "POST", { title: nextForeshadowTitle(foreshadows.map(f => f.title)) }, "新建伏笔失败")
+    },
+    onSuccess: async ({ foreshadow }, { novelId }) => {
+      void queryClient.invalidateQueries({ queryKey: ["foreshadows", novelId] })
+      toast.success(`已创建伏笔「${foreshadow.title}」`)
+      const tab: Tab = { id: buildTabId("foreshadow", novelId), type: "foreshadow", novelId, title: "伏笔" }
+      if (await navigateTo(tab)) useTabsStore.getState().requestPanelFocus(tab.id, "", undefined, foreshadow.id)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+  const createScene = async (novel: NovelSummary) => {
+    const tab: Tab = { id: buildTabId("scenes", novel.id), type: "scenes", novelId: novel.id, title: "场景" }
+    if (!await navigateTo(tab)) return
+    // Like openAllScenes, show the whole scene list, but only once the tab really opened.
+    const account = useChatStore.getState().accountId
+    useSceneUiStore.getState().setPref(`${account}:${novel.id}:workspace`, { scope: null, search: "" })
+    useSceneUiStore.getState().requestAction(novel.id, null, "create")
+  }
+  // useMutation only tracks its latest call; read every pending create so each work keeps its own disabled item.
+  const pendingCreates = useMutationState({
+    filters: { mutationKey: ["work-menu-create"], status: "pending" },
+    select: mutation => `${String(mutation.options.mutationKey?.[1])}:${(mutation.state.variables as { novelId?: string } | undefined)?.novelId}`,
+  })
+  const creating = (kind: "character" | "item" | "foreshadow", novelId: string) => pendingCreates.includes(`${kind}:${novelId}`)
+  /** The work row that opened the menu, so dialogs return focus to it. */
+  const workRowOf = (novelId: string) => document.querySelector<HTMLElement>(`[data-work-row="${CSS.escape(novelId)}"] .tree-row`)
+
+  /** Healthy-work menu, shared by … and right-click (docs/609 adds 编辑, create and export items). */
   const novelMenuItems = (novel: NovelSummary) => <>
     <DropdownMenuItem
       onClick={() => openTitleDialog({ type: "rename", novel })}
@@ -1863,9 +1966,44 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       <Pencil />
       重命名
     </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => openSimpleTab("theme", novel, "主题")}>
+      <SquarePen />
+      编辑
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem disabled={creating("character", novel.id)} onClick={() => createCharacterMutation.mutate({ novelId: novel.id })}>
+      <UserPlus />
+      创建角色
+    </DropdownMenuItem>
+    <DropdownMenuItem disabled={creating("item", novel.id)} onClick={() => createItemMutation.mutate({ novelId: novel.id })}>
+      <PackagePlus />
+      创建物品
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => { void createScene(novel) }}>
+      <MapPinPlus />
+      创建场景
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => openScenario(novel, "create", workRowOf(novel.id))}>
+      <FlaskConical />
+      创建情景
+    </DropdownMenuItem>
+    <DropdownMenuItem disabled={createWorldMutation.isPending && createWorldMutation.variables?.novel.id === novel.id} onClick={() => openTitleDialog({ type: "world-create", novel })}>
+      <Globe />
+      创建世界
+    </DropdownMenuItem>
+    <DropdownMenuItem disabled={creating("foreshadow", novel.id)} onClick={() => createForeshadowMutation.mutate({ novelId: novel.id })}>
+      <Flag />
+      创建伏笔
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    {(["outline", "content"] as const).map(kind => <DropdownMenuSub key={kind}>
+      <DropdownMenuSubTrigger>{kind === "content" ? <Download /> : <ListTree />}{kind === "content" ? "导出正文" : "导出大纲"}</DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-48"><ManuscriptExportItems disabled={workExport.exporting} onExport={format => { void workExport.exportCollection(novel, format, kind) }} /></DropdownMenuSubContent>
+    </DropdownMenuSub>)}
+    <DropdownMenuSeparator />
     <DropdownMenuItem
       variant="destructive"
-      onClick={() => setDialog({ type: "delete", novel })}
+      onClick={() => openDeleteWork({ novelId: novel.id, title: novel.title })}
     >
       <Trash2 />
       删除
@@ -1939,7 +2077,7 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
               {view === "settings" ? <>{renderSettings(novel, 1)}{renderSettingExtras(novel)}</> : view === "characters" ? <CharacterSubtree novel={novel} expanded={expanded} toggle={toggle} flat /> : view === "content" ? <OutlineSubtree novel={novel} kind="content" expanded={expanded} toggle={toggle} depth={1} pruneExpanded={pruneExpanded} /> : <ConversationsNode novel={novel} expanded={expanded} toggle={toggle} flat />}
             </NavigationWorkGroup>
             return (
-              <div key={`${scope}:${novel.id}`}>
+              <div key={`${scope}:${novel.id}`} data-work-row={novel.id}>
                 <RowContextMenu items={novelMenuItems(novel)}>
                 <TreeNode
                   icon={novelExpanded ? FolderOpen : FolderClosed}
@@ -2223,20 +2361,16 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
       </Dialog>
 
       <Dialog
-        open={dialog?.type === "delete" || dialog?.type === "world-delete"}
+        open={dialog?.type === "world-delete"}
         onOpenChange={(open) => {
           if (!open) setDialog(null)
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {dialog?.type === "world-delete" ? "删除世界" : "删除小说"}
-            </DialogTitle>
+            <DialogTitle>删除世界</DialogTitle>
             <DialogDescription>
-              {dialog?.type === "world-delete"
-                ? `确定要删除世界「${dialog.world.name}」吗？其下的子世界与全部设定将一并删除，该操作不可撤销。`
-                : `确定要删除《${dialog?.type === "delete" ? dialog.novel.title : ""}》吗？删除后将不再显示在列表中。`}
+              {dialog?.type === "world-delete" && `确定要删除世界「${dialog.world.name}」吗？其下的子世界与全部设定将一并删除，该操作不可撤销。`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2245,47 +2379,54 @@ export function SidebarTree({ user, onToggleSidebar, interactionPaused = false }
             </Button>
             <Button
               variant="destructive"
-              disabled={deleteMutation.isPending || deleteWorldMutation.isPending}
+              disabled={deleteWorldMutation.isPending}
               onClick={() => {
-                if (dialog?.type === "delete") deleteMutation.mutate(dialog.novel.id)
                 if (dialog?.type === "world-delete") {
                   deleteWorldMutation.mutate({ novel: dialog.novel, world: dialog.world })
                 }
               }}
             >
-              {(deleteMutation.isPending || deleteWorldMutation.isPending) && (
-                <Loader2 className="animate-spin" />
-              )}
+              {deleteWorldMutation.isPending && <Loader2 className="animate-spin" />}
               确认删除
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog
-        open={dialog?.type === "remove-faulted"}
-        onOpenChange={(open) => { if (!open && !removeFaultedMutation.isPending) setDialog(null) }}
+        open={dialog?.type === "delete-work"}
+        onOpenChange={(open) => { if (!open && !removeWorkMutation.isPending) closeDeleteWork() }}
       >
-        <DialogContent showCloseButton={!removeFaultedMutation.isPending}>
+        <DialogContent showCloseButton={!removeWorkMutation.isPending}>
           <DialogHeader>
-            <DialogTitle>删除作品</DialogTitle>
-            <DialogDescription>
-              {dialog?.type === "remove-faulted" ? `确定要从作品列表中删除《${dialog.work.title}》吗？与该作品关联的对话将一并删除。` : ""}
-            </DialogDescription>
+            <DialogTitle>{dialog?.type === "delete-work" ? `删除《${dialog.work.title}》` : ""}</DialogTitle>
+            <DialogDescription>是否同时删除磁盘上的作品文件？</DialogDescription>
           </DialogHeader>
-          {dialog?.type === "remove-faulted" && <div className="space-y-2 text-sm text-muted-foreground">
-            <p>作品目录中的文件不会被改动。{dialog.work.reason === "stale-lease" ? "" : "目录恢复后，可通过“打开作品目录”重新加入。"}</p>
-            {dialog.work.reason === "stale-lease" && <p className="flex gap-2 rounded-md bg-warning/10 px-2.5 py-2 text-foreground"><TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />该作品只是留有异常退出的写入锁，建议先使用“修复作品锁”。删除后如需重新加入，需要先手动移除作品目录中的锁文件夹。</p>}
+          {dialog?.type === "delete-work" && <div className="space-y-2 text-sm text-muted-foreground">
+            {workLocation.state === "ready"
+              ? <p data-work-location className="select-text break-all rounded-md bg-muted px-2.5 py-1.5 font-mono text-xs text-foreground">{workLocation.path}</p>
+              : workLocation.state === "loading"
+                ? <p className="text-xs">正在读取作品目录…</p>
+                : <p className="flex items-center gap-2 text-xs">无法读取作品目录位置<Button variant="link" size="sm" className="h-auto p-0 text-xs" disabled={removeWorkMutation.isPending} onClick={() => openDeleteWork(dialog.work)}>重试</Button></p>}
+            <p>选「删除」只从玄印写作中删除，文件保留。</p>
             {removeError && <p role="alert" className="text-xs text-destructive">{removeError}</p>}
           </div>}
           <DialogFooter>
-            <Button variant="outline" disabled={removeFaultedMutation.isPending} onClick={() => setDialog(null)}>取消</Button>
+            <Button variant="outline" disabled={removeWorkMutation.isPending} onClick={closeDeleteWork}>取消</Button>
+            <Button
+              variant="outline"
+              disabled={removeWorkMutation.isPending || dialog?.type === "delete-work" && !dialog.work.workId && workLocation.state !== "ready"}
+              onClick={() => { if (dialog?.type === "delete-work") confirmRemove(dialog.work, false) }}
+            >
+              {removeWorkMutation.isPending && removeWorkMutation.variables?.deleteFiles === false && <Loader2 className="animate-spin" />}
+              删除
+            </Button>
             <Button
               variant="destructive"
-              disabled={removeFaultedMutation.isPending}
-              onClick={() => { if (dialog?.type === "remove-faulted") confirmRemove(dialog.work) }}
+              disabled={removeWorkMutation.isPending || workLocation.state !== "ready"}
+              onClick={() => { if (dialog?.type === "delete-work") confirmRemove(dialog.work, true) }}
             >
-              {removeFaultedMutation.isPending && <Loader2 className="animate-spin" />}
-              {removeFaultedMutation.isPending ? "正在删除…" : "确认删除"}
+              {removeWorkMutation.isPending && removeWorkMutation.variables?.deleteFiles === true && <Loader2 className="animate-spin" />}
+              删除，不保留文件
             </Button>
           </DialogFooter>
         </DialogContent>

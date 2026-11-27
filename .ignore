@@ -1,0 +1,45 @@
+# AI / ripgrep 默认搜索忽略规则（git、tsc、esbuild、Next、electron-builder 不读此文件；
+# Tailwind 使用 source(none) + 显式 @source，也不受影响）。文件仍受 git 管理，可按路径直接打开，
+# 需要全文检索历史时用 `rg --no-ignore <pattern> docs/`。
+# 台账和批准文档中引用的 docs/reviews/…、旧证据等路径多数在此被隐藏，请按路径直接打开。
+# docs/test-cases-business.json 是活动用例的数据源；为降噪隐藏，日常检索用 docs/05-business-test-cases.md。
+
+# 历史过程文档（编号 001–499）、审核记录与真实书目导入过程
+docs/[0-4][0-9][0-9]-*
+docs/reviews/
+docs/novel-import-real-books/
+docs/scene-import-verification/
+docs/lotm-import/
+docs/lotm-local-import/
+docs/lotm-wizard-import/
+docs/macos-adhoc/
+docs/macos-gatekeeper/
+docs/readme-rewrite/
+
+# 运行证据与机器生成数据
+docs/evidence/
+docs/**/evidence/
+docs/*-evidence/
+docs/test-cases-business.json
+docs/test-cases-desktop.json
+docs/imported-source.json
+docs/source-inventory.json
+docs/backup-scope-retirement.json
+
+# 设计稿：只保留说明文档（*.md）可检索；原型 HTML/JS/JSON、截图、旧版本和证据忽略
+design/**/*.*
+!design/**/*.md
+!design/*/index.html
+!design/**/approval*.json
+!design/desktop-preview.*
+design/**/archive-v*/
+design/evidence/
+
+# 已退役的备份测试源码（按 2026-10-08 用户指令保留历史源码，不参与任何运行）
+tests/retired/
+
+# 日志类
+*.log
+*.tap
+*.diff
+*.jsonl

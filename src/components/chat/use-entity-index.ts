@@ -107,6 +107,17 @@ export function firstSentence(text: string | null | undefined): string | null {
   return m ? m[0].trim() || null : null
 }
 
+/** 角色 hover 信息（对话区实体芯片与世界线角色胶囊共用，docs/599 §12.8） */
+export function characterHoverInfo(c: Pick<CharacterRecord, "name" | "roleType" | "occupation" | "bio" | "personality" | "appearance" | "avatarUrl">): EntityHoverInfo {
+  const roleLabel = CHARACTER_ROLE_LABELS[c.roleType] ?? "角色"
+  return {
+    name: c.name,
+    role: c.occupation ? `${roleLabel} · ${c.occupation}` : roleLabel,
+    blurb: firstSentence(c.bio || c.personality || c.appearance),
+    avatarUrl: c.avatarUrl,
+  }
+}
+
 interface IndexData {
   novelTitle: string
   characters: { id: string; name: string }[]
@@ -271,14 +282,7 @@ function buildEntityIndex(data: IndexData): EntityIndex {
     hoverInfo: (kind, id) => {
       if (kind === "character") {
         const c = charactersFull.find((x) => x.id === id)
-        if (!c) return undefined
-        const roleLabel = CHARACTER_ROLE_LABELS[c.roleType] ?? "角色"
-        return {
-          name: c.name,
-          role: c.occupation ? `${roleLabel} · ${c.occupation}` : roleLabel,
-          blurb: firstSentence(c.bio || c.personality || c.appearance),
-          avatarUrl: c.avatarUrl,
-        }
+        return c ? characterHoverInfo(c) : undefined
       }
       if (kind === "item") {
         const it = items.find((x) => x.id === id)

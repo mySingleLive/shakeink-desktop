@@ -1801,6 +1801,42 @@
     "scopedAcceptancePassed": true,
     "fullAcceptancePassed": false
   },
+  "contentTabCloseHistory": {
+    "date": "2026-11-25",
+    "requirement": "右侧内容面板关闭 Tab 后按实际浏览顺序倒序回到上一个浏览的 Tab，与视觉排序无关",
+    "status": "scoped-verified",
+    "implementation": [
+      "src/stores/tabs.ts",
+      "src/lib/desktop/workspace-draft-source.ts"
+    ],
+    "historyLifetime": "current workspace session only; WorkspaceDraft v1 remains unchanged and restore clears previousTabIds",
+    "tests": [
+      "tests/unit/content-tabs-history.test.ts",
+      "tests/unit/content-tabs-reorder.test.ts",
+      "tests/unit/navigation-tabs.test.ts",
+      "tests/unit/navigation-component.test.ts",
+      "tests/unit/sidebar-navigation-guard.test.ts",
+      "tests/browser/content-tabs.test.ts",
+      "tests/helpers/content-tabs-fixture.ts",
+      "scripts/verify-content-tabs.mjs"
+    ],
+    "independentReviews": {
+      "technicalPlan": "passed after defining a deduplicated previous-tab stack and atomic guard commits",
+      "testPlan": "passed after adding restore, guard, repeated activation and bulk-delete boundaries",
+      "codeReview": "passed after preserving closeAllTabsOfNovel null/missing-active fallback"
+    },
+    "verification": {
+      "focusedUnit": "34/34 passed",
+      "contentTabsBrowser": "15/15 passed",
+      "typecheck": "passed",
+      "fullUnitIntegration": "5187 tests: 5143 passed, 44 failed; all 44 failures are outside the changed ContentTabs/navigation test files",
+      "productionBuild": "passed: npm run build",
+      "actualMacOSElectron": "passed with production build, isolated real 20-tab workspace, offline renderer and zero models: A→B→C→B, close B→C, middle-close C→A; no page errors",
+      "actualWindowsElectron": "not executed on macOS; existing Windows-only script updated"
+    },
+    "fullSuitePassed": false,
+    "fullAcceptancePassed": false
+  },
   "requirements": [
     {
       "id": "B01",
@@ -5602,6 +5638,395 @@
       "焦点在下拉选项上、背景有可选文字选区时 Cmd+C 复制该选区",
       "只读 Monaco、世界线搜索框只在浏览器夹具验证；E9（对话框屏障）只在浏览器夹具验证",
       "已知风险（未处理）：markdown 渲染不做 sanitize（src/lib/markdown.ts:22），CSP unsafe-inline；本次未新增 IPC"
+    ]
+  },
+  {
+   "id": "WL-599",
+   "requirement": "世界线事件卡片编辑形态：编辑形态即展开形态的同一张卡，各信息原位可改；进入编辑尺寸不变；添加角色、保存、新增角色转变、点击外部取消、角色胶囊点击 / 编辑替换、时间浮层（开始 / 结束、填空句、拖动时间轴、步进框）、父子事件同一编辑形态与新建子事件、未改动的新子事件取消即删除、Esc 取消、角色胶囊悬停简介（用户 2026-11-22，设计稿 design/worldline-card-edit 经 10 轮审核通过；R1–R18）",
+   "source": [
+    "docs/599-worldline-card-edit-research.md",
+    "docs/599-worldline-card-edit-plan.md",
+    "docs/599-worldline-card-edit-plan-review.md",
+    "docs/599-worldline-card-edit-test-review.md",
+    "docs/599-worldline-card-edit-code-review.md",
+    "docs/599-worldline-card-edit-code-review-r4.md"
+   ],
+   "implementation": [
+    "src/components/content/planning/worldline/EventCardEditor.tsx",
+    "src/components/content/planning/worldline/EventTimePicker.tsx",
+    "src/components/content/planning/worldline/ParagraphEditor.tsx",
+    "src/components/content/planning/worldline/CharacterHover.tsx",
+    "src/components/content/planning/worldline/popover-fit.ts",
+    "src/components/content/planning/worldline/EventCard.tsx",
+    "src/components/content/planning/worldline/EventTimeline.tsx",
+    "src/components/content/planning/worldline/worldline.module.css",
+    "src/components/content/planning/PlanningWorkspace.tsx（reuse，docs/577–598 同例）",
+    "src/components/content/planning/planning.module.css（reuse）",
+    "src/components/layout/ChatPanel.tsx（reuse：ai.stop 与 worldline.escape 互斥）",
+    "src/lib/planning/event-draft.ts",
+    "src/lib/planning/event-time-strip.ts",
+    "src/lib/desktop/worldline-escape.ts",
+    "desktop/shared/commands.json、command-registry.ts、command-catalogs.generated.json（worldline.escape）"
+   ],
+   "testIds": [
+    "CE-01..86、TP-01..11（tests/browser/planning-worldline-card-edit.test.ts，63 项）",
+    "ETS-*（tests/unit/event-time-strip.test.ts）",
+    "既有 planning-worldline-* 用例按 docs/599 §15.11 改（夹具 characters / 初始历史行）",
+    "599-r3、599-esc-r2（真实目标 edit-599.mjs、esc-599.mjs）"
+   ],
+   "verificationKind": "WORLDLINE_CARD_EDIT_TARGETED",
+   "status": "implemented-targeted-verified-real-target-met-macos",
+   "requirementEvidence": {
+    "R1-R3 原位编辑、同布局": "真实目标 599-r3 R3 saved fields / put back（标题、类型、重要度、时间偏移、角色增改换）+ 浏览器夹具 CE-10/13/14/15/73",
+    "R4 尺寸不变": "真实目标 599-r3（两视图 195→195）+ esc-r2 R4 sweep（最长时间文字 40 张，0 失败，其中 20 张展开行本已换行、编辑行一行）+ 浏览器夹具 CE-01/02/04/05/85",
+    "R5-R7 ＋、保存、新增角色转变": "浏览器夹具 CE-13/14/15/72/75；真实目标 599-r3 经元信息“添加”与“添加参与角色”加角色",
+    "R8 点击外部取消": "真实目标 599-r3 R16（点击外部）+ 浏览器夹具 CE-20/22a-e/23/26/27/29",
+    "R9/R10 胶囊点击打开角色 / 编辑替换": "真实目标 599-r3 R9 pill opens character tab、更换角色 + 浏览器夹具 CE-13/40",
+    "时间浮层（第 4–6 轮）": "真实目标 599-r3 开始时间偏移 +1 保存并改回 + 浏览器夹具 TP-01..11、CE-82",
+    "R13-R15 父子事件、新建子事件、删光子事件": "真实目标 599-r3 R14 child created + 浏览器夹具 CE-30/30b/35/36/37",
+    "R16 未改动的新子事件取消即删除": "真实目标 599-r3 R16（restore，历史“恢复规划版本：6”，数据与新建前相同）；delete / 409 分支仅浏览器夹具 CE-33/33b",
+    "R17 Esc 取消": "真实目标 esc-r2（sendInputEvent，焦点在标题 / 正文 / 按钮，两视图 6/6）+ 浏览器夹具 CE-21/60/61/65/66/67/68；生成中、组字中 Esc 仅浏览器夹具 CE-12",
+    "R18 胶囊悬停简介": "真实目标 599-r3 R18 hover card + 浏览器夹具 CE-41/42/43/44/47/49/51/53/80",
+    "C1 已通过功能不变": "浏览器 planning-*.test.ts 全量：只剩 CM-02/03/06/10（HEAD 基线）、ZB-20（HEAD 同样失败 p95 25ms）、CP-07 / WU-40b（负载相关，单独各跑两次通过）"
+   },
+   "evidence": [
+    "tsc 通过；npm run build 通过（~/shakeink-test-roots/worldline-ui-583-evidence/599/build-2.txt）",
+    "npm test：失败项与第 1 次全量（unit-1.txt）同集合减去 NI-LB07；其中 EC-budget、NI-C02 在 HEAD 工作树 /private/tmp/shakeink-599-base（链接 src/generated）同样失败；其余与 docs/598 基线 final-names 相同（unit-3.txt）",
+    "浏览器 tests/browser/planning-*.test.ts 全量（browser-3.txt）：失败 CM-02/03/06/10（基线）、ZB-20（HEAD 同样失败）、CP-07、WU-40b（单独重跑通过）；planning-worldline-card-edit 单独 63/63",
+    "真实目标（构建版、隔离根 ~/shakeink-test-roots/worldline-ui-599 由 worldline-ui-583 复制并移走租约收据、作品 LOTM-587-wg-r1、无模型调用）：599/r3 PASS 12/12，599/esc-r2 PASS（Esc 6/6、R4 sweep 40/40、版本不变）；该作品原无角色，驱动经 API 新建虚构角色 测试角色甲/乙/丙（记录于 result.json）",
+    "真实目标发现并修复：时间线展开行一行、编辑行（两个 caret + ＋）换行，约 138/1061 个事件进入编辑长 26px（599/meta-widths.json、r4-diag.json）；改为编辑行不换行、时间文字省略（用户选择），CE-85 去掉修复后失败；窄事件表弹层越界（代码审核 r4 P2-2），useFitPopover，CE-86 去掉修复后失败"
+   ],
+   "verificationLimits": [
+    "R16 的 delete / 409 回退、生成中 Esc、组字中 Esc、剪贴板粘贴只有浏览器夹具证据（离线无模型无法在真实目标复现外部修改与生成）",
+    "R4 sweep 跳过 10 张：7 张在该缩放下未画出、3 张时间线标题被其他卡片遮挡无法双击",
+    "测试用例审核列出的 CE-03/06/11c/24/28/31e/38/45/46/48/50b/52 与 CE-66 的标题拖动、框选、小地图拖动未写，未执行，不计为通过",
+    "Windows 未在真实目标验证"
+   ]
+  },
+  {
+    "id": "WL-600",
+    "requirement": "世界线事件表视图：Ctrl + 滚轮缩放画布（只有滚轮时仍上下滚动），并与时间线视图一样随缩放程度自动展开 / 收起父事件的子事件、自动展开 / 收起普通卡片、把普通事件卡片收缩成一行标题、按重要度隐藏或显示事件卡片（用户 2026-11-23；确认：Ctrl + 滚轮缩放、与时间线相同的拥挤度规则、只在有空间时展开、收起卡片缩到 0.75、家族内子事件也按时间拉伸、分组头不参与自动展开）",
+    "source": [
+      "docs/600-worldline-table-zoom-plan.md",
+      "docs/600-worldline-table-zoom-plan-review.md",
+      "docs/600-worldline-table-zoom-test-review.md",
+      "docs/600-worldline-table-zoom-code-review.md"
+    ],
+    "implementation": [
+      "src/components/content/planning/worldline/EventTable.tsx",
+      "src/lib/planning/worldline-layout.ts（tableLayout plan / gapMax / stretchChildren、tableZoomBounds levels、tableCrowding、tableGapFor、tableAutoOpenFits、projectAnchor、isProgrammaticScroll、decideAutoOpen）",
+      "src/lib/planning/worldline-viewport.ts（提示 store 按 owner 写入 / 清除）",
+      "src/components/content/planning/worldline/EventTimeline.tsx（提示 owner）",
+      "src/components/content/planning/worldline/EventCard.tsx（onSelectOnly）",
+      "src/components/content/planning/PlanningWorkspace.tsx（reuse：zoomLevelsOn、两视图都显示缩放提示、定位事件通知）",
+      "src/components/content/planning/worldline/worldline.module.css"
+    ],
+    "testIds": [
+      "TZ-01..14（tests/unit/worldline-table-zoom.test.ts；TZ-02 为 9dca205 上生成的布局快照）",
+      "TZB-01..21、06b..06e、12b、13e、17b（tests/browser/planning-worldline-table-zoom.test.ts）",
+      "ZB-02（改，需求导致：分级关闭）、ZB-05 / 08 / 37 / 40（只改注释）",
+      "600-r3（真实目标 table-zoom-600.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TABLE_ZOOM_TARGETED",
+    "supersededBy": "WL-602（2026-11-25）：T6“有空间时自动展开”被“卡片到最大后再放大一步全部展开（两种模式）”取代；T2 收起卡缩小在事件表中由 1.0–1.2× 微调取代。原证据保留，记录的是 docs/600 当时的行为。",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "T1 Ctrl + 滚轮缩放、普通滚轮滚动": "真实目标 600-r3 plain wheel scrolls + 每步记录 data-crowding；浏览器夹具 TZB-01、TZB-18",
+      "T2 收起卡片缩小": "真实目标 600-r3 复位级别 2 data-card-zoom 0.75；浏览器夹具 TZB-11（分组头、层叠卡、高度）",
+      "T3 一行标题（时间点）": "真实目标 600-r3 级别 2–5 时间点计数与截图 out-L2..L5；浏览器夹具 TZB-01/02/04/21",
+      "T4 自动折叠 / 展开父事件": "真实目标 600-r3 级别 3–4 层叠卡计数；浏览器夹具 TZB-02/03",
+      "T5 按重要度隐藏": "真实目标 600-r3 级别 6 无时间点、只剩关键卡片；浏览器夹具 TZB-01/15/16/17",
+      "T6 有空间时自动展开": "真实目标 600-r3 级别 0 滚动 20 屏：7 屏自动展开、切换 2 次（截图 level0-z1/z2）；浏览器夹具 TZB-06/06b..06e/07/13/13e/14",
+      "C1 界面状态不写作品、只作用于事件表": "真实目标 600-r3 作品版本 8→8；浏览器夹具 TZB-03/09",
+      "C2 已通过功能不变": "浏览器 planning-*.test.ts 全量 314 项：失败 CM-02/03/06/10（基线）、ZB-20（HEAD 同样失败）、CP-07（负载）、EC-73/74、WT-55（同文件 WT-55 超时 180 s 后连带，单独与 9dca205 上均 3/3 通过）"
+    },
+    "evidence": [
+      "tsc、npm run build 通过（~/shakeink-test-roots/worldline-ui-583-evidence/600/build-600.log）",
+      "单元：worldline-table-zoom + worldline-layout 114/114",
+      "浏览器 planning-*.test.ts 全量（browser-600b.log）：314 项 305 通过，失败见 C2",
+      "真实目标（构建版、隔离根 ~/shakeink-test-roots/worldline-ui-599、作品 LOTM-587-wg-r1、无模型调用）：600/r3 PASS 12/12；复位级别 2（d 21.657）；下限级别 6（d 0.12）；从下限 53 步进入级别 0；对齐时间轴圆点偏差每步 ≤ 0.5px；作品版本不变"
+    ],
+    "verificationLimits": [
+      "自动展开在停止输入约 160 ms 后出现 / 消失",
+      "级别 0 时根事件间空白随缩放增大，最多 1200px",
+      "首帧估算高度偏小时可能退出自动展开一次；家族跨度大于到下一根事件的间隔时该家族不自动展开",
+      "GAP / KEEP 回差边界只在单元层验证（浏览器夹具未构造刚好放得下的边界）",
+      "真实目标窄工具栏下“复位”按钮隐藏，复位改用 − 按钮验证；滚动为脚本写 scrollTop（模拟用户滚动）",
+      "Windows 未在真实目标验证"
+    ]
+  },
+  {
+    "id": "WL-601",
+    "requirement": "世界线事件表视图：默认缩放下事件卡片和字体太小、卡片间空隙太大；去掉无意义的空隙，卡片之间的空隙相等（用户 2026-11-24；确认：对齐模式在任何缩放级别都按固定间距排列、等距模式继续按时间拉伸、对齐模式不再自动展开；保留“相隔 N 年”文字，放进卡片间距；事件表收起卡片在所有级别保持原尺寸；年份徽章 / 相隔文字只在出现处加宽到刚好放下）",
+    "source": [
+      "docs/601-worldline-table-equal-gaps-plan.md",
+      "docs/601-worldline-table-equal-gaps-plan-review.md",
+      "docs/601-worldline-table-equal-gaps-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts（tableLayout equalGaps、RAIL_MARK_SPAN / RAIL_BREAK_SPAN、TableLayout.equal、alignedRailMarks 段线端与段首徽章、tableAutoOpenFits 拒绝 equal 布局）",
+      "src/components/content/planning/worldline/EventTable.tsx（收起卡 zScale 1、对齐模式 equalGaps / layoutK 0 / 不自动展开、模式切换锚点、用户滚动清除滚轮锚点）",
+      "src/components/content/planning/worldline/worldline.module.css（.railBreakTight）"
+    ],
+    "testIds": [
+      "EG-01..10（tests/unit/worldline-table-equal-gaps.test.ts）",
+      "EGB-01..04、06..11（tests/browser/planning-worldline-table-equal-gaps.test.ts）",
+      "TZB-06*/07/12/12b/13/13e/14/17b 改为等距模式；TZB-01/11 改为无缩放包层；TZB-19 计时前先悬停（tests/browser/planning-worldline-table-zoom.test.ts）",
+      "RM-B3 改为第一张可见卡片不动（tests/browser/planning-worldline-table-rail-modes.test.ts）；ZB-37/38 事件表检查改在等距模式（planning-worldline-auto-open.test.ts）",
+      "601-r2（真实目标 table-equal-601.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TABLE_EQUAL_GAPS_TARGETED",
+    "supersededBy": "WL-602（2026-11-25）：Q1“收起卡在所有级别原尺寸”改为 1.0–1.2× 随缩放微调（1.0 为原尺寸）；Q6“对齐模式不自动展开”改为对齐与等距都在上限处全部展开。原证据保留，记录的是 docs/601 当时的行为。",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "Q1 卡片原尺寸": "真实目标 601-r2 复位（级别 2）、放大 12 步（级别 1）、级别 4 均无 data-card-zoom，标题 13px 与未缩放相同；浏览器 EGB-02、TZB-01/11",
+      "Q2 对齐模式等间距": "真实目标 601-r2 三个缩放各 8 个滚动位置，同层相邻块间距全部为 6px；浏览器 EGB-01/08/09，单元 EG-01/02/06",
+      "Q3/Q4 相隔文字保留且只在出现处加宽": "真实目标 601-r2 含标记的间距 6–33px（≤ 40），时间轴文字两两不相交 0/24；浏览器 EGB-03/09，单元 EG-03/03b/05/07/09/10",
+      "Q6 对齐不自动展开、等距照旧": "真实目标 601-r2 各位置无 data-auto-open；浏览器 EGB-04/06，TZB-06* 在等距下通过",
+      "Q7 模式切换第一张可见卡片不动": "真实目标 601-r2 表格 30% / 75% 处往返偏差 ≤ 0.07px；浏览器 RM-B3、EGB-11",
+      "C1 等距与时间线不变": "TZ-02 布局快照通过；浏览器全量与 052627a 失败集合比较见 evidence"
+    },
+    "evidence": [
+      "tsc、npm run build 通过（~/shakeink-test-roots/worldline-ui-583-evidence/601/build-601.log）",
+      "单元：worldline-table-equal-gaps + worldline-table-zoom + worldline-layout 125/125",
+      "npm test 全量（~/shakeink-test-roots/worldline-ui-583-evidence/601/unit-601.log）：5157 项 42 失败，与 052627a（unit-head-052627a.log，133 失败）对比均为基线失败；ROOT11-07、NI-LB07 单独重跑通过（负载超时，与本改动无关）",
+      "浏览器 planning-*.test.ts 全量（~/shakeink-test-roots/worldline-ui-583-evidence/601/browser-601.log）：324 项，失败 CM-02/03/06/10 与 052627a 相同；WU-35（断档文字 text-overflow 省略号）已改为渐隐裁切，planning-worldline-table / equal-gaps / rail-modes 重跑 36/36 通过",
+      "真实目标（构建版、隔离根 ~/shakeink-test-roots/worldline-ui-599、作品 LOTM-587-wg-r1、无模型调用）：~/shakeink-test-roots/worldline-ui-583-evidence/601/r2 PASS 20/20；复位级别 2，可见卡片 8–14 张、时间点 5–14 个；作品版本不变",
+      "红检：关闭 equal（EGB-01/03/04/08/09 失败）、恢复 cardScale（EGB-02 失败）、去掉模式锚点（RM-B3 失败）、去掉滚动清锚点（EGB-10/11 失败）"
+    ],
+    "verificationLimits": [
+      "对齐模式卡片位置不再反映时间间隔，间隔由日期标签、年份徽章与相隔文字表达",
+      "对齐模式不自动展开；需要时手动展开或切到等距",
+      "复位级别 2 时一般事件仍是一行时间点（11px），未改",
+      "全为纪元精度的段没有段首徽章，仍留 62px 卡头距"
+    ]
+  },
+  {
+    "id": "WL-602",
+    "requirement": "世界线事件表视图：缩放时若没有触发卡片展开 / 收起 / 折叠，看不出变化，需修改（用户 2026-11-24；确认：卡片与字体随缩放微调，当前尺寸为最小、1.2× 为最大、复位 1.1×，两种模式，展开 / 编辑卡不缩放；设计稿审核后修改：缩到最小或放到最大后不再累计、反向第一步立即生效；放大到一定程度所有卡片自动展开——卡片最大后再放大一步，两种模式，等距模式展开后继续拉开间距直到不再变化；缩小时跳过无变化的步。用户 2026-11-24 UI 审核通过）",
+    "source": [
+      "docs/602-worldline-table-card-scale-research.md",
+      "design/worldline-table-card-scale/index.html",
+      "docs/602-worldline-table-card-scale-plan.md",
+      "docs/602-worldline-table-card-scale-plan-review.md",
+      "docs/602-worldline-table-card-scale-test-review.md",
+      "docs/602-worldline-table-card-scale-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/planning/worldline-layout.ts（tableCardScale、tableZoomModel / tableLabelClasses / tableZoomLevelAt / tableZoomView / tableZoomStep：按每级 zoomPlan（含用户折叠与保留卡）求外观与拉伸对，跳过无变化步；tableLayout 有缩放计划时估宽余量 +3；删除 tableAutoOpenFits / decideAutoOpen）",
+      "src/components/content/planning/PlanningWorkspace.tsx（缩放级别与回差由上次画出的级别求得；滚轮 / 工具栏按有效步前进，两端置灰；EventTable 新 props zoomLevel / cardScale / allOpen）",
+      "src/components/content/planning/worldline/EventTable.tsx（收起卡包层 zoom = 卡片尺寸；全部展开集合；删除放得下才展开的判定与锁存；尺寸 / 全部展开步保持视图；首行只在变化时上报）"
+    ],
+    "testIds": [
+      "TS-01..14（tests/unit/worldline-table-card-scale.test.ts；TS-14 用 zoomPlan + tableLayout 真实布局逐步比较）",
+      "TSB-01..18、04b、15b（tests/browser/planning-worldline-table-card-scale.test.ts，内存夹具，非真实目标）",
+      "改写：TZB-01/02/06*/11/12/17b/18，删除 TZB-06e/07/13/13e（planning-worldline-table-zoom.test.ts）；EGB-02/04/07/08（planning-worldline-table-equal-gaps.test.ts）；删除单元 TZ-07/10、TZ-14、EG-08",
+      "602-r13（真实目标 card-scale-602.mjs）"
+    ],
+    "verificationKind": "WORLDLINE_TABLE_CARD_SCALE_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "卡片尺寸 1.0–1.2×、复位 1.1×": "真实目标 602-r13：复位 data-card-scale 1.1、标题行 19.8px（18 × 1.1）；6 步到 1.2、6 步到 1.0；包层 zoom 与尺寸全程一致；浏览器 TSB-01/05/06、单元 TS-01/12",
+      "每步都有变化": "真实目标 602-r13：对齐放大 7 步、缩小 9 步、等距放大 55 步，整表（卡片数、时间点、层叠、展开、表高）与视图逐步比较死步均为 0；单元 TS-04/14（真实布局）；浏览器 TSB-02/03/04/04b/10",
+      "两端停止、反向立即生效": "真实目标 602-r13 三个方向到头后再滚 10 步无变化（读数也不变），反向第一步变化；快速 10 次缩小 = 10 个有效步；浏览器 TSB-02/03/04、单元 TS-04/08",
+      "全部展开": "真实目标 602-r13：对齐 +7 步（266%）全部展开即上限，前一步 1.2× 收起；等距第 7 步全部展开、继续到第 55 步；用户折叠的父事件展开、子事件不出现；浏览器 TSB-07/08/16、EGB-04",
+      "视图与性能": "真实目标 602-r13：全部展开那一步 90 ms；全部展开下滚动 20 屏帧对 p95 34 ms、参照卡片偏差 ≤ 0.2px；浏览器 TSB-09/14/15/15b（F885 夹具）",
+      "标题不截断": "真实目标 602-r13 2600px 窗口全表：1.1 / 1.2 无比 1.0 多出的截断（1.0 也为 0）；浏览器 TSB-05",
+      "C1 分级关不变、时间线不变": "单元 TS-09、TZ-02 布局快照；浏览器 TSB-12（步数 = docs/601）、TZB-10"
+    },
+    "evidence": [
+      "~/shakeink-test-roots/worldline-ui-583-evidence/602/r13/result.json 与截图（reset-40、reset-one-open、all-open、all-open-folded、max-size、floor、linear-top、wide-reset）；r1–r10 为修复过程记录",
+      "~/shakeink-test-roots/worldline-ui-583-evidence/602/build.log、build-head.txt（构建后、运行期间未再构建）",
+      "单元全量（npm test）：当前 5169 项 42 失败，干净 HEAD 052627a 5092 项 134 失败，当前的失败全部也在 HEAD 中出现，无新增（/tmp 对比）",
+      "浏览器 planning-worldline-* 与 planning-card-menu 全量（~/shakeink-test-roots/worldline-ui-583-evidence/602/browser-602.log）：337 通过、4 失败（CM-02/03/06/10），与干净 HEAD 052627a 的失败集合相同（browser-head-052627a.log），无新增；CP-07（时间线长任务计数）在 HEAD 5 次中 4 次超过 2，属基线不稳定，本次全量通过"
+    ],
+    "verificationLimits": [
+      "浏览器用例为内存夹具，不作为真实目标通过依据；真实目标只在 macOS 构建版、隔离根 worldline-ui-599（LOTM-587-wg-r1，无模型）执行。",
+      "等距模式全部展开后，展开卡实测高于估计时可能多停一步（审核 P3-1，方向为多停不漏变）。",
+      "被跳过的缩放位置不能停留；跳步时读数一次变化多步。复位已是上限或 fit = 0 的世界线不会全部展开。",
+      "全部展开时工具栏“全部展开 / 全部收起”仍按手动展开集合判断。",
+      "窄面板中展开卡长标题换行后压在卡头下方内容上（docs/602 §11.5，既有样式，未在本次修改，待用户决定）。"
+    ]
+  },
+  {
+    "id": "WD-608",
+    "requirement": "点击作品菜单“删除”时弹出对话框询问是否连磁盘文件一起删除；选“否”只从玄印写作删除作品数据（移出作品列表、删除关联对话，文件保留，可再用“打开作品”加入），选“是”连作品目录永久删除；正常作品与不可用作品都用此对话框；标题“删除《作品名》”、正文“是否同时删除磁盘上的作品文件？”+ 完整路径 +“选「否」只从玄印写作中删除，文件保留。”、按钮 取消/否/是，删除文件（用户 2026-11-25）；按钮改为 取消/删除/删除，不保留文件，提示句改为“选「删除」只从玄印写作中删除，文件保留。”（用户 2026-11-26，“否”易误解）",
+    "source": [
+      "docs/608-work-delete-files-plan.md",
+      "docs/608-work-delete-files-plan-review.md",
+      "docs/608-work-delete-files-cases.md",
+      "docs/608-work-delete-files-cases-review.md",
+      "docs/608-work-delete-files-code-review.md"
+    ],
+    "implementation": [
+      "desktop/service/workspaces.ts（removeWork：预检 inspectDeletion → 忙检查与 forgotten 同步 → 关闭连接失败即拒绝 → 锁快照 → 提交 → 提交后 deleteWorkFolder 逐条目复核身份/清单/锁，清单最后删；deletionRefusal 纯函数；removeTreeOnDevice 不跨设备不跟随链接；keptDeletions 残留目录受保护）",
+      "desktop/service/dispatcher.ts（GET /api/works/location；DELETE /api/works/[id] 严格请求体 {deleteFiles,path}）",
+      "desktop/service/work-creation-reservations.ts（records）",
+      "desktop/service/index.ts（引导目录加入受保护根）",
+      "src/components/layout/SidebarTree.tsx（统一删除对话框；正常作品不再调用 DELETE /api/novels/[id]；删除后先移除列表行与该作品查询）"
+    ],
+    "testIds": [
+      "tests/unit/work-delete-files.test.ts WDU-01/01b/02/03/04/05/06",
+      "tests/integration/work-delete-files.test.ts WD-01..24、06b/06c、09b、14b、17b",
+      "tests/integration/faulted-work-removal.test.ts WN-10（响应含 files）",
+      "tests/browser/works-loading.test.ts WDB-01..13、07b/09b（取代 WN-48'/49、50'、51'/52、53'），内存夹具，非真实目标",
+      "scripts/verify-work-delete-files.mjs WDR-01/01b/02/03/04（真实目标）",
+      "scripts/verify-reused-import-target.mjs 删除步骤改为新对话框选“否”"
+    ],
+    "verificationKind": "WORK_DELETE_FILES_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "对话框文案与路径": "真实目标 WDR-03：标题、问句、真实目录完整路径、提示句、按钮 取消/删除/删除，不保留文件（docs/608-work-delete-files-evidence/wdr-03-dialog.png）；浏览器 WDB-01/02",
+      "否：只删玄印数据": "真实目标 WDR-01：列表移除，目录条目除锁外不变；WDR-01b 用“打开作品”重新加入；集成 WD-01/02",
+      "是：永久删除目录": "真实目标 WDR-02：目录不存在，同级目录不变（wdr-02-ls.txt）；集成 WD-03（外部链接/硬链接不受影响）",
+      "不可用作品": "真实目标 WDR-04：移走目录后选“是”，提示未找到作品目录，移走的目录不变；集成 WD-06/06c",
+      "防误删": "集成 WD-07..16、21、24、14b、06b（符号链接、替换、清单不符、嵌套、预留、外机/存活/同进程锁、连接未关闭、数据根重叠、检查期间开始任务）；单元 WDU-04/05（挂载点、/、主目录、常用文件夹、数据根、引导目录）、WDU-01/01b/06（跨设备、提交后新锁）",
+      "部分失败": "集成 WD-17/17b：files=kept，清单保留，残留目录仍受保护（含无预留的打开作品）"
+    },
+    "evidence": [
+      "docs/608-work-delete-files-evidence/real-target-report.json、wdr-03-dialog.png、wdr-02-after-delete.png、wdr-02-ls.txt",
+      "/private/tmp/shakeink-delete-608/evidence/build.log、build-head.txt、run.log（构建后、运行期间未再构建）",
+      "单元+集成全量（npm test）：5211 项 43 失败；干净 HEAD 9947f8e 比较的失败集合包含全部 43 项，无新增",
+      "浏览器 works-loading 33/33、sidebar-navigation 22/22"
+    ],
+    "verificationLimits": [
+      "浏览器用例为内存夹具，不作为真实目标通过依据；真实目标只在 macOS 构建版、隔离 SHAKEINK_TEST_ROOT（零模型）执行，作品通过真实 POST /api/novels 创建，只替换原生目录选择框。",
+      "跨设备、挂载点只用注入 lstat 的单元测试覆盖，未挂载真实卷。",
+      "removeTreeOnDevice 按路径递归，“目录换成符号链接”的本机竞态只能收窄（审核低 3），未彻底消除；大目录预检与删除没有条目上限（审核低 4）。",
+      "取代：正常作品原“删除小说”（DELETE /api/novels/[id]，仅标记 DELETED，对话保留）改为本流程，选“否”会删除关联对话。Web 路由 DELETE /api/novels/[id] 保留，桌面界面已无调用方；以前通过它删除的作品仍留在 catalog 中，本次不处理。",
+      "残留目录（部分删除失败）若没有创建预留，只在本次应用运行期间受保护，重启后不再受保护（代码评审中2 复审）。",
+      "删除后的一次侧栏级联计数请求（GET /api/novels/:id/cascade）可能在列表刷新前返回“作品未关联到本地目录”，只在主进程日志中出现，界面无提示。"
+    ]
+  },
+  {
+    "id": "WM-609",
+    "requirement": "作品菜单（… 与右键相同）在「重命名」之下、「删除」之上加入：「编辑」（打开该作品的主题面板）；创建类「创建角色」「创建物品」「创建场景」「创建情景」「创建世界」「创建伏笔」（行为与各面板自带的新建按钮相同）；导出类「导出大纲」「导出正文」，各带子菜单 TXT/Markdown/Word/PDF，导出整书（用户 2026-11-26）",
+    "source": [
+      "docs/609-work-menu-items-plan.md",
+      "docs/609-work-menu-items-plan-review.md",
+      "docs/609-work-menu-items-cases.md",
+      "docs/609-work-menu-items-cases-review.md",
+      "docs/609-work-menu-items-code-review.md"
+    ],
+    "implementation": [
+      "src/components/layout/SidebarTree.tsx（novelMenuItems 新增项；创建角色/物品/伏笔 mutation，进行中禁用对应项；创建场景/伏笔先 openTabForNavigation 成功再写场景请求/面板聚焦；创建情景焦点回到作品行；顶层 useCollectionExport，删除成功与数据目录变化时取消）",
+      "src/components/layout/OutlineTreeMenu.tsx（导出逻辑抽成 useCollectionExport，正文树菜单行为不变）",
+      "src/lib/foreshadow-title.ts（nextForeshadowTitle，伏笔面板与菜单共用）",
+      "src/stores/scene-ui.ts（action.sceneId 允许 null，表示创建根场景）"
+    ],
+    "testIds": [
+      "tests/unit/work-menu-items.test.ts WMU-01",
+      "tests/unit/sidebar-help-menu.test.ts SH-04（查找起点改为设置项之后）",
+      "tests/browser/works-loading.test.ts WN-56'（菜单项、分隔栏、子菜单触发器），内存夹具，非真实目标",
+      "tests/browser/work-menu-items.test.ts WM-01..12、05b（真实场景/伏笔面板），内存夹具，非真实目标",
+      "tests/browser/file-export.test.ts EXB16-05b/05c/05d、WME-01..06（sidebar/volume 模式，主进程导出服务写真实隔离目录）",
+      "scripts/verify-work-menu-items.mjs WMR-00..05、01b（真实目标）",
+      "scripts/verify-faulted-work-nodes.mjs 健康作品右键菜单期望改为新 11 项"
+    ],
+    "verificationKind": "WORK_MENU_ITEMS_TARGETED",
+    "status": "implemented-targeted-verified-real-target-met-macos",
+    "requirementEvidence": {
+      "菜单结构": "真实目标 WMR-01：… 与右键菜单都为 11 项且完整位于窗口内（wmr-01-dots-menu.png、wmr-01-context-menu.png）；WMR-01b：最小窗口高度 580 下位于窗口底部的作品行，两种菜单都在窗口内，真实点击删除（wmr-01-context-menu-bottom.png）；浏览器 WN-56'",
+      "编辑": "真实目标 WMR-02；浏览器 WM-01",
+      "创建角色/物品/伏笔": "真实目标 WMR-03 读回记录；浏览器 WM-02..05、09a–d、10、10b、11",
+      "创建场景/世界/情景": "真实目标 WMR-04（wmr-04-scenario-dialog.png）；浏览器 WM-06a–f、07a/b、08",
+      "导出大纲/正文": "真实目标 WMR-05：… 导出正文 md、右键导出大纲 txt，文件内容分别含各自终点标记（wmr-05-dots-export-submenu.png、wmr-05-context-export-submenu.png）；浏览器 WM-12、WME-01..06、EXB16-05/05b/05c"
+    },
+    "evidence": [
+      "docs/609-work-menu-items-evidence/real-target-report.json 及截图",
+      "/private/tmp/shakeink-menu-609/build.log、build-head.txt、run.log、faulted-run.log（构建后、运行期间未再构建）",
+      "单元+集成全量：5216 项 44 失败；单独复跑唯一不在 HEAD 失败集合中的 BDC07，工作区与 HEAD 均通过（并行运行时的偶发失败）",
+      "浏览器：work-menu-items 21/21、file-export 18/18、works-loading 33/33、sidebar-navigation 全部通过；sidebar-surfaces SS-03 在 HEAD 同样失败"
+    ],
+    "verificationLimits": [
+      "浏览器用例为内存夹具，不作为真实目标通过依据；真实目标只在 macOS 构建版、隔离 SHAKEINK_TEST_ROOT（零模型）执行，作品与章节由 scripts/seed-work-menu-items.ts 写入隔离目录（大纲在应用内是叙事线投影，不能经大纲接口写入），只替换原生保存对话框。",
+      "期望随 609 改变、不计为新通过：WN-56'、SH-04、verify-faulted-work-nodes.mjs 健康作品菜单。verify-faulted-work-nodes.mjs 另把删除按钮名从“确认删除”改为“删除”（608 改名后该脚本未同步）。",
+      "works-loading 夹具页面改为与真实外壳一样不滚动（原夹具页面可滚动，11 项右键菜单会越出视口）；真实窗口由 WMR-01/01b 确认。",
+      "桌面保存全局只允许一个任务：作品菜单导出等待保存对话框时，正文树菜单导出提示“已有文件正在保存，请稍后重试”（现有行为，WME-03）。",
+      "伏笔 tab 中当前条目有未保存修改时，从菜单创建伏笔会选中新条目并丢弃这些修改，与面板 + 相同。",
+      "侧栏 CharacterSubtree 在角色接口返回非预期形状时会无限重新请求（既有问题，本次未改，仅在夹具中给出正确回复）。",
+      "伏笔取名用缓存的伏笔列表（与面板 + 相同），缓存过期时可能与其他来源新建的伏笔重名（代码审核低4，接受）；场景/伏笔导航的取消信号不随数据目录切换中止（代码审核低5，接受，导航在活动 tab 变化时已自行放弃）。"
+    ]
+  },
+  {
+    "id": "IP-610",
+    "requirement": "导入作品保存时，章节正文去除开头的卷名、章节名行，并修复没有换行挤在一起的问题（按缩进/句末标点/短行/行内全角缩进分段，段落以空行分隔）；导入会话与导入记录保留原文（用户 2026-11-27，《诡秘之主》第一卷实测）",
+    "source": [
+      "docs/610-import-prose-format-plan.md",
+      "docs/610-import-prose-format-plan-review.md",
+      "docs/610-import-prose-format-cases.md",
+      "docs/610-import-prose-format-cases-review.md",
+      "docs/610-import-prose-format-code-review.md"
+    ],
+    "implementation": [
+      "desktop/core/novel-import-prose.ts（formatImportChapterProse、importContentAnchor）",
+      "desktop/service/novel-import-publish.ts（章节 content/wordCount 用排版后正文；伏笔 CHAPTER_CONTENT 锚点映射到排版后偏移，落在标题内的退为整章引用）"
+    ],
+    "testIds": [
+      "tests/unit/novel-import-prose.test.ts IPF-01..25",
+      "tests/integration/novel-import-{publish,semantic-publish,pdf-publish,verify-publish,wizard-publish}.test.ts（期望改为排版后正文并含写死字符串；NIW-S06 改用 legacySceneFixture 后经真实发布验证锚点重映射）",
+      "tests/unit/lotm-local-import-audit.test.ts（freezeRows 与发布一致）",
+      "scripts/verify-import-prose-format.mjs IPF-R0..R8（真实目标，尚未执行）"
+    ],
+    "verificationKind": "IMPORT_PROSE_FORMAT_TARGETED",
+    "status": "implemented-targeted-verified-real-target-pending",
+    "requirementEvidence": {
+      "去除卷名章节名": "离线对《诡秘之主》第一卷 213 章运行 formatImportChapterProse（生产切章 detectImportChapterCuts）：0 章以卷名/章名开头",
+      "分段": "同一离线运行：213/213 章段落数等于原文去标题后的非空行数；去空白后全文一致",
+      "真实目标": "未执行：scripts/verify-import-prose-format.mjs 尚未运行；用户正在已构建应用中手动验收",
+      "已知存量失败": "lotm-import-audit 11 项（仍有章节缺少细纲）与 lotm-local-import-audit FROZEN_CHAPTER_ORACLE_MISMATCH 在 HEAD 上同样失败，与本次无关"
+    }
+  },
+  {
+    "id": "CR-611",
+    "requirement": "作品正文（章节内容面板）预览改为网文阅读排版：章首（卷名·章节号·章名·字数·状态·装饰线）、顶栏面包屑、书页与桌面底色、衬线正文 18px/1.95/段距.75em/缩进 2 字、章末「本章完」；「Aa 阅读设置」弹出框可设章首对齐、卷名/章节号/字数显示、字号 16–22、宣纸与玄墨各一套背景（分别记忆），即时保存；弹出框外任意点击或 Esc 关闭。其他编辑器与预览不变（用户 2026-11-28 批准设计稿 v4）",
+    "source": [
+      "docs/611-chapter-reader-research.md",
+      "design/chapter-reader/index.html（v4，已批准）",
+      "docs/611-chapter-reader-plan.md",
+      "docs/611-chapter-reader-plan-review.md",
+      "docs/611-chapter-reader-cases.md",
+      "docs/611-chapter-reader-cases-review.md",
+      "docs/611-chapter-reader-code-review.md"
+    ],
+    "implementation": [
+      "src/lib/chapter-reader.ts（chineseNumeral、chapterHeading）",
+      "src/stores/chapter-reader.ts（阅读设置 zustand persist chapter-reader-v1，读回逐项校验）",
+      "src/components/content/ChapterReader.tsx（章首、章末、阅读设置弹出框、useChapterReader）",
+      "src/components/content/ChapterContentPanel.tsx（面包屑；传 reader）",
+      "src/components/editor/MarkdownEditor.tsx（可选 reader：预览插槽与工具条插槽）",
+      "src/components/comments/CommentablePreview.tsx（可选 header/footer/contentClassName/attributes）",
+      "src/components/editor/preview-selection.ts（[data-preview-chrome] 视为界面）",
+      "src/app/desktop.css（.chapter-reader 作用域样式）"
+    ],
+    "testIds": [
+      "tests/unit/chapter-reader.test.ts CRU-01..10、CR611-61",
+      "tests/browser/chapter-reader.test.ts CR611-01..60b（含 01b/05b/11b/21b/41b/51b/55b–e）",
+      "scripts/verify-chapter-reader.mjs CR611-R01..R07（含 R01b，真实 Electron）"
+    ],
+    "verificationKind": "CHAPTER_READER_TARGETED",
+    "status": "implemented-targeted-verified-real-target-verified",
+    "requirementEvidence": {
+      "单元": "tests/unit/chapter-reader.test.ts 16/16 通过",
+      "浏览器": "tests/browser/chapter-reader.test.ts 36/36 通过（真实 ChapterContentPanel/CandidatePanel/DesktopCommandController/globals.css+desktop.css，Chromium）；移除 reader 或 [data-preview-chrome] 时对应用例失败",
+      "真实目标": "docs/611-chapter-reader-evidence/real-target-report.json passed：macOS arm64 Electron 44.6.0，合成隔离根，零模型，离线；R01–R12 全部通过（含重启后设置保留、正文 sha256 与 version 不变；R08 Ctrl+滚轮连续缩放：一格 760→878px 经 13 个中间宽度过渡，继续放大至铺满面板 1020px（无阴影、无页边），再缩小至 573px；字号 18px 与窗口缩放 1 始终不变；R09 阅读设置页面缩放滑块默认 100%/760px，真实键盘左移 10 次为 90%/684px，鼠标拖到最右为「铺满」1020px，楷体/黑体/仿宋/宋体生效；R10 打开第二个章节标签后（第一个标签的阅读视图仍挂载但隐藏）滑块可用，方向键调到 80%/720px；R11 真实键盘在百分比框输入 85 回车为 765px；100% 为 900px，滑块拇指位于轨道正中；R12 宣纸三个背景色块分别为 #fbf6e9/#e3eedb/#ffffff；R09 本机 229 个字体中内置 43 项、14 项标「未安装」、本机字体分组 201 项，苹方/兰亭黑/手札体等生效）；截图存于 ~/shakeink-test-roots/chapter-reader-611-evidence/，不进仓库",
+      "回归": "npm test 5253 项中 42 项失败，与 HEAD 基线同批文件逐项比对：除 LOTM-L-C04 外均在 HEAD 同样失败；LOTM-L-C04 单独在两侧各跑 3 次全部通过（并发负载下偶发）。相关浏览器套件 74 项两侧失败集完全相同（text-context-menu 11 项为既有失败）。tsc --noEmit 通过",
+      "范围": "CR611-59/60a/60b：候选稿面板、其他评论预览、版本历史、候选稿对比预览无阅读排版，段落样式不变"
+    },
+    "deviations": [
+      "章首不可选择（批准稿 .chapter-head 为 user-select:text）：跨章首选区会使评论/伏笔取不到锚点（CR611-55）",
+      "阅读视图不使用设置里的正文字号与行距，由阅读设置字号与固定行距 1.95 取代；正文字体仍跟随设置（CR611-05/05b）",
+      "弹出框打开期间全局菜单命令与快捷键按模态拦截，与其他弹出层一致（CR611-49）",
+      "阅读设置存于数据根 session 目录的 localStorage，不随「导出配置」迁移；数据根迁移后是否保留未验证",
+      "窗口拖拽区与原生菜单的点击不会关闭弹出框（无页面指针事件），未自动化",
+      "窄工具条（容器 < 640px）中按钮只显示「Aa」，可访问名称仍为「阅读设置」；窄面板书页左右内边距 40px（批准稿 26px），避免评论钮压住正文",
+      "CR611-59 的第二个调用方为合成的 MarkdownEditor（SETTING 评论目标）而非真实 WorldPanel/SettingContentEditor",
+        "章首不显示「已生成」状态（用户 2026-11-28 修改，CR611-01c）；其余四种状态照常显示，顶栏状态标签不变",
+        "宣纸背景色块显示为同一颜色的修复（用户 2026-11-28）：按钮通用规则 background:transparent 优先级高于宣纸色块颜色，玄墨规则带 .ink 前缀不受影响；色块规则提高到同等作用域（CR611-21c、R12）",
+        "正文字体扩展为分组下拉框（用户 2026-11-28）：宋体/明体、楷体、黑体、仿宋、其他五组共 43 项内置字体，另列「本机字体」分组；经 Local Font Access 读取本机字体，未安装的内置字体标「（未安装）」并禁用；所选字体未安装时提示「此字体未安装，正文暂以宋体显示」；每个字体栈以宋体与通用字体收尾；旧值 song/kai/hei/fangsong 保持原字体栈（CR611-80/80b、CRU-12/15、R09）；字体名称与 Windows 字体未在 Windows 验证",
+        "页面缩放 100% 改为 900px（原 760px）且位于滑块正中：左半 60%→100%、右半 100%→铺满；百分比框可直接输入（回车或失焦生效，可带 %，超范围收到边界，最大即铺满，↑/↓ 每次 1%，非数字恢复原值）；旧默认 760px 读回时迁移为 900px，用户自选宽度保留（用户 2026-11-28 修改，CR611-81/84、CRU-13/14、R09–R11）",
+        "阅读设置新增「正文字体」下拉框（原生 select，与设置页正文字体一致；跟随设置/宋体/楷体/黑体/仿宋，默认跟随设置，下拉框以所选字体显示；作用于正文与章首，元信息与章末仍用界面字体）和「页面缩放」滑块（60% 至铺满，步长 1%，百分比 = 书页宽 / 760px，默认 100%，最大显示「铺满」；与 Ctrl+滚轮共用同一宽度；窄面板禁用并显示「铺满」）（用户 2026-11-28 新增，CR611-80..82、R09）；宋体等为系统字体，Windows 上依赖本机字体，未在 Windows 验证",
+        "Ctrl+滚轮调整书页宽度（用户 2026-11-28 新增，同日改为连续缩放）：按滚动量连续缩放（一格约 12.7%，触控板小增量对应几像素），逐帧缓动过渡；最小 456px（60%），最大铺满整个面板（无页边、无阴影、无桌面底色，记为 pageFill）；接近满宽时页边距与圆角连续收为 0；指针下文字保持屏幕位置；停止后保存，所有章节共用；文字大小与窗口缩放不变；窄面板（<820px）书页始终铺满，不响应（CR611-70..75、R08）"
     ]
   }
   ],

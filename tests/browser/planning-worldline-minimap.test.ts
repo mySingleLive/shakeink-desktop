@@ -255,7 +255,7 @@ test("MM-B9: an editor opened on a card above the minimap keeps its save button 
   }, mm)
   assert.ok(id, "a clickable card overlaps the minimap in x")
   await page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${id}"] h3`).dblclick()
-  const save = page.getByRole("button", { name: "保存事件", exact: true })
+  const save = page.getByRole("button", { name: "保存", exact: true })
   await expect(save).toBeVisible(); await page.waitForTimeout(200)
   const r = (await save.boundingBox())!
   assert.ok(r.y + r.height <= mm.y + 1 || r.x > mm.x + mm.width || r.x + r.width < mm.x, `save ${JSON.stringify(r)} under the minimap ${JSON.stringify(mm)}`)

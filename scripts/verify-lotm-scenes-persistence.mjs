@@ -11,6 +11,7 @@ import {stripImportKnowledgeAnnotations} from '../desktop/core/novel-import-sema
 import {importVolumeGroups} from '../desktop/core/novel-import-chapters.ts'
 import {sceneForestFingerprint} from './lib/scene-import-persistence.mjs'
 import {quitElectronNormally} from './lib/electron-normal-quit.mjs'
+import {formatImportChapterProse} from '../desktop/core/novel-import-prose.ts'
 
 const privateRoot=await realpath('/private/tmp'),insidePrivate=path=>{const part=relative(privateRoot,path);return !!part&&part!=='..'&&!part.startsWith('../')&&!isAbsolute(part)}
 const existingPrivate=async value=>{assert.ok(typeof value==='string'&&value.startsWith('/private/tmp/'),'isolated private paths required');const path=await realpath(value);assert.ok(insidePrivate(path),'isolated private paths required');return path}
@@ -54,8 +55,8 @@ try{
    assert.ok(chapter.id===c.id&&chapter.volumeId===v.id&&chapter.volume?.id===v.id,'persisted chapter volume differs');assert.ok(chapter.volume.title===v.title,'persisted chapter volume title differs');assert.equal(chapter.index,j+1);chapters.push(chapter)
   }
  }
- assert.equal(chapters.length,s.chapters.length);for(const [i,c] of chapters.entries()){assert.ok(c.title===s.chapters[i].title,'persisted chapter title differs');assert.ok(c.content===s.chapters[i].content,'persisted chapter content differs')}
- assert.equal(sha(chapters.map(c=>c.content).join('')),sha(s.workingProse));assert.equal(errors.length,0,'unexpected page error after reopening')
+ assert.equal(chapters.length,s.chapters.length);for(const [i,c] of chapters.entries()){assert.ok(c.title===s.chapters[i].title,'persisted chapter title differs');assert.ok(c.content===formatImportChapterProse(s.chapters[i].content,{title:s.chapters[i].title,...(s.chapters[i].volume!==undefined?{volume:s.chapters[i].volume}:{})}).text,'persisted chapter content differs')}
+ assert.equal(sha(s.chapters.map(c=>c.content).join('')),sha(s.workingProse));assert.equal(errors.length,0,'unexpected page error after reopening')
  await page.screenshot({path:join(output,'reopened.png')})
  acceptance={sessionId:s.id,publication:s.publication,scenes:rows.length,parents,comparedBusinessFields:rows.length*7,nonemptyBusinessFields:fieldsCount,chapters:chapters.length,volumes:volumes.length,allIdentitiesAndFieldsMatch:true,bodyUnchanged:true,sourceUnchanged:true,pageErrors:errors,realElectronReopened:true,access:'local read-only IPC routes'}
 }finally{

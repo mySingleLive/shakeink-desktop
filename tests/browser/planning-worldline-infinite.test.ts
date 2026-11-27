@@ -95,7 +95,7 @@ test("IC-11b: the editor is revealed by moving y; focusing its fields never scro
   // docs/592 R1: two-line titles make the families taller; bring the card into the lane first.
   await revealTimelineCard(page, card(page, "学徒在旧书中发现星图"))
   await card(page, "学徒在旧书中发现星图").locator("h3").dblclick()
-  const save = page.getByRole("button", { name: "保存事件", exact: true })
+  const save = page.getByRole("button", { name: "保存", exact: true })
   await expect(save).toBeVisible()
   await page.waitForTimeout(150)
   // The save button is inside the lane (revealed), and the lane's own scroll is 0.
@@ -325,7 +325,7 @@ test("IC-22: the expand button toggles at once; a click does not expand; a doubl
   await page.waitForTimeout(350)
   await expect(c).toHaveAttribute("aria-expanded", "false")
   await c.locator("h3").dblclick()
-  await expect(page.getByRole("button", { name: "保存事件", exact: true })).toBeVisible()
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toBeVisible()
 }))
 
 /** A, B, C with C anchored to B (IC-23). */

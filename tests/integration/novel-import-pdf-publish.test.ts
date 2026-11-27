@@ -13,6 +13,7 @@ import {NovelImportPdfClient} from '../../desktop/main/novel-import-pdf-client'
 import {importPlanHash} from '../../desktop/core/novel-import'
 import {pdfInspectionLedgerHash} from '../../desktop/core/novel-import-pdf'
 import {publishNovelImport,readNovelImportRecord} from '../../desktop/service/novel-import-publish'
+import {storedChapterProse} from '../helpers/import-stored-prose'
 import {prisma} from '../../src/lib/db'
 import {ContentError} from '../../src/lib/content-errors'
 import type {ImportSession,ImportPublishInput} from '../../desktop/shared/novel-import'
@@ -50,7 +51,7 @@ test('NI-PDF10: real publication audit binds PDF page decisions and history with
    assert.deepEqual(audit.events,events);assert.deepEqual(audit.files[0].events,events)
    for(const page of audit.files[0].pages)assert.equal(page.textHash,createHash('sha256').update(JSON.stringify(text.slice(page.start,page.end))).digest('hex'))
    const stored=JSON.stringify(audit);assert.ok(!stored.includes(source));assert.doesNotMatch(stored,/previewToken|requestId|blob:|data:image|ancestors|"png"/u)
-   assert.equal((await prisma.chapter.findMany({where:{volume:{novelId:receipt.novelId}}})).map(chapter=>chapter.content).join(''),text)
+   assert.deepEqual((await prisma.chapter.findMany({where:{volume:{novelId:receipt.novelId}}})).map(chapter=>chapter.content),storedChapterProse(session))
    assert.equal(await prisma.contentMutation.count({where:{novelId:receipt.novelId,targetType:'NOVEL_IMPORT'}}),1)
    const read=(await readNovelImportRecord(receipt.novelId)).record as any
    assert.ok(read.pdfPageReview);assert.equal(read.pdfPageReview.files[0].proof,undefined)

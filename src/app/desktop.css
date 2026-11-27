@@ -536,3 +536,116 @@ body[data-platform="win32"] .dashboard-shell > nav[aria-label="创作工作区"]
 .desktop-prompt [data-slot="dialog-description"]{line-height:1.7;color:var(--foreground)}
 .desktop-prompt-detail{margin:0;font-size:13px;line-height:1.7;color:var(--muted-foreground);white-space:pre-line;overflow-wrap:anywhere;max-height:40dvh;overflow:auto}
 .desktop-prompt [data-slot="dialog-footer"]{margin:8px -20px -20px;padding:14px 20px;flex-direction:row;justify-content:flex-end;flex-wrap:wrap}
+
+/* ============================================================
+   docs/611 chapter reader (chapter-content preview only; design/chapter-reader v4).
+   Scoped to .chapter-reader so other MarkdownEditor previews are unchanged.
+   ============================================================ */
+.chapter-crumb { display:flex; align-items:center; gap:6px; min-width:0; margin:0; font-size:12.5px; line-height:1.4; font-weight:400; white-space:nowrap; color:var(--muted-foreground); }
+.chapter-crumb-volume { flex-shrink:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.chapter-crumb-sep { opacity:.6; }
+.chapter-crumb-chapter { min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--foreground); font-weight:500; }
+
+.paper .chapter-reader {
+  --reader-desk:#efe7d2; --reader-page:#fbf6e9; --reader-ink:#33291c; --reader-meta:#75664b; --reader-rule:#c9b78f;
+  --reader-seal:#b03524; --reader-shadow:0 1px 2px rgba(96,74,38,.10), 0 10px 30px -12px rgba(96,74,38,.22);
+}
+.paper .chapter-reader[data-reader-paper-bg="green"] { --reader-desk:#d5e3cf; --reader-page:#e3eedb; --reader-ink:#26331f; --reader-meta:#586a4c; --reader-rule:#a9bf9c; }
+.paper .chapter-reader[data-reader-paper-bg="white"] { --reader-desk:#ebebeb; --reader-page:#ffffff; --reader-ink:#222222; --reader-meta:#6e6e6e; --reader-rule:#cfcfcf; }
+.ink .chapter-reader {
+  --reader-desk:#0f0d0c; --reader-page:#1a1716; --reader-ink:#d6cec4; --reader-meta:#8f857c; --reader-rule:#4a3f37;
+  --reader-seal:#e07a5f; --reader-shadow:0 0 0 1px rgba(255,248,240,.05);
+}
+.ink .chapter-reader[data-reader-ink-bg="green"] { --reader-desk:#0c1210; --reader-page:#15201b; --reader-ink:#cbd8ce; --reader-meta:#7f9186; --reader-rule:#34463c; }
+.ink .chapter-reader[data-reader-ink-bg="blue"] { --reader-desk:#0c0f15; --reader-page:#161b25; --reader-ink:#ccd3de; --reader-meta:#808a9a; --reader-rule:#343d4d; }
+.ink .chapter-reader[data-reader-ink-bg="black"] { --reader-desk:#000000; --reader-page:#050505; --reader-ink:#bdb6ad; --reader-meta:#7a736b; --reader-rule:#2c2824; --reader-shadow:0 0 0 1px rgba(255,248,240,.06); }
+.chapter-reader { --reader-size:18px; }
+.chapter-reader[data-reader-size="16"] { --reader-size:16px; }
+.chapter-reader[data-reader-size="20"] { --reader-size:20px; }
+.chapter-reader[data-reader-size="22"] { --reader-size:22px; }
+
+/* (0,3,0): beats `.desktop-markdown-editor .markdown-body` (desktop.css:178). Body font still follows 设置 › 正文字体. */
+.desktop-markdown-editor .chapter-reader.markdown-body {
+  container-type:inline-size; background:var(--reader-desk); color:var(--reader-ink);
+  font-family:var(--reader-font, var(--desktop-body-font, var(--font-serif))); font-size:var(--reader-size); line-height:1.95;
+}
+/* 阅读设置 › 正文字体: --reader-font is set inline from reader-fonts.ts; 跟随设置 leaves it unset. */
+.chapter-reader .chapter-reader-page {
+  /* --reader-width: Ctrl + wheel page width. As it nears the panel width (100cqw) the desk margins and the
+     corner radius shrink continuously to 0, so the page grows smoothly into a full-panel page. */
+  --reader-gap:calc((100cqw - var(--reader-width, 760px)) / 2);
+  max-width:var(--reader-width, 760px); padding:56px 64px 48px; background:var(--reader-page);
+  margin:clamp(0px, var(--reader-gap), 28px) auto clamp(0px, var(--reader-gap), 40px);
+  border-radius:clamp(0px, var(--reader-gap), 4px); box-shadow:var(--reader-shadow);
+}
+.chapter-reader[data-reader-fill="true"] .chapter-reader-page { max-width:none; margin:0; min-height:100%; border-radius:0; box-shadow:none; }
+@container (max-width: 819px) {
+  .chapter-reader .chapter-reader-page { margin:0; max-width:none; min-height:100%; padding:36px 40px 40px; box-shadow:none; border-radius:0; }
+}
+.chapter-reader [data-block] p { margin:0 0 .75em; text-indent:2em; text-align:justify; letter-spacing:.02em; }
+
+.chapter-reader .chapter-reader-head { text-align:center; margin-bottom:44px; }
+.chapter-reader[data-reader-align="left"] .chapter-reader-head { text-align:left; }
+.chapter-reader .chapter-reader-volume { font-size:13px; line-height:1.6; letter-spacing:.18em; color:var(--reader-meta); margin:0 0 14px; }
+.chapter-reader .chapter-reader-head h1 {
+  margin:0; padding:0; border:0; font-family:inherit; font-size:calc(var(--reader-size) * 1.6); line-height:1.4;
+  font-weight:700; letter-spacing:.08em; color:var(--reader-ink); text-align:inherit;
+}
+.chapter-reader .chapter-reader-head h1::after { content:none; }
+.chapter-reader .chapter-reader-number { display:block; font-size:.56em; font-weight:600; letter-spacing:.3em; color:var(--reader-seal); margin-bottom:8px; }
+.chapter-reader .chapter-reader-meta { margin:16px 0 0; font:12px/1.6 var(--font-ui); letter-spacing:.04em; color:var(--reader-meta); }
+.chapter-reader .chapter-reader-meta span + span::before { content:"·"; margin:0 8px; opacity:.7; }
+.chapter-reader .chapter-reader-ornament { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:22px; color:var(--reader-rule); }
+.chapter-reader .chapter-reader-ornament::before, .chapter-reader .chapter-reader-ornament::after { content:""; width:64px; height:1px; background:linear-gradient(90deg, transparent, var(--reader-rule)); }
+.chapter-reader .chapter-reader-ornament::after { transform:scaleX(-1); }
+.chapter-reader .chapter-reader-ornament i { width:6px; height:6px; transform:rotate(45deg); border:1px solid var(--reader-seal); opacity:.75; }
+.chapter-reader[data-reader-align="left"] .chapter-reader-ornament { justify-content:flex-start; }
+.chapter-reader[data-reader-align="left"] .chapter-reader-ornament::before,
+.chapter-reader[data-reader-align="left"] .chapter-reader-ornament i { display:none; }
+.chapter-reader[data-reader-align="left"] .chapter-reader-ornament::after { width:48px; height:2px; transform:none; background:var(--reader-seal); opacity:.8; }
+
+.chapter-reader .chapter-reader-end { margin:48px 0 0; text-align:center; font-size:13px; line-height:1.6; letter-spacing:.3em; color:var(--reader-meta); }
+.chapter-reader .chapter-reader-end > span::before, .chapter-reader .chapter-reader-end > span::after { content:"—"; margin:0 12px; color:var(--reader-rule); letter-spacing:0; }
+.chapter-reader .chapter-reader-end small { display:block; margin-top:6px; letter-spacing:.04em; font:12px var(--font-ui); opacity:.8; }
+
+.chapter-reader-trigger { display:inline-flex; align-items:center; gap:4px; flex-shrink:0; white-space:nowrap; font-size:12px; line-height:1; color:var(--muted-foreground); background:transparent; border:0; padding:4px 8px; border-radius:4px; cursor:pointer; }
+/* Narrow toolbars keep the existing controls on one line: the trigger shrinks to "Aa" (name kept for assistive tech). */
+.chapter-reader-toolbar { container-type:inline-size; }
+@container (max-width: 640px) {
+  .chapter-reader-trigger .chapter-reader-trigger-text { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+}
+.chapter-reader-trigger:hover, .chapter-reader-trigger[data-popup-open] { color:var(--foreground); background:var(--hover-wash); }
+.chapter-reader-popup { width:280px; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--popover); color:var(--popover-foreground); box-shadow:var(--shadow-2); font-family:var(--font-ui); outline:none; }
+.chapter-reader-popup .chapter-reader-label { font-size:11.5px; color:var(--muted-foreground); margin:0 0 6px; }
+.chapter-reader-popup .chapter-reader-row { display:flex; gap:6px; margin-bottom:12px; }
+.chapter-reader-popup .chapter-reader-row:last-child { margin-bottom:0; }
+.chapter-reader-popup .chapter-reader-row > button { flex:1; font-size:12px; line-height:1.5; padding:4px 0; border-radius:6px; border:1px solid var(--border); background:transparent; color:inherit; cursor:pointer; }
+.chapter-reader-popup .chapter-reader-row > button[aria-pressed="true"] { border-color:var(--primary); color:var(--primary); }
+.chapter-reader-popup .chapter-reader-toggles { margin-bottom:12px; }
+.chapter-reader-popup .chapter-reader-toggle { display:flex; align-items:center; justify-content:space-between; font-size:12.5px; padding:5px 0; cursor:pointer; }
+.chapter-reader-popup .chapter-reader-toggle + .chapter-reader-toggle { border-top:1px solid var(--border); }
+.chapter-reader-popup .chapter-reader-label[for] { display:block; }
+.chapter-reader-popup .chapter-reader-font { margin-bottom:12px; }
+.chapter-reader-popup .chapter-reader-font select { width:100%; height:30px; padding:0 8px; border:1px solid var(--border); border-radius:6px; background:var(--background); color:var(--foreground); font-size:13px; cursor:pointer; }
+.chapter-reader-popup .chapter-reader-hint { margin:6px 0 0; font-size:11.5px; color:var(--warning, var(--muted-foreground)); }
+.chapter-reader-popup .chapter-reader-font select:focus-visible { outline:2px solid var(--ring); outline-offset:1px; }
+.chapter-reader-popup .chapter-reader-zoom { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.chapter-reader-popup .chapter-reader-zoom input[type="range"] { flex:1; min-width:0; accent-color:var(--primary); cursor:pointer; }
+.chapter-reader-popup .chapter-reader-zoom input[type="range"]:disabled { cursor:not-allowed; opacity:.5; }
+.chapter-reader-popup .chapter-reader-zoom-value { display:inline-flex; align-items:center; gap:2px; width:64px; height:26px; padding:0 6px; border:1px solid var(--border); border-radius:6px; background:var(--background); font-size:12px; color:var(--foreground); }
+.chapter-reader-popup .chapter-reader-zoom-value:focus-within { border-color:var(--primary); }
+.chapter-reader-popup .chapter-reader-zoom-value input { width:100%; min-width:0; border:0; padding:0; background:transparent; color:inherit; font:inherit; text-align:right; font-variant-numeric:tabular-nums; outline:none; }
+.chapter-reader-popup .chapter-reader-zoom-value input:disabled { opacity:.6; cursor:not-allowed; }
+.chapter-reader-popup .chapter-reader-zoom-value > span { color:var(--muted-foreground); }
+.chapter-reader-popup .chapter-reader-swatches > button.chapter-reader-swatch { flex:none; width:26px; height:26px; padding:0; border-radius:50%; }
+.chapter-reader-popup .chapter-reader-swatch[aria-pressed="true"] { box-shadow:0 0 0 2px var(--popover), 0 0 0 3.5px var(--primary); }
+.ink .chapter-reader-popup .chapter-reader-swatch { border-color:rgba(255,248,240,.22); }
+/* Same specificity as `.chapter-reader-popup .chapter-reader-row > button` (background:transparent) plus the
+   data-bg attribute, so the swatch colour wins in both themes (the 宣纸 swatches used to render transparent). */
+.chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="default"] { background:#fbf6e9; }
+.chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="green"] { background:#e3eedb; }
+.chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="white"] { background:#ffffff; }
+.ink .chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="default"] { background:#1a1716; }
+.ink .chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="green"] { background:#15201b; }
+.ink .chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="blue"] { background:#161b25; }
+.ink .chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="black"] { background:#050505; }

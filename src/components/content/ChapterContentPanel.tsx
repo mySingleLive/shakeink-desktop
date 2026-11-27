@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ClipboardPaste, Copy, Download, Files, History, ListChecks, Loader2, MoreHorizontal, Scissors, Sparkles, SquareDashed, Wand2 } from "lucide-react"
 import { toast } from "sonner"
@@ -33,6 +33,9 @@ import { useRegisterCommentSave } from "@/components/comments/comment-save-coord
 
 import { apiGet, apiSend, readError } from "./api"
 import { CHAPTER_STATUS_LABELS } from "./labels"
+import { useChapterReader } from "./ChapterReader"
+import { chapterHeading } from "@/lib/chapter-reader"
+import { countChineseWords } from "@/lib/text"
 import type { ContentPanelProps } from "./registry"
 import type { ChapterDetail } from "./types"
 import {
@@ -272,15 +275,23 @@ function ChapterContentEditor({
     } finally { if (job.signal.aborted) toast.dismiss(notification); if (exportJob.current === job) { exportJob.current = null; setExporting(false) } }
   }
 
+  /* docs/611: reader layout for the preview; the word count matches the editor toolbar. */
+  const words = useMemo(() => countChineseWords(content), [content])
+  const reader = useChapterReader(chapter, words, streaming, !!content.trim())
+  const heading = useMemo(() => chapterHeading(chapter), [chapter])
+  const crumb = `${heading.crumbVolume} › ${heading.crumbChapter}`
+
   return (
     <div className="relative flex h-full flex-col">
       {/* 浏览历史时保留当前编辑器实例及草稿，返回正文后继续原来的编辑位置。 */}
       <div className={history?.mode === "versions" ? "hidden" : "relative flex min-h-0 flex-1 flex-col"}>
       {/* 标题与状态保留在工具条，正文操作统一收纳到右侧菜单。 */}
       <div className="flex shrink-0 items-center gap-2 border-b bg-card px-4 py-2.5">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <h2 className="min-w-0 break-words font-serif text-base font-semibold">
-            第 {chapter.volume.index} 卷 · 第 {chapter.index} 章《{chapter.title}》
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h2 className="chapter-crumb" title={crumb}>
+            <span className="chapter-crumb-volume">{heading.crumbVolume}</span>
+            <span className="chapter-crumb-sep" aria-hidden="true">›</span>
+            <span className="chapter-crumb-chapter">{heading.crumbChapter}</span>
           </h2>
           <Badge variant={chapter.status === "FINAL" ? "default" : "secondary"}>
             {CHAPTER_STATUS_LABELS[chapter.status]}
@@ -410,6 +421,7 @@ function ChapterContentEditor({
         placeholder={streaming ? "" : "正文内容，可直接编辑（自动保存）"}
         commentsTarget={{ novelId, targetType: "CHAPTER_CONTENT", targetId: chapter.id }}
         className="min-h-0 flex-1 rounded-none border-0"
+        reader={reader}
       />
 
       {/* 悬浮评分指示器：右下角（悬停多维度浮窗 / 点击切编辑器评审视图） */}

@@ -19,7 +19,7 @@
  */
 import { usePreviewReferences, type PreviewReferences } from "@/components/foreshadow/preview-references"
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from "react"
-import type { JSX, ReactNode } from "react"
+import type { CSSProperties, JSX, ReactNode } from "react"
 import { MessageSquarePlus } from "lucide-react"
 
 import { blockIndexAt, splitMarkdownBlocks } from "@/lib/comment-anchor"
@@ -46,6 +46,15 @@ interface CommentablePreviewProps {
   onToggleThread: (threadId: string) => void
   onCreateComment: (input: CreateCommentInput) => Promise<void>
   renderBubble: (rt: ResolvedThread) => ReactNode
+  /** docs/611 chapter reader: shown before the first / after the last block. Mark roots with data-preview-chrome. */
+  header?: ReactNode
+  footer?: ReactNode
+  /** Replaces the default width/padding classes of the inner container (relative mx-auto are kept). */
+  contentClassName?: string
+  /** data-* attributes on the scroll container */
+  attributes?: Record<`data-${string}`, string>
+  /** Inline style on the scroll container (CSS variables) */
+  style?: CSSProperties
 }
 
 /** 遍历文本节点时跳过的祖先标签(与 entity-refs 的 isSkippable 同款思路;另跳过已生成的高亮,避免重复嵌套) */
@@ -157,6 +166,11 @@ export function CommentablePreview({
   onToggleThread,
   onCreateComment,
   renderBubble,
+  header,
+  footer,
+  contentClassName,
+  attributes,
+  style,
 }: CommentablePreviewProps): JSX.Element {
   const blocks = useMemo(() => splitMarkdownBlocks(source), [source])
   const blockHtml = useMemo(() => blocks.map((b) => renderMarkdown(b.text)), [blocks])
@@ -395,10 +409,13 @@ export function CommentablePreview({
       onMouseUp={handleMouseUp}
       onClick={handleClick}
       ref={scrollRef}
+      {...attributes}
+      style={style}
     >
       {foreshadowOverlay}
       {/* relative 为浮钮的定位基准;其余结构与 MarkdownPreview 一致 */}
-      <div ref={innerRef} className="relative mx-auto max-w-[720px] px-11 pb-24 pt-8" onMouseMove={handleBlockBtnMouseMove} onMouseLeave={hideBlockBtnSoon}>
+      <div ref={innerRef} className={cn("relative mx-auto", contentClassName ?? "max-w-[720px] px-11 pb-24 pt-8")} onMouseMove={handleBlockBtnMouseMove} onMouseLeave={hideBlockBtnSoon}>
+        {header}
         {blockHtml.map((html, i) => (
           <Fragment key={i}>
             <PreviewBlock index={i} html={html} />
@@ -418,6 +435,7 @@ export function CommentablePreview({
         ))}
         {composer && (composer.blockIndex < 0 || composer.blockIndex >= blockHtml.length) &&
           composerNode}
+        {footer}
         {addBtn && !readOnly && (
           <button
             type="button"

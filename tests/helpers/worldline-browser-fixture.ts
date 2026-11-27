@@ -34,24 +34,36 @@ import {useDesktopStore} from './src/stores/desktop';import {defaultState} from 
 globalThis.renders={};globalThis.__renderProbe=(id)=>{globalThis.renders[id]=(globalThis.renders[id]??0)+1};
 const onRender=(id)=>{globalThis.renders[id]=(globalThis.renders[id]??0)+1};
 globalThis.mountWorldline=(view,mount={})=>{
- window.desktop=mount.controller?{command:async()=>{},readClipboardText:async()=>'',settings:async()=>{throw Error('unexpected settings write')}}:{};
+ window.desktop=mount.controller?{command:async()=>{},readClipboardText:async()=>{globalThis.clipboardReads++;return mount.clipboard??''},showTextContextMenu:async()=>globalThis.nextContextCommand??null,settings:async()=>{throw Error('unexpected settings write')}}:{};
  if(mount.controller)useDesktopStore.setState({bootstrap:{...defaultState,platform:'darwin'}});
  globalThis.shortcutOverrides=overrides=>useDesktopStore.setState(state=>({bootstrap:{...state.bootstrap,settings:{...state.bootstrap.settings,shortcuts:{...state.bootstrap.settings.shortcuts,darwin:overrides}}}}));
  useChatStore.setState({draft:'',draftNovelId:null});
  let state={...view,data:planningSchema.parse(view.data)};
+ // docs/599 §13.6 / §15.2: history rows as the server writes them (src/lib/services/planning.ts:344-356): one row per
+ // version holding the data after that commit; a restore's row says which version it restored. The initial version
+ // has its own row, as a work created on the server does.
  const snapshots=new Map();
+ if(!state.history.some(h=>h.version===state.version)){state={...state,history:[{id:'h'+state.version,version:state.version,reason:'初始'},...state.history]};snapshots.set('h'+state.version,state.data)}
  globalThis.posts=[];
+ // docs/599 §15.5: holdNext() parks the next POST until release(); externalEdit(ops) is a change from elsewhere (AI).
+ let held=null;
+ globalThis.holdNext=()=>{let release;const gate=new Promise(r=>{release=r});held=gate;return release};
+ const commit=(data,reason)=>{const version=state.version+1,id='h'+version;snapshots.set(id,data);state={...state,version,data,history:[{id,version,reason},...state.history]}};
+ globalThis.externalEdit=ops=>commit(applyPlanningOperations(state.data,ops),'修改');
+ globalThis.clipboardReads=0;
  window.fetch=async(input,init)=>{
   const path=String(input),method=(init&&init.method)||'GET';
+  if(path==='/api/novels/${NOVEL}/characters'&&method==='GET'){globalThis.characterRequests=(globalThis.characterRequests??0)+1;return Response.json({characters:mount.characterRecords??[]})}
   if(path!=='/api/novels/${NOVEL}/planning')throw Error('Unexpected fixture request '+method+' '+path);
   if(method==='GET')return Response.json(state);
   const body=JSON.parse(init.body);globalThis.posts.push(body);
+  if(held){const gate=held;held=null;await gate}
   if(body.expectedVersion!==state.version)return Response.json({error:'版本已变化'},{status:409});
   if(globalThis.failNextSave){globalThis.failNextSave=false;return Response.json({error:'保存失败（固定数据）'},{status:500})}
-  // docs/584 IC-24: a restore returns the data saved before that version (the fixture keeps every snapshot).
-  const data=body.action==='restore'?(snapshots.get(body.snapshotId)??state.data):applyPlanningOperations(state.data,body.operations);
-  snapshots.set('h'+state.version,state.data);
-  state={...state,version:state.version+1,data,history:[{id:'h'+state.version,version:state.version,reason:body.action==='restore'?'恢复规划版本：'+state.version:'修改'},...state.history]};
+  if(body.action==='restore'){
+   const row=state.history.find(h=>h.id===body.snapshotId);
+   commit(snapshots.get(body.snapshotId)??state.data,'恢复规划版本：'+(row?row.version:state.version));
+  }else commit(applyPlanningOperations(state.data,body.operations),'修改');
   return Response.json(state);
  };
  globalThis.planningState=()=>state;
@@ -65,6 +77,7 @@ globalThis.mountWorldline=(view,mount={})=>{
  globalThis.disposeWorldline=()=>{flushSync(()=>root.unmount());client.clear()};
  globalThis.refetchWorldline=()=>client.invalidateQueries();
  globalThis.chatDraft=()=>useChatStore.getState().draft;
+ globalThis.openTabs=()=>useTabsStore.getState().tabs.map(t=>t.id);
 };
 ` },
     bundle: true, write: false, platform: "browser", format: "iife", tsconfig: "tsconfig.json",
@@ -90,7 +103,7 @@ export function launch() {
 export interface WorldlineView { version: number; data: unknown; characters: { id: string; name: string; avatarUrl: string | null }[]; materials: unknown[]; readonly: boolean; history: unknown[]; proposals: unknown[] }
 
 /** Opens a page, mounts the panel with `view`, runs `body`, and fails on any page error. */
-export async function withWorldline(browser: Browser, view: WorldlineView, body: (page: Page) => Promise<void>, options: { profiling?: boolean; theme?: "ink" | "paper"; width?: number; refId?: string; panels?: number; controller?: boolean; reducedMotion?: boolean; zoomLevels?: boolean | "default" } = {}) {
+export async function withWorldline(browser: Browser, view: WorldlineView, body: (page: Page) => Promise<void>, options: { profiling?: boolean; theme?: "ink" | "paper"; width?: number; refId?: string; panels?: number; controller?: boolean; reducedMotion?: boolean; zoomLevels?: boolean | "default"; clipboard?: string; characterRecords?: unknown[] } = {}) {
   const page = await browser.newPage({ viewport: { width: options.width ?? 1440, height: 1000 }, deviceScaleFactor: 1 })
   const errors: string[] = []
   page.setDefaultTimeout(5000)
@@ -105,7 +118,7 @@ export async function withWorldline(browser: Browser, view: WorldlineView, body:
     await page.addStyleTag({ content: `${await stylesheet}\n${compiled.css}` })
     await page.addScriptTag({ content: compiled.js })
     if (options.reducedMotion) await page.emulateMedia({ reducedMotion: "reduce" })
-    await page.evaluate(([v, m]) => (window as any).mountWorldline(v, m), [view, { refId: options.refId, panels: options.panels, controller: options.controller, zoomLevels: options.zoomLevels ?? false }] as const)
+    await page.evaluate(([v, m]) => (window as any).mountWorldline(v, m), [view, { refId: options.refId, panels: options.panels, controller: options.controller, zoomLevels: options.zoomLevels ?? false, clipboard: options.clipboard, characterRecords: options.characterRecords }] as const)
     await page.getByRole("heading", { name: "世界线", exact: true }).first().waitFor()
     await body(page)
     if (errors.length) throw Error("page errors: " + errors.join(" | "))

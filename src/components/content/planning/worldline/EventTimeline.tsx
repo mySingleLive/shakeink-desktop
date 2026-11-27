@@ -87,6 +87,8 @@ export const TimelineZoomLevelsContext = createContext(true);
 export const TimelineZoomNoteContext = createContext<ZoomNoteStore | null>(null);
 /** docs/592 §2.6: a second press within this time of a press on a point is its double click. */
 const POINT_DOUBLE_MS = 400;
+/** docs/599 acceptance 2: two presses on the same card body within this are its double click (lane-captured). */
+const CARD_DOUBLE_MS = 500;
 const EMPTY_IDS: ReadonlySet<string> = new Set();
 
 /** The time ruler; a component of its own so the render-count case can see it re-render on every window change. */
@@ -347,16 +349,18 @@ export function EventTimeline({
   const cardCtx = useMemo(() => ({ ...ctx, onExpand: onAutoExpand }), [ctx, onAutoExpand]);
   // docs/592 §2.4: the status-line note, written after commit; cleared when the timeline unmounts.
   const toggleShowAll = useRef(() => {});
+  // docs/600 §9.3: the timeline and the event table share the panel's note store; each clears only its own note.
+  const noteOwner = useRef({}).current;
   toggleShowAll.current = () => setShowAll((v) => (v ? 0 : pointClass));
   useLayoutEffect(() => {
     if (!noteStore) return;
     // docs/593 H4: hidden events have no note; levels without points (4, 6) clear it.
-    noteStore.set(pointClass > 0 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, important: pointClass === 2, showAll } : null);
+    noteStore.set(pointClass > 0 && (plan.points.size > 0 || showAll) ? { count: plan.points.size, important: pointClass === 2, showAll } : null, noteOwner);
   });
   useEffect(() => {
     if (!noteStore) return;
-    noteStore.actions = { toggleShowAll: () => toggleShowAll.current() };
-    return () => { noteStore.actions = null; noteStore.set(null); };
+    noteStore.register(noteOwner, { toggleShowAll: () => toggleShowAll.current() });
+    return () => noteStore.clear(noteOwner);
   }, [noteStore]);
 
   // Measured heights of open cards feed the next layout. One observer for the component's life; the open set
@@ -369,7 +373,8 @@ export function EventTimeline({
     const ro = new ResizeObserver((entries) => {
       for (const e of entries) {
         const id = (e.target as HTMLElement).dataset.eventId;
-        if (id) pending[id] = Math.ceil((e.target as HTMLElement).getBoundingClientRect().height);
+        // docs/599: entering edit remounts the card; the detached element reports 0 and must not count.
+        if (id && (e.target as HTMLElement).isConnected) pending[id] = Math.ceil((e.target as HTMLElement).getBoundingClientRect().height);
       }
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() =>
@@ -392,7 +397,7 @@ export function EventTimeline({
     ro.disconnect();
     root.querySelectorAll<HTMLElement>("[data-event-card][aria-expanded='true']").forEach((el) => ro.observe(el));
     // docs/597 code review P2-2: open cards also enter the DOM when the rendered band moves (vband, declared below).
-  }, [openKey, vbandKey]);
+  }, [openKey, vbandKey, editing]);
 
   // docs/584 R2: a pan (middle button, or Space + left) moves start and y through the store; a left drag on the canvas
   // draws a selection box kept here only (no PlanningWorkspace render per frame, IC-21b). Esc, blur and
@@ -418,6 +423,8 @@ export function EventTimeline({
   const lastPointPress = useRef<{ id: string; at: number; x: number; y: number } | null>(null);
   /** The click after a point's second press is swallowed, so the new card's own double click does not edit twice. */
   const swallowClick = useRef(false);
+  const pressedCard = useRef<string | null>(null);
+  const cardPress = useRef<{ id: string; at: number; x: number; y: number } | null>(null);
   const drag = useRef<{ x: number; y: number; start: number; top: number; active: boolean } | null>(null);
   const box = useRef<{ x: number; y: number; additive: boolean; active: boolean; onCard: boolean } | null>(null);
   const [rect, setRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -591,7 +598,9 @@ export function EventTimeline({
     if (!lane || !el) return;
     // Fully visible when it fits; taller than the lane, its bottom (the save / cancel buttons) is kept in view.
     const reveal = () => {
-      const l = lane.getBoundingClientRect(), r = el.getBoundingClientRect(), m = 12;
+      const l = lane.getBoundingClientRect(), c = el.getBoundingClientRect(), m = 12;
+      // docs/599 §8: the save bar hangs 6 + 34px under the editing card; keep it in view too.
+      const r = { top: c.top, bottom: c.bottom + 40, left: c.left, right: c.right, height: c.height + 40 };
       // docs/596 P2-1: an editor under the 120px minimap keeps its save / cancel buttons above it.
       const mm = host.current?.querySelector("[data-minimap]")?.getBoundingClientRect();
       const mb = mm && r.right > mm.left && r.left < mm.right ? Math.max(m, l.bottom - mm.top + 14) : m;
@@ -767,7 +776,7 @@ export function EventTimeline({
         onPointerDown={(e) => {
           // docs/584 R2: a left press on the canvas or on a card outside its title / controls may become a box selection
           // (≥ 5px) or stays a click (cards select themselves; empty canvas clears). No preventDefault: focus moves here.
-          if (e.button !== 0 || (e.target as Element).closest("button,summary,input,select,textarea,a,[data-minimap],[data-card-title],[data-card-menu]")) return;
+          if (e.button !== 0 || (e.target as Element).closest("button,summary,input,select,textarea,a,[data-minimap],[data-card-title],[data-card-menu],[data-editing]")) return;
           const additive = e.metaKey || e.ctrlKey || e.shiftKey, mods = { toggle: e.metaKey || e.ctrlKey, add: e.shiftKey };
           // docs/592 §2.6 (review round 2 #3): a press on a point selects it; it turns into a card next frame. A second press
           // within POINT_DOUBLE_MS near the first is that point's double click, wherever it lands (its new card, or the
@@ -779,7 +788,11 @@ export function EventTimeline({
           swallowClick.current = false;
           if (repeat) { swallowClick.current = true; ctx.onSelect(last!.id, 2, mods); }
           else if (pt) { lastPointPress.current = { id: pt, at: now, x: e.clientX, y: e.clientY }; ctx.onSelect(pt, 1, mods); }
-          box.current = { x: e.clientX, y: e.clientY, additive, active: false, onCard: !!pt || repeat || !!(e.target as Element).closest("[data-event-card]") };
+          const cardEl = (e.target as Element).closest<HTMLElement>("[data-event-card]");
+          box.current = { x: e.clientX, y: e.clientY, additive, active: false, onCard: !!pt || repeat || !!cardEl };
+          // docs/599 acceptance 2: the lane captures the pointer, so the click and double click that follow are
+          // retargeted to the lane and never reach the card under the press. Remember that card to forward them.
+          pressedCard.current = !pt && !repeat && cardEl ? cardEl.dataset.eventId ?? null : null;
           if (!typing(e.target)) host.current?.focus({ preventScroll: true });
           e.currentTarget.setPointerCapture(e.pointerId);
         }}
@@ -788,7 +801,7 @@ export function EventTimeline({
           const b = box.current;
           if (!b) return;
           if (!b.active && Math.hypot(e.clientX - b.x, e.clientY - b.y) < PAN_THRESHOLD) return;
-          if (!b.active) { b.active = true; e.currentTarget.setAttribute("data-panning", ""); getSelection()?.removeAllRanges(); }
+          if (!b.active) { b.active = true; pressedCard.current = null; e.currentTarget.setAttribute("data-panning", ""); getSelection()?.removeAllRanges(); }
           const r = e.currentTarget.getBoundingClientRect();
           setRect({ x: Math.min(b.x, e.clientX) - r.left, y: Math.min(b.y, e.clientY) - r.top, w: Math.abs(e.clientX - b.x), h: Math.abs(e.clientY - b.y) });
         }}
@@ -798,6 +811,19 @@ export function EventTimeline({
           e.currentTarget.removeAttribute("data-panning");
           timeDrag.end();
           if (!b) return;
+          // docs/599 acceptance 2: a press on a card body (outside its title and controls) that did not become a box
+          // drag is that card's click. The lane holds the pointer capture, so Chromium sends the card no click (and
+          // a click on the lane only when the press also started there): count presses here instead, as the card
+          // would (select on 1, edit on 2, docs/584 R2).
+          const card = pressedCard.current;
+          pressedCard.current = null;
+          if (card && !b.active) {
+            const now = performance.now(), last = cardPress.current;
+            const n = last && last.id === card && now - last.at < CARD_DOUBLE_MS && Math.hypot(e.clientX - last.x, e.clientY - last.y) < PAN_THRESHOLD ? 2 : 1;
+            cardPress.current = n === 2 ? null : { id: card, at: now, x: e.clientX, y: e.clientY };
+            ctx.onSelect(card, n, { toggle: e.metaKey || e.ctrlKey, add: e.shiftKey });
+            return;
+          }
           if (b.active) {
             // The box from the press and the release point (not the last rendered rect, which may lag a frame).
             // Hit test on layout coordinates, so cards outside the rendered band are selected too.

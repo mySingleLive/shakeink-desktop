@@ -53,6 +53,9 @@ class ElementFixture extends EventTarget {
  getClientRects(){return [0]}
 }
 class DocumentFixture extends EventTarget {modal=false;querySelector(selector:string){return this.modal&&selector.includes('role="dialog"')?{}:null}}
+const desktopCommandTargetsFor=(f:{bus:CommandTargets<ElementFixture|null>})=>f.bus
+// docs/599 DC-10: a stand-in for worldline-escape.ts; `owns` says whether a worldline panel owns Escape right now.
+const worldline={owns:false}
 function controller(overrides:Record<string,string[]>={},mention:object|null=null){
  const document=new DocumentFixture(),window=new EventTarget(),composer=new ElementFixture("composer"),button=new ElementFixture("button"),editor=new ElementFixture("editor")
  const bus=new CommandTargets<ElementFixture|null>(),calls:string[]=[],cleanup:Array<()=>void>=[]
@@ -61,7 +64,7 @@ function controller(overrides:Record<string,string[]>={},mention:object|null=nul
  const store={getState:()=>({bootstrap})}
  const register=(commands:Record<string,CommandHandler>,ref?:{current:ElementFixture})=>cleanup.push(bus.register({owner:{},accepts:target=>!ref||target===ref.current,commands}))
  const registrations=panelCalls("useDesktopCommands").map(node=>node.getText(ast)).join(";\n")
- new Function("useDesktopCommands","textareaRef","canSend","isGenerating","mention","stop","handleSend","historyInput","flatMentionItems","setMentionIndex","selectMention","mentionIndex","mentionDismissedRef","setMention","insertToken","dispatchChatUiEvent","CHAT_OPEN_MODEL_PICKER_EVENT","useChatStore","setSearchOpen","document","syncFromEditor","hasLiveModel",registrations)(register,{current:composer},true,true,mention,()=>calls.push("stop"),()=>calls.push("send"),()=>{},[{}],()=>{},()=>calls.push("mention"),0,{current:null},()=>calls.push("close"),()=>{},()=>{},"models",{getState:()=>({requestChatFocus(){}})},()=>{},document,()=>{},()=>true)
+ new Function("useDesktopCommands","textareaRef","canSend","isGenerating","mention","stop","handleSend","historyInput","flatMentionItems","setMentionIndex","selectMention","mentionIndex","mentionDismissedRef","setMention","insertToken","dispatchChatUiEvent","CHAT_OPEN_MODEL_PICKER_EVENT","useChatStore","setSearchOpen","document","syncFromEditor","hasLiveModel","worldlineEscapeOwner",registrations)(register,{current:composer},true,true,mention,()=>calls.push("stop"),()=>calls.push("send"),()=>{},[{}],()=>{},()=>calls.push("mention"),0,{current:null},()=>calls.push("close"),()=>{},()=>{},"models",{getState:()=>({requestChatFocus(){}})},()=>{},document,()=>{},()=>true,(t?:unknown)=>worldline.owns?{owner:{},target:t}:null)
  const dependencies:Record<string,unknown>={
   react:{useEffect(effect:()=>()=>void){cleanup.push(effect())}},sonner:{toast:{info(){},error(){}}},
   "@/stores/desktop":{useDesktopStore:store,updateDesktopSettings:async()=>{}},"@/stores/tabs":{useTabsStore:{getState:()=>({activeTabId:null}),subscribe:()=>()=>{}}},
@@ -80,7 +83,7 @@ function controller(overrides:Record<string,string[]>={},mention:object|null=nul
  const source=transformSync(readFileSync(new URL("../../src/components/desktop/DesktopCommandController.tsx",import.meta.url),"utf8"),{loader:"tsx",format:"cjs",jsx:"automatic"}).code
  new Function("module","exports","require",source)(module,module.exports,(name:string)=>{assert(name in dependencies,`Unexpected dependency: ${name}`);return dependencies[name]})
  module.exports.DesktopCommandController()
- return {calls,composer,button,editor,document,
+ return {calls,composer,button,editor,document,bus,
   key(target:ElementFixture,key:string,code=key,extra:Record<string,unknown>={}){
    const event=new Event("keydown",{cancelable:true})
    Object.defineProperties(event,Object.fromEntries(Object.entries({target,key,code,metaKey:false,ctrlKey:false,altKey:false,shiftKey:false,isComposing:false,repeat:false,keyCode:0,...extra}).map(([name,value])=>[name,{value}])));window.dispatchEvent(event);return event
@@ -127,9 +130,19 @@ test("CMP47-17: both platform catalogs expose actual composer/global scopes and 
   assert.equal(commands.find(command=>command.id==="ai.stop")!.scope,"global")
   assert.equal(commands.find(command=>command.id==="ai.send")!.scope,"composer")
   assert.deepEqual(commands.find(command=>command.id==="ai.mentionConfirm")!.contexts,{mention:true})
-  assert.deepEqual(commands.find(command=>command.id==="ai.stop")!.contexts,{mention:false})
+  assert.deepEqual(commands.find(command=>command.id==="ai.stop")!.contexts,{mention:false,worldlineEdit:false})
  }
  const original=desktopCommandCatalog("darwin").find(command=>command.id==="ai.send")!
  const remove=publishDesktopCommands({},[{...original,label:"Runtime label",scope:"markdown",contexts:{mention:true},defaults:["Enter","F19"]}])
  try{const merged=desktopCommandCatalog("darwin").find(command=>command.id==="ai.send")!;assert.equal(merged.label,original.label);assert.equal(merged.scope,"composer");assert.deepEqual(merged.contexts,{mention:false});assert.deepEqual(merged.defaults,["Enter","F19"])}finally{remove()}
+})
+
+// docs/599 §15.1 (DC-10): the real ChatPanel ai.stop yields Escape to an editing worldline panel, so exactly one runs.
+test("DC-10: while generating, Escape in an editing worldline panel cancels the edit and does not stop generation",async()=>{
+ const f=controller()
+ const remove=desktopCommandTargetsFor(f).register({owner:{},accepts:()=>worldline.owns,commands:{"worldline.escape":{enabled:()=>worldline.owns,run:()=>{f.calls.push("worldline.escape")}}}})
+ try{
+  worldline.owns=true;f.key(f.button,"Escape");await f.settle();assert.deepEqual(f.calls,["worldline.escape"])
+  worldline.owns=false;f.key(f.button,"Escape");await f.settle();assert.deepEqual(f.calls,["worldline.escape","stop"])
+ }finally{remove();worldline.owns=false;f.dispose()}
 })

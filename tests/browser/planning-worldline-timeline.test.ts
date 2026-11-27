@@ -152,10 +152,14 @@ test("TL-R1: saving a new start time repacks the timeline; the card moves right"
   const t = (await snap(page)).find(c => c.vis && c.y < 500)!
   const id = t.id, x0 = await cardX(page, id)
   await page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${id}"] h3`).dblclick()
+  // docs/599: the start offset is in the card's time picker, unsigned with 前 / 后; a later start is larger after 后.
+  await page.getByRole("button", { name: "事件时间" }).click()
+  const before = (await page.getByRole("button", { name: "之前或之后" }).textContent()) === "前"
   const offset = page.getByLabel("开始时间偏移")
   const old = Number(await offset.inputValue())
-  await offset.fill(String(old + Math.max(1, Math.abs(old) * 0.002)))
-  await page.getByRole("button", { name: "保存事件", exact: true }).click()
+  await offset.fill(String(before ? Math.max(0, old - Math.max(1, old * 0.002)) : old + Math.max(1, old * 0.002)))
+  await page.getByRole("button", { name: "完成" }).click()
+  await page.getByRole("button", { name: "保存", exact: true }).click()
   await expect.poll(() => page.locator(`[data-timeline-plane] [data-event-card][data-event-id="${id}"]`).count()).toBe(1)
   await expect.poll(() => cardX(page, id)).toBeGreaterThan(x0 + 1)
 }))

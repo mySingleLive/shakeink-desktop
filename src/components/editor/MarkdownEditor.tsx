@@ -8,7 +8,7 @@ import { CommentDraftProvider, CommentDraftList } from "@/components/comments/co
  * modes 可限定可用视图子集（如候选稿面板只要 预览+评审，Monaco 不挂载）；缺省=全集，行为与现状一致。
  */
 import dynamic from "next/dynamic"
-import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from "react"
 import { useTheme } from "next-themes"
 import { Flag } from "lucide-react"
 import { openReference, ReferenceChip, ReferencePicker, useReferences, type ReferenceSelection } from "@/components/foreshadow/references"
@@ -90,6 +90,19 @@ interface MarkdownEditorProps {
   /** 受控视图模式（外部入口如评分指示器切评审视图用）；与 onModeChange 成对传 */
   mode?: EditorMode
   onModeChange?: (mode: EditorMode) => void
+  /** docs/611 chapter reader layout for the commentable preview (chapter content panel only) */
+  reader?: MarkdownEditorReader
+}
+
+export interface MarkdownEditorReader {
+  header: ReactNode
+  footer: ReactNode
+  /** Shown before the mode switch in preview / split */
+  toolbar: ReactNode
+  className: string
+  contentClassName: string
+  attributes: Record<`data-${string}`, string>
+  style?: CSSProperties
 }
 
 export function MarkdownEditor({
@@ -109,6 +122,7 @@ export function MarkdownEditor({
   modes,
   mode: controlledMode,
   onModeChange,
+  reader,
 }: MarkdownEditorProps) {
   const { resolvedTheme } = useTheme()
   const theme: "paper" | "ink" = resolvedTheme === "ink" ? "ink" : "paper"
@@ -302,11 +316,32 @@ export function MarkdownEditor({
   const modePool = modes ?? ["edit", "split", "preview", "review"]
   const modeOptions = [...MODE_OPTIONS, ...(reviewTarget ? [REVIEW_OPTION] : [])].filter((o) => modePool.includes(o.value))
 
+  const modeSwitch = (
+    <div className="flex items-center gap-0.5 rounded-md border bg-muted p-0.5">
+      {modeOptions.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => setMode(opt.value)}
+          className={cn(
+            "flex h-6 items-center gap-1 rounded px-2 text-xs transition-colors",
+            effectiveMode === opt.value
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <opt.icon className="size-3" />
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+
   return (
     <CommentDraftProvider target={commentsTarget ?? null} source={value}>
     <div ref={rootRef} tabIndex={-1} className={cn("desktop-markdown-editor flex min-h-0 flex-col overflow-hidden rounded-lg border bg-editor", className)}>
       {/* 工具条：字数 + 评论开关 + 三态切换 */}
-      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b bg-editor px-3">
+      <div className={cn("flex h-9 shrink-0 items-center justify-between gap-2 border-b bg-editor px-3", reader && "chapter-reader-toolbar")}>
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-muted-foreground">
             字数 {words.toLocaleString()}
@@ -333,24 +368,10 @@ export function MarkdownEditor({
             </button>
           )}
         </div>
-        <div className="flex items-center gap-0.5 rounded-md border bg-muted p-0.5">
-          {modeOptions.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setMode(opt.value)}
-              className={cn(
-                "flex h-6 items-center gap-1 rounded px-2 text-xs transition-colors",
-                effectiveMode === opt.value
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <opt.icon className="size-3" />
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        {/* docs/611: with a reader the wrapper is always present so switching modes does not remount the buttons */}
+        {reader
+          ? <div className="flex items-center gap-2">{(effectiveMode === "preview" || effectiveMode === "split") && reader.toolbar}{modeSwitch}</div>
+          : modeSwitch}
       </div>
 
       {foreshadowTarget && <div className="foreshadow-editor-strip" aria-label="本篇伏笔引用">
@@ -426,6 +447,12 @@ export function MarkdownEditor({
                 onToggleThread={toggleExpanded}
                 onCreateComment={createComment}
                 renderBubble={renderBubble}
+                header={reader?.header}
+                footer={reader?.footer}
+                className={reader?.className}
+                contentClassName={reader?.contentClassName}
+                attributes={reader?.attributes}
+                style={reader?.style}
               />
             ) : (
               <MarkdownPreview source={value} novel={novel} />

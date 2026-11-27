@@ -51,9 +51,10 @@ async function deleteFromSidebar(page,title){
  const row=page.locator('.sidebar-navigation .tree-row',{hasText:title}).first();await row.waitFor()
  await row.click({button:'right'});const menu=page.locator('[role=menu][data-open]');await menu.waitFor()
  await menu.getByRole('menuitem',{name:'删除',exact:true}).click()
- const dialog=page.getByRole('dialog').filter({hasText:'删除小说'});await dialog.waitFor()
- await dialog.getByRole('button',{name:'确认删除',exact:true}).click();await dialog.waitFor({state:'hidden'})
- await page.getByText('小说已删除').first().waitFor().catch(()=>undefined)
+ // docs/608: the delete dialog asks about the folder; 删除 (keep files) keeps the files (this driver's RT-R0b expectation).
+ const dialog=page.getByRole('dialog').filter({hasText:'是否同时删除磁盘上的作品文件？'});await dialog.locator('[data-work-location]').waitFor()
+ await dialog.getByRole('button',{name:'删除',exact:true}).click();await dialog.waitFor({state:'hidden'})
+ await page.getByText('作品已从列表中删除').first().waitFor().catch(()=>undefined)
  await page.locator('.sidebar-navigation .tree-row',{hasText:title}).first().waitFor({state:'detached',timeout:20000})
 }
 

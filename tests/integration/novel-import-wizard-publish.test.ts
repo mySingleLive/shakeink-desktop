@@ -8,8 +8,9 @@ import {loadDatabaseSeed} from '../../desktop/service/database/seed'
 import {prisma} from '../../src/lib/db'
 import {publishNovelImport,readNovelImportRecord} from '../../desktop/service/novel-import-publish'
 import {resolveReferenceAnchor} from '../../src/lib/foreshadow-reference'
+import {storedChapterProse} from '../helpers/import-stored-prose'
 import {validatePlanning} from '../../src/lib/planning/domain'
-import {fixture,filesF,bodyF,source,rosterAi,toTree,toStep,linesAi,timelineCatalog,touchesAi,entityResult,entityName,type Ai} from '../helpers/novel-import-wizard-fixture'
+import {legacySceneFixture,fixture,filesF,bodyF,source,rosterAi,toTree,toStep,linesAi,timelineCatalog,touchesAi,entityResult,entityName,type Ai} from '../helpers/novel-import-wizard-fixture'
 import type {ImportPublishInput,ImportSession} from '../../desktop/shared/novel-import'
 
 /* Synthetic fixture only: drive the real controller to step 21, then publish into a disposable PGlite
@@ -28,7 +29,7 @@ function richAi(base:Ai):Ai{return async r=>{
 }}
 /** Publish the controller's frozen request into the shared PGlite workspace instead of the fake. */
 async function publishedWork(select?:(indices:number[],chapters:{title:string;volume?:string}[])=>number[]){
- const f=await fixture(filesF(),rosterAi());f.setAi(touchesAi(linesAi(richAi(f.handler()))))
+ const f=await legacySceneFixture(filesF(),rosterAi());f.setAi(touchesAi(linesAi(richAi(f.handler()))))
  let captured:ImportPublishInput|undefined
  f.options.publish=async input=>{captured=structuredClone(input) as ImportPublishInput;return publishNovelImport(works,input)}
  const v0=await toTree(f)
@@ -46,7 +47,9 @@ test('NIW-S06/S07/S08/S09/S15: wizard publication writes only selected chapters,
    const volumes=await prisma.volume.findMany({where:{novelId:w.novelId},orderBy:{index:'asc'},include:{chapters:{orderBy:{index:'asc'}}}})
    assert.deepEqual(volumes.map(v=>[v.index,v.title,v.chapters.length]),[[1,'甲卷',4],[2,'乙卷',2]])
    assert.deepEqual(volumes[1].chapters.map(c=>[c.index,c.title]),[[1,'第二章 再承'],[2,'第三章 再终']])
-   const all=volumes.flatMap(v=>v.chapters);for(const [k,c] of all.entries())assert.equal(c.content,w.session.chapters[k].content)
+   const all=volumes.flatMap(v=>v.chapters),stored=storedChapterProse(w.session);for(const [k,c] of all.entries()){assert.equal(c.content,stored[k]);assert.doesNotMatch(c.content,/^第|\n(?!\n)|\n{3}/u);assert.equal(c.wordCount,Array.from(c.content).length)}
+   // docs/610: chapter 1 is stored without 「第一部 甲卷」「第一章 起」.
+   assert.equal(all[0].content,'沈砚在北城南巷拾起青铜钥匙。起之夜。')
    assert.ok(!all.some(c=>/再起|三起|后记/u.test(c.content)))
    const characters=await prisma.character.findMany({where:{novelId:w.novelId}}),shen=characters.find(c=>c.name==='沈砚')!,lin=characters.find(c=>c.name==='林舟')!
    assert.equal(shen.height,'178cm');assert.equal(shen.habits,'思考时捏袖口');assert.deepEqual(shen.personalityTags,['沉稳']);assert.deepEqual(shen.motivations,[{items:[{text:'找回父亲',importance:5}]}]);assert.deepEqual(shen.beliefs,{values:'守诺'});assert.equal(shen.abilities,'辨识古物')
@@ -56,7 +59,7 @@ test('NIW-S06/S07/S08/S09/S15: wizard publication writes only selected chapters,
    const scenes=await prisma.scene.findMany({where:{novelId:w.novelId}});assert.ok(scenes.some(s=>s.exteriorDescription==='青石城墙'))
    const foreshadows=await prisma.foreshadow.findMany({where:{novelId:w.novelId},include:{touches:{include:{references:true}}}});assert.equal(foreshadows.length,1);assert.equal(foreshadows[0].status,'PLANTED')
    const touch=foreshadows[0].touches[0],contentRef=touch.references.find(r=>r.targetType==='CHAPTER_CONTENT')!,chapter=all.find(c=>c.id===touch.chapterId)!
-   const anchor=resolveReferenceAnchor(chapter.content,contentRef);assert.equal(anchor?.start,contentRef.startOffset);assert.ok(touch.references.some(r=>r.targetType==='CHAPTER_OUTLINE'))
+   const anchor=resolveReferenceAnchor(chapter.content,contentRef);assert.equal(anchor?.start,contentRef.startOffset);assert.ok(contentRef.quote);assert.equal(chapter.content.slice(contentRef.startOffset!,contentRef.endOffset!),contentRef.quote);assert.ok(contentRef.startOffset!<w.session.chapters[all.indexOf(chapter)].content.indexOf(contentRef.quote!),'offset was remapped past the removed headings');assert.ok(touch.references.some(r=>r.targetType==='CHAPTER_OUTLINE'))
    const planning=validatePlanning((await prisma.planningDocument.findUnique({where:{novelId:w.novelId}}))!.data)
    assert.ok(planning.events.some(e=>e.materialRefs.some(m=>m.kind==='foreshadow'&&m.id===foreshadows[0].id)))
    const {record}=await readNovelImportRecord(w.novelId) as unknown as {record:{wizard?:{chapterSelection:number[];candidates:{selected:boolean}[];skipped:unknown[];dropped:unknown[]}}}

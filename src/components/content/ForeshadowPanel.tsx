@@ -39,6 +39,7 @@ import type { ForeshadowDTO, ForeshadowTouchDTO } from "@/lib/services/foreshado
 
 import { apiGet, apiSend } from "./api"
 import type { ContentPanelProps } from "./registry"
+import { nextForeshadowTitle } from "@/lib/foreshadow-title"
 import type { OutlineVolumeNode } from "./types"
 
 /* ---------------- 数据类型（与服务层 DTO 对齐） ---------------- */
@@ -488,17 +489,13 @@ export function ForeshadowPanel({ novelId }: ContentPanelProps) {
   }
 
   const createMutation = useMutation({
-    mutationFn: () => {
-      const names = new Set(items.map((f) => f.title))
-      let n = 1
-      while (names.has(`未命名伏笔 ${n}`)) n += 1
-      return apiSend<{ foreshadow: ForeshadowItem }>(
+    mutationFn: () =>
+      apiSend<{ foreshadow: ForeshadowItem }>(
         `/api/novels/${novelId}/foreshadows`,
         "POST",
-        { title: `未命名伏笔 ${n}` },
+        { title: nextForeshadowTitle(items.map((f) => f.title)) },
         "新建伏笔失败"
-      )
-    },
+      ),
     onSuccess: (res) => {
       invalidate()
       setSelectedId(res.foreshadow.id)

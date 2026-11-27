@@ -6,8 +6,8 @@
     "src/lib/desktop/markdown-actions.ts": "3684edbc677f7566efe527ec0ae22f1ccbd2e4ebbf8cd37f45d4b0fa46d39912",
     "src/lib/desktop/command-runtime.ts": "21e3f8a0fd46e3a132dbfbbe0ef53f446b17c262268afd9b21501110324add88",
     "src/lib/desktop/command-scope.ts": "2436c3352532393863cba91dd73e38e99c7d6700354273f5a236838f1746a17b",
-    "desktop/shared/command-registry.ts": "7dcce2d0deb46e4798e3945a34dd5a9ca968e44aada0b4ef75b5d3255db27edc",
-    "desktop/shared/commands.json": "ac5d4c76f93b0a08aa97ca25aee31507fe36da8c91c97e0f5c3bbe43b0d27d35",
+    "desktop/shared/command-registry.ts": "51d8b3a37344fa337b9b1691b66a055ecfcd8ee9cbae4a1c8d561a56a01f7251",
+    "desktop/shared/commands.json": "c31d4544f37233a6ef2519299085d086ef1440c7a471fb75c7c3fb4e7f44641a",
     "src/components/editor/monaco-setup.ts": "8361a4c9c2d9e705715782dd7019b5731912f0605c3a49db3b3d438ca0ad4191",
     "desktop/core/shortcuts.ts": "d21f1f9df42112169f5ed50ba9e31991482d4bc3b33585adea8c0337999d9d45",
     "desktop/core/shortcut-context.ts": "61b18c806ddceaffdbd4f1f270a67862ea873eda529e4430e55b4d43d17f0be2",
@@ -593,6 +593,19 @@
           "defaults": [
             "Cmd+F"
           ]
+        },
+        {
+          "id": "worldline.escape",
+          "label": "关闭世界线浮层 / 取消事件编辑",
+          "group": "世界线",
+          "scope": "global",
+          "locked": false,
+          "defaults": [
+            "Escape"
+          ],
+          "contexts": {
+            "worldlineEdit": true
+          }
         },
         {
           "id": "md.findNext",
@@ -1402,7 +1415,8 @@
             "Escape"
           ],
           "contexts": {
-            "mention": false
+            "mention": false,
+            "worldlineEdit": false
           }
         },
         {
@@ -7397,7 +7411,7 @@
           ]
         }
       ],
-      "sha256": "5e0e273017a92c59abff6d3e25c41f7b280727bd72929608179604e7f4bd4e15"
+      "sha256": "dec68c221ddfa748b4fe087ccce8ca36ec69b0eca8f4cd8325469b1a318fe425"
     },
     "win32": {
       "resolved": true,
@@ -7945,6 +7959,19 @@
           "defaults": [
             "Ctrl+F"
           ]
+        },
+        {
+          "id": "worldline.escape",
+          "label": "关闭世界线浮层 / 取消事件编辑",
+          "group": "世界线",
+          "scope": "global",
+          "locked": false,
+          "defaults": [
+            "Escape"
+          ],
+          "contexts": {
+            "worldlineEdit": true
+          }
         },
         {
           "id": "md.findNext",
@@ -8733,7 +8760,8 @@
             "Escape"
           ],
           "contexts": {
-            "mention": false
+            "mention": false,
+            "worldlineEdit": false
           }
         },
         {
@@ -14134,7 +14162,7 @@
           ]
         }
       ],
-      "sha256": "2fbe15e25af49773f81483cc1858348f85746c2cdea68a38313fc423944d59d5"
+      "sha256": "2068b033eb3fe0949941215552df34f80a5938cac26ab917893638bef790a61b"
     }
   }
 }

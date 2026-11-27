@@ -6,7 +6,7 @@ import { registerSceneLeaveGuard } from "../../src/stores/scene-ui"
 function setup() {
   const tabs: Tab[] = ["a", "b", "c"].map(id => ({ id, type: "theme", novelId: "isolated-tabs", title: id }))
   const subTabs = { a: "draft", b: "preview" }, panelFocus = { tabId: "a", settingId: "isolated-setting" }
-  useTabsStore.setState({ tabs, activeTabId: "a", activationNonce: 7, subTabs, panelFocus })
+  useTabsStore.setState({ tabs, activeTabId: "a", activationNonce: 7, previousTabIds: [], subTabs, panelFocus })
   return { tabs, subTabs, panelFocus }
 }
 function move(id: string, destination: number) {
@@ -46,10 +46,10 @@ test("TABS-store-03 finite out-of-range integers clamp to first/last and valid s
   useTabsStore.setState({ tabs: [], activeTabId: null }); const empty = useTabsStore.getState()
   move("a", 0); assert.equal(useTabsStore.getState(), empty)
 })
-test("TABS-store-04 closing selected tab uses its new left neighbor, retaining remaining subviews", () => {
+test("TABS-store-04 closing selected tab uses recent browsing before its new left neighbor, retaining remaining subviews", () => {
   setup(); move("a", 2); useTabsStore.getState().closeTab("a")
   assert.deepEqual(order(), ["b", "c"]); assert.equal(useTabsStore.getState().activeTabId, "c")
   assert.deepEqual(useTabsStore.getState().subTabs, { b: "preview" })
-  setup(); move("c", 0); useTabsStore.getState().activateTab("c"); useTabsStore.getState().closeTab("c")
-  assert.deepEqual(order(), ["a", "b"]); assert.equal(useTabsStore.getState().activeTabId, "a")
+  setup(); useTabsStore.getState().activateTab("b"); useTabsStore.getState().activateTab("c"); move("c", 0); useTabsStore.getState().closeTab("c")
+  assert.deepEqual(order(), ["a", "b"]); assert.equal(useTabsStore.getState().activeTabId, "b")
 })

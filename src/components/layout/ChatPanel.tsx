@@ -5,12 +5,14 @@ import { parseSceneIdentity } from "@/lib/scene-context"
 import { splitMentionToken } from "@/lib/mention-token"
 import { positionForCreation } from "@/lib/creation-wizard/position"
 import { useDesktopCommands } from "@/lib/desktop/use-command-target"
+import { worldlineEscapeOwner } from "@/lib/desktop/worldline-escape"
 import { useDesktopStore } from "@/stores/desktop"
 import { ComposerHistory } from "@/lib/desktop/composer-history"
 import {composerBindingHint} from "@/lib/desktop/composer-shortcuts"
 import {shortcutNamespace} from "@desktop/core/shortcuts"
 import {desktopCommandCatalog} from "@/lib/desktop/command-runtime"
 import {consumeDesktopComposerPaste} from "@/lib/desktop/native-text-edits"
+import {requestNovelImport} from "@/lib/desktop/novel-import"
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
@@ -30,10 +32,13 @@ import {
   ClipboardList,
   Cog,
   Copy,
+  FileInput,
+  FolderOpen,
   Hash,
   ImageIcon,
   ListTodo,
   MessageSquare,
+  NotebookPen,
   PanelLeft,
   PanelRight,
   Paperclip,
@@ -1526,6 +1531,11 @@ export function ChatPanel({
     if (!conversationId) resetConversation(null, useChatStore.getState().draft)
   }
 
+  /** 引导页「打开作品」：与系统菜单同一主进程命令（目录对话框 → 加入导航栏 → works.refresh） */
+  const handleOpenWork = () => {
+    void window.desktop?.command("file.open").catch((error: unknown) => toast.error(error instanceof Error ? error.message : "打开作品失败"))
+  }
+
   /** 引导页「新建作品」：挂起兜底书名（首条消息发送时才落库，与创建向导同一延迟建书链路） */
   const handleCreateHeroNovel = () => {
     // 关联钉为 null（产品 B1：防 draftNovelId/composerNovelId 残留错发旧书）
@@ -1688,7 +1698,8 @@ export function ChatPanel({
   useDesktopCommands({
     "composer.focus":()=>{useChatStore.getState().requestChatFocus();textareaRef.current?.scrollIntoView({block:"nearest"});textareaRef.current?.focus()},
     "chat.search":()=>setSearchOpen(value=>!value),
-    "ai.stop":{enabled:()=>isGenerating&&!mention,run:stop},
+    // docs/599 §12.3: an editing worldline panel owns Escape (worldline.escape); stop yields so one command runs.
+    "ai.stop":{enabled:()=>isGenerating&&!mention&&!worldlineEscapeOwner(),run:stop},
   })
   useDesktopCommands({
     "ai.send":{enabled:()=>canSend&&!mention&&hasLiveModel(),run:handleSend},
@@ -1968,16 +1979,22 @@ export function ChatPanel({
                     />
                   </div>
                   <div className="p-1">
-                    {/* 新建作品：常驻列表区顶部，不参与 novelQuery 搜索过滤；挂起态右侧 ✓。
-                        仅空会话（!conversationId）可点——已加载的空会话 storedNovelId 跟随旧书，
-                        此时挂起新书会显示「待创建」但发送仍落旧书（守卫与 handleCreateHeroNovel 同边界） */}
-                    {!conversationId && (
-                      <DropdownMenuItem onClick={handleCreateHeroNovel}>
-                        <Plus className="size-3.5 text-muted-foreground" />
-                        <span className="min-w-0 flex-1">新建作品</span>
-                        {pendingNovelTitle && <Check className="size-3.5 text-primary" />}
-                      </DropdownMenuItem>
-                    )}
+                    {/* 创建作品：与侧栏左上角「创建作品」一致，直接弹出创作向导 */}
+                    <DropdownMenuItem onClick={() => { setWizardPreset(undefined); setCreateOpen(true) }}>
+                      <NotebookPen className="size-3.5 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">创建作品</span>
+                    </DropdownMenuItem>
+                    {/* 打开/导入作品：与系统菜单 file.open、侧栏「导入作品」走同一入口，不改变当前会话关联 */}
+                    <DropdownMenuItem onClick={handleOpenWork}>
+                      <FolderOpen className="size-3.5 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">打开作品</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void requestNovelImport()}>
+                      <FileInput className="size-3.5 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">导入作品</span>
+                    </DropdownMenuItem>
+                    {/* 功能类与作品类菜单项之间的分隔栏；没有作品项时不显示 */}
+                    {filteredHeroNovels.length > 0 && <DropdownMenuSeparator />}
                     {filteredHeroNovels.length === 0 && (
                       <div className="px-2 py-1.5 text-xs text-muted-foreground">
                         没有匹配的小说
@@ -2000,6 +2017,16 @@ export function ChatPanel({
                         <Check className="size-3.5 text-primary" />
                       )}
                     </DropdownMenuItem>
+                    {/* 待创建作品：挂起兜底书名，挂起态右侧 ✓，不参与 novelQuery 搜索过滤。
+                        仅空会话（!conversationId）可点——已加载的空会话 storedNovelId 跟随旧书，
+                        此时挂起新书会显示「待创建」但发送仍落旧书（守卫与 handleCreateHeroNovel 同边界） */}
+                    {!conversationId && (
+                      <DropdownMenuItem onClick={handleCreateHeroNovel}>
+                        <Plus className="size-3.5 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">待创建作品</span>
+                        {pendingNovelTitle && <Check className="size-3.5 text-primary" />}
+                      </DropdownMenuItem>
+                    )}
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>

@@ -54,6 +54,7 @@ const ready = (async () => {
     const started = await startOwnedRoot({ root: workerData.root, bootstrap: workerData.bootstrap }, async root => {
       // Recovery and pointer validation have completed before this constructor.
       works = openedWorks = new Workspaces(root, workerData.migrations,databaseSeed)
+      if (typeof workerData.bootstrap === "string") works.protectedRoots = [workerData.bootstrap]
       await works.initialize()
       await works.run("inbox", async () => {
         await localTemplateLibrary.initialize()
