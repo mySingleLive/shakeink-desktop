@@ -1,7 +1,8 @@
 "use client"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, ChevronRight, History, RotateCcw } from "lucide-react"
+import { ArrowLeft, ChevronRight, History, RotateCcw, Sparkles } from "lucide-react"
+import { isSelectionAiReason } from "@/lib/selection-ai"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -18,6 +19,14 @@ type Entry = { id: string; version?: number; baseVersion?: number; status?: stri
 type Selected = Entry & { content: string; contentHash: string; baseContent?: string | null; wordRequirement?: WordRequirement | null; reviewConfigHash?: string | null; qualityDecision?: { comparable: boolean; baselineScore: number | null; candidateScore: number | null; reasons: string[] } | null }
 const LABELS: Record<string, string> = { incomplete: "生成未完成", reviewing: "正在评审", ready: "可采用", needs_review: "待检查", accepted: "已采用", discarded: "已丢弃", withdrawn: "已撤回" }
 
+/** docs/612 §6.3: AI selection edits carry a primary tag; other reasons stay as muted text. */
+function ReasonTag({ reason }: { reason?: string | null }) {
+  if (!reason) return null
+  return isSelectionAiReason(reason)
+    ? <span className="history-reason ai"><Sparkles aria-hidden="true" />{reason}</span>
+    : <span className="history-reason plain">{reason}</span>
+}
+
 function formatVersionTime(value: string) {
   return new Date(value).toLocaleString("zh-CN", {
     year: "numeric", month: "2-digit", day: "2-digit",
@@ -25,8 +34,10 @@ function formatVersionTime(value: string) {
   })
 }
 
-export function ChapterHistory({ novelId, chapterId, mode, boundary, onClose, beforeCommit, onCommitted, onCommitError }: {
+export function ChapterHistory({ novelId, chapterId, mode, boundary, freshVersions = [], onClose, beforeCommit, onCommitted, onCommitError }: {
   novelId: string; chapterId: string; mode: "versions" | "candidates"; boundary: ChapterBoundary
+  /** docs/612: versions created by a selection replace/undo in this session — highlighted once */
+  freshVersions?: number[]
   onClose: () => void
   beforeCommit: (boundary: ChapterBoundary) => void
   onCommitted: (receipt: ContentReceipt, content: string, boundary: ChapterBoundary) => void
@@ -109,7 +120,8 @@ export function ChapterHistory({ novelId, chapterId, mode, boundary, onClose, be
           <h2 ref={headingRef} tabIndex={-1} className="font-serif text-base font-semibold outline-none">
             {selectedEntry ? `历史正文 · 修订 ${selectedEntry.version}` : "版本历史"}
           </h2>
-          {selectedEntry && <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+          {selectedEntry && <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+            <ReasonTag reason={selectedEntry.reason} />
             <span>{selectedEntry.wordCount ?? "—"} 字</span>
             <time dateTime={selectedEntry.createdAt}>{formatVersionTime(selectedEntry.createdAt)}</time>
             <span>只读</span>
@@ -131,12 +143,13 @@ export function ChapterHistory({ novelId, chapterId, mode, boundary, onClose, be
           {entries.map(entry => <li key={entry.id}>
             <Button
               variant="ghost" disabled={entry.restorable === false}
-              className="h-auto w-full justify-start gap-3 rounded-none px-4 py-3 text-left whitespace-normal"
+              className={`h-auto w-full justify-start gap-3 rounded-none px-4 py-3 text-left whitespace-normal${entry.version !== undefined && freshVersions.includes(entry.version) ? " history-row-fresh" : ""}`}
               onClick={() => void choose(entry)}
             >
               <History aria-hidden="true" className="size-4 text-muted-foreground" />
               <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1">
                 <span>修订 {entry.version}</span>
+                <ReasonTag reason={entry.reason} />
                 <span className="text-xs text-muted-foreground">{entry.wordCount ?? "—"} 字</span>
                 <time dateTime={entry.createdAt} className="ml-auto text-xs font-normal text-muted-foreground tabular-nums">{formatVersionTime(entry.createdAt)}</time>
                 {entry.restorable === false && <span className="w-full text-xs text-muted-foreground">记录损坏，无法查看或恢复</span>}

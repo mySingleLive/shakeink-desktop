@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "monacoVersion": "0.56.0",
   "sourceHashes": {
-    "src/lib/desktop/monaco-commands.ts": "cad766d65d529120961d4a6cc7095b16da6dcde057c6844ba73370700bd54eac",
+    "src/lib/desktop/monaco-commands.ts": "acc9a6b43f0e684f6fdb571ce52652cb4c185f8b68060a401b97be404c267ad8",
     "src/lib/desktop/markdown-actions.ts": "3684edbc677f7566efe527ec0ae22f1ccbd2e4ebbf8cd37f45d4b0fa46d39912",
     "src/lib/desktop/command-runtime.ts": "21e3f8a0fd46e3a132dbfbbe0ef53f446b17c262268afd9b21501110324add88",
     "src/lib/desktop/command-scope.ts": "2436c3352532393863cba91dd73e38e99c7d6700354273f5a236838f1746a17b",
-    "desktop/shared/command-registry.ts": "7d4c8cad3b9bb845d84e9f7b9da299e4ffe21c6cf5390bf90d6a1065236d87cf",
-    "desktop/shared/commands.json": "c31d4544f37233a6ef2519299085d086ef1440c7a471fb75c7c3fb4e7f44641a",
+    "desktop/shared/command-registry.ts": "af8e7f28e320144b0cc17a4139ec135de43327d42e74dab7f89e8436392890f7",
+    "desktop/shared/commands.json": "eb483feb3a18f69c8ae5b8bf702e6f68b6d6a5d8307f20ea496a6a738141a57d",
     "src/components/editor/monaco-setup.ts": "8361a4c9c2d9e705715782dd7019b5731912f0605c3a49db3b3d438ca0ad4191",
     "desktop/core/shortcuts.ts": "96dc7d0c921431e5bd61e1b915b632f90e70cf62e8681b736074c7bcaf318f7d",
     "desktop/core/shortcut-context.ts": "61b18c806ddceaffdbd4f1f270a67862ea873eda529e4430e55b4d43d17f0be2",
@@ -1389,7 +1389,8 @@
             "Enter"
           ],
           "contexts": {
-            "mention": false
+            "mention": false,
+            "selectionAi": false
           }
         },
         {
@@ -1402,7 +1403,8 @@
             "Shift+Enter"
           ],
           "contexts": {
-            "mention": false
+            "mention": false,
+            "selectionAi": false
           }
         },
         {
@@ -1416,7 +1418,8 @@
           ],
           "contexts": {
             "mention": false,
-            "worldlineEdit": false
+            "worldlineEdit": false,
+            "selectionAi": false
           }
         },
         {
@@ -1506,7 +1509,10 @@
           "locked": false,
           "defaults": [
             "Alt+ArrowUp"
-          ]
+          ],
+          "contexts": {
+            "selectionAi": false
+          }
         },
         {
           "id": "ai.historyNext",
@@ -1516,7 +1522,79 @@
           "locked": false,
           "defaults": [
             "Alt+ArrowDown"
-          ]
+          ],
+          "contexts": {
+            "selectionAi": false
+          }
+        },
+        {
+          "id": "selectionAi.run",
+          "label": "执行当前修改功能",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Enter"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "mention": false
+          }
+        },
+        {
+          "id": "selectionAi.newline",
+          "label": "修改要求换行",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Shift+Enter"
+          ],
+          "contexts": {
+            "selectionAi": true
+          }
+        },
+        {
+          "id": "selectionAi.pickPrev",
+          "label": "上一个修改功能",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Cmd+ArrowUp"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "mention": false
+          }
+        },
+        {
+          "id": "selectionAi.pickNext",
+          "label": "下一个修改功能",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Cmd+ArrowDown"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "mention": false
+          }
+        },
+        {
+          "id": "selectionAi.escape",
+          "label": "关闭 AI 修改浮层",
+          "group": "AI 修改要求",
+          "scope": "global",
+          "locked": false,
+          "defaults": [
+            "Escape"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "worldlineEdit": false
+          }
         },
         {
           "id": "input.left",
@@ -7411,7 +7489,7 @@
           ]
         }
       ],
-      "sha256": "dec68c221ddfa748b4fe087ccce8ca36ec69b0eca8f4cd8325469b1a318fe425"
+      "sha256": "3497709c961b111f131d63f7581c8582cd42745a837776b249ecf09d75d6d68d"
     },
     "win32": {
       "resolved": true,
@@ -8734,7 +8812,8 @@
             "Enter"
           ],
           "contexts": {
-            "mention": false
+            "mention": false,
+            "selectionAi": false
           }
         },
         {
@@ -8747,7 +8826,8 @@
             "Shift+Enter"
           ],
           "contexts": {
-            "mention": false
+            "mention": false,
+            "selectionAi": false
           }
         },
         {
@@ -8761,7 +8841,8 @@
           ],
           "contexts": {
             "mention": false,
-            "worldlineEdit": false
+            "worldlineEdit": false,
+            "selectionAi": false
           }
         },
         {
@@ -8851,7 +8932,10 @@
           "locked": false,
           "defaults": [
             "Alt+ArrowUp"
-          ]
+          ],
+          "contexts": {
+            "selectionAi": false
+          }
         },
         {
           "id": "ai.historyNext",
@@ -8861,7 +8945,79 @@
           "locked": false,
           "defaults": [
             "Alt+ArrowDown"
-          ]
+          ],
+          "contexts": {
+            "selectionAi": false
+          }
+        },
+        {
+          "id": "selectionAi.run",
+          "label": "执行当前修改功能",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Enter"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "mention": false
+          }
+        },
+        {
+          "id": "selectionAi.newline",
+          "label": "修改要求换行",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Shift+Enter"
+          ],
+          "contexts": {
+            "selectionAi": true
+          }
+        },
+        {
+          "id": "selectionAi.pickPrev",
+          "label": "上一个修改功能",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Alt+ArrowUp"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "mention": false
+          }
+        },
+        {
+          "id": "selectionAi.pickNext",
+          "label": "下一个修改功能",
+          "group": "AI 修改要求",
+          "scope": "composer",
+          "locked": false,
+          "defaults": [
+            "Alt+ArrowDown"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "mention": false
+          }
+        },
+        {
+          "id": "selectionAi.escape",
+          "label": "关闭 AI 修改浮层",
+          "group": "AI 修改要求",
+          "scope": "global",
+          "locked": false,
+          "defaults": [
+            "Escape"
+          ],
+          "contexts": {
+            "selectionAi": true,
+            "worldlineEdit": false
+          }
         },
         {
           "id": "input.left",
@@ -14162,7 +14318,7 @@
           ]
         }
       ],
-      "sha256": "2068b033eb3fe0949941215552df34f80a5938cac26ab917893638bef790a61b"
+      "sha256": "4d7e576c89225862c4b758f7f65e68e2cbe7f05404e027b9b865b9129d172eb2"
     }
   }
 }

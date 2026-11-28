@@ -34,6 +34,7 @@ import { useRegisterCommentSave } from "@/components/comments/comment-save-coord
 import { apiGet, apiSend, readError } from "./api"
 import { CHAPTER_STATUS_LABELS } from "./labels"
 import { useChapterReader } from "./ChapterReader"
+import { useSelectionAiLayer } from "./selection-ai/useSelectionAiLayer"
 import { chapterHeading } from "@/lib/chapter-reader"
 import { countChineseWords } from "@/lib/text"
 import type { ContentPanelProps } from "./registry"
@@ -275,6 +276,25 @@ function ChapterContentEditor({
     } finally { if (job.signal.aborted) toast.dismiss(notification); if (exportJob.current === job) { exportJob.current = null; setExporting(false) } }
   }
 
+  /* docs/612: manuscript selection AI toolbar, request box and processing panel */
+  const [freshVersions, setFreshVersions] = useState<number[]>([])
+  const selectionAi = useSelectionAiLayer({
+    novelId, chapterId: chapter.id,
+    disabled: streaming || !!history,
+    flush: async () => { await flush(); return { version: versionRef.current, content: contentRef.current } },
+    liveText: () => contentRef.current,
+    beforeCommit: () => {
+      if (controller.dirty) throw new Error("仍有未保存的输入，请稍后重试")
+      controller.pause()
+      return { expectedVersion: versionRef.current, localRevision: controller.revision, content: contentRef.current }
+    },
+    // receiveCommit resumes on success; on a mid-flight edit it keeps the pause and shows the conflict (code review 3).
+    applyCommit: (receipt, value, boundary) => { receiveCommit(receipt, value, boundary) },
+    commitFailed: () => { controller.resume() },
+    revision: () => controller.revision,
+    onHistory: versions => setFreshVersions(previous => [...previous, ...versions]),
+  })
+
   /* docs/611: reader layout for the preview; the word count matches the editor toolbar. */
   const words = useMemo(() => countChineseWords(content), [content])
   const reader = useChapterReader(chapter, words, streaming, !!content.trim())
@@ -327,7 +347,8 @@ function ChapterContentEditor({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              disabled={!canGenerate || streaming}
+              disabled={!canGenerate || streaming || selectionAi.busy}
+              title={selectionAi.busy ? "请先完成或放弃当前 AI 修改" : undefined}
               onClick={() => (openCommentCount > 0 ? improve() : void generate())}
             >
               {streaming ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Wand2 aria-hidden="true" />}
@@ -412,6 +433,7 @@ function ChapterContentEditor({
           contentRef.current = v
           setContent(v)
           if (!streaming) { onDirtyChange(true); schedule(v) }
+          selectionAi.onEdited()
         }}
         readOnly={streaming}
         novel
@@ -422,6 +444,7 @@ function ChapterContentEditor({
         commentsTarget={{ novelId, targetType: "CHAPTER_CONTENT", targetId: chapter.id }}
         className="min-h-0 flex-1 rounded-none border-0"
         reader={reader}
+        selectionActions={selectionAi.selectionActions}
       />
 
       {/* 悬浮评分指示器：右下角（悬停多维度浮窗 / 点击切编辑器评审视图） */}
@@ -430,10 +453,13 @@ function ChapterContentEditor({
         targetType="CHAPTER_CONTENT"
         targetId={chapter.id}
         onOpenReview={() => setEditorMode("review")}
+        className={selectionAi.panelOffset ? "absolute right-4 z-30 transition-[bottom] duration-200" : undefined}
+        style={selectionAi.panelOffset ? { bottom: selectionAi.panelOffset + 40 } : undefined}
       />
       </div>
-      {history && <ChapterHistory novelId={novelId} chapterId={chapter.id} mode={history.mode} boundary={history.boundary} onClose={() => {
+      {history && <ChapterHistory novelId={novelId} chapterId={chapter.id} mode={history.mode} boundary={history.boundary} freshVersions={freshVersions} onClose={() => {
         setHistory(null)
+        setFreshVersions([])
         void queryClient.invalidateQueries({ queryKey: ["content-candidates"] })
         requestAnimationFrame(() => menuTriggerRef.current?.focus())
       }}

@@ -34,6 +34,39 @@ import { useEditorCommands, type MarkdownEditorHandle } from "./use-editor-comma
 import { useDesktopCommands } from "@/lib/desktop/use-command-target"
 import { installPreviewTextCommands } from "@/lib/desktop/preview-text-commands"
 export type { MarkdownEditorHandle } from "./use-editor-commands"
+import type { SelectionCommentBridge, SelectionCommentSnapshot } from "@/components/comments/selection-comment-bridge"
+import { selectionSnapshot } from "@/lib/comment-selection"
+
+/** docs/612 §4.4: a settled manuscript selection for the selection AI toolbar. */
+export interface SelectionAnchor {
+  snapshot: SelectionCommentSnapshot
+  view: "edit" | "preview"
+  /** Current client rects of the selection (viewport coordinates); empty when it cannot be measured. */
+  rects(): DOMRect[]
+  /** Visible area of the pane holding the selection. */
+  viewport(): DOMRect | null
+  /** Scroll the pane by dy pixels (request box opening). */
+  scrollBy(dy: number): void
+  /** Restore the selection highlight in its pane (after closing the request box). */
+  reselect(): void
+}
+export interface SelectionActions {
+  /** False disables the toolbar (whole-chapter generation, other popovers). */
+  active: boolean
+  onSelection(anchor: SelectionAnchor | null): void
+  /** Layer rendered inside the editor root (toolbar, request box, panel). */
+  layer: ReactNode
+  bridge: SelectionCommentBridge
+  /** Source ranges to paint (processing highlight, replacement flash) in the preview; Monaco paints its own. */
+  marks: { start: number; end: number; className?: string }[]
+  /** Called on scroll/layout so the layer can reposition. */
+  onViewportChange(): void
+  /** Receives the live Monaco instance (undo command, decorations). */
+  onEditor?(editor: MonacoInstance | null): void
+}
+
+/** monaco EditorOption.lineHeight; read via the instance to avoid importing monaco on the server. */
+const monacoLineHeightOption = 75 as never
 
 const MonacoMarkdownEditor = dynamic(() => import("./MonacoMarkdownEditor"), {
   ssr: false,
@@ -92,6 +125,8 @@ interface MarkdownEditorProps {
   onModeChange?: (mode: EditorMode) => void
   /** docs/611 chapter reader layout for the commentable preview (chapter content panel only) */
   reader?: MarkdownEditorReader
+  /** docs/612 selection AI toolbar (chapter content panel only) */
+  selectionActions?: SelectionActions
 }
 
 export interface MarkdownEditorReader {
@@ -123,6 +158,7 @@ export function MarkdownEditor({
   mode: controlledMode,
   onModeChange,
   reader,
+  selectionActions,
 }: MarkdownEditorProps) {
   const { resolvedTheme } = useTheme()
   const theme: "paper" | "ink" = resolvedTheme === "ink" ? "ink" : "paper"
@@ -274,6 +310,61 @@ export function MarkdownEditor({
     [applyingId, readOnly, reply, setStatus, applyThread, apply, remove]
   )
 
+  /* docs/612 §4.4: Monaco selection → selection AI toolbar (mouse: on mouseup; keyboard: 300 ms after the last change) */
+  const selectionLatest = useRef(selectionActions); selectionLatest.current = selectionActions
+  useEffect(() => {
+    if (!editorInstance || !selectionActions) return
+    selectionLatest.current?.onEditor?.(editorInstance)
+    let timer: ReturnType<typeof setTimeout> | null = null, mouseDown = false
+    const publish = () => {
+      timer = null
+      const actions = selectionLatest.current, model = editorInstance.getModel(), range = editorInstance.getSelection()
+      if (!actions || !model || !range || range.isEmpty()) { actions?.onSelection(null); return }
+      const snapshot = selectionSnapshot(model.getValue(), model.getOffsetAt(range.getStartPosition()), model.getOffsetAt(range.getEndPosition()))
+      if (!snapshot.quote.trim()) { actions.onSelection(null); return }
+      const node = editorInstance.getDomNode()
+      // First line from the selection start to the content edge; last line from the content left to the selection end.
+      const rects = () => {
+        const host = editorInstance.getDomNode()?.getBoundingClientRect(), current = editorInstance.getSelection()
+        if (!host || !current || current.isEmpty()) return []
+        const lineHeight = editorInstance.getOption(monacoLineHeightOption) as number
+        const layout = editorInstance.getLayoutInfo()
+        const a = editorInstance.getScrolledVisiblePosition(current.getStartPosition()), b = editorInstance.getScrolledVisiblePosition(current.getEndPosition())
+        if (!a || !b) return []
+        if (b.top === a.top) return [new DOMRect(host.left + a.left, host.top + a.top, Math.max(1, b.left - a.left), lineHeight)]
+        const right = layout.contentLeft + layout.contentWidth
+        return [new DOMRect(host.left + a.left, host.top + a.top, Math.max(1, right - a.left), lineHeight),
+          new DOMRect(host.left + layout.contentLeft, host.top + b.top, Math.max(1, b.left - layout.contentLeft), lineHeight)]
+      }
+      actions.onSelection({ snapshot: { ...snapshot, line: range.getEndPosition().lineNumber }, view: "edit", rects,
+        viewport: () => node?.getBoundingClientRect() ?? null,
+        scrollBy: dy => editorInstance.setScrollTop(editorInstance.getScrollTop() + dy),
+        reselect: () => { editorInstance.setSelection(range); editorInstance.focus() } })
+    }
+    const schedule = (delay: number) => { if (timer) clearTimeout(timer); timer = setTimeout(publish, delay) }
+    // Monaco's onMouseUp is not guaranteed after a double/triple click (its word-selection drag monitor takes the
+    // release), so a window mouseup also ends the press, and a selection that changes during a press still publishes
+    // once the press has been quiet for 400 ms (user 2026-11-29: double-click must show the toolbar).
+    const release = () => { if (!mouseDown) return; mouseDown = false; schedule(0) }
+    window.addEventListener("mouseup", release, true)
+    const dom = editorInstance.getDomNode()
+    const dbl = () => { mouseDown = false; schedule(0) }
+    dom?.addEventListener("dblclick", dbl)
+    const disposables = [
+      editorInstance.onMouseDown(() => { mouseDown = true; if (timer) clearTimeout(timer); selectionLatest.current?.onSelection(null) }),
+      editorInstance.onMouseUp(() => { mouseDown = false; schedule(0) }),
+      editorInstance.onDidChangeCursorSelection(e => {
+        if (e.selection.isEmpty()) { if (timer) clearTimeout(timer); if (!mouseDown) selectionLatest.current?.onSelection(null); return }
+        schedule(mouseDown ? 400 : 300)
+      }),
+      { dispose: () => { window.removeEventListener("mouseup", release, true); dom?.removeEventListener("dblclick", dbl) } },
+      editorInstance.onDidScrollChange(() => selectionLatest.current?.onViewportChange()),
+      editorInstance.onDidLayoutChange(() => selectionLatest.current?.onViewportChange()),
+      editorInstance.onContextMenu(() => selectionLatest.current?.onSelection(null)),
+    ]
+    return () => { if (timer) clearTimeout(timer); disposables.forEach(d => d.dispose()); selectionLatest.current?.onEditor?.(null) }
+  }, [editorInstance, !!selectionActions]) // eslint-disable-line react-hooks/exhaustive-deps
+
   /* 光标位置（状态栏展示） */
   useEffect(() => {
     if (!editorInstance) return
@@ -339,7 +430,7 @@ export function MarkdownEditor({
 
   return (
     <CommentDraftProvider target={commentsTarget ?? null} source={value}>
-    <div ref={rootRef} tabIndex={-1} className={cn("desktop-markdown-editor flex min-h-0 flex-col overflow-hidden rounded-lg border bg-editor", className)}>
+    <div ref={rootRef} tabIndex={-1} className={cn("desktop-markdown-editor relative flex min-h-0 flex-col overflow-hidden rounded-lg border bg-editor", className)}>
       {/* 工具条：字数 + 评论开关 + 三态切换 */}
       <div className={cn("flex h-9 shrink-0 items-center justify-between gap-2 border-b bg-editor px-3", reader && "chapter-reader-toolbar")}>
         <div className="flex items-center gap-2">
@@ -420,6 +511,7 @@ export function MarkdownEditor({
                     onToggleThread: toggleExpanded,
                     onCreateComment: createComment,
                     renderBubble,
+                    bridge: selectionActions?.bridge,
                   }
                 : undefined
             }
@@ -433,7 +525,8 @@ export function MarkdownEditor({
         )}
         {mode === "split" && <div className="desktop-markdown-divider bg-border" />}
         {mode !== "edit" && (
-          <div ref={previewRef} tabIndex={-1} className="min-h-0 min-w-0">
+          <div ref={previewRef} tabIndex={-1} className="min-h-0 min-w-0" onScrollCapture={selectionActions ? () => selectionLatest.current?.onViewportChange() : undefined}
+            onContextMenuCapture={selectionActions ? () => selectionLatest.current?.onSelection(null) : undefined}>
             {commentsTarget || foreshadowTarget ? (
               <CommentablePreview
                 foreshadows={previewReferences}
@@ -453,6 +546,19 @@ export function MarkdownEditor({
                 contentClassName={reader?.contentClassName}
                 attributes={reader?.attributes}
                 style={reader?.style}
+                commentBridge={selectionActions?.bridge}
+                extraMarks={selectionActions?.marks.map(m => ({ ...m, className: m.className ?? "selection-ai-range" }))}
+                onTextSelection={selectionActions ? selection => {
+                  const actions = selectionLatest.current
+                  if (!actions) return
+                  if (!selection) { actions.onSelection(null); return }
+                  const range = selection.range, pane = previewRef.current?.querySelector<HTMLElement>(".markdown-body") ?? previewRef.current
+                  actions.onSelection({ snapshot: selection.snapshot, view: "preview",
+                    rects: () => range.startContainer.isConnected ? [...range.getClientRects()].filter(r => r.width > 0 || r.height > 0) : [],
+                    viewport: () => pane?.getBoundingClientRect() ?? null,
+                    scrollBy: dy => { if (pane) pane.scrollTop += dy },
+                    reselect: () => { previewRef.current?.focus({ preventScroll: true }); const sel = window.getSelection(); if (sel && range.startContainer.isConnected) { sel.removeAllRanges(); sel.addRange(range) } } })
+                } : undefined}
               />
             ) : (
               <MarkdownPreview source={value} novel={novel} />
@@ -474,6 +580,7 @@ export function MarkdownEditor({
         <span>{theme === "ink" ? "玄墨" : "宣纸"}</span>
       </div>
       {commentsTarget && <CommentDraftList />}
+      {selectionActions?.layer}
     </div>
     </CommentDraftProvider>
   )

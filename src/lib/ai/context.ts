@@ -260,11 +260,14 @@ function renderCharacters(characters: Character[], attrNames?: AttributeNameMap)
 export function renderScene(s: Scene): string { return renderSceneDetails(s) }
 
 /** 查小说的角色自定义属性定义，建 definitionId → 名称映射（供 renderCharacter 渲染属性行） */
-export async function loadCharacterAttributeNames(novelId: string): Promise<AttributeNameMap> {  const defs = await prisma.attributeDefinition.findMany({
-    where: { novelId, targets: { has: "CHARACTER" } },
-    select: { id: true, name: true },
+export async function loadCharacterAttributeNames(novelId: string): Promise<AttributeNameMap> {
+  // docs/612: the local PGlite adapter rejects `has`/`hasSome` on enum arrays ("malformed array literal"),
+  // which made every buildNovelSections call fail on the desktop database. Filter the targets in memory.
+  const defs = await prisma.attributeDefinition.findMany({
+    where: { novelId },
+    select: { id: true, name: true, targets: true },
   })
-  return new Map(defs.map((d) => [d.id, d.name]))
+  return new Map(defs.filter((d) => d.targets.includes("CHARACTER")).map((d) => [d.id, d.name]))
 }
 
 function renderTropes(tropes: Trope[]): string | null {

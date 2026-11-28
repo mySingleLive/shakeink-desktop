@@ -649,3 +649,91 @@ body[data-platform="win32"] .dashboard-shell > nav[aria-label="创作工作区"]
 .ink .chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="green"] { background:#15201b; }
 .ink .chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="blue"] { background:#161b25; }
 .ink .chapter-reader-popup .chapter-reader-row > .chapter-reader-swatch[data-bg="black"] { background:#050505; }
+
+/* ==========================================================================
+   docs/612 selection AI toolbar (chapter-content editor only; design/selection-ai-toolbar v9).
+   ========================================================================== */
+.selection-ai-float { position: absolute; z-index: 40; background: var(--popover); color: var(--foreground); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--shadow-color) 70%, transparent), 0 8px 24px -8px var(--shadow-color); font-family: var(--font-ui, system-ui); user-select: none; }
+.ink .selection-ai-float { box-shadow: 0 0 0 1px rgba(255,248,240,.07), 0 10px 28px -8px rgba(0,0,0,.7); }
+.selection-ai-toolbar { height: 34px; display: flex; align-items: center; gap: 2px; padding: 0 4px; white-space: nowrap; animation: selection-ai-pop .12s ease-out; }
+@keyframes selection-ai-pop { from { opacity: 0; transform: translateY(-3px) } to { opacity: 1; transform: none } }
+.selection-ai-sep { width: 1px; height: 16px; background: var(--border); margin: 0 3px; flex: none; }
+.selection-ai-tbtn { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); font: inherit; font-size: 12.5px; cursor: pointer; }
+.selection-ai-tbtn svg { width: 14px; height: 14px; flex: none; }
+.selection-ai-tbtn.only { width: 28px; padding: 0; justify-content: center; }
+.selection-ai-tbtn:hover:not(:disabled), .selection-ai-tbtn:focus-visible, .selection-ai-tbtn[data-popup-open] { background: var(--hover-wash); outline: none; }
+.selection-ai-tbtn:disabled { color: var(--muted-foreground); opacity: .55; cursor: not-allowed; }
+.selection-ai-comment { color: var(--primary); }
+.selection-ai-comment:hover:not(:disabled) { background: color-mix(in oklab, var(--primary) 12%, transparent) !important; }
+.selection-ai-ask { display: inline-flex; align-items: center; gap: 6px; width: 148px; height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--editor-bg); color: var(--muted-foreground); font: inherit; font-size: 12.5px; cursor: text; text-align: left; }
+.selection-ai-ask svg { width: 14px; height: 14px; flex: none; }
+.selection-ai-ask:hover, .selection-ai-ask:focus-visible { border-color: var(--primary); color: var(--foreground); outline: none; }
+.selection-ai-toolbar.compact .selection-ai-ask { width: 28px; padding: 0; justify-content: center; }
+.selection-ai-toolbar.compact .selection-ai-ask span { display: none; }
+
+.selection-ai-request { overflow: hidden; animation: selection-ai-pop .12s ease-out; user-select: text; }
+.selection-ai-quote { display: flex; gap: 8px; align-items: center; padding: 8px 12px 0; font-size: 11.5px; color: var(--muted-foreground); }
+.selection-ai-quote-text { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; background: var(--muted); }
+.selection-ai-quote-text svg { width: 12px; height: 12px; flex: none; opacity: .7; }
+.selection-ai-quote-text span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selection-ai-quote-count { flex: none; }
+.selection-ai-request-editor { min-height: 52px; max-height: 156px; overflow-y: auto; padding: 6px 12px 2px; font-size: 13.5px; line-height: 1.6; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--foreground); }
+.selection-ai-request-editor:empty::before { content: attr(data-placeholder); color: var(--muted-foreground); opacity: .8; pointer-events: none; }
+.selection-ai-request .relative > [data-testid="mention-popup"] { bottom: auto; top: 100%; margin: 4px 0 0; }
+.selection-ai-request-bar { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 6px; }
+.selection-ai-request-bar .selection-ai-tbtn { color: var(--muted-foreground); font-size: 12px; }
+.selection-ai-funcs { border-top: 1px solid var(--border); padding: 4px; background: var(--card); }
+.selection-ai-func { display: grid; grid-template-columns: 18px auto minmax(0, 1fr); column-gap: 8px; align-items: center; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); font: inherit; text-align: left; cursor: pointer; }
+.selection-ai-func svg { color: var(--muted-foreground); }
+.selection-ai-func b { font-weight: 500; font-size: 13px; }
+.selection-ai-func small { margin-left: 10px; font-size: 11.5px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selection-ai-func:hover:not(:disabled) { background: var(--hover-wash); }
+.selection-ai-func:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px var(--primary); }
+.selection-ai-func.picked { background: color-mix(in oklab, var(--primary) 13%, transparent); }
+.ink .selection-ai-func.picked { background: color-mix(in oklab, var(--primary) 20%, transparent); }
+.selection-ai-func.picked b, .selection-ai-func.picked svg { color: var(--primary); }
+.selection-ai-func:disabled { opacity: .5; cursor: not-allowed; }
+.selection-ai-hint { padding: 4px 12px 6px; font-size: 11px; color: var(--muted-foreground); background: var(--card); }
+
+.selection-ai-panel { left: 50%; bottom: calc(26px + 16px); transform: translateX(-50%); width: min(640px, calc(100% - 32px)); display: flex; flex-direction: column; overflow: hidden; animation: selection-ai-rise .18s ease-out; }
+@keyframes selection-ai-rise { from { opacity: 0; transform: translate(-50%, 8px) } to { opacity: 1; transform: translate(-50%, 0) } }
+.selection-ai-stream { height: 160px; overflow-y: auto; padding: 10px 14px 8px; font: 14px/1.85 var(--font-serif, "Noto Serif SC", "Songti SC", serif); color: var(--foreground); transition: height .2s ease; user-select: text; }
+.selection-ai-panel.done .selection-ai-stream { height: 260px; }
+.selection-ai-stream p { margin: 0 0 .5em; text-indent: 2em; }
+.selection-ai-stream p.orig { color: var(--muted-foreground); }
+.selection-ai-caret { display: inline-block; width: 2px; height: 1em; background: var(--primary); vertical-align: -2px; margin-left: 1px; animation: selection-ai-blink 1s steps(1) infinite; }
+@keyframes selection-ai-blink { 50% { opacity: 0 } }
+.selection-ai-think { font: 12px/1.6 var(--font-ui, system-ui); color: var(--muted-foreground); margin-bottom: 6px; }
+.selection-ai-think > button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+.selection-ai-think-text { margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--border); white-space: pre-wrap; }
+.selection-ai-foot { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 8px 0 14px; border-top: 1px solid var(--border); background: var(--card); font-size: 12.5px; }
+.selection-ai-state { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selection-ai-state small { color: var(--muted-foreground); font-size: 12px; }
+.selection-ai-state.error { color: var(--destructive); }
+.selection-ai-state.warn, .selection-ai-warn { color: #8a5a07; font-style: normal; }
+.ink .selection-ai-state.warn, .ink .selection-ai-warn { color: #e3b25c; }
+.selection-ai-warn { margin-left: 6px; font-size: 12px; }
+.selection-ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex: none; }
+.selection-ai-ibtn { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: var(--popover); color: var(--foreground); cursor: pointer; }
+.selection-ai-ibtn:hover { background: var(--hover-wash); }
+.selection-ai-ibtn.stop { background: var(--destructive); border-color: var(--destructive); color: #fff; }
+.selection-ai-btn { height: 28px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--popover); color: var(--foreground); font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.selection-ai-btn:hover:not(:disabled) { background: var(--hover-wash); }
+.selection-ai-btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.selection-ai-btn:disabled { opacity: .6; cursor: default; }
+.selection-ai-undo { left: 50%; bottom: calc(26px + 16px); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 6px 0 14px; font-size: 12.5px; animation: selection-ai-rise .18s ease-out; }
+.selection-ai-undo .selection-ai-btn { height: 26px; }
+.selection-ai-x { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--muted-foreground); cursor: pointer; }
+.selection-ai-x:hover { background: var(--hover-wash); }
+/* processing highlight (preview mark + Monaco inline decoration) */
+mark.selection-ai-range, .monaco-editor .selection-ai-range { background: color-mix(in oklab, var(--primary) 13%, transparent); color: inherit; border-radius: 2px; }
+.ink mark.selection-ai-range, .ink .monaco-editor .selection-ai-range { background: color-mix(in oklab, var(--primary) 20%, transparent); }
+mark.selection-ai-flash { background: color-mix(in oklab, var(--success) 28%, transparent); color: inherit; border-radius: 2px; transition: background 1.2s ease; }
+/* version history reason tags */
+.history-reason { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; white-space: nowrap; }
+.history-reason.ai { background: color-mix(in oklab, var(--primary) 13%, transparent); color: var(--primary); }
+.history-reason.ai svg { width: 11px; height: 11px; }
+.history-reason.plain { padding: 0; color: var(--muted-foreground); }
+.history-row-fresh { animation: history-row-fresh 2.4s ease-out; }
+@keyframes history-row-fresh { from { background: color-mix(in oklab, var(--success) 26%, transparent) } to { background: transparent } }

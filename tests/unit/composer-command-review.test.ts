@@ -64,7 +64,7 @@ function controller(overrides:Record<string,string[]>={},mention:object|null=nul
  const store={getState:()=>({bootstrap})}
  const register=(commands:Record<string,CommandHandler>,ref?:{current:ElementFixture})=>cleanup.push(bus.register({owner:{},accepts:target=>!ref||target===ref.current,commands}))
  const registrations=panelCalls("useDesktopCommands").map(node=>node.getText(ast)).join(";\n")
- new Function("useDesktopCommands","textareaRef","canSend","isGenerating","mention","stop","handleSend","historyInput","flatMentionItems","setMentionIndex","selectMention","mentionIndex","mentionDismissedRef","setMention","insertToken","dispatchChatUiEvent","CHAT_OPEN_MODEL_PICKER_EVENT","useChatStore","setSearchOpen","document","syncFromEditor","hasLiveModel","worldlineEscapeOwner",registrations)(register,{current:composer},true,true,mention,()=>calls.push("stop"),()=>calls.push("send"),()=>{},[{}],()=>{},()=>calls.push("mention"),0,{current:null},()=>calls.push("close"),()=>{},()=>{},"models",{getState:()=>({requestChatFocus(){}})},()=>{},document,()=>{},()=>true,(t?:unknown)=>worldline.owns?{owner:{},target:t}:null)
+ new Function("useDesktopCommands","textareaRef","canSend","isGenerating","mention","stop","handleSend","historyInput","flatMentionItems","setMentionIndex","selectMention","mentionIndex","mentionDismissedRef","setMention","insertToken","dispatchChatUiEvent","CHAT_OPEN_MODEL_PICKER_EVENT","useChatStore","setSearchOpen","document","syncFromEditor","hasLiveModel","worldlineEscapeOwner","selectionAiEscapeOwner",registrations)(register,{current:composer},true,true,mention,()=>calls.push("stop"),()=>calls.push("send"),()=>{},[{}],()=>{},()=>calls.push("mention"),0,{current:null},()=>calls.push("close"),()=>{},()=>{},"models",{getState:()=>({requestChatFocus(){}})},()=>{},document,()=>{},()=>true,(t?:unknown)=>worldline.owns?{owner:{},target:t}:null,()=>null /* docs/612: no selection AI layer open */)
  const dependencies:Record<string,unknown>={
   react:{useEffect(effect:()=>()=>void){cleanup.push(effect())}},sonner:{toast:{info(){},error(){}}},
   "@/stores/desktop":{useDesktopStore:store,updateDesktopSettings:async()=>{}},"@/stores/tabs":{useTabsStore:{getState:()=>({activeTabId:null}),subscribe:()=>()=>{}}},
@@ -130,11 +130,12 @@ test("CMP47-17: both platform catalogs expose actual composer/global scopes and 
   assert.equal(commands.find(command=>command.id==="ai.stop")!.scope,"global")
   assert.equal(commands.find(command=>command.id==="ai.send")!.scope,"composer")
   assert.deepEqual(commands.find(command=>command.id==="ai.mentionConfirm")!.contexts,{mention:true})
-  assert.deepEqual(commands.find(command=>command.id==="ai.stop")!.contexts,{mention:false,worldlineEdit:false})
+  // docs/612 §4.7: selectionAi:false keeps the chat commands apart from the selection AI request box in conflict checks.
+  assert.deepEqual(commands.find(command=>command.id==="ai.stop")!.contexts,{mention:false,worldlineEdit:false,selectionAi:false})
  }
  const original=desktopCommandCatalog("darwin").find(command=>command.id==="ai.send")!
  const remove=publishDesktopCommands({},[{...original,label:"Runtime label",scope:"markdown",contexts:{mention:true},defaults:["Enter","F19"]}])
- try{const merged=desktopCommandCatalog("darwin").find(command=>command.id==="ai.send")!;assert.equal(merged.label,original.label);assert.equal(merged.scope,"composer");assert.deepEqual(merged.contexts,{mention:false});assert.deepEqual(merged.defaults,["Enter","F19"])}finally{remove()}
+ try{const merged=desktopCommandCatalog("darwin").find(command=>command.id==="ai.send")!;assert.equal(merged.label,original.label);assert.equal(merged.scope,"composer");assert.deepEqual(merged.contexts,{mention:false,selectionAi:false});assert.deepEqual(merged.defaults,["Enter","F19"])}finally{remove()}
 })
 
 // docs/599 §15.1 (DC-10): the real ChatPanel ai.stop yields Escape to an editing worldline panel, so exactly one runs.

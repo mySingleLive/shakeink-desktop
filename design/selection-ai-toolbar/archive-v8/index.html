@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>正文框选 AI 助手工具栏 设计稿 v8</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ecebe6; color: #302b24; font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 1360px; margin: 0 auto; padding: 24px 28px 56px; }
+  h1.page { margin: 0; font-size: 22px; font-weight: 600; }
+  .intro { margin: 6px 0 14px; color: #6f665a; max-width: 980px; font-size: 13px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; margin-bottom: 14px; }
+  .group { display: flex; align-items: center; gap: 4px; }
+  .group > span { margin-right: 4px; color: #6f665a; font-size: 12px; }
+  .controls button { font: inherit; font-size: 12px; cursor: pointer; border: 1px solid #d3ccbf; border-radius: 6px; background: transparent; padding: 4px 12px; min-height: 30px; color: inherit; }
+  .controls button[aria-pressed="true"] { background: #373329; color: #faf8f0; border-color: #373329; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; align-items: start; }
+  .frame.narrow { max-width: 470px; }
+  .side { background: #f7f5ef; border: 1px solid #d8d2c4; border-radius: 9px; padding: 12px 14px; font-size: 12.5px; }
+  .side h3 { margin: 0 0 8px; font-size: 13px; }
+  .side ol { margin: 0; padding-left: 18px; color: #4f483d; }
+  .side li { margin-bottom: 6px; }
+  .side li small { display: block; color: #8a8173; }
+  .side .empty { color: #8a8173; }
+
+  /* ===== 面板主题变量（取自 globals.css 宣纸 / 玄墨） ===== */
+  .panel {
+    --foreground: #2b251b; --muted-fg: #7d7157; --card: #faf5e8; --popover: #fcf8ee; --border: #d8cba6; --muted: #eae1c8;
+    --primary: #b03524; --primary-fg: #fff8f0; --editor-bg: #f9f4e4; --badge: #e7dcc0; --badge-fg: #4d4430; --success: #64804a;
+    --hover: rgba(80, 60, 20, .07); --hl: rgba(176, 53, 36, .13); --flash: rgba(100, 128, 74, .28); --danger: #b03524; --warn-bg: rgba(204, 140, 30, .14); --warn-fg: #8a5a07;
+    --shadow: 0 1px 2px rgba(60, 45, 20, .10), 0 8px 24px -8px rgba(60, 45, 20, .30);
+    --line-no: #b4a682; --page-ink: #33291c;
+    height: 760px; display: flex; flex-direction: column; overflow: hidden; position: relative;
+    border: 1px solid var(--border); border-radius: 9px; background: var(--editor-bg); color: var(--foreground);
+    box-shadow: 0 9px 25px #29231714;
+  }
+  .panel.ink {
+    --foreground: #ece7e1; --muted-fg: #9a918a; --card: #141110; --popover: #171312; --border: rgba(255,248,240,.11); --muted: #1b1715;
+    --primary: #e07a5f; --primary-fg: #1a0f0b; --editor-bg: #100d0c; --badge: #1a1614; --badge-fg: #ded7cf; --success: #7cb083;
+    --hover: rgba(255, 248, 240, .06); --hl: rgba(224, 122, 95, .20); --flash: rgba(124, 176, 131, .25); --danger: #e5826b; --warn-bg: rgba(230, 170, 70, .13); --warn-fg: #e3b25c;
+    --shadow: 0 0 0 1px rgba(255,248,240,.07), 0 10px 28px -8px rgba(0,0,0,.7);
+    --line-no: #5d544d; --page-ink: #d6cec4;
+  }
+  .topbar { display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-bottom: 1px solid var(--border); background: var(--card); flex-shrink: 0; }
+  .crumb { display: flex; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--muted-fg); white-space: nowrap; overflow: hidden; }
+  .crumb b { color: var(--foreground); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--badge); color: var(--badge-fg); white-space: nowrap; }
+  .saved { font-size: 11.5px; color: var(--muted-fg); white-space: nowrap; }
+  .saved::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); margin-right: 5px; vertical-align: 1px; }
+  .spacer { flex: 1; }
+  .icon-btn { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; color: var(--muted-fg); border: 0; background: transparent; font-size: 16px; }
+  .etool { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--editor-bg); flex-shrink: 0; font-size: 12px; color: var(--muted-fg); }
+  .etool .left { display: flex; gap: 12px; align-items: center; font-family: "SF Mono", Menlo, monospace; }
+  .modes { display: flex; gap: 2px; border: 1px solid var(--border); background: var(--muted); border-radius: 6px; padding: 2px; }
+  .modes button { font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 4px; border: 0; background: transparent; color: var(--muted-fg); cursor: pointer; }
+  .modes button.on { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .statusbar { height: 26px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-top: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--muted-fg); }
+
+  /* ===== 正文区：编辑（仿 Monaco）/ 预览 / 分屏 ===== */
+  .body { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+  .body.split { grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr); }
+  .divider { background: var(--border); }
+  .pane { min-height: 0; overflow: auto; position: relative; }
+  .pane.edit { font: 13.5px/22px "SF Mono", Menlo, Consolas, "PingFang SC", monospace; color: var(--foreground); padding: 10px 0 120px; }
+  .pane.edit .ln { display: grid; grid-template-columns: 46px minmax(0, 1fr); }
+  .pane.edit .ln > i { font-style: normal; text-align: right; padding-right: 14px; color: var(--line-no); user-select: none; font-size: 12px; }
+  .pane.edit .ln > span { white-space: pre-wrap; word-break: break-all; padding-right: 18px; }
+  .pane.preview .page { max-width: 720px; margin: 0 auto; padding: 36px 44px 160px; color: var(--page-ink); font: 18px/1.95 "Noto Serif SC", "Songti SC", "STSong", serif; }
+  .pane.preview .head { text-align: center; margin-bottom: 30px; user-select: none; }
+  .pane.preview .head small { display: block; font-size: 13px; color: var(--muted-fg); letter-spacing: .08em; }
+  .pane.preview .head h2 { margin: 6px 0 4px; font-size: 28px; font-weight: 700; letter-spacing: .04em; }
+  .pane.preview .head em { font-style: normal; font-size: 12.5px; color: var(--muted-fg); font-family: -apple-system, "PingFang SC", sans-serif; }
+  .pane.preview p { margin: 0 0 .7em; text-indent: 2em; }
+  .pane ::selection { background: rgba(176, 53, 36, .22); }
+  .panel.ink .pane ::selection { background: rgba(224, 122, 95, .32); }
+  mark.sel-hl { background: var(--hl); color: inherit; border-radius: 2px; }
+  mark.flash { background: var(--flash); color: inherit; border-radius: 2px; transition: background 1.2s ease; }
+  mark.flash.fade { background: transparent; }
+
+  /* ===== 浮层通用 ===== */
+  .float { position: absolute; z-index: 20; background: var(--popover); color: var(--foreground); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .hidden { display: none !important; }
+  .ico { width: 14px; height: 14px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* 选区工具栏：细长条 */
+  .seltb { height: 34px; display: flex; align-items: center; gap: 2px; padding: 0 4px; white-space: nowrap; animation: pop .12s ease-out; }
+  @keyframes pop { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .seltb .ask { display: flex; align-items: center; gap: 6px; width: 148px; height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--editor-bg); color: var(--muted-fg); font: inherit; font-size: 12.5px; cursor: text; text-align: left; }
+  .seltb .ask:hover { border-color: var(--primary); color: var(--foreground); }
+  .seltb .sep { width: 1px; height: 16px; background: var(--border); margin: 0 3px; }
+  .tbtn { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); font: inherit; font-size: 12.5px; cursor: pointer; }
+  .tbtn:hover:not(:disabled), .tbtn:focus-visible, .tbtn.open { background: var(--hover); outline: none; }
+  .tbtn:disabled { color: var(--muted-fg); opacity: .55; cursor: not-allowed; }
+  .tbtn.only { width: 28px; padding: 0; justify-content: center; }
+  .seltb.compact .ask { width: 28px; padding: 0; justify-content: center; }
+  .seltb.compact .ask span { display: none; }
+  /* 功能菜单 / 功能列表 */
+  .menu { width: 236px; padding: 4px; }
+  .mitem { display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 8px; align-items: center; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); font: inherit; text-align: left; cursor: pointer; }
+  .mitem b { font-weight: 500; font-size: 13px; }
+  .mitem small { grid-column: 2; font-size: 11.5px; color: var(--muted-fg); line-height: 1.35; }
+  .mitem:hover:not(:disabled), .mitem.active, .mitem:focus-visible { background: var(--hover); outline: none; }
+  .mitem:focus-visible { box-shadow: inset 0 0 0 1.5px var(--primary); }
+  .mitem.active b { color: var(--primary); }
+  /* 输入框功能列表：当前选择的功能（Enter 执行它）用主色浅底高亮，悬停仅浅灰底 */
+  .askbox .funcs .mitem.picked { background: var(--hl); }
+  .askbox .funcs .mitem.picked b, .askbox .funcs .mitem.picked .ico { color: var(--primary); }
+  .mitem:disabled { opacity: .5; cursor: not-allowed; }
+  .mitem .ico { grid-row: span 2; color: var(--muted-fg); }
+
+  /* 修改要求输入框 */
+  .askbox { width: 560px; overflow: hidden; animation: pop .12s ease-out; } /* v8：420 → 560；正文区不够宽时按 正文宽 − 32 收窄 */
+  .askbox .quote { display: flex; gap: 8px; align-items: center; padding: 8px 12px 0; font-size: 11.5px; color: var(--muted-fg); }
+  /* 选中文字摘要：引号图标 + 浅底圆角条，不用竖线（易被误认为光标） */
+  .askbox .quote .qtext { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; background: var(--muted); }
+  .askbox .quote .qtext span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .askbox .quote .qtext .ico { width: 12px; height: 12px; fill: currentColor; stroke: none; opacity: .7; }
+  .askbox .quote .qcount { flex: none; }
+  .askbox .edit { min-height: 52px; max-height: 156px; overflow-y: auto; padding: 6px 12px 2px; font-size: 13.5px; line-height: 1.6; outline: none; white-space: pre-wrap; word-break: break-word; }
+  .askbox .edit:empty::before { content: attr(data-placeholder); color: var(--muted-fg); opacity: .8; pointer-events: none; }
+  .chip { display: inline-flex; align-items: center; gap: 3px; color: var(--primary); font-weight: 500; }
+  .chip::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); opacity: .25; }
+  .askbox .bar { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 6px; }
+  .askbox .bar .tbtn { color: var(--muted-fg); font-size: 12px; }
+  .model { display: flex; align-items: center; gap: 5px; }
+  .model i { width: 14px; height: 14px; border-radius: 4px; background: linear-gradient(135deg, #4d6bfe, #7c8cff); }
+  .askbox .funcs { border-top: 1px solid var(--border); padding: 4px; background: var(--card); }
+  .askbox .funcs .mitem { grid-template-columns: 18px auto minmax(0, 1fr) auto; }
+  .askbox .funcs .mitem small { grid-column: 3; margin-left: 10px; }
+  .askbox .funcs .mitem .ico { grid-row: auto; }
+  .askbox .hint { padding: 4px 12px 6px; font-size: 11px; color: var(--muted-fg); background: var(--card); }
+  .mention { position: absolute; width: 220px; padding: 4px; z-index: 30; }
+  .mention .mitem { grid-template-columns: 18px minmax(0, 1fr) auto; }
+  .mention .mitem small { grid-column: 3; }
+  .mention .avatar { width: 16px; height: 16px; border-radius: 50%; background: #c99e6b; }
+
+  /* 处理框 / 结果框 */
+  .proc { left: 50%; bottom: 42px; transform: translateX(-50%); width: min(640px, calc(100% - 32px)); display: flex; flex-direction: column; overflow: hidden; animation: rise .18s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .proc .stream { height: 160px; overflow-y: auto; padding: 10px 14px 8px; font: 14px/1.85 "Noto Serif SC", "Songti SC", serif; color: var(--page-ink); transition: height .2s ease; }
+  .proc.done .stream { height: 260px; }
+  .proc .stream p { margin: 0 0 .5em; text-indent: 2em; }
+  .proc .stream p.orig { color: var(--muted-fg); }
+  .proc .caret { display: inline-block; width: 2px; height: 1em; background: var(--primary); vertical-align: -2px; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .think { font: 12px/1.6 -apple-system, "PingFang SC", sans-serif; color: var(--muted-fg); margin-bottom: 6px; }
+  .think summary { cursor: pointer; list-style: none; display: inline-flex; gap: 4px; align-items: center; }
+  .think summary::before { content: "▸"; font-size: 10px; }
+  .think[open] summary::before { content: "▾"; }
+  .think div { margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--border); white-space: pre-wrap; }
+  .proc .foot { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px 0 14px; border-top: 1px solid var(--border); background: var(--card); font-size: 12.5px; }
+  .proc .state { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .proc .state small { color: var(--muted-fg); }
+  .proc .state.err { color: var(--danger); }
+  .proc .state.warn { color: var(--warn-fg); }
+  .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--primary); animation: spin .8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex: none; }
+  .ibtn { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border); background: var(--popover); color: var(--foreground); cursor: pointer; }
+  .ibtn:hover { background: var(--hover); }
+  .ibtn.stop { background: var(--danger); border-color: var(--danger); color: var(--primary-fg); }
+  .ibtn svg.fill { fill: currentColor; stroke: none; }
+  .btn { height: 28px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--popover); color: var(--foreground); font: inherit; font-size: 12.5px; cursor: pointer; }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .undo { left: 50%; bottom: 42px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 6px 0 14px; font-size: 12.5px; animation: rise .18s ease-out; }
+  .undo .btn { height: 26px; }
+  .undo .x { border: 0; background: transparent; color: var(--muted-fg); cursor: pointer; width: 24px; height: 24px; border-radius: 4px; }
+  .tip { position: absolute; z-index: 40; padding: 4px 8px; border-radius: 5px; background: #2b251b; color: #f6efe0; font-size: 11.5px; white-space: nowrap; pointer-events: none; }
+  .panel.ink .tip { background: #ece7e1; color: #1a1614; }
+  /* ===== 正文功能菜单（⋯） ===== */
+  .pmenu { right: 12px; top: 44px; width: 180px; padding: 4px; }
+  .pmenu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+  .pmenu button:hover:not(:disabled) { background: var(--hover); }
+  .pmenu button:disabled { opacity: .45; cursor: default; }
+  .pmenu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 2px; }
+
+  /* ===== 版本历史（对应 ChapterHistory versions 模式，替换正文区） ===== */
+  .panel.show-history > .topbar, .panel.show-history > .etool, .panel.show-history > .body, .panel.show-history > .statusbar, .panel.show-history > .score, .panel.show-history > .float { display: none; }
+  .hview { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .panel.show-history .hview { display: flex; }
+  .hbar { display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-bottom: 1px solid var(--border); background: var(--card); flex-shrink: 0; }
+  .hbar h2 { margin: 0; font: 600 16px/1.4 "Noto Serif SC", "Songti SC", serif; }
+  .hbar .meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 2px; font-size: 12px; color: var(--muted-fg); }
+  .hbar .grow { flex: 1; min-width: 0; }
+  .hlist { flex: 1; min-height: 0; overflow-y: auto; background: var(--card); }
+  .hlist > p { margin: 0; padding: 12px 16px; font-size: 13px; color: var(--muted-fg); }
+  .hlist ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+  .hlist li { border-bottom: 1px solid var(--border); }
+  .hrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; border: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+  .hrow:hover { background: var(--hover); }
+  .hrow.fresh { animation: freshrow 2.4s ease-out; }
+  @keyframes freshrow { from { background: var(--flash); } to { background: transparent; } }
+  .hrow .ico { color: var(--muted-fg); }
+  .hrow .main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+  .hrow .w { font-size: 12px; color: var(--muted-fg); }
+  .hrow time { margin-left: auto; font-size: 12px; color: var(--muted-fg); font-variant-numeric: tabular-nums; }
+  .reason { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; height: 20px; border-radius: 999px; font-size: 11.5px; background: var(--badge); color: var(--badge-fg); white-space: nowrap; }
+  .reason.ai { background: var(--hl); color: var(--primary); }
+  .reason.ai .ico { width: 11px; height: 11px; color: currentColor; }
+  .reason.plain { background: transparent; padding: 0; color: var(--muted-fg); }
+  .hdetail { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .hdetail details { flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--card); padding: 8px 16px; font-size: 13px; }
+  .hdetail summary { cursor: pointer; color: var(--muted-fg); }
+  .hdetail details > p { margin: 6px 0 0; color: var(--muted-fg); font-size: 12.5px; }
+  .diff { margin-top: 6px; max-height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.7; }
+  .diff p { margin: 0 0 4px; padding: 2px 6px; border-radius: 3px; }
+  .diff .rm { background: rgba(176, 53, 36, .10); color: var(--danger); }
+  .diff .add { background: rgba(100, 128, 74, .14); color: var(--success); }
+  .panel.ink .diff .rm { background: rgba(229, 130, 107, .12); }
+  .panel.ink .diff .add { background: rgba(124, 176, 131, .14); }
+  .hdetail .pane.preview { flex: 1; }
+  .hdetail .pane.preview .page { padding-bottom: 60px; }
+  .score { position: absolute; right: 16px; bottom: 42px; z-index: 10; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--card); border: 1px solid var(--border); font: 600 13px/1 "SF Mono", monospace; color: var(--success); box-shadow: var(--shadow); transition: bottom .2s ease; }
+</style>
+</head>
+<body>
+<main>
+  <h1 class="page">正文框选 AI 助手工具栏 · 设计稿 v8</h1>
+  <p class="intro">在下方正文中用鼠标拖选任意文字即可弹出工具栏（编辑 / 分屏两侧 / 预览都可以）。也可以用「直达状态」按钮查看各阶段。示例正文、模型名和生成文字都是审核用的占位内容，不进入正式产品；AI 输出为本地模拟，不调用任何模型。产品说明见 <code>docs/612-selection-ai-toolbar-product.md</code>。</p>
+  <div class="controls">
+    <div class="group"><span>主题</span><button data-theme="paper" aria-pressed="true">宣纸</button><button data-theme="ink" aria-pressed="false">玄墨</button></div>
+    <div class="group"><span>面板宽度</span><button data-width="wide" aria-pressed="true">正常</button><button data-width="narrow" aria-pressed="false">窄面板</button></div>
+    <div class="group"><span>模型</span><button data-model="yes" aria-pressed="true">已配置</button><button data-model="no" aria-pressed="false">未配置</button></div>
+    <div class="group"><span>平台</span><button data-os="mac">macOS</button><button data-os="win">Windows</button></div>
+    <div class="group"><span>生成</span><button data-think="yes" aria-pressed="true">含思考</button><button data-think="no" aria-pressed="false">无思考</button></div>
+  </div>
+  <div class="controls">
+    <div class="group"><span>直达状态</span>
+      <button data-jump="toolbar">工具栏</button><button data-jump="menu">⋯ 菜单</button><button data-jump="ask">修改要求输入框</button>
+      <button data-jump="running">处理中</button><button data-jump="stopped">已停止</button><button data-jump="failed">失败</button>
+      <button data-jump="done">完成</button><button data-jump="continue">续写完成</button><button data-jump="conflict">替换冲突</button><button data-jump="undo">已替换（撤销）</button><button data-jump="history">替换后的版本历史</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="frame" id="frame">
+      <div class="panel" id="panel">
+        <div class="topbar">
+          <div class="crumb"><span>第一卷 · 示例卷</span><span>›</span><b>第三章 示例章节</b></div>
+          <span class="badge">草稿</span><span class="saved">已保存</span><span class="spacer"></span>
+          <button class="icon-btn" title="正文功能菜单" id="moreMenu">⋯</button>
+        </div>
+        <div class="etool">
+          <div class="left"><span id="words">字数 0</span><span>⚑ 标注伏笔</span><span>💬 0</span></div>
+          <div class="modes" id="modes"><button data-mode="edit">编辑</button><button data-mode="split">分屏</button><button data-mode="preview" class="on">预览</button><button data-mode="review">评审</button></div>
+        </div>
+        <div class="body" id="body"></div>
+        <div class="statusbar"><span id="cursor">行 1，列 1</span><span class="spacer"></span><span>Markdown</span><span id="themeName">宣纸</span></div>
+        <div class="score" id="score">86</div>
+        <div class="hview" id="hview"></div>
+      </div>
+    </div>
+    <aside class="side">
+      <h3>当前状态</h3>
+      <p id="stateText" style="margin:0 0 12px;color:#4f483d">未选中文字。拖选正文试试。</p>
+      <h3>版本历史</h3>
+      <p style="margin:0;color:#4f483d">替换后点右上角「⋯ → 版本历史」，或点「直达状态 → 替换后的版本历史」。列表中 AI 修改产生的版本带标签：<b>AI 润色前</b>（替换前全文）、<b>AI 润色</b>（替换后全文）、<b>撤销 AI 润色</b>。点任一版本可查看全文、与当前稿比较、恢复。</p>
+      <h3 style="margin-top:12px">审核要点</h3>
+      <ol>
+        <li>工具栏在选区下方，顺序：输入修改要求 · 润色 · 扩写 · 续写 · ⋯</li>
+        <li>⋯ 菜单列出全部六项功能</li>
+        <li>输入框：@ 引用、+、模型选择；无作品选择/模式/发送；下方功能列表</li>
+        <li>处理框在底部，只显示 AI 输出；停止 / 继续</li>
+        <li>完成后变大，放弃 / 替换；替换后可撤销</li>
+        <li>版本历史新增「AI X前」「AI X」，撤销再加「撤销 AI X」</li>
+      </ol>
+    </aside>
+  </div>
+</main>
+<script>
+/* ===== 审核用占位数据（不进入正式产品） ===== */
+const SAMPLE = [
+  "雨下到第三天的时候，镇口那家旧书铺终于亮了灯。",
+  "林简撑着伞站在檐下，看见柜台后面坐着一个陌生的老人。老人低头翻着一本没有封皮的册子，手指在纸页上停停走走，像是在数着什么。屋里很静，只有雨水顺着瓦檐落下的声音。",
+  "她犹豫了一会儿，还是推门走了进去。门上的铜铃响了一声，老人没有抬头，只是把册子往她这边推了推。",
+  "“你来晚了。”老人说，“它等了你很久。”",
+  "林简低头去看那本册子。纸页泛黄，字迹却很新，最上面一行写着她的名字，下面是一串她从没见过的日期。",
+  "窗外的雨忽然停了。",
+]
+const FNS = {
+  polish:   { name: "润色", desc: "优化措辞与节奏，不改情节", icon: "sparkle" },
+  expand:   { name: "扩写", desc: "补充细节，篇幅约增加一半", icon: "expand" },
+  shrink:   { name: "缩写", desc: "精简冗余，保留关键情节", icon: "shrink" },
+  continue: { name: "续写", desc: "接着选中内容往下写", icon: "arrow" },
+  rewrite:  { name: "重写", desc: "换一种写法重新表达", icon: "redo" },
+  summary:  { name: "总结", desc: "概括为一段简述", icon: "list" },
+}
+const OUT = {
+  polish: "林简撑伞立在檐下，柜台后坐着一位从未见过的老人。他垂首翻阅一本失了封皮的旧册，指尖在纸页间时停时走，仿佛在默数什么。屋内极静，只听得雨水沿瓦檐一线线垂落。",
+  expand: "林简撑着伞站在檐下，伞骨上的水珠一颗接一颗往下滚。柜台后面坐着一个陌生的老人，灰布长衫洗得发白，鼻梁上架着一副缺了一条腿的老花镜。他低头翻着一本没有封皮的册子，枯瘦的手指在纸页上停停走走，每停一次，嘴唇便轻轻动一下，像是在数着什么，又像是在和谁对着暗号。\n\n屋里很静，静得能听见煤油灯芯细微的噼啪声。雨水顺着瓦檐落下，在门槛外砸出一排浅浅的水窝。",
+  shrink: "檐下，林简看见柜台后坐着个陌生老人，正翻着一本无封皮的册子，像在数什么。屋里只有雨声。",
+  continue: "她收了伞，把伞尖抵在门边的青砖上，水很快洇开一小片深色。老人翻页的手停住了，那一页上画着一扇门，门上挂着一只小小的铜铃。\n\n林简忽然觉得那铃铛有些眼熟。她回头去看，门上空空的，什么也没有挂。",
+  rewrite: "隔着雨幕，林简望见柜台后多了一个老人。他不是镇上的人，她确定。那人正一页页拨着一本没有封皮的册子，手指走走停停，好像在清点一笔旧账。除了檐下的雨声，屋里再没有别的动静。",
+  summary: "林简在雨中来到旧书铺，看见一位陌生老人在柜台后翻看一本无封皮的册子，屋内寂静。",
+}
+/* 重试时的另一稿（审核用占位） */
+const ALT = {
+  polish: ["林简撑着伞立在檐下。柜台后坐着个面生的老人，正低头翻一本没了封皮的册子，指尖在纸上走走停停，像在默数。屋里没有声响，只有雨顺着瓦檐往下淌。", "檐下，林简收住脚步。柜台后的老人她从没见过，他翻着一本无封皮的旧册，手指一顿一顿，似在点数。四下极静，唯有檐雨不绝。"],
+  expand: ["林简撑着伞站在檐下，鞋尖已经湿透。柜台后面坐着一个陌生的老人，背微微佝着，像一截被雨泡软的旧木头。他低头翻着一本没有封皮的册子，手指在纸页上停停走走，每停一次，就用指甲在页边轻轻划一道，仿佛在给什么东西计数。\n\n屋里很静。檐上的雨水一串串落下，把门口那块青石敲得发亮。"],
+  shrink: ["林简在檐下看见一个陌生老人，正翻着无封皮的册子默数什么。屋里只剩雨声。"],
+  continue: ["她把伞靠在门边，伞尖滴下的水在地上聚成一小片。老人终于抬起头，镜片后的眼睛很浑，却直直地看着她。\n\n“坐吧，”他说，“这一页，得你自己翻。”"],
+  rewrite: ["雨帘后面，柜台边多出一个老人。林简在镇上住了十几年，从没见过他。他正一页页拨弄一本没封皮的册子，指头时走时停，像在核对一份只有他看得懂的名单。屋里静得只剩下檐雨。"],
+  summary: ["雨天，林简在旧书铺见到一位陌生老人，他正翻着一本无封皮的册子，像在清点什么。"],
+}
+const THINK = "先确认选中段落的视角与时态：第三人称、过去时。保留“陌生老人”“无封皮册子”“数着什么”三个要素，语气偏静，句子可以略收紧……"
+const ENTITIES = [{ name: "示例角色甲", kind: "角色" }, { name: "示例角色乙", kind: "角色" }, { name: "旧书铺", kind: "场景" }, { name: "第三章细纲", kind: "大纲" }]
+
+const ICONS = {
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  expand: '<path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/>',
+  shrink: '<path d="M10 4v6H4M14 20v-6h6M4 4l6 6M20 20l-6-6"/>',
+  arrow: '<path d="M4 12h14M13 6l6 6-6 6"/>',
+  redo: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  list: '<path d="M8 6h12M8 12h12M8 18h8M4 6h.01M4 12h.01M4 18h.01"/>',
+  more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  chev: '<path d="M6 9l6 6 6-6"/>',
+  stop: '<rect x="7" y="7" width="10" height="10" rx="1.5"/>',
+  play: '<path d="M8 5v14l11-7z"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+  back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  restore: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  right: '<path d="M9 6l6 6-6 6"/>',
+  quote: '<path d="M4 18v-5.5C4 8.4 6.2 6 9.5 5.2l.6 1.6C8.3 7.6 7.4 9 7.3 11H10v7zM14 18v-5.5c0-4.1 2.2-6.5 5.5-7.3l.6 1.6c-1.8.8-2.7 2.2-2.8 4.2H20v7z"/>',
+}
+const icon = (n, fill) => `<svg class="ico${fill ? " fill" : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
+const count = s => Array.from(s.replace(/\s/g, "")).length
+/* ===== 状态 ===== */
+const S = {
+  source: SAMPLE.join("\n\n"), mode: "preview", hasModel: true, think: true, narrow: false,
+  sel: null,            // { start, end, pane } 源文偏移
+  phase: "idle",        // idle | toolbar | menu | ask | running | stopped | failed | done | conflict | undo
+  fn: null, req: "", out: "", thinkText: "", thinkSec: 0, timer: null, undoTimer: null, flash: null,
+  history: [], lastReplace: null, changedDuring: false, pick: "polish",
+  os: /Mac|iPhone|iPad/.test(navigator.platform) ? "mac" : "win",
+  hsel: null, freshFrom: 0,
+}
+/* 示例历史：每条保存全文快照（与产品一致：修订号递增，最新在上） */
+const T0 = Date.now() - 3 * 3600e3
+function seedHistory() {
+  const v1 = SAMPLE.slice(0, 4).join("\n\n"), v2 = SAMPLE.slice(0, 5).join("\n\n"), v3 = S.source
+  S.history = [
+    { version: 3, reason: "正文更新", text: v3, at: T0 + 2 * 3600e3 },
+    { version: 2, reason: "正文更新", text: v2, at: T0 + 3600e3 },
+    { version: 1, reason: "AI 生成正文", text: v1, at: T0 },
+  ]
+}
+function addVersion(reason, text, kind) {
+  const version = (S.history[0]?.version ?? 0) + 1
+  S.history.unshift({ version, reason, text, at: Date.now(), kind })
+}
+const $ = s => document.querySelector(s)
+const panel = $("#panel"), body = $("#body")
+const layer = (id) => { let el = document.getElementById(id); if (!el) { el = document.createElement("div"); el.id = id; panel.appendChild(el) } return el }
+
+/* ===== 正文渲染：每个段落/行携带源文起点 data-s，文字与源文逐字对应 ===== */
+function paragraphs() {
+  const out = []; let i = 0
+  for (const text of S.source.split("\n\n")) { out.push({ s: i, text }); i += text.length + 2 }
+  return out
+}
+function marked(p) {
+  const ranges = []
+  const hl = ["running", "stopped", "failed", "done", "conflict"].includes(S.phase) && S.sel
+  if (hl) ranges.push([S.sel.start, S.sel.end, "sel-hl"])
+  if (S.flash) ranges.push([S.flash.start, S.flash.end, "flash"])
+  let html = "", at = p.s
+  const end = p.s + p.text.length
+  for (const [a, b, cls] of ranges) {
+    const x = Math.max(a, p.s), y = Math.min(b, end)
+    if (x >= y || x < at) continue
+    html += esc(S.source.slice(at, x)) + `<mark class="${cls}">${esc(S.source.slice(x, y))}</mark>`
+    at = y
+  }
+  return html + esc(S.source.slice(at, end))
+}
+function editPane() {
+  let n = 0, html = ""
+  paragraphs().forEach((p, idx) => {
+    if (idx) html += `<div class="ln"><i>${++n}</i><span></span></div>`
+    html += `<div class="ln"><i>${++n}</i><span data-s="${p.s}">${marked(p)}</span></div>`
+  })
+  return `<div class="pane edit" data-pane="edit">${html}</div>`
+}
+function previewPane() {
+  const ps = paragraphs().map(p => `<p data-s="${p.s}">${marked(p)}</p>`).join("")
+  return `<div class="pane preview" data-pane="preview"><div class="page"><div class="head"><small>第一卷 · 示例卷</small><h2>第三章　示例章节</h2><em>${count(S.source).toLocaleString()} 字 · 草稿</em></div>${ps}</div></div>`
+}
+function renderBody() {
+  const scrolls = [...body.querySelectorAll(".pane")].map(p => p.scrollTop)
+  body.className = "body" + (S.mode === "split" ? " split" : "")
+  body.innerHTML = S.mode === "edit" ? editPane() : S.mode === "preview" ? previewPane() : editPane() + '<div class="divider"></div>' + previewPane()
+  body.querySelectorAll(".pane").forEach((p, i) => { p.scrollTop = scrolls[i] ?? 0; p.addEventListener("scroll", place) })
+  $("#words").textContent = `字数 ${count(S.source).toLocaleString()}`
+  document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", b.dataset.mode === S.mode))
+}
+/* ===== 选区 ↔ 源文偏移 ===== */
+function offsetOf(node, off) {
+  const el = (node.nodeType === 1 ? node : node.parentElement)?.closest("[data-s]")
+  if (!el || !body.contains(el)) return null
+  const r = document.createRange(); r.selectNodeContents(el); r.setEnd(node, off)
+  return Number(el.dataset.s) + r.toString().length
+}
+function pointAt(paneEl, pos) {
+  for (const el of paneEl.querySelectorAll("[data-s]")) {
+    const s = Number(el.dataset.s), len = el.textContent.length
+    if (pos < s || pos > s + len) continue
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let left = pos - s, t
+    while ((t = walker.nextNode())) { if (left <= t.length) return [t, left]; left -= t.length }
+    return [el, el.childNodes.length]
+  }
+  return null
+}
+function rangeIn(paneEl, a, b) {
+  const p = pointAt(paneEl, a), q = pointAt(paneEl, b)
+  if (!p || !q) return null
+  const r = document.createRange(); r.setStart(...p); r.setEnd(...q); return r
+}
+function readSelection() {
+  const sel = getSelection()
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null
+  const r = sel.getRangeAt(0)
+  const pane = (r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement).closest(".pane")
+  if (!pane) return null
+  let a = offsetOf(r.startContainer, r.startOffset), b = offsetOf(r.endContainer, r.endOffset)
+  if (a === null || b === null || b <= a) return null
+  if (!S.source.slice(a, b).trim()) return null
+  return { start: a, end: b, pane: pane.dataset.pane }
+}
+function selPane() {
+  const panes = [...body.querySelectorAll(".pane")]
+  return panes.find(p => p.dataset.pane === S.sel?.pane) ?? panes[0]
+}
+
+/* ===== 浮层定位：选区末行下方，空间不足翻到首行上方 ===== */
+function place() {
+  const fl = document.querySelector(".float.anchored")
+  if (!fl || !S.sel) return
+  const pane = selPane(), r = rangeIn(pane, S.sel.start, S.sel.end)
+  if (!r) return
+  const rects = [...r.getClientRects()].filter(x => x.width > 0)
+  if (!rects.length) return
+  const first = rects[0], last = rects[rects.length - 1]
+  const view = pane.getBoundingClientRect(), box = panel.getBoundingClientRect()
+  const outside = last.bottom < view.top || first.top > view.bottom
+  fl.style.visibility = outside ? "hidden" : "visible"
+  const w = fl.offsetWidth, h = fl.offsetHeight
+  let top = last.bottom + 8 - box.top
+  // 输入框较高：打开时上下都放不下，先把正文滚动到「选区末行下方」放得下（仅一次，选区本身过高时不滚）
+  if (fl.classList.contains("askbox") && !fl.dataset.fitted && last.bottom + 8 + h > view.bottom - 8 && first.top - 8 - h <= view.top) {
+    fl.dataset.fitted = "1"
+    const need = last.bottom + 8 + h - (view.bottom - 8), room = first.top - view.top - 8
+    if (need <= room && need <= pane.scrollHeight - pane.clientHeight - pane.scrollTop) { pane.scrollTop += need; return place() }
+  }
+  if (last.bottom + 8 + h > view.bottom - 8) {
+    // 下方放不下：能翻到首行上方就翻上去，否则贴底收进可视区（可能盖住部分选区）
+    top = first.top - 8 - h > view.top ? first.top - 8 - h - box.top : Math.max(view.top + 8, view.bottom - 8 - h) - box.top
+  }
+  const cx = (last.left + last.right) / 2 - box.left
+  const min = view.left - box.left + 8, max = view.right - box.left - w - 8
+  fl.style.left = Math.max(min, Math.min(cx - w / 2, max)) + "px"
+  fl.style.top = top + "px"
+  const sub = document.querySelector(".float.menu, .float.mention")
+  if (sub && sub.dataset.for) positionSub(sub)
+}
+function positionSub(sub) {
+  const host = document.querySelector(sub.dataset.for); if (!host) return
+  const a = host.getBoundingClientRect(), box = panel.getBoundingClientRect()
+  let left = a.right - box.left - sub.offsetWidth, top = a.bottom - box.top + 4
+  if (a.bottom + sub.offsetHeight + 8 > box.bottom - 30) top = a.top - box.top - sub.offsetHeight - 4
+  sub.style.left = Math.max(8, left) + "px"; sub.style.top = top + "px"
+}
+/* ===== 浮层渲染 ===== */
+const noModelTip = "请先在 设置 → 模型 中添加模型"
+function fnBtn(key) {
+  const f = FNS[key]
+  return `<button class="tbtn" data-fn="${key}" ${S.hasModel ? "" : "disabled"} title="${S.hasModel ? f.desc : noModelTip}">${icon(f.icon)}${f.name}</button>`
+}
+const DEFAULT_FN = "polish" // 输入框打开时默认选择的功能；Enter 执行当前选择
+function fnItems(inAsk) {
+  return Object.entries(FNS).map(([k, f]) => { const on = inAsk && k === S.pick; return `<button class="mitem${on ? " picked" : ""}" data-fn="${k}" ${inAsk ? `aria-pressed="${on}"` : ""} ${S.hasModel ? "" : "disabled"} title="${S.hasModel ? "" : noModelTip}">${icon(f.icon)}<b>${f.name}</b><small>${f.desc}</small></button>` }).join("")
+}
+function setPick(k) {
+  S.pick = k
+  document.querySelectorAll(".askbox .funcs .mitem").forEach(b => { const on = b.dataset.fn === k; b.classList.toggle("picked", on); b.setAttribute("aria-pressed", String(on)) })
+  const h = document.querySelector(".askbox .hint"); if (h && S.hasModel) h.textContent = askHint()
+}
+/* 选择功能的快捷键：macOS ⌘↑/⌘↓，Windows Alt+↑/Alt+↓ */
+const pickMod = e => S.os === "mac" ? e.metaKey && !e.altKey && !e.ctrlKey : e.altKey && !e.metaKey && !e.ctrlKey
+const pickKeyLabel = () => S.os === "mac" ? "⌘↑↓" : "Alt+↑↓"
+function stepPick(dir) {
+  const keys = Object.keys(FNS), i = keys.indexOf(S.pick)
+  setPick(keys[(i + dir + keys.length) % keys.length])
+  document.querySelector(".askbox .funcs .mitem.picked")?.scrollIntoView({ block: "nearest" })
+}
+const askHint = () => `Enter 执行${FNS[S.pick].name} · ${pickKeyLabel()} 选择功能 · Shift+Enter 换行 · Esc 关闭`
+const PROC = ["running", "stopped", "failed", "done", "conflict"]
+/* 处理框在处理阶段之间保留同一元素，避免停止/继续/完成时重播入场动画 */
+function clearFloats() { panel.querySelectorAll(".float").forEach(e => { if (!(e.id === "proc" && PROC.includes(S.phase))) e.remove() }) }
+function render() {
+  clearFloats(); renderBody()
+  $("#score").style.bottom = ["running", "stopped", "failed"].includes(S.phase) ? "214px" : ["done", "conflict"].includes(S.phase) ? "314px" : S.phase === "undo" ? "92px" : "42px"
+  const p = S.phase
+  if (p === "toolbar" || p === "menu") {
+    const tb = layer("tb"); tb.className = "float anchored seltb" + (S.narrow ? " compact" : "")
+    tb.innerHTML = `<button class="ask" data-act="ask" title="输入修改要求">${icon("pen")}<span>输入修改要求…</span></button><span class="sep"></span>${fnBtn("polish")}${fnBtn("expand")}${fnBtn("continue")}<span class="sep"></span><button class="tbtn only${p === "menu" ? " open" : ""}" id="moreBtn" data-act="more" title="更多 AI 修改" aria-haspopup="menu" aria-expanded="${p === "menu"}">${icon("more")}</button>`
+    if (p === "menu") { const m = layer("fnmenu"); m.className = "float menu"; m.dataset.for = "#moreBtn"; m.setAttribute("role", "menu"); m.innerHTML = fnItems(false) }
+  }
+  if (p === "ask") {
+    const q = S.source.slice(S.sel.start, S.sel.end).replace(/\s+/g, " ")
+    const box = layer("ask"); box.className = "float anchored askbox"
+    box.style.width = Math.min(560, body.clientWidth - 32) + "px"
+    box.innerHTML = `<div class="quote"><div class="qtext" title="选中的原文">${icon("quote")}<span>${esc(q)}</span></div><span class="qcount">已选 ${count(q)} 字</span></div>
+      <div class="edit" contenteditable="true" role="textbox" aria-label="修改要求" data-placeholder="写下修改要求，@ 引用角色、场景、大纲…">${S.req}</div>
+      <div class="bar"><button class="tbtn only" data-act="plus" title="插入角色·场景·大纲">${icon("plus")}</button>
+        <button class="tbtn model" title="模型与思考强度（仅本次修改）" ${S.hasModel ? "" : "disabled"}><i></i>${S.hasModel ? "示例模型 · 标准思考" : "未配置模型"}${icon("chev")}</button></div>
+      <div class="funcs" role="group" aria-label="AI 修改功能">${fnItems(true)}</div>
+      <div class="hint">${S.hasModel ? askHint() : noModelTip}</div>`
+    const ed = box.querySelector(".edit")
+    ed.addEventListener("input", () => { S.req = ed.innerHTML; mentionCheck(ed) })
+    ed.addEventListener("keydown", askKeys)
+    box.querySelector(".funcs").addEventListener("keydown", funcKeys)
+    requestAnimationFrame(() => { ed.focus(); const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); getSelection().removeAllRanges(); getSelection().addRange(r) })
+  }
+  if (["running", "stopped", "failed", "done", "conflict"].includes(p)) renderProc()
+  if (p === "undo") {
+    const u = layer("undo"); u.className = "float undo"
+    u.innerHTML = `<span>已替换为${FNS[S.fn].name}结果</span><button class="btn" data-act="undo">撤销</button><button class="x" data-act="close" title="关闭">${icon("x")}</button>`
+  }
+  requestAnimationFrame(() => { place(); const m = document.querySelector(".float.menu"); if (m) positionSub(m) })
+  updateSide()
+}
+function procText() {
+  if (S.fn === "continue") {
+    const orig = S.source.slice(S.sel.start, S.sel.end)
+    return orig.split(/\n\n+/).map(t => `<p class="orig">${esc(t)}</p>`).join("") + S.out.split(/\n\n+/).filter(Boolean).map(t => `<p>${esc(t)}</p>`).join("")
+  }
+  return S.out.split(/\n\n+/).map(t => `<p>${esc(t)}</p>`).join("")
+}
+function renderProc() {
+  const f = FNS[S.fn], p = S.phase, n = count(S.out), done = p === "done" || p === "conflict"
+  const box = layer("proc"); box.className = "float proc" + (done ? " done" : "")
+  if (S.narrow) box.style.width = (body.clientWidth - 32) + "px"
+  const think = S.think ? `<details class="think"${p === "running" && !S.out ? " open" : ""}><summary>${p === "running" && !S.out ? "思考中…" : `已思考 ${S.thinkSec} 秒`}</summary><div>${esc(S.thinkText)}</div></details>` : ""
+  const caret = p === "running" ? '<span class="caret"></span>' : ""
+  let state, actions
+  if (p === "running") { state = `<div class="state" title="修改要求：${esc(stripTags(S.req) || "无")}"><span class="spin"></span>${f.name}中 <small>${S.attempt > 1 ? `· 第 ${S.attempt} 次` : ""} · 已生成 ${n} 字</small></div>`; actions = `<button class="ibtn stop" data-act="stop" title="停止">${icon("stop", true)}</button>` }
+  if (p === "stopped") { state = `<div class="state">已停止 <small>· 已生成 ${n} 字</small></div>`; actions = `<button class="ibtn" data-act="resume" title="继续">${icon("play", true)}</button><button class="ibtn" data-act="discard" title="放弃">${icon("x")}</button>` }
+  if (p === "failed") { state = `<div class="state err">${f.name}失败：网络连接中断，已生成 ${n} 字</div>`; actions = `<button class="ibtn" data-act="resume" title="继续">${icon("play", true)}</button><button class="ibtn" data-act="discard" title="放弃">${icon("x")}</button>` }
+  if (p === "done") {
+    const before = count(S.source.slice(S.sel.start, S.sel.end)), after = S.fn === "continue" ? before + n : n
+    state = S.changedDuring ? `<div class="state warn">${f.name}完成 · 选中原文已改动，无法直接替换</div>` : `<div class="state"><span class="dot"></span>${f.name}完成 <small>${S.attempt > 1 ? `· 第 ${S.attempt} 次` : ""} · 原文 ${before} 字 → ${after} 字</small></div>`
+    actions = `<button class="btn" data-act="discard">放弃</button><button class="btn" data-act="retry" title="按相同功能和要求重新生成，替换当前结果">重试</button><button class="btn primary" data-act="replace">替换</button>`
+  }
+  if (p === "conflict") { state = `<div class="state warn">正文在处理期间已改动，无法替换。结果已保留，可复制后手动修改</div>`; actions = `<button class="btn" data-act="copy">复制结果</button><button class="btn" data-act="discard">放弃</button>` }
+  box.innerHTML = `<div class="stream" id="stream">${think}${procText()}${caret}</div><div class="foot">${state}${actions}</div>`
+  const st = box.querySelector("#stream")
+  if (!S.userScrolled) st.scrollTop = st.scrollHeight
+  st.addEventListener("scroll", () => { S.userScrolled = st.scrollTop + st.clientHeight < st.scrollHeight - 8 })
+}
+const stripTags = h => { const d = document.createElement("div"); d.innerHTML = h; return d.textContent.trim() }
+/* ===== @ 引用（与对话输入框相同：@ 触发弹窗，选中插入 chip） ===== */
+let mentionIdx = 0
+function mentionCheck(ed) {
+  const old = document.getElementById("mention"); old?.remove()
+  const sel = getSelection(); if (!sel.rangeCount) return
+  const r = sel.getRangeAt(0), t = r.startContainer
+  if (t.nodeType !== 3) return
+  const before = t.textContent.slice(0, r.startOffset), at = before.lastIndexOf("@")
+  if (at < 0 || /\s/.test(before.slice(at + 1))) return
+  const q = before.slice(at + 1), list = ENTITIES.filter(e => e.name.includes(q))
+  if (!list.length) return
+  mentionIdx = Math.min(mentionIdx, list.length - 1)
+  const m = layer("mention"); m.className = "float mention"; m.dataset.for = ".askbox .edit"
+  m.innerHTML = list.map((e, i) => `<button class="mitem${i === mentionIdx ? " active" : ""}" data-mention="${e.name}"><span class="avatar"></span><b>${e.name}</b><small>${e.kind}</small></button>`).join("")
+  m._insert = (name) => {
+    const range = document.createRange(); range.setStart(t, at); range.setEnd(t, r.startOffset); range.deleteContents()
+    const chip = document.createElement("span"); chip.className = "chip"; chip.contentEditable = "false"; chip.textContent = name
+    range.insertNode(chip); const sp = document.createTextNode(" "); chip.after(sp)
+    const c = document.createRange(); c.setStartAfter(sp); c.collapse(true); sel.removeAllRanges(); sel.addRange(c)
+    m.remove(); S.req = ed.innerHTML; ed.focus()
+  }
+  positionSub(m)
+}
+function askKeys(e) {
+  const m = document.getElementById("mention")
+  if (m) {
+    const items = [...m.querySelectorAll(".mitem")]
+    if ((e.key === "ArrowDown" || e.key === "ArrowUp") && (e.metaKey || e.altKey)) { e.preventDefault(); return } // @ 弹窗打开时不切换功能
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); mentionIdx = (mentionIdx + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length; items.forEach((b, i) => b.classList.toggle("active", i === mentionIdx)); return }
+    if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); m._insert(items[mentionIdx].dataset.mention); return }
+    if (e.key === "Escape") { e.preventDefault(); m.remove(); return }
+  }
+  if (e.isComposing || e.keyCode === 229) return
+  // ⌘↑/⌘↓（macOS）或 Alt+↑/Alt+↓（Windows）：选择功能，光标留在输入框；首尾循环
+  if ((e.key === "ArrowDown" || e.key === "ArrowUp") && pickMod(e)) { e.preventDefault(); stepPick(e.key === "ArrowDown" ? 1 : -1); return }
+  // 不带修饰键的 ↑/↓/←/→ 不拦截：在输入框内移动光标（与对话输入框一致）
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (S.hasModel) start(S.pick); return }
+  if (e.key === "Tab" && !e.shiftKey) { const cur = document.querySelector(".askbox .funcs .mitem.picked:not(:disabled)"); if (cur) { e.preventDefault(); cur.focus() } return }
+  if (e.key === "Escape") { e.preventDefault(); closeAll(true) }
+}
+/* 功能列表获得焦点后：↑/↓ 在功能间移动，Enter/空格执行，从首项再按 ↑ 或 Shift+Tab 回到输入框 */
+function funcKeys(e) {
+  const items = [...document.querySelectorAll(".askbox .funcs .mitem:not(:disabled)")], i = items.indexOf(document.activeElement)
+  const back = () => { const ed = document.querySelector(".askbox .edit"); ed.focus(); const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); getSelection().removeAllRanges(); getSelection().addRange(r) }
+  const go = el => { if (!el) return; el.focus(); setPick(el.dataset.fn) } // 高亮跟随焦点：高亮项即当前选择
+  if (e.key === "ArrowDown") { e.preventDefault(); go(items[Math.min(i + 1, items.length - 1)]) }
+  else if (e.key === "ArrowUp") { e.preventDefault(); if (i <= 0) back(); else go(items[i - 1]) }
+  else if (e.key === "Tab" && e.shiftKey && i === 0) { e.preventDefault(); back() }
+  else if (e.key === "Escape") { e.preventDefault(); closeAll(true) }
+}
+
+/* ===== 模拟生成（审核用；正式产品为真实模型流式输出） ===== */
+function start(fn, retry) {
+  S.attempt = retry ? (S.attempt ?? 1) + 1 : 1
+  S.fn = fn; S.out = ""; S.thinkText = ""; S.thinkSec = 0; S.changedDuring = false; S.userScrolled = false
+  S.phase = "running"; getSelection().removeAllRanges(); render(); tick()
+}
+function tick() {
+  clearTimeout(S.timer)
+  const target = S.attempt > 1 ? (ALT[S.fn]?.[(S.attempt - 2) % ALT[S.fn].length] ?? OUT[S.fn]) : OUT[S.fn]
+  if (S.think && S.thinkText.length < THINK.length) {
+    S.thinkText = THINK.slice(0, S.thinkText.length + 6); S.thinkSec = Math.max(1, Math.round(S.thinkText.length / 12))
+  } else if (S.out.length < target.length) {
+    S.out = target.slice(0, S.out.length + 3)
+  } else { S.phase = "done"; render(); return }
+  renderProc(); S.timer = setTimeout(tick, 45)
+}
+function stop() { clearTimeout(S.timer); S.phase = "stopped"; renderProc(); updateSide() }
+
+/* ===== 替换 / 放弃 / 撤销 ===== */
+function stamp() { const d = new Date(); return d.toTimeString().slice(0, 8) }
+function replaceSel() {
+  if (S.changedDuring) { S.phase = "conflict"; renderProc(); updateSide(); return }
+  const f = FNS[S.fn], orig = S.source.slice(S.sel.start, S.sel.end)
+  const text = S.fn === "continue" ? orig + "\n\n" + S.out : S.out
+  const before = S.source
+  S.source = before.slice(0, S.sel.start) + text + before.slice(S.sel.end)
+  S.freshFrom = (S.history[0]?.version ?? 0) + 1
+  addVersion(`AI ${f.name}前`, before, "before")
+  addVersion(`AI ${f.name}`, S.source, "after")
+  S.lastReplace = { before, after: S.source, fn: S.fn }
+  S.flash = { start: S.sel.start, end: S.sel.start + text.length }
+  S.phase = "undo"; render(); scrollToFlash()
+  setTimeout(() => { document.querySelectorAll("mark.flash").forEach(m => m.classList.add("fade")); setTimeout(() => { S.flash = null; if (S.phase === "undo" || S.phase === "idle") renderBody() }, 1300) }, 400)
+  clearTimeout(S.undoTimer); S.undoTimer = setTimeout(() => { if (S.phase === "undo") { S.phase = "idle"; render() } }, 10000)
+}
+function scrollToFlash() { requestAnimationFrame(() => body.querySelectorAll("mark.flash").forEach(m => m.scrollIntoView({ block: "nearest" }))) }
+function undo() {
+  if (!S.lastReplace || S.source !== S.lastReplace.after) return
+  S.source = S.lastReplace.before
+  S.freshFrom = (S.history[0]?.version ?? 0) + 1
+  addVersion(`撤销 AI ${FNS[S.lastReplace.fn].name}`, S.source, "undo")
+  S.lastReplace = null; S.flash = null; clearTimeout(S.undoTimer); S.phase = "idle"; S.sel = null; render(); toast("已撤销")
+}
+function closeAll(keepSel) {
+  clearTimeout(S.timer); S.phase = "idle"
+  const s = S.sel; render()
+  if (keepSel && s) { const r = rangeIn(selPane(), s.start, s.end); if (r) { getSelection().removeAllRanges(); getSelection().addRange(r); S.phase = "toolbar"; render(); getSelection().removeAllRanges(); getSelection().addRange(rangeIn(selPane(), s.start, s.end)) } }
+  else S.sel = null
+}
+function toast(t) { const el = layer("toast"); el.className = "float undo"; el.style.bottom = "42px"; el.textContent = t; setTimeout(() => el.remove(), 1400) }
+/* ===== 事件 ===== */
+body.addEventListener("mouseup", () => setTimeout(() => {
+  if (["running", "stopped", "failed", "done", "conflict"].includes(S.phase)) return
+  const sel = readSelection()
+  if (!sel) { if (S.phase === "toolbar" || S.phase === "menu" || S.phase === "ask") { S.phase = "idle"; S.sel = null; render() } return }
+  if (S.phase === "ask" && S.sel && sel.start === S.sel.start && sel.end === S.sel.end) return
+  if (!S.sel || sel.start !== S.sel.start || sel.end !== S.sel.end) { S.req = ""; S.pick = DEFAULT_FN }
+  const keep = getSelection().getRangeAt(0).cloneRange()
+  S.sel = sel; S.phase = "toolbar"; render()
+  const r = rangeIn(selPane(), sel.start, sel.end) ?? keep
+  getSelection().removeAllRanges(); getSelection().addRange(r)
+}, 0))
+body.addEventListener("mousedown", () => { if (S.phase === "menu" || S.phase === "ask") { S.phase = "toolbar" } })
+panel.addEventListener("mousedown", e => { if (e.target.closest(".float") && !e.target.closest("[contenteditable], .stream")) e.preventDefault() })
+panel.addEventListener("click", e => {
+  const m = e.target.closest("[data-mention]"); if (m) { document.getElementById("mention")._insert(m.dataset.mention); return }
+  const f = e.target.closest("[data-fn]"); if (f && !f.disabled) { start(f.dataset.fn); return }
+  const a = e.target.closest("[data-act]")?.dataset.act
+  if (a === "ask") { S.phase = "ask"; render() }
+  else if (a === "more") { S.phase = S.phase === "menu" ? "toolbar" : "menu"; const s = S.sel; render(); const r = rangeIn(selPane(), s.start, s.end); if (r) { getSelection().removeAllRanges(); getSelection().addRange(r) } }
+  else if (a === "plus") { const ed = document.querySelector(".askbox .edit"); ed.focus(); document.execCommand("insertText", false, "@"); S.req = ed.innerHTML; mentionCheck(ed) }
+  else if (a === "stop") stop()
+  else if (a === "resume") { S.phase = "running"; render(); tick() }
+  else if (a === "retry") start(S.fn, true)
+  else if (a === "discard" || a === "close") { clearTimeout(S.timer); S.phase = "idle"; S.sel = null; render() }
+  else if (a === "replace") replaceSel()
+  else if (a === "copy") { navigator.clipboard?.writeText(S.out).catch(() => {}); toast("已复制结果") }
+  else if (a === "undo") undo()
+})
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return
+  if (S.phase === "menu") { S.phase = "toolbar"; const s = S.sel; render(); const r = rangeIn(selPane(), s.start, s.end); if (r) { getSelection().removeAllRanges(); getSelection().addRange(r) } }
+  else if (S.phase === "toolbar") { S.phase = "idle"; S.sel = null; getSelection().removeAllRanges(); render() }
+})
+document.addEventListener("mousedown", e => {
+  if (e.target.closest("[data-os]")) { e.preventDefault(); return } // 审核用平台切换不关闭浮层、不抢焦点
+  if (!panel.contains(e.target) && ["toolbar", "menu", "ask"].includes(S.phase)) { S.phase = "idle"; S.sel = null; render() }
+})
+$("#modes").addEventListener("click", e => {
+  const m = e.target.closest("[data-mode]")?.dataset.mode; if (!m || m === "review") return
+  S.mode = m; if (["toolbar", "menu", "ask"].includes(S.phase)) { S.phase = "idle"; S.sel = null }
+  if (S.sel) S.sel.pane = m === "split" ? S.sel.pane : m
+  render()
+})
+new ResizeObserver(() => place()).observe(panel)
+
+/* ===== 正文功能菜单 → 版本历史（复用现有 ChapterHistory 的列表/详情/比较/恢复结构） ===== */
+const fmtTime = t => new Date(t).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
+function reasonTag(h) {
+  const ai = /^(AI |撤销 AI )/.test(h.reason) && h.reason !== "AI 生成正文"
+  return ai ? `<span class="reason ai">${icon("sparkle")}${esc(h.reason)}</span>` : `<span class="reason plain">${esc(h.reason)}</span>`
+}
+function paraDiff(a, b) {
+  const A = a.split(/\n\n+/), B = b.split(/\n\n+/), sa = new Set(A), sb = new Set(B)
+  return [...A.filter(x => !sb.has(x)).map(t => ({ kind: "rm", t })), ...B.filter(x => !sa.has(x)).map(t => ({ kind: "add", t }))]
+}
+function renderHistory() {
+  const hv = $("#hview")
+  if (!S.hsel) {
+    hv.innerHTML = `<div class="hbar"><button class="icon-btn" data-act="hclose" title="返回正文">${icon("back")}</button><div class="grow"><h2>版本历史</h2></div></div>
+      <div class="hlist"><p>选择一个修订，查看完整正文。</p><ul aria-label="正文版本列表">${S.history.map(h => `<li><button class="hrow${S.freshFrom && h.version >= S.freshFrom ? " fresh" : ""}" data-hv="${h.version}">${icon("history")}<span class="main"><span>修订 ${h.version}</span>${reasonTag(h)}<span class="w">${count(h.text).toLocaleString()} 字</span><time>${fmtTime(h.at)}</time></span>${icon("right")}</button></li>`).join("")}</ul></div>`
+    return
+  }
+  const h = S.history.find(x => x.version === S.hsel), cur = S.history[0], d = paraDiff(cur.text, h.text)
+  hv.innerHTML = `<div class="hbar"><button class="icon-btn" data-act="hback" title="返回版本列表">${icon("back")}</button>
+      <div class="grow"><h2>历史正文 · 修订 ${h.version}</h2><div class="meta">${reasonTag(h)}<span>${count(h.text).toLocaleString()} 字</span><time>${fmtTime(h.at)}</time><span>只读</span></div></div>
+      <button class="btn primary" data-act="hrestore" ${h.version === cur.version ? "disabled" : ""}>${icon("restore")} 恢复为当前稿</button></div>
+    <div class="hdetail"><details ${h.version !== cur.version ? "open" : ""}><summary>与当前稿比较 · 修订 ${cur.version}</summary><p>恢复会保存为新修订，仅替换正文。</p>
+      <div class="diff">${d.length ? d.map(x => `<p class="${x.kind}">${x.kind === "rm" ? "− " : "+ "}${esc(x.t)}</p>`).join("") : '<p style="color:var(--muted-fg)">此版本与当前正文相同</p>'}</div></details>
+      <div class="pane preview"><div class="page">${h.text.split(/\n\n+/).map(t => `<p>${esc(t)}</p>`).join("")}</div></div></div>`
+}
+function openHistory() { clearTimeout(S.timer); clearTimeout(S.undoTimer); S.phase = "idle"; S.sel = null; S.hsel = null; render(); panel.classList.add("show-history"); renderHistory(); updateSide() }
+function closeHistory() { panel.classList.remove("show-history"); S.hsel = null; S.freshFrom = 0; render() }
+$("#moreMenu").addEventListener("click", e => {
+  e.stopPropagation()
+  const old = document.getElementById("pmenu"); if (old) { old.remove(); return }
+  const busy = PROC.includes(S.phase)
+  const m = layer("pmenu"); m.className = "float pmenu"
+  m.innerHTML = `<button data-act="hopen">${icon("history")} 版本历史</button><button disabled>候选稿</button><button disabled>定稿检查</button><hr><button ${busy ? 'disabled title="请先完成或放弃当前 AI 修改"' : "disabled"}>${busy ? "AI 生成正文（处理中不可用）" : "重新生成正文"}</button><button disabled>AI 评审</button>`
+})
+document.addEventListener("click", e => { if (!e.target.closest("#pmenu, #moreMenu")) document.getElementById("pmenu")?.remove() })
+panel.addEventListener("click", e => {
+  const row = e.target.closest("[data-hv]"); if (row) { S.hsel = Number(row.dataset.hv); renderHistory(); return }
+  const a = e.target.closest("[data-act]")?.dataset.act
+  if (a === "hopen") { document.getElementById("pmenu")?.remove(); openHistory() }
+  else if (a === "hclose") closeHistory()
+  else if (a === "hback") { S.hsel = null; renderHistory() }
+  else if (a === "hrestore") {
+    const h = S.history.find(x => x.version === S.hsel); if (!h) return
+    S.source = h.text; S.freshFrom = (S.history[0]?.version ?? 0) + 1
+    addVersion(`恢复正文版本 ${h.version}`, h.text, "restore"); S.lastReplace = null
+    closeHistory(); toast("正文已保存为新修订")
+  }
+})
+
+/* ===== 审核控制 ===== */
+function press(attr, val) { document.querySelectorAll(`[data-${attr}]`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset[attr] === val))) }
+document.querySelectorAll("[data-theme]").forEach(b => b.onclick = () => { panel.classList.toggle("ink", b.dataset.theme === "ink"); $("#themeName").textContent = b.dataset.theme === "ink" ? "玄墨" : "宣纸"; press("theme", b.dataset.theme) })
+document.querySelectorAll("[data-width]").forEach(b => b.onclick = () => { S.narrow = b.dataset.width === "narrow"; $("#frame").classList.toggle("narrow", S.narrow); press("width", b.dataset.width); render() })
+document.querySelectorAll("[data-model]").forEach(b => b.onclick = () => { S.hasModel = b.dataset.model === "yes"; press("model", b.dataset.model); render() })
+document.querySelectorAll("[data-os]").forEach(b => b.onclick = () => { S.os = b.dataset.os; press("os", S.os); const h = document.querySelector(".askbox .hint"); if (h && S.hasModel) h.textContent = askHint() })
+press("os", S.os)
+document.querySelectorAll("[data-think]").forEach(b => b.onclick = () => { S.think = b.dataset.think === "yes"; press("think", b.dataset.think) })
+function demoSel() { const s = paragraphs()[1]; return { start: s.s, end: s.s + s.text.length, pane: S.mode === "split" ? "preview" : S.mode } }
+document.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => {
+  panel.classList.remove("show-history"); S.hsel = null
+  clearTimeout(S.timer); S.sel = demoSel(); S.changedDuring = false; S.userScrolled = false
+  const j = b.dataset.jump
+  if (j === "history") {
+    S.fn = "polish"; S.out = OUT.polish; S.phase = "done"; render(); replaceSel()
+    const keep = S.freshFrom; openHistory(); S.freshFrom = keep; renderHistory(); return
+  }
+  const fn = j === "continue" ? "continue" : "polish"
+  S.fn = fn; S.thinkText = THINK; S.thinkSec = 6
+  if (j === "toolbar" || j === "menu" || j === "ask") {
+    S.phase = j; S.pick = DEFAULT_FN; if (j === "ask") S.req = '语气再冷一点，突出 <span class="chip" contenteditable="false">示例角色甲</span>&nbsp;的不安'
+    render(); if (j !== "ask") { const r = rangeIn(selPane(), S.sel.start, S.sel.end); getSelection().removeAllRanges(); getSelection().addRange(r) }
+    selPane().querySelector("[data-s]") && rangeIn(selPane(), S.sel.start, S.sel.end)?.startContainer.parentElement.scrollIntoView({ block: "center" }); place(); return
+  }
+  if (j === "undo") { S.out = OUT.polish; S.phase = "done"; render(); replaceSel(); return }
+  if (j === "running") { S.out = OUT[fn].slice(0, 40); S.phase = "running"; render(); tick(); return }
+  S.out = j === "stopped" || j === "failed" ? OUT[fn].slice(0, 46) : OUT[fn]
+  S.phase = j === "continue" ? "done" : j === "conflict" ? "done" : j
+  if (j === "conflict") S.changedDuring = true
+  render()
+})
+
+function updateSide() {
+  const T = { idle: "未选中文字。拖选正文试试。", toolbar: "已选中文字：工具栏在选区下方。", menu: "⋯ 菜单已展开：列出全部六项。", ask: "修改要求输入框：↑↓ 在输入框内移动光标；高亮项为当前选择（默认润色），Enter 执行它；⌘↑↓（macOS）或 Alt+↑↓（Windows）改变选择，光标留在输入框；点任一功能直接执行。", running: `${FNS[S.fn]?.name}中：底部处理框实时显示 AI 输出。`, stopped: "已停止：可继续或放弃，半截结果不能替换。", failed: "失败：可继续（以已生成部分为前文）或放弃。", done: S.changedDuring ? "完成但选中原文在处理期间被改动：点「替换」会被拒绝。" : "完成：框变大，显示最终文本，可放弃或替换。", conflict: "替换被拒绝：正文已改动，可复制结果。", undo: "已替换：10 秒内可撤销；编辑视图中 Cmd/Ctrl+Z 效果相同。" }
+  $("#stateText").textContent = panel.classList.contains("show-history") ? "版本历史：AI 修改产生的版本带红色标签；点击查看全文、与当前稿比较、恢复。" : T[S.phase]
+}
+seedHistory()
+render()
+</script>
+</body>
+</html>

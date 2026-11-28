@@ -6028,6 +6028,52 @@
         "阅读设置新增「正文字体」下拉框（原生 select，与设置页正文字体一致；跟随设置/宋体/楷体/黑体/仿宋，默认跟随设置，下拉框以所选字体显示；作用于正文与章首，元信息与章末仍用界面字体）和「页面缩放」滑块（60% 至铺满，步长 1%，百分比 = 书页宽 / 760px，默认 100%，最大显示「铺满」；与 Ctrl+滚轮共用同一宽度；窄面板禁用并显示「铺满」）（用户 2026-11-28 新增，CR611-80..82、R09）；宋体等为系统字体，Windows 上依赖本机字体，未在 Windows 验证",
         "Ctrl+滚轮调整书页宽度（用户 2026-11-28 新增，同日改为连续缩放）：按滚动量连续缩放（一格约 12.7%，触控板小增量对应几像素），逐帧缓动过渡；最小 456px（60%），最大铺满整个面板（无页边、无阴影、无桌面底色，记为 pageFill）；接近满宽时页边距与圆角连续收为 0；指针下文字保持屏幕位置；停止后保存，所有章节共用；文字大小与窗口缩放不变；窄面板（<820px）书页始终铺满，不响应（CR611-70..75、R08）"
     ]
+  },
+  {
+    "id": "SA-612",
+    "requirement": "作品正文编辑/分屏/预览框选后弹出 AI 助手工具栏（添加评论 · 输入修改要求 · 润色 · 扩写 · 续写 · ⋯ 六项功能）；修改要求输入框（@ 引用、模型选择、默认润色、⌘↑↓/Alt+↑↓ 选择功能、↑↓ 移动光标）；底部处理框流式显示 AI 输出、停止/继续；完成后放弃/重试/替换；替换前后各记历史版本并可撤销；版本历史显示原因标签；AI 修改参考小说主题、角色、设定、世界线、叙事线、大纲与本章上下文（用户 2026-11-29 批准设计稿 v9）",
+    "source": [
+      "docs/612-selection-ai-toolbar-research.md",
+      "docs/612-selection-ai-toolbar-product.md",
+      "design/selection-ai-toolbar/index.html（v9，已批准）",
+      "docs/612-selection-ai-toolbar-plan.md",
+      "docs/612-selection-ai-toolbar-cases.md",
+      "docs/implementation-boundaries.md（USER-2026-11-29-SELECTION-AI-TOOLBAR）"
+    ],
+    "implementation": [
+      "src/lib/selection-ai.ts",
+      "src/lib/services/selection-ai.ts（流式生成、替换、撤销）",
+      "src/lib/services/content-commit.ts（selection、beforeReason）",
+      "desktop/handlers/novels/[id]/chapters/[chapterId]/selection-ai/{route,commit/route,undo/route}.ts",
+      "src/components/content/selection-ai/*",
+      "src/components/editor/MarkdownEditor.tsx（selectionActions）",
+      "src/components/comments/CommentablePreview.tsx、use-monaco-comments.tsx、selection-comment-bridge.ts",
+      "src/components/content/ChapterContentPanel.tsx、ChapterHistory.tsx",
+      "desktop/shared/commands.json、command-registry.ts（selectionAi.*）",
+      "src/lib/desktop/selection-ai-escape.ts、monaco-commands.ts（setMonacoUndoOverride）",
+      "prisma/seed-templates.ts（selection.rewrite）",
+      "src/lib/ai/context.ts（loadCharacterAttributeNames 修复）"
+    ],
+    "testIds": [
+      "tests/unit/selection-ai.test.ts SAU-01..15",
+      "tests/integration/selection-ai-service.test.ts SAI-01..16、SAC-01..14",
+      "tests/browser/selection-ai.test.ts SA-01..93、SA-04b..04h、代码审核回归",
+      "scripts/verify-selection-ai.mjs SA612-R00..R08（真实 Electron，部分执行）"
+    ],
+    "verificationKind": "SELECTION_AI_TARGETED",
+    "status": "implemented-targeted-verified-real-target-partial",
+    "evidence": [
+      "docs/612-selection-ai-toolbar-code-review.md",
+      "docs/612-selection-ai-toolbar-evidence/real-target-report.json"
+    ],
+    "requirementEvidence": {
+      "单元": "tests/unit/selection-ai.test.ts 15/15 通过",
+      "集成": "tests/integration/selection-ai-service.test.ts 22/22 通过（PGlite、真实上下文构建与模型网关，脚本化上游）",
+      "浏览器": "tests/browser/selection-ai.test.ts 31/31 通过（真实组件 + Chromium，仅本地接口与 Electron 桥接为替身；不是 Electron 运行）",
+      "回归": "npm test 5295 项中 43 项失败，均在 HEAD 干净副本上同样失败；相关浏览器文件 95/95 通过",
+      "真实目标": "docs/612-selection-ai-toolbar-evidence/real-target-report.json：仅 SA612-R08（无模型禁用）通过，驱动在添加脚本模型一步超时，其余 Electron 项未执行；真实供应商模型由用户验收",
+      "代码审核": "docs/612-selection-ai-toolbar-code-review.md"
+    }
   }
   ],
   "developmentRecordUpdated": "2026-10-09",

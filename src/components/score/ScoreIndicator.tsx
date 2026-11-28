@@ -40,6 +40,7 @@ export function ScoreIndicator({
   candidateId,
   size = "md",
   className,
+  style,
   onOpenReview,
 }: {
   novelId: string
@@ -51,6 +52,8 @@ export function ScoreIndicator({
   size?: "md" | "sm"
   /** 覆盖定位容器类名（默认 absolute bottom-24 right-4——抬高避开编辑器状态栏/评审条等底边文字） */
   className?: string
+  /** docs/612: inline position override (moves up above the selection AI panel) */
+  style?: import("react").CSSProperties
   /** 点击接管：编辑器所在面板传入后切换其评审视图；未提供时弹评分详情对话框 */
   onOpenReview?: () => void
 }) {
@@ -100,7 +103,7 @@ export function ScoreIndicator({
   }
 
   return (
-    <div className={className ?? "absolute bottom-24 right-4 z-30"}>
+    <div className={className ?? "absolute bottom-24 right-4 z-30"} style={style}>
       <button
         ref={btnRef}
         type="button"

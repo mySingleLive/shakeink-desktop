@@ -5,8 +5,9 @@ import { ContentError, requireVersion } from "@/lib/content-errors"
 import { checkGeneratedContent } from "@/lib/content-policy"
 import { countChineseWords } from "@/lib/text"
 import { planningSchema } from "@/lib/planning/domain"
+import { applyReplacement, selectionStillMatches } from "@/lib/selection-ai"
 
-export type ContentSource = "manual" | "ai" | "comment" | "restore" | "candidate" | "metadata" | "planning"
+export type ContentSource = "manual" | "ai" | "ai-selection" | "comment" | "restore" | "candidate" | "metadata" | "planning"
 export interface ContentReceipt {
   operationId: string
   chapterId: string
@@ -28,6 +29,16 @@ export interface ChapterRevisionInput {
   reason: string
   changes: { content?: string; outline?: string; title?: string; status?: ChapterStatus }
   generation?: { finishReason?: string; targetWordCount?: number; compressionAuthorized?: boolean }
+  /**
+   * docs/612: record the pre-change text as a history entry with this reason. If that revision already has a snapshot
+   * (one per revision), the unchanged text first becomes its own revision, so the entry is always new.
+   */
+  beforeReason?: string
+  /**
+   * docs/612: replace [start, end) of the locked chapter text instead of sending full content. Checked after the
+   * receipt lookup and the version/hash CAS, so a replay returns its receipt even though the selection is gone.
+   */
+  selection?: { start: number; end: number; quote: string; replacement: string }
 }
 export interface ChapterContentInput extends Omit<ChapterRevisionInput, "changes"> { content: string }
 export type CommitTransaction = Prisma.TransactionClient
@@ -58,8 +69,8 @@ export async function ownedChapter(tx: CommitTransaction, userId: string, novelI
   return chapter
 }
 
-/** 现有历史保持原样；新写入的每个 Chapter 修订只有一份不可变快照。 */
-export async function snapshotChapter(tx: CommitTransaction, chapter: Chapter, reason: string) {
+/** 现有历史保持原样；新写入的每个 Chapter 修订只有一份不可变快照（ContentVersion_chapter_revision_key）。 */
+export async function snapshotChapter(tx: CommitTransaction, chapter: Chapter, reason: string, options: { createdAt?: Date } = {}) {
   const existing = await tx.contentVersion.findFirst({ where: { targetType: "Chapter", targetId: chapter.id, version: chapter.version } })
   if (existing) {
     const snapshot = existing.snapshot as Record<string, unknown> | null
@@ -68,7 +79,7 @@ export async function snapshotChapter(tx: CommitTransaction, chapter: Chapter, r
     }
     return existing
   }
-  return tx.contentVersion.create({ data: { targetType: "Chapter", targetId: chapter.id, version: chapter.version, snapshot: JSON.parse(JSON.stringify(chapter)), reason } })
+  return tx.contentVersion.create({ data: { targetType: "Chapter", targetId: chapter.id, version: chapter.version, snapshot: JSON.parse(JSON.stringify(chapter)), reason, ...(options.createdAt ? { createdAt: options.createdAt } : {}) } })
 }
 
 function verifyReceipt(record: { requestHash: string; result: Prisma.JsonValue }, hash: string): ContentReceipt {
@@ -109,23 +120,35 @@ export async function commitChapterRevisionInTransaction(tx: CommitTransaction, 
   if (planning && input.source !== "planning" && (input.changes.outline !== undefined || input.changes.title !== undefined)) throw new ContentError("OUTLINE_PROJECTION_READONLY", "请在叙事线的卷章大纲修改标题与章纲")
   if (plannedChapter && input.changes.content !== undefined && ["ai", "candidate"].includes(input.source) && countChineseWords(input.changes.content) > plannedChapter.wordBudget) throw new ContentError("CHAPTER_BUDGET_EXCEEDED", `正文超过本章${plannedChapter.wordBudget}字上限，请修订候选稿`)
   if (plannedChapter && input.changes.content !== undefined && ["ai", "candidate"].includes(input.source) && countChineseWords(input.changes.content) < plannedChapter.wordMin) throw new ContentError("CHAPTER_BUDGET_UNDER_MIN", `正文低于本章${plannedChapter.wordMin}字下限，请补足候选稿`)
-  const content = input.changes.content ?? before.content
+  if (input.selection && input.changes.content !== undefined) throw new ContentError("INVALID_REQUEST", "选区替换不能同时提交全文", 400)
+  if (input.selection && !selectionStillMatches(before.content, input.selection.start, input.selection.end, input.selection.quote)) throw new ContentError("SELECTION_CHANGED", "选中的原文已改动，未替换", 409)
+  const content = input.selection ? applyReplacement(before.content, input.selection.start, input.selection.end, input.selection.replacement) : input.changes.content ?? before.content
   if (input.source === "ai") {
     const check = checkGeneratedContent({ content, previousContent: before.content, ...input.generation })
     if (check.status !== "ready") throw new ContentError("CANDIDATE_REQUIRED", "生成稿需要检查，请先保存为候选稿")
   }
-  await snapshotChapter(tx, before, "修改前稿件")
+  // Snapshots of one transaction share now(); explicit times keep history order stable.
+  const now = Date.now()
+  let base = before
+  if (input.beforeReason) {
+    if (await tx.contentVersion.findFirst({ where: { targetType: "Chapter", targetId: before.id, version: before.version }, select: { id: true } })) {
+      const bumped = await tx.chapter.updateMany({ where: { id: before.id, version: before.version }, data: { version: { increment: 1 } } })
+      if (bumped.count !== 1) throw new ContentError("VERSION_CONFLICT", "稿件已有新修订，草稿已保留，请重新比较")
+      base = await tx.chapter.findUniqueOrThrow({ where: { id: before.id } })
+    }
+    await snapshotChapter(tx, base, input.beforeReason, { createdAt: new Date(now) })
+  } else await snapshotChapter(tx, before, "修改前稿件")
   const changed = content !== before.content
   const wordCount = countChineseWords(content)
   const status = changed ? before.status === "OUTLINE" ? "OUTLINE" : "WRITTEN" : input.changes.status ?? before.status
-  const updated = await tx.chapter.updateMany({ where: { id: before.id, version: input.expectedVersion }, data: { ...input.changes, content, wordCount, status, version: { increment: 1 } } })
+  const updated = await tx.chapter.updateMany({ where: { id: before.id, version: base.version }, data: { ...input.changes, content, wordCount, status, version: { increment: 1 } } })
   if (updated.count !== 1) throw new ContentError("VERSION_CONFLICT", "稿件已有新修订，草稿已保留，请重新比较")
   const chapter = await tx.chapter.findUniqueOrThrow({ where: { id: before.id } })
-  const snapshot = await snapshotChapter(tx, chapter, input.reason)
+  const snapshot = await snapshotChapter(tx, chapter, input.reason, input.beforeReason ? { createdAt: new Date(now + 1) } : {})
   const receipt: ContentReceipt = { operationId: input.operationId, chapterId: chapter.id, version: chapter.version, contentHash: contentHash(content), previousWordCount: countChineseWords(before.content), wordCount, deltaWordCount: wordCount - countChineseWords(before.content), snapshotId: snapshot.id }
   if (effects) await effects(tx, chapter, receipt)
   const outlineOnly = input.changes.outline !== undefined && input.changes.content === undefined
-  await tx.contentMutation.create({ data: { userId: input.userId, novelId: input.novelId, targetType: outlineOnly ? "CHAPTER_OUTLINE" : "CHAPTER_CONTENT", targetId: chapter.id, operationId: input.operationId, requestHash: hash, beforeVersion: before.version, afterVersion: chapter.version, beforeHash: contentHash(outlineOnly ? before.outline : before.content), afterHash: contentHash(outlineOnly ? chapter.outline : chapter.content), result: receipt as unknown as Prisma.InputJsonValue } })
+  await tx.contentMutation.create({ data: { userId: input.userId, novelId: input.novelId, targetType: outlineOnly ? "CHAPTER_OUTLINE" : "CHAPTER_CONTENT", targetId: chapter.id, operationId: input.operationId, requestHash: hash, beforeVersion: base.version, afterVersion: chapter.version, beforeHash: contentHash(outlineOnly ? before.outline : before.content), afterHash: contentHash(outlineOnly ? chapter.outline : chapter.content), result: receipt as unknown as Prisma.InputJsonValue } })
   return receipt
 }
 

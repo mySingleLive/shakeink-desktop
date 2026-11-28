@@ -443,8 +443,11 @@ test("CR611-52/53/54: comments still anchor to the body", () => scenario({ setup
   await selectIn(page, 2, 2, 6)
   const p3 = page.locator(firstP).nth(2), box = (await p3.boundingBox())!
   await page.mouse.move(box.x + 60, box.y + 10); await page.mouse.down(); await page.mouse.up()
+  // docs/612 (approved v9): selecting text shows the AI toolbar, whose first button opens the same comment composer;
+  // the old per-selection round button is hidden. Bring the selection into view so the toolbar is visible.
+  await p3.evaluate(el => el.scrollIntoView({ block: "center" }))
   await selectIn(page, 2, 2, 6); await p3.dispatchEvent("mouseup")
-  await page.getByTitle("添加评论").click()
+  await page.getByRole("toolbar", { name: "AI 助手" }).getByRole("button", { name: "添加评论" }).click()
   await page.getByRole("textbox").last().fill("意见")
   await page.getByRole("button", { name: /^(发表|评论|提交)/ }).last().click()
   await page.waitForFunction(() => (window as any).f.requests.some((r: any) => r.method === "POST" && r.path.endsWith("/comments")))

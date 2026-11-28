@@ -2972,6 +2972,45 @@
       "status": "planned"
     },
     {
+      "path": "src/app/api/novels/[id]/chapters/[chapterId]/selection-ai/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "disposition": "migrate-handler",
+      "reason": "桌面新增本地 handler（docs/612 正文选区 AI 修改），无上游对应，不提供 HTTP 路由",
+      "local": "desktop/handlers/novels/[id]/chapters/[chapterId]/selection-ai/route.ts",
+      "testIds": [
+        "SAI-01..16"
+      ],
+      "status": "planned"
+    },
+    {
+      "path": "src/app/api/novels/[id]/chapters/[chapterId]/selection-ai/commit/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "disposition": "migrate-handler",
+      "reason": "桌面新增本地 handler（docs/612 正文选区 AI 修改），无上游对应，不提供 HTTP 路由",
+      "local": "desktop/handlers/novels/[id]/chapters/[chapterId]/selection-ai/commit/route.ts",
+      "testIds": [
+        "SAC-01..14"
+      ],
+      "status": "planned"
+    },
+    {
+      "path": "src/app/api/novels/[id]/chapters/[chapterId]/selection-ai/undo/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "disposition": "migrate-handler",
+      "reason": "桌面新增本地 handler（docs/612 正文选区 AI 修改），无上游对应，不提供 HTTP 路由",
+      "local": "desktop/handlers/novels/[id]/chapters/[chapterId]/selection-ai/undo/route.ts",
+      "testIds": [
+        "SAC-09..10"
+      ],
+      "status": "planned"
+    },
+    {
       "path": "src/app/api/novels/[id]/chapters/[chapterId]/route.ts",
       "methods": [
         "GET",

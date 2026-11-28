@@ -204,6 +204,64 @@ export const PROMPT_TEMPLATES: SeedPromptTemplate[] = [
 输出 JSON：{ "replacement": "改写后的段落文本" }`,
   },
   {
+    key: "selection.rewrite",
+    name: "正文选区 AI 修改",
+    variables: ["novelTitle", "chapterTitle", "action", "instruction", "requirement", "theme", "style", "characters", "settings", "narrative", "worldEvents", "chapterOutline", "previousSummary", "foreshadows", "before", "selection", "after", "continuation"],
+    content: `你是一位小说写作助手。作者在《{{novelTitle}}》「{{chapterTitle}}」的正文中选中了一段文字，请对这段文字执行「{{action}}」。
+
+【本次任务】
+{{instruction}}
+
+【作者的修改要求】
+{{requirement}}
+
+【主题】
+{{theme}}
+
+【文风】
+{{style}}
+
+【角色】
+{{characters}}
+
+【设定与世界观】
+{{settings}}
+
+【叙事线：本章讲述安排】
+{{narrative}}
+
+【本章涉及的世界线事件】
+{{worldEvents}}
+
+【伏笔线索】
+{{foreshadows}}
+
+【卷与本章大纲】
+{{chapterOutline}}
+
+【前一章结尾】
+{{previousSummary}}
+
+【选区之前的正文（只供衔接，不要改写）】
+{{before}}
+
+【选中的原文】
+{{selection}}
+
+【选区之后的正文（只供衔接，不要改写）】
+{{after}}
+
+【已经写出的部分（为空则从头写）】
+{{continuation}}
+
+要求：
+1. 只输出用来替换选中原文的文字本身，不要解释、标题、引号或前后缀；不要重复选区之前或之后的正文。
+2. 续写时只输出接在选区后的新文字，不重复选中的原文；总结时用一段话概括。
+3. 人称、时态、文风与上下文一致；人物言行符合角色设定与当前成长阶段；不违背设定、世界观与大纲。
+4. 叙事线中标为「暂不披露」的内容不得写出或暗示揭晓；伏笔只按给出的线索处理，不自行回收。
+5. 「已经写出的部分」不为空时，从它的末尾接着写，不重复已写内容。`,
+  },
+  {
     key: "comment.improve",
     name: "行内评论改进决策",
     variables: ["quote", "comment", "context"],

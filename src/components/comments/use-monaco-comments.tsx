@@ -38,6 +38,7 @@ import {registerDesktopCommandTarget} from "@/lib/desktop/command-runtime"
 import { monaco } from "../editor/monaco-setup"
 import { CommentComposer } from "./CommentComposer"
 import type { CreateCommentInput, ResolvedThread } from "./types"
+import type { SelectionCommentBridge } from "./selection-comment-bridge"
 
 export interface MonacoCommentsArgs {
   editor: Monaco.editor.IStandaloneCodeEditor | null
@@ -54,6 +55,8 @@ export interface MonacoCommentsArgs {
   onCreateComment: (input: CreateCommentInput) => Promise<void>
   /** 渲染某条线程的气泡(CommentBubble,动作已由调用方绑定) */
   renderBubble: (rt: ResolvedThread) => ReactNode
+  /** docs/612: selection AI toolbar opens this composer and hides the selection button */
+  bridge?: SelectionCommentBridge
 }
 
 /** 选区浮钮状态(坐标相对编辑器容器) */
@@ -115,10 +118,26 @@ export function useMonacoComments(args: MonacoCommentsArgs): { overlay: ReactNod
     onToggleThread,
     onCreateComment,
     renderBubble,
+    bridge,
   } = args
 
   const [addBtn, setAddBtn] = useState<AddButtonState | null>(null)
   const [composer, setComposer] = useState<ComposerState | null>(null)
+  /* docs/612: the selection AI toolbar opens the same composer channel; report open/close back to it */
+  useEffect(() => {
+    if (!bridge || !editor) return
+    const mine = (snapshot: Parameters<NonNullable<SelectionCommentBridge["openers"]["edit"]>>[0]) => {
+      if (!enabled || readOnly || editor.getRawOptions().readOnly) return false
+      const model = editor.getModel()
+      if (!model) return false
+      const line = snapshot.line ?? model.getPositionAt(snapshot.endOffset).lineNumber
+      setComposer({ ...snapshot, line }); setAddBtn(null); return true
+    }
+    bridge.openers.edit = mine
+    return () => { if (bridge.openers.edit === mine) bridge.openers.edit = undefined }
+  }, [bridge, editor, enabled, readOnly])
+  useEffect(() => { bridge?.onComposerChange?.("edit", !!composer) }, [bridge, composer])
+  useEffect(() => () => bridge?.onComposerChange?.("edit", false), [bridge])
   useEffect(()=>{
     if(!editor)return
     return registerDesktopCommandTarget(editorCommentCommand(editor,()=>enabled&&!readOnly&&!composer,snapshot=>{setComposer(snapshot);setAddBtn(null)}))
@@ -551,7 +570,7 @@ export function useMonacoComments(args: MonacoCommentsArgs): { overlay: ReactNod
   })
 
   const addButton =
-    addBtn && !readOnly && !composer
+    addBtn && !readOnly && !composer && !bridge?.hideSelectionButton
       ? createElement(
           "button",
           {

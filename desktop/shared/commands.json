@@ -1191,6 +1191,56 @@
       "platform": null
     },
     {
+      "id": "selectionAi.run",
+      "label": "执行当前修改功能",
+      "group": "AI 修改要求",
+      "scope": "composer",
+      "mac": "Enter",
+      "win": "Enter",
+      "locked": false,
+      "platform": null
+    },
+    {
+      "id": "selectionAi.newline",
+      "label": "修改要求换行",
+      "group": "AI 修改要求",
+      "scope": "composer",
+      "mac": "Shift+Enter",
+      "win": "Shift+Enter",
+      "locked": false,
+      "platform": null
+    },
+    {
+      "id": "selectionAi.pickPrev",
+      "label": "上一个修改功能",
+      "group": "AI 修改要求",
+      "scope": "composer",
+      "mac": "Cmd+ArrowUp",
+      "win": "Alt+ArrowUp",
+      "locked": false,
+      "platform": null
+    },
+    {
+      "id": "selectionAi.pickNext",
+      "label": "下一个修改功能",
+      "group": "AI 修改要求",
+      "scope": "composer",
+      "mac": "Cmd+ArrowDown",
+      "win": "Alt+ArrowDown",
+      "locked": false,
+      "platform": null
+    },
+    {
+      "id": "selectionAi.escape",
+      "label": "关闭 AI 修改浮层",
+      "group": "AI 修改要求",
+      "scope": "global",
+      "mac": "Escape",
+      "win": "Escape",
+      "locked": false,
+      "platform": null
+    },
+    {
       "id": "input.left",
       "label": "光标左移",
       "group": "普通文本输入框",

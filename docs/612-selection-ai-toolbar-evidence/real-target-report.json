@@ -1,0 +1,37 @@
+{
+  "status": "failed",
+  "checks": [
+    {
+      "id": "SA612-R08",
+      "result": "pass",
+      "note": "无模型时功能按钮禁用"
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    {
+      "name": "sar-08-no-model.png",
+      "sha256": "d84c8a1ae022289e62a1f86b494ae6d733689efc4dce5a986e905af5005c4383"
+    },
+    {
+      "name": "failure.png",
+      "sha256": "d056d48f288908c75b02b85a758b859a64f796d83360db6c1d5975235cf69789"
+    }
+  ],
+  "isolation": {
+    "syntheticWorks": 1,
+    "model": "scripted local endpoint (not a real provider)",
+    "offlineRenderer": true,
+    "userDataAccessed": false
+  },
+  "limitations": [
+    "真实供应商模型未在此脚本中验证，由用户验收"
+  ],
+  "runtime": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "electron": "44.6.0"
+  },
+  "failure": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: '添加模型', exact: true })\u001b[22m\n",
+  "modelRequests": 0
+}

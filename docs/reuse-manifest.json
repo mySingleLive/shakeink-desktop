@@ -475,7 +475,7 @@
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
       "status": "adapted-desktop-boundary",
-      "currentSha256": "ab38f13788d5800e0e06b39565bb3f27ad856978712102c84efbe1ed2940fb94",
+      "currentSha256": "ebc55ab39ad1524f821261697ab54938316b4e8d52f6f54cec99af343bcd10b7",
       "reason": "docs/611: optional header/footer/contentClassName/attributes/style slots for the chapter reader; without them the DOM is unchanged. Earlier unregistered drift (c4cf283 and others) also included in currentSha256."
     },
     {
@@ -576,7 +576,7 @@
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
       "status": "adapted-desktop-boundary",
-      "currentSha256": "33a3e3b6ff1fbcecc7ddbce28773588f7ec298b20fc54e86558d6d0c61b9bbee",
+      "currentSha256": "175a1de3e5617a5da5460dac321f8fe822875dc57f833f3ae54d624f3c9aec30",
       "reason": "docs/611 chapter reader (user-approved design v4): breadcrumb top bar and reader layout passed to MarkdownEditor; autosave, generation, menus and comments unchanged. Earlier unregistered drift before 611 also included in currentSha256."
     },
     {
@@ -1217,7 +1217,7 @@
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
       "status": "adapted-desktop-boundary",
-      "currentSha256": "dcdf2a1e39d48b4683b490c3c0af5b8a7399a93ba4e8c3b9b2fd21ba9e7e70c7",
+      "currentSha256": "34f44e128ac279085e0623ab5368f1ad78464c5b27dac6d2a4bf01e879be129d",
       "reason": "Add a desktop-scoped wrapper for local body typography; preserve the original editor, autosave, modes and comments. docs/611: optional reader prop (chapter content panel only) forwards reader slots to CommentablePreview and adds a toolbar slot in preview/split; other callers unchanged."
     },
     {
@@ -1237,7 +1237,7 @@
         "desktop platform adapter only; preserve original rendering/behavior"
       ],
       "status": "adapted-desktop-boundary",
-      "currentSha256": "87d5574537b3bc3e67c5cfe84a886ab9a2096a2e7a07963f60876795eb93f2c5",
+      "currentSha256": "a05dfc3e15088a2231eacc4fff286071272e0b866bb7dc953d276f7a1da0dfb3",
       "reason": "Apply desktop body font, size, line-height, line-number and wrapping preferences through the existing editor options without remounting its model or undo history."
     },
     {

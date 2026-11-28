@@ -30,6 +30,7 @@ import {useDesktopCommands} from "@/lib/desktop/use-command-target"
 
 import { CommentComposer } from "./CommentComposer"
 import type { CreateCommentInput, ResolvedThread } from "./types"
+import type { SelectionCommentBridge, SelectionCommentSnapshot } from "./selection-comment-bridge"
 
 interface CommentablePreviewProps {
   source: string
@@ -55,6 +56,15 @@ interface CommentablePreviewProps {
   attributes?: Record<`data-${string}`, string>
   /** Inline style on the scroll container (CSS variables) */
   style?: CSSProperties
+  /** docs/612: selection AI toolbar — opens this composer; hides the selection button */
+  commentBridge?: SelectionCommentBridge
+  /**
+   * docs/612: every settled text selection inside the preview blocks (or null when it collapses), with its live DOM
+   * Range for positioning. Independent of comment availability so the AI toolbar works on read-only comments too.
+   */
+  onTextSelection?: (selection: { snapshot: SelectionCommentSnapshot & { blockIndex: number }; range: Range } | null) => void
+  /** docs/612: extra marks (selection AI range highlight) painted like comment anchors; [start, end) in source offsets */
+  extraMarks?: { start: number; end: number; className: string }[]
 }
 
 /** 遍历文本节点时跳过的祖先标签(与 entity-refs 的 isSkippable 同款思路;另跳过已生成的高亮,避免重复嵌套) */
@@ -139,6 +149,43 @@ function highlightBlock(blockEl: Element, rts: ResolvedThread[], source: string,
   }
 }
 
+/** docs/612: wrap [start, end) (source offsets) of one block in <mark class=…>, text node by text node. */
+function paintRange(blockEl: Element, blockText: string, blockStart: number, start: number, end: number, className: string) {
+  const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT)
+  const spans: { node: Text; from: number }[] = []
+  let plain = ""
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text
+    if (!node.nodeValue) continue
+    let el = node.parentElement, skip = false
+    while (el && el !== blockEl) { if (SKIP_TAGS.has(el.tagName)) { skip = true; break } el = el.parentElement }
+    if (skip) continue
+    spans.push({ node, from: plain.length }); plain += node.nodeValue
+  }
+  const map = renderedTextMap(blockText, plain)
+  if (!map) return
+  const idx = map.findIndex(offset => offset !== null && offset + blockStart >= start)
+  const last = map.findLastIndex(offset => offset !== null && offset + blockStart >= start && offset + blockStart < end) + 1
+  if (idx < 0 || last <= idx) return
+  for (const { node, from } of spans) {
+    const left = Math.max(0, idx - from), right = Math.min(node.length, last - from)
+    if (right <= left) continue
+    const selected = left ? node.splitText(left) : node
+    if (right - left < selected.length) selected.splitText(right - left)
+    const mark = document.createElement("mark")
+    mark.className = className; mark.dataset.extraMark = "1"
+    selected.replaceWith(mark); mark.appendChild(selected)
+  }
+}
+function clearExtraMarks(container: HTMLElement) {
+  container.querySelectorAll("mark[data-extra-mark]").forEach(mark => {
+    const parent = mark.parentNode
+    if (!parent) return
+    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark)
+    parent.removeChild(mark); parent.normalize()
+  })
+}
+
 /** 选区浮钮状态(相对内层 720px 容器定位) */
 type ComposerState = ReturnType<typeof selectionSnapshot> & { blockIndex: number }
 interface AddButtonState { top: number; left: number; snapshot: ComposerState }
@@ -171,6 +218,9 @@ export function CommentablePreview({
   contentClassName,
   attributes,
   style,
+  commentBridge,
+  onTextSelection,
+  extraMarks,
 }: CommentablePreviewProps): JSX.Element {
   const blocks = useMemo(() => splitMarkdownBlocks(source), [source])
   const blockHtml = useMemo(() => blocks.map((b) => renderMarkdown(b.text)), [blocks])
@@ -249,23 +299,41 @@ export function CommentablePreview({
     return Number.isInteger(index) ? index : null
   }
 
-  /** 拖选结束:选区非空且首尾都在正文块内 → 在选区末行下沿弹出「添加评论」浮钮 */
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (readOnly || !commentsEnabled) return
-    const target = e.target as HTMLElement
-    if (target.closest("[data-comment-composer]") || target.closest(".text-comment-add-btn")) return
-    if (composer) return // composer 打开期间不再响应新选区
-    const sel = window.getSelection()
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
-      setAddBtn(null)
-      return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapRef = useRef<(range: Range) => any>(() => null)
+  /**
+   * A triple-click (paragraph) or a drag past a block end puts the range end at offset 0 of the next element, outside
+   * any text of the selected block. Move such an end back to the end of the last selected text node (docs/612).
+   */
+  const clampRangeEnd = (input: Range) => {
+    const range = input.cloneRange()
+    const inner = innerRef.current
+    if (!inner) return range
+    // Already ends inside visible text after at least one character: nothing to do.
+    if (range.endContainer.nodeType === Node.TEXT_NODE && range.endOffset > 0 && range.endContainer.nodeValue!.slice(0, range.endOffset).trim()) return range
+    // Collect body text nodes the range contains at least one character of; end at the last one's end.
+    const walker = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT)
+    let last: Text | null = null, node: Node | null
+    while ((node = walker.nextNode())) {
+      const text = node as Text
+      // Whitespace-only nodes (the newline renderMarkdown leaves after </p>) have no source mapping.
+      if (!text.nodeValue?.trim() || blockIndexOfNode(text) === null) continue
+      const probe = document.createRange(); probe.setStart(text, 0); probe.setEnd(text, 1)
+      // probe start must be before the range end, and probe end after the range start
+      if (range.compareBoundaryPoints(Range.START_TO_END, probe) > 0 && range.compareBoundaryPoints(Range.END_TO_START, probe) < 0) last = text
     }
-    const range = sel.getRangeAt(0)
+    if (last) { const trimmed = last.nodeValue!.replace(/\s+$/, ""); range.setEnd(last, Math.max(1, trimmed.length)) }
+    return range
+  }
+
+  /** DOM Range → source snapshot (start/end/quote/context + last block). Null when it cannot be mapped. */
+  const previewSelectionSnapshot = (input: Range) => {
+    const range = clampRangeEnd(input)
     const startBlock = blockIndexOfNode(range.startContainer)
     const endBlock = blockIndexOfNode(range.endContainer)
-    if (startBlock === null || endBlock === null) return
+    if (startBlock === null || endBlock === null) return null
     const inner = innerRef.current
-    if (!inner) return
+    if (!inner) return null
     const sourceOffset = (index: number, node: Node, offset: number, end: boolean) => {
       const el = inner.querySelector(`[data-block="${index}"]`)!
       const before = document.createRange()
@@ -279,9 +347,67 @@ export function CommentablePreview({
     }
     const start = sourceOffset(startBlock, range.startContainer, range.startOffset, false)
     const end = sourceOffset(endBlock, range.endContainer, range.endOffset, true)
-    if (start === null || end === null || end <= start) { setAddBtn(null); return }
+    if (start === null || end === null || end <= start) return null
     const snapshot = { ...selectionSnapshot(source, start, end), blockIndex: endBlock }
-    if (!snapshot.quote.trim()) return
+    return snapshot.quote.trim() ? snapshot : null
+  }
+  mapRef.current = previewSelectionSnapshot
+
+  /*
+   * docs/612: besides mouseup, publish settled selections from double/triple clicks and keyboard selection
+   * (Shift+arrows) to the AI toolbar: dblclick right away, any other selectionchange 300 ms after the last change.
+   */
+  const latestSelection = useRef(onTextSelection); latestSelection.current = onTextSelection
+  const composerOpen = useRef(false); composerOpen.current = !!composer
+  useEffect(() => {
+    if (!onTextSelection) return
+    const scroll = scrollRef.current
+    if (!scroll) return
+    let timer: ReturnType<typeof setTimeout> | null = null, pressed = false
+    const publish = () => {
+      timer = null
+      const callback = latestSelection.current
+      if (!callback || composerOpen.current) return
+      const sel = window.getSelection()
+      if (!sel || sel.isCollapsed || !sel.rangeCount) return
+      const range = sel.getRangeAt(0)
+      if (!innerRef.current?.contains(range.commonAncestorContainer)) return
+      const mapped = mapRef.current(range)
+      if (mapped) callback({ snapshot: mapped, range: range.cloneRange() })
+    }
+    const schedule = (delay: number) => { if (timer) clearTimeout(timer); timer = setTimeout(publish, delay) }
+    const down = () => { pressed = true; if (timer) clearTimeout(timer) }
+    // A press that started in the manuscript may be released anywhere (drag past the edge, onto the chat panel…).
+    const up = () => { if (!pressed) return; pressed = false; schedule(0) }
+    // Everything else that selects text (Cmd+A / 全选, Shift+click, programmatic selection, a lost pointerup):
+    // publish once the selection has been stable for 300 ms; during a press wait for the release.
+    const changed = () => { if (!pressed) schedule(300); else schedule(600) }
+    const dbl = () => { pressed = false; schedule(0) }
+    scroll.addEventListener("pointerdown", down, true); document.addEventListener("pointerup", up, true)
+    document.addEventListener("selectionchange", changed); scroll.addEventListener("dblclick", dbl)
+    return () => { if (timer) clearTimeout(timer); scroll.removeEventListener("pointerdown", down, true); document.removeEventListener("pointerup", up, true); document.removeEventListener("selectionchange", changed); scroll.removeEventListener("dblclick", dbl) }
+  }, [!!onTextSelection]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** 拖选结束:选区非空且首尾都在正文块内 → 在选区末行下沿弹出「添加评论」浮钮 */
+  const handleMouseUp = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (target.closest("[data-comment-composer]") || target.closest(".text-comment-add-btn")) return
+    const sel = window.getSelection()
+    const live = sel && !sel.isCollapsed && sel.rangeCount ? sel.getRangeAt(0) : null
+    const mapped = live ? previewSelectionSnapshot(live) : null
+    // docs/612: the AI toolbar follows every mapped selection; comment gating below only affects the comment button.
+    if (!composer) onTextSelection?.(mapped && live ? { snapshot: mapped, range: live.cloneRange() } : null)
+    if (readOnly || !commentsEnabled) return
+    if (composer) return // composer 打开期间不再响应新选区
+    if (!live) {
+      setAddBtn(null)
+      return
+    }
+    if (!mapped) { setAddBtn(null); return }
+    const snapshot = mapped
+    const range = live
+    const inner = innerRef.current
+    if (!inner) return
     selectionRef.current = range.cloneRange()
     const rects = range.getClientRects()
     const rect = rects[rects.length - 1] ?? range.getBoundingClientRect()
@@ -305,6 +431,25 @@ export function CommentablePreview({
     const observer = new ResizeObserver(update); observer.observe(scroll)
     return () => { scroll.removeEventListener("scroll", update); observer.disconnect() }
   }, [])
+
+  /* docs/612: extra range marks (selection AI). Idempotent like the comment highlight effect. */
+  const extraSignature = JSON.stringify([source, extraMarks ?? []])
+  const paintedExtra = useRef("")
+  useEffect(() => {
+    const inner = innerRef.current
+    if (!inner) return
+    const present = inner.querySelectorAll("mark[data-extra-mark]").length > 0
+    if (paintedExtra.current === extraSignature && (present || !extraMarks?.length)) return
+    paintedExtra.current = extraSignature
+    clearExtraMarks(inner)
+    for (const mark of extraMarks ?? []) {
+      blocks.forEach((block, index) => {
+        if (block.start >= mark.end || block.start + block.text.length <= mark.start) return
+        const el = inner.querySelector(`[data-block="${index}"]`)
+        if (el) paintRange(el, block.text, block.start, mark.start, mark.end, mark.className)
+      })
+    }
+  })
 
   /** composer 关闭时一并清段落行评论钮——composer/addBtn 期间 mousemove 提前 return，旧 blockBtn 会滞留、关闭后在原位置闪现 */
   const closeComposer = () => {
@@ -380,6 +525,20 @@ export function CommentablePreview({
   }
   useDesktopCommands({"md.comment":{enabled:()=>!!commentsEnabled&&!readOnly&&!!addBtn&&!composer,run:openComposer}},innerRef)
 
+  /* docs/612: the selection AI toolbar opens the same composer channel */
+  useEffect(() => {
+    if (!commentBridge) return
+    const mine = (snapshot: Parameters<NonNullable<SelectionCommentBridge["openers"]["preview"]>>[0]) => {
+      if (readOnly || !commentsEnabled) return false
+      const blockIndex = snapshot.blockIndex ?? blockIndexAt(blocks, Math.max(snapshot.startOffset, snapshot.endOffset - 1))
+      setComposer({ ...snapshot, blockIndex }); setAddBtn(null); setBlockBtn(null); return true
+    }
+    commentBridge.openers.preview = mine
+    return () => { if (commentBridge.openers.preview === mine) commentBridge.openers.preview = undefined }
+  }, [commentBridge, readOnly, commentsEnabled, blocks])
+  useEffect(() => { commentBridge?.onComposerChange?.("preview", !!composer) }, [commentBridge, composer])
+  useEffect(() => () => commentBridge?.onComposerChange?.("preview", false), [commentBridge])
+
   /** composer 提交:成功才关闭;失败(onCreateComment 上抛)由 CommentComposer 捕获,草稿保留 */
   const submitComposer = async (content: string) => {
     if (!composer) return
@@ -436,7 +595,7 @@ export function CommentablePreview({
         {composer && (composer.blockIndex < 0 || composer.blockIndex >= blockHtml.length) &&
           composerNode}
         {footer}
-        {addBtn && !readOnly && (
+        {addBtn && !readOnly && !commentBridge?.hideSelectionButton && (
           <button
             type="button"
             className="text-comment-add-btn"

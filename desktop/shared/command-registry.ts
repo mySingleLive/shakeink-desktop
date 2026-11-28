@@ -10,7 +10,13 @@ export function platformCommands(platform: DesktopPlatform): DesktopCommand[] {
     const key = platform === "darwin" ? command.mac : command.win
     const defaults=command.id==="ai.mentionConfirm" ? ["Tab","Enter"] : command.id==="ai.mentionClose" ? ["Escape"] : key ? [key] : []
     // docs/599 §12.3: worldline.escape and ai.stop share Escape; enabled() keeps them apart at run time (worldline-escape.ts).
-    const contexts:Record<string,boolean>|undefined=command.id.startsWith("ai.mention")&&command.id!=="ai.mention" ? {mention:true} : command.id==="ai.stop" ? {mention:false,worldlineEdit:false} : command.id==="worldline.escape" ? {worldlineEdit:true} : ["ai.send","ai.newline"].includes(command.id) ? {mention:false} : undefined
+    // docs/612 §4.7: the selection AI request box and the chat composer share the composer scope; contexts keep their keys apart.
+    const contexts:Record<string,boolean>|undefined=command.id.startsWith("ai.mention")&&command.id!=="ai.mention" ? {mention:true}
+      : command.id==="ai.stop" ? {mention:false,worldlineEdit:false,selectionAi:false} : command.id==="worldline.escape" ? {worldlineEdit:true}
+      : ["ai.send","ai.newline"].includes(command.id) ? {mention:false,selectionAi:false} : ["ai.historyPrev","ai.historyNext"].includes(command.id) ? {selectionAi:false}
+      : ["selectionAi.run","selectionAi.pickPrev","selectionAi.pickNext"].includes(command.id) ? {selectionAi:true,mention:false}
+      : command.id==="selectionAi.escape" ? {selectionAi:true,worldlineEdit:false}
+      : command.id.startsWith("selectionAi.") ? {selectionAi:true} : undefined
     return { id:command.id, label:command.label, group:command.group, scope:command.scope as ShortcutScope, locked:command.locked, defaults, ...(contexts ? {contexts} : {}) }
   })
 }

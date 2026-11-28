@@ -183,6 +183,15 @@ export function buildMonacoCommandCatalog(runtime: MonacoRuntime, platform: Desk
   }
   return [...rows.values()]
 }
+/**
+ * docs/612 §4.5: an editor owner may take over its own undo (text.undo, under whatever binding the author chose, and
+ * the native 编辑 → 撤销 menu) while a condition holds — e.g. undoing a selection AI replacement on the server.
+ */
+const undoOverrides = new WeakMap<object, () => (() => void) | null>()
+export function setMonacoUndoOverride(editor: object, override: (() => (() => void) | null) | null) {
+  if (override) undoOverrides.set(editor, override); else undoOverrides.delete(editor)
+}
+
 export function createMonacoCommandTarget(editor: MonacoEditorTarget, runtime: MonacoRuntime, commands: MonacoDesktopCommand[]): CommandTarget<HTMLElement | null> {
   assertRuntime(runtime)
   const alive = () => !!editor.getDomNode()?.isConnected && !!editor.getDomNode()?.getClientRects().length && !!editor.getModel()
@@ -199,6 +208,7 @@ export function createMonacoCommandTarget(editor: MonacoEditorTarget, runtime: M
   const handlers: CommandTarget<HTMLElement | null>["commands"] = Object.fromEntries(commands.map(row => [row.id, {
     enabled: () => available(row),
     run: async () => {
+      if (row.monacoId === "undo") { const takeover = undoOverrides.get(editor)?.(); if (takeover) { takeover(); return } }
       if (!available(row)) return
       const model = editor.getModel(), dom = editor.getDomNode()
       editor.focus()

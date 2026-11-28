@@ -1,5 +1,9 @@
 # UI 批准与实施边界
 
+<!-- USER-2026-11-29-SELECTION-AI-TOOLBAR BEGIN -->
+> **2026-11-29 用户“UI 设计通过，可以继续”，批准正文框选 AI 助手工具栏 v9。** 来源为 `docs/612-selection-ai-toolbar-product.md`、`docs/612-selection-ai-toolbar-research.md` 与 `design/selection-ai-toolbar/index.html`（v9）：作品正文编辑/分屏/预览框选后选区下方工具栏（添加评论 · 输入修改要求 · 润色 · 扩写 · 续写 · ⋯）；修改要求输入框（宽 560 px，↑↓ 移动光标，默认高亮润色，⌘↑↓/Alt+↑↓ 选择功能，@ 引用与模型选择，无作品选择/模式/发送）；底部处理框（只显示 AI 消息，停止/继续）；结果框放弃/重试/替换；替换前后各记历史版本并可撤销；版本历史显示原因标签。用户附加要求：润色、扩写、缩写、续写、重写等修改除本章上下文外，还要参考小说主题、角色、设定、世界线、叙事线、大纲。产品设计 §9 未答问题按设计稿默认执行（仅作品正文；续写为原文 + 续写写回；总结保留替换；去掉标准/计划模式；框选时隐藏原选区评论圆钮）。添加评论直接复用现有 CommentComposer 与评论流程；正文仍复用真实 MarkdownEditor/Monaco/CommentablePreview。按技术方案及独立审核 → 用例及独立审核 → TDD/code review → 真实 Electron 验证继续；批准不代表实现或测试通过。
+<!-- USER-2026-11-29-SELECTION-AI-TOOLBAR END -->
+
 <!-- USER-2026-10-25-NOVEL-IMPORT BEGIN -->
 > **2026-10-25 用户“UI 设计审核通过，可以继续”，批准导入作品 v4。** 来源为 `docs/novel-import/02-product.md`、`04-ui-design.md` 和 `design/novel-import/approval-v4.json` 绑定的 HTML：普通来源复选框、补全卡片始终展开、真实设定分类与文件图标、AI 识别等待、三类冲突与正文逐处批准。继续技术方案及独立审核 → 本任务定向用例及独立审核 → TDD/代码审核 → 本任务定向验证。**用户明确禁止全量测试，本任务不运行全仓测试。** 仍复用真实工作台/业务面板，批准不代表实现或真实平台验证通过。
 <!-- USER-2026-10-25-NOVEL-IMPORT END -->

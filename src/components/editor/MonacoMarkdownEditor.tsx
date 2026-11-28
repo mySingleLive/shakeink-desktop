@@ -92,6 +92,7 @@ export default function MonacoMarkdownEditor({
     onToggleThread: comments?.onToggleThread ?? NOOP_TOGGLE,
     onCreateComment: comments?.onCreateComment ?? NOOP_CREATE,
     renderBubble: comments?.renderBubble ?? NO_BUBBLE,
+    bridge: comments?.bridge,
   })
 
   const handleMount: OnMount = (editor) => {

@@ -1,7 +1,7 @@
 {
   "date": "2026-10-14",
   "baseline": {"all": 401, "plot": 90, "servicePrompts": 29, "combined": 430},
-  "expected": {"all": 471, "plot": 160, "focused": 74, "added": 70, "servicePrompts": 29, "combined": 500},
+  "expected": {"all": 471, "plot": 160, "focused": 74, "added": 70, "servicePrompts": 30, "combined": 501, "servicePromptsNote": "docs/612 新增 selection.rewrite（正文选区 AI 修改）"},
   "groups": [
     {"name": "通用结构", "minimum": 19, "count": 23, "genres": [], "templates": [
       {"id": "plot-structure-qi-cheng-zhuan-he", "requirement": "起承转合"},

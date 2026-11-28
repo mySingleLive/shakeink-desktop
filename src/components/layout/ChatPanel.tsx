@@ -6,6 +6,7 @@ import { splitMentionToken } from "@/lib/mention-token"
 import { positionForCreation } from "@/lib/creation-wizard/position"
 import { useDesktopCommands } from "@/lib/desktop/use-command-target"
 import { worldlineEscapeOwner } from "@/lib/desktop/worldline-escape"
+import { selectionAiEscapeOwner } from "@/lib/desktop/selection-ai-escape"
 import { useDesktopStore } from "@/stores/desktop"
 import { ComposerHistory } from "@/lib/desktop/composer-history"
 import {composerBindingHint} from "@/lib/desktop/composer-shortcuts"
@@ -1698,7 +1699,8 @@ export function ChatPanel({
     "composer.focus":()=>{useChatStore.getState().requestChatFocus();textareaRef.current?.scrollIntoView({block:"nearest"});textareaRef.current?.focus()},
     "chat.search":()=>setSearchOpen(value=>!value),
     // docs/599 §12.3: an editing worldline panel owns Escape (worldline.escape); stop yields so one command runs.
-    "ai.stop":{enabled:()=>isGenerating&&!mention&&!worldlineEscapeOwner(),run:stop},
+    // docs/612 §4.7: an open selection AI toolbar/request box owns Escape (selectionAi.escape) the same way.
+    "ai.stop":{enabled:()=>isGenerating&&!mention&&!worldlineEscapeOwner()&&!selectionAiEscapeOwner(),run:stop},
   })
   useDesktopCommands({
     "ai.send":{enabled:()=>canSend&&!mention&&hasLiveModel(),run:handleSend},
